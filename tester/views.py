@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import TestFileForm
 from .models import TestFile
@@ -24,11 +25,14 @@ def upload_file(request):
             print("File path:")
             print(file_path)
 
+
             try:
                 # Debugging output
                 print(f"Running script at: {script_path}")
                 print(f"Using user profile: {file_path}")
                 print(f"Extracting to: {extract_dir}")
+
+                start_time = time.time()
 
                 result = subprocess.run(
                     ['python', script_path,
@@ -41,6 +45,10 @@ def upload_file(request):
                     capture_output=True,
                     text=True,
                 )
+
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                test_file.execution_time = round(elapsed_time, 2)
 
                 # Debugging subprocess output
                 print(f"STDOUT: {result.stdout}")
@@ -66,4 +74,17 @@ def upload_file(request):
 
 def show_results(request, pk):
     test_file = get_object_or_404(TestFile, pk=pk)
-    return render(request, 'results.html', {'test_file': test_file})
+    execution_time = test_file.execution_time
+    hours = int(execution_time // 3600)
+    minutes = int(execution_time // 60)
+    seconds = round(execution_time % 60, 2)
+    if hours > 0:
+        formatted_time = f"{hours} hours, {minutes} minutes and {seconds} seconds"
+    elif minutes > 0:
+        formatted_time = f"{minutes} minutes and {seconds} seconds"
+    else:
+        formatted_time = f"{seconds} seconds"
+    return render(request, 'results.html', {
+        'test_file': test_file,
+        'formatted_time': formatted_time
+    })

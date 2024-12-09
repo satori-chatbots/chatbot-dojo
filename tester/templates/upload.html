@@ -1,6 +1,35 @@
 <h1>Upload YAML File</h1>
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data" id="upload-form">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Upload</button>
+    <button type="submit" id="upload-button">Upload</button>
 </form>
+
+<div id="status-container">
+    <p id="status-message">Executing: <span id="elapsed-time">0</span> seconds</p>
+</div>
+
+<script>
+let timerInterval; // Global variable to store the interval
+
+function updateElapsedTime() {
+    const startTime = Date.now();
+    const elapsedTimeElement = document.getElementById('elapsed-time');
+
+    // Clear any existing interval
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    timerInterval = setInterval(() => {
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        elapsedTimeElement.textContent = elapsedSeconds;
+    }, 1000);
+}
+
+document.getElementById('upload-form').addEventListener('submit', function(event) {
+    if (this.checkValidity()) {
+        updateElapsedTime();
+    }
+});
+</script>
