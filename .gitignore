@@ -1,6 +1,9 @@
-# uploads directory
+# uploads and results directory
 uploads/
 test-results/
+
+# migration files
+**/migrations/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
