@@ -59,18 +59,6 @@ def upload_file(request):
                 test_file.result = f"Error: {e}"
                 test_file.save()
 
-            except subprocess.CalledProcessError as e:
-                # Handle script errors
-                print("Error running script:")
-                print(e.stderr)  # Captures stderr output
-                test_file.result = f"Script Error: {e.stderr}"
-                test_file.save()
-            except Exception as e:
-                # Handle unexpected errors
-                print("Unexpected error running script:")
-                print(e)
-                test_file.result = f"Unexpected Error: {e}"
-                test_file.save()
             return redirect('results', pk=test_file.id)
     else:
         form = TestFileForm()
