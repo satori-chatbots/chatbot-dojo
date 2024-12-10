@@ -12,7 +12,9 @@ def upload_file(request):
             test_file = form.save()  # Save the uploaded file
             file_path = test_file.file.path  # Path to the uploaded YAML file
             # Base directory of the Django project
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            print("Base dir:")
+            print(base_dir)
             # Relative path to the autotest script
             script_path = os.path.join(base_dir, 'user-simulator/src/autotest.py')
             # Setup CWD user-simulator

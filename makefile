@@ -4,8 +4,9 @@ run:
 	$(PYTHON) manage.py runserver
 
 migrations:
+	$(PYTHON) manage.py makemigrations tester
 	$(PYTHON) manage.py makemigrations
-	$(PYTHON) manage.py migrate 
+	$(PYTHON) manage.py migrate
 
 clean:
 	find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
