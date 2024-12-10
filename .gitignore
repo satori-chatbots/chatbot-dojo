@@ -1,6 +1,7 @@
 # uploads and results directory
 uploads/
 test-results/
+test_files/
 
 # migration files
 **/migrations/
