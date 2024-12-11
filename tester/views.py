@@ -22,7 +22,7 @@ def upload_file(request):
             file_path = os.path.dirname(test_file_instance.file.path)
 
             # Base directory of the Django project
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
             print("Base dir:")
             print(base_dir)
             # Relative path to the autotest script
