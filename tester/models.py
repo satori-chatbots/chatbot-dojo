@@ -1,7 +1,7 @@
 from django.db import models
 
 def upload_to(instance, filename):
-    return f'uploads/{instance.test_case.id}/yaml/{filename}'
+    return f'uploads/user-yaml/{filename}'
 
 class TestCase(models.Model):
     id = models.AutoField(primary_key=True)
