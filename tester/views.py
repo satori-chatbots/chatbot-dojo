@@ -25,14 +25,15 @@ def upload_file(request):
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
             print("Base dir:")
             print(base_dir)
+            # Directory for --extract
+            extract_dir = os.path.dirname(file_path)
             # Relative path to the autotest script
             script_path = os.path.join(base_dir, 'user-simulator/src/autotest.py')
             # Setup CWD user-simulator
             cwd = os.chdir(os.path.dirname(os.path.dirname(script_path)))
 
 
-            # Directory for --extract
-            extract_dir = os.path.dirname(file_path)
+
 
             print("File path:")
             print(file_path)
