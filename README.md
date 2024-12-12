@@ -19,10 +19,20 @@ pip install -r requirements.txt
 pip install -r ../user-simulator/requirements.txt
 ```
 
-After that, you can run the server with the following command:
+After that, you can make the necessary migrations and then execute the server:
 
 ```bash
-python manage.py runserver
+make migrations
+make run
+```
+
+In case of problems, I suggest deleting the migrations and the database file and then running the migrations again:
+
+```bash
+make clean
+make dropdb
+make migrations
+make run
 ```
 
 ## Usage
