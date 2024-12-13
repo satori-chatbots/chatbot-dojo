@@ -1,0 +1,3 @@
+[submodule "user-simulator"]
+	path = user-simulator
+	url = git@github.com:satori-chatbots/user-simulator.git
