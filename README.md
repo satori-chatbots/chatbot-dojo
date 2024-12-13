@@ -4,6 +4,12 @@ A web server for sensei
 
 ## Installation
 
+To update this repo, since it depends on the `user-simulator` we have to make a git pull like this:
+
+```bash
+git pull --recurse-submodules
+```
+
 First of all, we need to have this project cloned and the `user-simulator` project cloned as well. Also, they should be at the same level in the directory tree. For example:
 
 ```bash
