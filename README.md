@@ -9,6 +9,17 @@ To update this repo, since it depends on the `user-simulator` we have to make a 
 ```bash
 git pull --recurse-submodules
 ```
+or 
+
+```bash
+make pull-submodules
+```
+
+If you want to do it automatically you can add this to your config:
+
+```bash
+git config submodule.recurse true
+```
 
 First of all, we need to have this project cloned and the `user-simulator` project cloned as well. Also, they should be at the same level in the directory tree. For example:
 

@@ -1,22 +1,21 @@
 PYTHON=python
+BACKEND_DIR=backend
+MANAGE=$(BACKEND_DIR)/manage.py
 
 run:
-	$(PYTHON) manage.py runserver
+	$(PYTHON) $(MANAGE) runserver
 
 migrations:
-	$(PYTHON) manage.py makemigrations tester
-	$(PYTHON) manage.py makemigrations
-	$(PYTHON) manage.py migrate
+	$(PYTHON) $(MANAGE) makemigrations tester
+	$(PYTHON) $(MANAGE) makemigrations
+	$(PYTHON) $(MANAGE) migrate
 
 clean:
-	find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
-	find . -path "*/migrations/*.pyc"  -delete
+	find $(BACKEND_DIR) -path "*/migrations/*.py" -not -name "__init__.py" -delete
+	find $(BACKEND_DIR) -path "*/migrations/*.pyc"  -delete
 
 dropdb:
-	rm db.sqlite3
+	rm $(BACKEND_DIR)/db.sqlite3
 
-clear_uploads:
-	rm -rf uploads/*
-
-clear_results:
-	rm -rf test-results/*
+pull-submodules:
+	git pull --recurse-submodules
