@@ -10,11 +10,11 @@ router.register(r'testcases', api.TestCaseViewSet)
 router.register(r'testfiles', api.TestFileViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
-]
-
-urlpatterns += [
+    # Custom Routes First
     path('upload/', api.FileUploadAPIView.as_view(), name='file-upload'),
-    path('testfiles/delete/', api.FileDeleteAPIView.as_view(), name='file-delete-bulk'),
-    path('testfiles/delete/<int:id>/', api.FileDeleteAPIView.as_view(), name='file-delete-single'),
+    path('testfiles/delete/<int:id>/', api.FileDeleteAPIView.as_view(),  name='file-delete-single'),
+    path('testfiles/delete-bulk/', api.FileDeleteAPIView.as_view(), name='file-delete-bulk'),
+
+    # Then Include Router URLs
+    path('', include(router.urls)),
 ]
