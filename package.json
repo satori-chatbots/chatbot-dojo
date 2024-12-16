@@ -1,0 +1,23 @@
+{
+  "name": "sensei-web",
+  "version": "1.0.0",
+  "description": "Web application for sensei",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/satori-chatbots/sensei-web.git"
+  },
+  "keywords": [
+    "chatbot",
+    "testing"
+  ],
+  "author": "MISO, Iván Sotillo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/satori-chatbots/sensei-web/issues"
+  },
+  "homepage": "https://github.com/satori-chatbots/sensei-web#readme"
+}
