@@ -1,3 +1,7 @@
+# vite
+node_modules/
+.vite/
+
 # uploads and results directory
 uploads/
 test-results/
