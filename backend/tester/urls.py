@@ -15,4 +15,6 @@ urlpatterns = [
 
 urlpatterns += [
     path('upload/', api.FileUploadAPIView.as_view(), name='file-upload'),
+    path('testfiles/delete/', api.FileDeleteAPIView.as_view(), name='file-delete-bulk'),
+    path('testfiles/delete/<int:id>/', api.FileDeleteAPIView.as_view(), name='file-delete-single'),
 ]

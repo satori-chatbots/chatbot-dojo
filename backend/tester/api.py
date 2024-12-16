@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import TestCase, TestFile
@@ -33,3 +33,29 @@ class FileUploadAPIView(APIView):
 
         serializer = TestFileSerializer(file_instances, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class FileDeleteAPIView(APIView):
+    """
+    API view to handle deletion of files.
+    """
+
+    def delete(self, request, id=None, format=None):
+
+        # Single file delete
+        if id is not None:
+            file = get_object_or_404(TestFile, id=id)
+            file.delete()
+            return Response({'message': f'File with ID {id} deleted.'}, status=status.HTTP_200_OK)
+
+        print(request.data)
+        # Bulk file delete
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        files = TestFile.objects.filter(id__in=ids)
+        if not files.exists():
+            return Response({'error': 'No files found for the provided IDs.'}, status=status.HTTP_404_NOT_FOUND)
+
+        deleted_count, _ = files.delete()
+        return Response({'deleted': deleted_count}, status=status.HTTP_200_OK)
