@@ -1,73 +1,23 @@
-import { useState, useEffect, useRef } from 'react'
+import React from 'react'
+import FileList from './components/FileList'
+import FileUpload from './components/FileUpload'
+import useFetchFiles from './hooks/useFetchFiles'
 
 function App() {
-    const [files, setFiles] = useState([])
-    const [selectedFiles, setSelectedFiles] = useState(null)
-    const fileInputRef = useRef(null)
+    const { files, loading, error, reload } = useFetchFiles()
 
-    useEffect(() => {
-        fetch('http://localhost:8000/testfiles/')
-            .then(response => response.json())
-            .then(data => setFiles(data))
-            .catch(error => console.error('Error fetching files:', error))
-    }, [])
-
-    const handleFileChange = (event) => {
-        setSelectedFiles(event.target.files)
+    if (loading) {
+        return <p>Loading files...</p>
     }
 
-    const handleUpload = () => {
-        if (!selectedFiles || selectedFiles.length === 0) {
-            alert('Please select files to upload.')
-            return
-        }
-
-        const formData = new FormData()
-        for (let i = 0; i < selectedFiles.length; i++) {
-            formData.append('file', selectedFiles[i])
-        }
-
-        fetch('http://localhost:8000/upload/', {
-            method: 'POST',
-            body: formData,
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`)
-                }
-                return response.json()
-            })
-            .then(data => {
-                // Refresh the files list
-                fetch('http://localhost:8000/testfiles/')
-                    .then(response => response.json())
-                    .then(data => setFiles(data))
-                    .catch(error => console.error('Error fetching files:', error))
-                setSelectedFiles(null)
-                fileInputRef.current.value = null  // Clear the file input
-                alert('Files uploaded successfully.')
-            })
-            .catch(error => console.error('Error uploading files:', error))
+    if (error) {
+        return <p>Error fetching files: {error.message}</p>
     }
 
     return (
         <div>
-            <h1>Uploaded Files</h1>
-            {files.length > 0 ? (
-                <ul>
-                    {files.map(file => (
-                        <li key={file.id}>
-                            <a href={file.file} target="_blank" rel="noopener noreferrer">{file.file}</a>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <p>No files uploaded yet.</p>
-            )}
-
-            <h2>Upload New Files</h2>
-            <input type="file" multiple onChange={handleFileChange} ref={fileInputRef} />
-            <button onClick={handleUpload}>Upload</button>
+            <FileList files={files} />
+            <FileUpload onUpload={reload} />
         </div>
     )
 }
