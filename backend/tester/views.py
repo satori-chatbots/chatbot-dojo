@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+from .serializers import TestFileSerializer
 from .forms import TestCaseForm, TestFileForm
 from .models import TestCase, TestFile
 from django.shortcuts import render, get_object_or_404
@@ -9,22 +10,7 @@ import os
 import subprocess
 import time
 
-class UploadAPIView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request, format=None):
-        form = TestCaseForm(request.data)
-        file_form = TestFileForm(request.data, request.FILES)
-        files = request.FILES.getlist('file')
-        if form.is_valid() and file_form.is_valid():
-            test_case_instance = form.save(commit=False)
-            test_case_instance.save()
-            for f in files:
-                test_file_instance = TestFile(file=f, test_case=test_case_instance)
-                test_file_instance.save()
-            return Response({'message': 'Files uploaded successfully', 'test_case_id': test_case_instance.id}, status=status.HTTP_201_CREATED)
-        else:
-            return Response({'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 class ExecuteAPIView(APIView):
     def post(self, request, format=None):

@@ -12,8 +12,7 @@ router.register(r'testfiles', api.TestFileViewSet)
 urlpatterns = [
     path('', include(router.urls)),
 ]
-# urlpatterns = [
-#     path('upload/', views.UploadAPIView.as_view(), name='upload'),
-#     path('execute/', views.ExecuteAPIView.as_view(), name='execute'),
-#     path('results/<int:pk>/', views.show_results, name='results'),
-# ]
+
+urlpatterns += [
+    path('upload/', api.FileUploadAPIView.as_view(), name='file-upload'),
+]
