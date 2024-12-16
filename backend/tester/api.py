@@ -36,13 +36,15 @@ class TestFileViewSet(viewsets.ModelViewSet):
         deleted_count, _ = files.delete()
         return Response({'deleted': deleted_count}, status=status.HTTP_200_OK)
 
-class FileUploadAPIView(APIView):
-    """
-    API endpoint that allows multiple files to be uploaded.
-    """
-    parser_classes = (MultiPartParser, FormParser)
-
-    def post(self, request, format=None):
+    @action(detail=False, methods=['post'], url_path='upload', parser_classes=[MultiPartParser, FormParser])
+    def upload(self, request):
+        """
+        Endpoint to upload multiple files.
+        Expects multipart/form-data with files under the key 'file':
+        {
+            "file": [file1, file2, ...]
+        }
+        """
         files = request.FILES.getlist('file')
         if not files:
             return Response({'error': 'No files provided.'}, status=status.HTTP_400_BAD_REQUEST)

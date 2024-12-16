@@ -11,7 +11,7 @@ export const fetchFiles = () => {
 };
 
 export const uploadFiles = (formData) => {
-    return fetch(`${API_BASE_URL}/upload/`, {
+    return fetch(`${API_BASE_URL}/testfiles/upload/`, {
         method: 'POST',
         body: formData,
     })
