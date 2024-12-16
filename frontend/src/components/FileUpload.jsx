@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { uploadFiles } from '../api/fileUpload'
+import { uploadFiles } from '../api/fileApi'
 
 function FileUpload({ onUpload }) {
     const [selectedFiles, setSelectedFiles] = useState(null)
