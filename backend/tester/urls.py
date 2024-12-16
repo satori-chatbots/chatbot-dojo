@@ -7,9 +7,10 @@ router = routers.DefaultRouter()
 
 router.register('api/testcase', api.TestCaseViewSet, 'testcase')
 
-urlpatterns = router.urls
+# urlpatterns = router.urls
 
-urlpatterns += [
-    path('', views.upload_file, name='upload'),
+urlpatterns = [
+    path('upload/', views.UploadAPIView.as_view(), name='upload'),
+    path('execute/', views.ExecuteAPIView.as_view(), name='execute'),
     path('results/<int:pk>/', views.show_results, name='results'),
 ]

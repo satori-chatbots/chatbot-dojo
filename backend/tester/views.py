@@ -1,89 +1,65 @@
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status
+from .forms import TestCaseForm, TestFileForm
+from .models import TestCase, TestFile
+from django.shortcuts import render, get_object_or_404
 import os
 import subprocess
 import time
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import *
-from .models import *
 
-def upload_file(request):
-    if request.method == 'POST':
-        form = TestCaseForm(request.POST)
-        file_form = TestFileForm(request.POST, request.FILES)
+class UploadAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, format=None):
+        form = TestCaseForm(request.data)
+        file_form = TestFileForm(request.data, request.FILES)
         files = request.FILES.getlist('file')
         if form.is_valid() and file_form.is_valid():
             test_case_instance = form.save(commit=False)
             test_case_instance.save()
-
             for f in files:
                 test_file_instance = TestFile(file=f, test_case=test_case_instance)
                 test_file_instance.save()
+            return Response({'message': 'Files uploaded successfully', 'test_case_id': test_case_instance.id}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Directory of the uploaded files' directory
-            file_path = os.path.dirname(test_file_instance.file.path)
+class ExecuteAPIView(APIView):
+    def post(self, request, format=None):
+        test_case_id = request.data.get('test_case_id')
+        test_case_instance = get_object_or_404(TestCase, id=test_case_id)
+        files = TestFile.objects.filter(test_case=test_case_instance)
+        if not files.exists():
+            return Response({'error': 'No files associated with this test case'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Base directory of the Django project
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-            print("Base dir:")
-            print(base_dir)
-            # Directory for --extract
-            extract_dir = os.path.dirname(file_path)
-            # Relative path to the autotest script
-            script_path = os.path.join(base_dir, 'user-simulator/src/autotest.py')
-            # Setup CWD user-simulator
-            cwd = os.chdir(os.path.dirname(os.path.dirname(script_path)))
-
-
-
-
-            print("File path:")
-            print(file_path)
-
-
-            try:
-                # Debugging output
-                print(f"Running script at: {script_path}")
-                print(f"Using user profile: {file_path}")
-                print(f"Extracting to: {extract_dir}")
-
-                start_time = time.time()
-
-                result = subprocess.run(
-                    ['python', script_path,
-                    '--technology', 'taskyto',
-                    '--chatbot', 'http://127.0.0.1:5000',
-                    '--user', file_path,
-                    '--extract', extract_dir],
-                    # Set as cwd the /user-simulator/
-                    cwd=cwd,
-                    capture_output=True,
-                    text=True,
-                )
-
-                end_time = time.time()
-                elapsed_time = end_time - start_time
-                test_case_instance.execution_time = round(elapsed_time, 2)
-
-                # Debugging subprocess output
-                print(f"STDOUT: {result.stdout}")
-                print(f"STDERR: {result.stderr}")
-
-                test_case_instance.result = result.stdout
-                test_case_instance.save()
-
-            except FileNotFoundError as e:
-                print(f"File not found: {e}")
-                test_case_instance.result = f"Error: {e}"
-                test_case_instance.save()
-
-            except Exception as e:
-                print(f"Error running script: {e}")
-                test_case_instance.result = f"Error: {e}"
-                test_case_instance.save()
-
-            return redirect('results', pk=test_case_instance.id)
-    else:
-        form = TestFileForm()
-    return render(request, 'upload.html', {'form': form})
+        file_path = os.path.dirname(files.first().file.path)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        extract_dir = os.path.dirname(file_path)
+        script_path = os.path.join(base_dir, 'user-simulator/src/autotest.py')
+        os.chdir(os.path.dirname(os.path.dirname(script_path)))
+        try:
+            start_time = time.time()
+            result = subprocess.run(
+                ['python', script_path,
+                '--technology', 'taskyto',
+                '--chatbot', 'http://127.0.0.1:5000',
+                '--user', file_path,
+                '--extract', extract_dir],
+                capture_output=True,
+                text=True,
+            )
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            test_case_instance.execution_time = round(elapsed_time, 2)
+            test_case_instance.result = result.stdout
+            test_case_instance.save()
+            return Response({'result': test_case_instance.result}, status=status.HTTP_200_OK)
+        except Exception as e:
+            test_case_instance.result = f"Error: {e}"
+            test_case_instance.save()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def show_results(request, pk):
     test_case = get_object_or_404(TestCase, pk=pk)
