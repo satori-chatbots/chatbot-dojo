@@ -1,6 +1,6 @@
 import React from 'react'
 
-function FileList({ files }) {
+function FileList({ files, selectedFiles, toggleSelect }) {
     return (
         <div>
             <h1>Uploaded Files</h1>
@@ -8,6 +8,11 @@ function FileList({ files }) {
                 <ul>
                     {files.map(file => (
                         <li key={file.id}>
+                            <input
+                                type="checkbox"
+                                checked={selectedFiles.includes(file.id)}
+                                onChange={() => toggleSelect(file.id)}
+                            />
                             <a href={file.file} target="_blank" rel="noopener noreferrer">
                                 {file.file}
                             </a>
