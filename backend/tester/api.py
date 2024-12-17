@@ -33,8 +33,10 @@ class TestFileViewSet(viewsets.ModelViewSet):
         if not files.exists():
             return Response({'error': 'No files found for the provided IDs.'}, status=status.HTTP_404_NOT_FOUND)
 
-        deleted_count, _ = files.delete()
-        return Response({'deleted': deleted_count}, status=status.HTTP_200_OK)
+        for file in files:
+            file.delete()
+
+        return Response({'deleted': len(ids)}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='upload', parser_classes=[MultiPartParser, FormParser])
     def upload(self, request):

@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 def upload_to(instance, filename):
     return f'user-yaml/{filename}'
@@ -9,6 +11,11 @@ class TestFile(models.Model):
 
     def __str__(self):
         return self.file.name
+
+# Delete file from media when TestFile object is deleted from database
+@receiver(post_delete, sender=TestFile)
+def delete_file_from_media(sender, instance, **kwargs):
+    instance.file.delete(save=False)
 
 class TestCase(models.Model):
     id = models.AutoField(primary_key=True)
