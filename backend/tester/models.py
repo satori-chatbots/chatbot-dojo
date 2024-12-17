@@ -1,7 +1,7 @@
 from django.db import models
 
 def upload_to(instance, filename):
-    return f'uploads/user-yaml/{filename}'
+    return f'user-yaml/{filename}'
 
 class TestFile(models.Model):
     file = models.FileField(upload_to=upload_to)
