@@ -1,3 +1,6 @@
+import subprocess
+import time
+import configparser
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.decorators import action
@@ -8,6 +11,7 @@ from django.conf import settings
 from .models import TestCase, TestFile
 from .serializers import TestCaseSerializer, TestFileSerializer
 import os
+from .utils import check_keys
 
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
@@ -113,3 +117,82 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         serializer = TestFileSerializer(file_instances, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class ExecuteAllAPIView(APIView):
+
+    def post(self, request, format=None):
+        """
+        Execute all test files in the user-yaml directory using Taskyto.
+        """
+        uploads_dir = os.path.join(settings.MEDIA_ROOT, 'user-yaml')
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir)
+            return Response(
+                {'error': 'Uploads directory did not exist and has been created. Please add files and try again.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        test_files = TestFile.objects.all()
+        if not test_files.exists():
+            return Response(
+                {'error': 'No test files available to execute.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        results = []
+        # Go up one more because if not we are in backend dir and not in the project dir
+        base_dir = os.path.dirname(settings.BASE_DIR)
+        script_path = os.path.join(base_dir, 'user-simulator', 'src', 'autotest.py')
+
+        # Load OPENAI_API_KEY from keys.properties
+        check_keys(["OPENAI_API_KEY"])
+
+        # Set extract dir to MEDIA / results
+        extract_dir = os.path.join(settings.MEDIA_ROOT, 'results')
+
+        # Set CWD to the script dir
+        print(f"Script path: {script_path}")
+        cwd = os.chdir(os.path.dirname(os.path.dirname(script_path)))
+        print(f"CWD: {cwd}")
+
+
+        for test_file in test_files:
+            file_path = test_file.file.path
+            extract_dir = os.path.dirname(file_path)
+            try:
+                start_time = time.time()
+                result = subprocess.run(
+                    ['python', script_path,
+                     '--technology', 'taskyto',
+                     '--chatbot', 'http://127.0.0.1:5000',
+                     '--user', file_path,
+                     '--extract', extract_dir],
+                    cwd=cwd,
+                    capture_output=True,
+                    text=True,
+                )
+                end_time = time.time()
+                elapsed_time = round(end_time - start_time, 2)
+
+                test_file.result = result.stdout.strip() or result.stderr.strip()
+                test_file.execution_time = elapsed_time
+                test_file.save()
+
+                results.append({
+                    'file_id': test_file.id,
+                    'file_name': os.path.basename(file_path),
+                    'execution_time': elapsed_time,
+                    'result': test_file.result
+                })
+
+            except Exception as e:
+                test_file.result = f"Error: {e}"
+                test_file.execution_time = 0
+                test_file.save()
+                results.append({
+                    'file_id': test_file.id,
+                    'file_name': os.path.basename(file_path),
+                    'error': str(e)
+                })
+
+        return Response({'results': results}, status=status.HTTP_200_OK)

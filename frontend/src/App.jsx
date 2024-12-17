@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
-import FileList from './components/FileList'
-import FileUpload from './components/FileUpload'
-import useFetchFiles from './hooks/useFetchFiles'
-import { deleteFiles } from './api/fileApi'
+import React, { useState } from 'react';
+import FileList from './components/FileList';
+import FileUpload from './components/FileUpload';
+import useFetchFiles from './hooks/useFetchFiles';
+import { deleteFiles } from './api/fileApi';
+import { executeTest } from './api/executeTestsApi';
 
 function App() {
     const { files, loading, error, reload } = useFetchFiles()
@@ -36,6 +37,23 @@ function App() {
             })
     }
 
+    const handleExecuteTest = () => {
+
+
+
+        //  FFor now all the files are selected for testing,
+        // Also, the result is just being shown in an alert.
+        executeTest()
+            .then((data) => {
+                setTestResult(data.result);
+                alert('Test executed successfully.');
+            })
+            .catch((error) => {
+                console.error('Error executing test:', error);
+                alert('Error executing test.');
+            });
+    };
+
     if (loading) {
         return <p>Loading files...</p>
     }
@@ -48,7 +66,9 @@ function App() {
         <div>
             <FileList files={files} selectedFiles={selectedFiles} toggleSelect={toggleSelect} />
             <button onClick={handleDelete}>Delete Selected</button>
+            <button onClick={handleExecuteTest}>Execute Test</button>
             <FileUpload onUpload={reload} />
+
         </div>
     )
 }
