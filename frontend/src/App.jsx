@@ -1,76 +1,38 @@
-import React, { useState } from 'react';
+import React from 'react';
 import UserProfileList from './components/UserProfileList';
 import UserProfileUpload from './components/UserProfileUpload';
 import useFetchFiles from './hooks/useFetchFiles';
-import { deleteFiles } from './api/fileApi';
-import { executeTest } from './api/executeTestsApi';
+import useFileHandlers from './hooks/userFileHandlers';
 
 function App() {
-    const { files, loading, error, reload } = useFetchFiles()
-    const [selectedFiles, setSelectedFiles] = useState([])
-
-    const toggleSelect = (id) => {
-        setSelectedFiles(prev =>
-            prev.includes(id) ? prev.filter(fileId => fileId !== id) : [...prev, id]
-        )
-    }
-
-    const handleDelete = () => {
-        if (selectedFiles.length === 0) {
-            alert('No files selected for deletion.')
-            return
-        }
-
-        if (!window.confirm('Are you sure you want to delete the selected files?')) {
-            return
-        }
-
-        deleteFiles(selectedFiles)
-            .then(() => {
-                alert('Selected files deleted successfully.')
-                setSelectedFiles([])
-                reload()
-            })
-            .catch(error => {
-                console.error('Error deleting files:', error)
-                alert('Error deleting files.')
-            })
-    }
-
-    const handleExecuteTest = () => {
-
-
-
-        //  FFor now all the files are selected for testing,
-        // Also, the result is just being shown in an alert.
-        executeTest()
-            .then((data) => {
-                setTestResult(data.result);
-                alert('Test executed successfully.');
-            })
-            .catch((error) => {
-                console.error('Error executing test:', error);
-                alert('Error executing test.');
-            });
-    };
+    const { files, loading, error, reload } = useFetchFiles();
+    const {
+        selectedFiles,
+        toggleSelect,
+        handleDelete,
+        handleExecuteTest,
+    } = useFileHandlers(reload);
 
     if (loading) {
-        return <p>Loading files...</p>
+        return <p>Loading files...</p>;
     }
 
     if (error) {
-        return <p>Error fetching files: {error.message}</p>
+        return <p>Error fetching files: {error.message}</p>;
     }
 
     return (
         <div>
-            <UserProfileList files={files} selectedFiles={selectedFiles} toggleSelect={toggleSelect} />
-            <button onClick={handleDelete}>Delete Selected</button>
-            <button onClick={handleExecuteTest}>Execute Test</button>
+            <UserProfileList
+                files={files}
+                selectedFiles={selectedFiles}
+                toggleSelect={toggleSelect}
+                handleDelete={handleDelete}
+                handleExecuteTest={handleExecuteTest}
+            />
             <UserProfileUpload onUpload={reload} />
-
         </div>
-    )
+    );
 }
 
-export default App
+export default App;
