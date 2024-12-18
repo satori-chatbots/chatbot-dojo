@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/satori-chatbots/sensei-web/issues"
   },
-  "homepage": "https://github.com/satori-chatbots/sensei-web#readme"
+  "homepage": "https://github.com/satori-chatbots/sensei-web#readme",
+  "dependencies": {
+    "react-router-dom": "^7.0.2"
+  }
 }
