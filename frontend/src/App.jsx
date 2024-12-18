@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import FileList from './components/FileList';
-import FileUpload from './components/FileUpload';
+import UserProfileList from './components/UserProfileList';
+import UserProfileUpload from './components/UserProfileUpload';
 import useFetchFiles from './hooks/useFetchFiles';
 import { deleteFiles } from './api/fileApi';
 import { executeTest } from './api/executeTestsApi';
@@ -64,10 +64,10 @@ function App() {
 
     return (
         <div>
-            <FileList files={files} selectedFiles={selectedFiles} toggleSelect={toggleSelect} />
+            <UserProfileList files={files} selectedFiles={selectedFiles} toggleSelect={toggleSelect} />
             <button onClick={handleDelete}>Delete Selected</button>
             <button onClick={handleExecuteTest}>Execute Test</button>
-            <FileUpload onUpload={reload} />
+            <UserProfileUpload onUpload={reload} />
 
         </div>
     )

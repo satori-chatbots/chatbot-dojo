@@ -1,9 +1,9 @@
 import React from 'react'
 
-function FileList({ files, selectedFiles, toggleSelect }) {
+function UserProfileList({ files, selectedFiles, toggleSelect }) {
     return (
         <div>
-            <h1>Uploaded Files</h1>
+            <h1>User Profiles</h1>
             {files.length > 0 ? (
                 <ul>
                     {files.map(file => (
@@ -20,10 +20,10 @@ function FileList({ files, selectedFiles, toggleSelect }) {
                     ))}
                 </ul>
             ) : (
-                <p>No files uploaded yet.</p>
+                <p>No profiles uploaded yet.</p>
             )}
         </div>
     )
 }
 
-export default FileList
+export default UserProfileList

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { uploadFiles } from '../api/fileApi'
 
-function FileUpload({ onUpload }) {
+function UserProfileUpload({ onUpload }) {
     const [selectedFiles, setSelectedFiles] = useState(null)
     const fileInputRef = useRef(null)
 
@@ -35,11 +35,11 @@ function FileUpload({ onUpload }) {
 
     return (
         <div>
-            <h2>Upload New Files</h2>
+            <h2>Upload New Profiles</h2>
             <input type="file" multiple accept=".yaml,.yml" onChange={handleFileChange} ref={fileInputRef} />
             <button onClick={handleUpload}>Upload</button>
         </div>
     )
 }
 
-export default FileUpload
+export default UserProfileUpload
