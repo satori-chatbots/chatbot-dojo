@@ -153,25 +153,24 @@ class ExecuteAllAPIView(APIView):
 
         # Set extract dir to MEDIA / results
         extract_dir = os.path.join(settings.MEDIA_ROOT, 'results')
+        print(f"Extract dir: {extract_dir}")
 
         # Set CWD to the script dir
         print(f"Script path: {script_path}")
         cwd = os.chdir(os.path.dirname(os.path.dirname(script_path)))
-        print(f"CWD: {cwd}")
+        # print(f"CWD: {cwd}")
 
 
         for test_file in test_files:
             file_path = test_file.file.path
-            extract_dir = os.path.dirname(file_path)
             try:
                 start_time = time.time()
                 result = subprocess.run(
                     ['python', script_path,
-                     '--technology', 'taskyto',
-                     '--chatbot', 'http://127.0.0.1:5000',
-                     '--user', file_path,
-                     '--extract', extract_dir],
-                    cwd=cwd,
+                    '--technology', 'taskyto',
+                    '--chatbot', 'http://127.0.0.1:5000',
+                    '--user', file_path,
+                    '--extract', extract_dir],
                     capture_output=True,
                     text=True,
                 )
