@@ -1,7 +1,7 @@
-import API_BASE_URL from './config';
+import API_BASE_URL, { ENDPOINTS } from './config';
 
 export const fetchFiles = () => {
-    return fetch(`${API_BASE_URL}/testfiles/`)
+    return fetch(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -11,7 +11,7 @@ export const fetchFiles = () => {
 };
 
 export const uploadFiles = (formData) => {
-    return fetch(`${API_BASE_URL}/testfiles/upload/`, {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.UPLOAD_FILES}`, {
         method: 'POST',
         body: formData,
     })
@@ -24,7 +24,7 @@ export const uploadFiles = (formData) => {
 };
 
 export const deleteFiles = (ids) => {
-    return fetch(`${API_BASE_URL}/testfiles/delete-bulk/`, {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.DELETE_FILES}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
