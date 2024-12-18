@@ -79,6 +79,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
             Response: Response with the number of files deleted or an error message.
         """
         ids = request.data.get('ids', [])
+        # This because if not when deleting a single file, it will be a single int and not a list
+        if not isinstance(ids, list):
+            ids = [ids]
         if not ids:
             return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -89,7 +92,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
         for file in files:
             file.delete()
 
-        return Response({'deleted': len(ids)}, status=status.HTTP_200_OK)
+        return Response({'deleted': len(files)}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='upload', parser_classes=[MultiPartParser, FormParser])
     def upload(self, request):
