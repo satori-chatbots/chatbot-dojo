@@ -1,5 +1,6 @@
 PYTHON=python
 BACKEND_DIR=backend
+FRONTEND_DIR=frontend
 MANAGE=$(BACKEND_DIR)/manage.py
 
 run:
@@ -19,3 +20,9 @@ dropdb:
 
 pull-submodules:
 	git pull --recurse-submodules
+
+npm-install:
+	cd $(FRONTEND_DIR) && npm install
+
+npm-dev:
+	cd $(FRONTEND_DIR) && npm run dev
