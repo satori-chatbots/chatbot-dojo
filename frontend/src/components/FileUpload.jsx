@@ -36,7 +36,7 @@ function FileUpload({ onUpload }) {
     return (
         <div>
             <h2>Upload New Files</h2>
-            <input type="file" multiple onChange={handleFileChange} ref={fileInputRef} />
+            <input type="file" multiple accept=".yaml,.yml" onChange={handleFileChange} ref={fileInputRef} />
             <button onClick={handleUpload}>Upload</button>
         </div>
     )
