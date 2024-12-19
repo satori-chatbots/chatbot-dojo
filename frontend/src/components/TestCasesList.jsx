@@ -10,18 +10,18 @@ function TestCasesList({ testCases }) {
                         <li key={testCase.id}>
                             <p><strong>Executed At:</strong> {new Date(testCase.executed_at).toLocaleString()}</p>
                             <p><strong>Execution Time:</strong> {testCase.execution_time} seconds</p>
-                            <p><strong>Result:</strong> {testCase.result}</p>
-                            <p><strong>Test Files:</strong>
+                            <p><strong>User Profiles Used:</strong>
                                 <ul>
                                     {testCase.test_files.map(file => (
-                                        <li key={file.id}>
-                                            <a href={file.file} target="_blank" rel="noopener noreferrer">
-                                                {file.file}
+                                        <li key={file}>
+                                            <a href={file} target="_blank" rel="noopener noreferrer">
+                                                {file}
                                             </a>
                                         </li>
                                     ))}
                                 </ul>
                             </p>
+                            <p><strong>Conversation:</strong> {testCase.result}</p>
                         </li>
                     ))}
                 </ul>
