@@ -6,7 +6,7 @@ function UserProfileList({ files, selectedFiles, toggleSelect, handleDelete, han
             <h1>User Profiles</h1>
             {files.length > 0 ? (
                 <>
-                    <ul>
+                    <ul style={{ listStyleType: 'none', padding: 0 }}>
                         {files.map(file => (
                             <li key={file.id}>
                                 <input
@@ -15,7 +15,7 @@ function UserProfileList({ files, selectedFiles, toggleSelect, handleDelete, han
                                     onChange={() => toggleSelect(file.id)}
                                 />
                                 <a href={file.file} target="_blank" rel="noopener noreferrer">
-                                    {file.file}
+                                    {file.file.split('/').pop().replace('.yml', '')}
                                 </a>
                             </li>
                         ))}

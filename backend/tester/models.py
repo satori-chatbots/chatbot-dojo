@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+import os
 
 def upload_to(instance, filename):
     return f'user-yaml/{filename}'
@@ -10,7 +11,7 @@ class TestFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.file.name
+        return os.path.basename(self.file.name)
 
 # Delete file from media when TestFile object is deleted from database
 @receiver(post_delete, sender=TestFile)
