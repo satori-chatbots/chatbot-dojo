@@ -18,3 +18,13 @@ export const executeTest = async (testCaseId) => {
         throw error;
     }
 };
+
+export const fetchTestCases = () => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.FETCH_TEST_CASES}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        });
+};

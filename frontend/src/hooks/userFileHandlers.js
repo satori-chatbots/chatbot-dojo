@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { deleteFiles } from '../api/fileApi';
-import { executeTest } from '../api/executeTestsApi';
+import { executeTest } from '../api/testCasesApi';
 
 function useFileHandlers(reload) {
     const [selectedFiles, setSelectedFiles] = useState([]);

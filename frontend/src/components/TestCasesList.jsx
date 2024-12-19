@@ -1,0 +1,35 @@
+import React from 'react';
+
+function TestCasesList({ testCases }) {
+    return (
+        <div>
+            <h1>Test Cases</h1>
+            {testCases.length > 0 ? (
+                <ul>
+                    {testCases.map(testCase => (
+                        <li key={testCase.id}>
+                            <p><strong>Executed At:</strong> {new Date(testCase.executed_at).toLocaleString()}</p>
+                            <p><strong>Execution Time:</strong> {testCase.execution_time} seconds</p>
+                            <p><strong>Result:</strong> {testCase.result}</p>
+                            <p><strong>Test Files:</strong>
+                                <ul>
+                                    {testCase.test_files.map(file => (
+                                        <li key={file.id}>
+                                            <a href={file.file} target="_blank" rel="noopener noreferrer">
+                                                {file.file}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </p>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p>No test cases yet.</p>
+            )}
+        </div>
+    )
+}
+
+export default TestCasesList

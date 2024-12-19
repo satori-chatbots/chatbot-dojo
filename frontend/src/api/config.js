@@ -7,4 +7,5 @@ export const ENDPOINTS = {
     UPLOAD_FILES: '/testfiles/upload/',
     DELETE_FILES: '/testfiles/delete-bulk/',
     EXECUTE_TEST: '/execute-all/',
+    FETCH_TEST_CASES: '/testcases/',
 };

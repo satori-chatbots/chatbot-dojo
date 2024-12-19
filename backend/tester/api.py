@@ -17,6 +17,10 @@ class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
 
+# ------------------------- #
+# - USER PROFILES - YAMLS - #
+# ------------------------- #
+
 class TestFileViewSet(viewsets.ModelViewSet):
     queryset = TestFile.objects.all()
     serializer_class = TestFileSerializer
@@ -122,11 +126,17 @@ class TestFileViewSet(viewsets.ModelViewSet):
         serializer = TestFileSerializer(file_instances, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
+# ----------------------------- #
+# - EXECUTE AUTOTEST ON FILES - #
+# ----------------------------- #
+
 class ExecuteAllAPIView(APIView):
 
     def post(self, request, format=None):
         """
         Execute all test files in the user-yaml directory using Taskyto.
+        Create a TestCase instance and associate executed TestFiles with it.
         """
         uploads_dir = os.path.join(settings.MEDIA_ROOT, 'user-yaml')
         if not os.path.exists(uploads_dir):
@@ -143,8 +153,11 @@ class ExecuteAllAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        results = []
-        # Go up one more because if not we are in backend dir and not in the project dir
+        # Initialize total execution time and collect individual results
+        total_execution_time = 0
+        combined_result = ''
+
+        # Prepare script paths
         base_dir = os.path.dirname(settings.BASE_DIR)
         script_path = os.path.join(base_dir, 'user-simulator', 'src', 'autotest.py')
 
@@ -157,9 +170,10 @@ class ExecuteAllAPIView(APIView):
 
         # Set CWD to the script dir
         print(f"Script path: {script_path}")
-        cwd = os.chdir(os.path.dirname(os.path.dirname(script_path)))
-        # print(f"CWD: {cwd}")
+        os.chdir(os.path.dirname(os.path.dirname(script_path)))
 
+        # Create TestCase instance
+        test_case = TestCase.objects.create()
 
         for test_file in test_files:
             file_path = test_file.file.path
@@ -167,10 +181,10 @@ class ExecuteAllAPIView(APIView):
                 start_time = time.time()
                 result = subprocess.run(
                     ['python', script_path,
-                    '--technology', 'taskyto',
-                    '--chatbot', 'http://127.0.0.1:5000',
-                    '--user', file_path,
-                    '--extract', extract_dir],
+                     '--technology', 'taskyto',
+                     '--chatbot', 'http://127.0.0.1:5000',
+                     '--user', file_path,
+                     '--extract', extract_dir],
                     capture_output=True,
                     text=True,
                 )
@@ -181,21 +195,27 @@ class ExecuteAllAPIView(APIView):
                 test_file.execution_time = elapsed_time
                 test_file.save()
 
-                results.append({
-                    'file_id': test_file.id,
-                    'file_name': os.path.basename(file_path),
-                    'execution_time': elapsed_time,
-                    'result': test_file.result
-                })
+                # Update TestCase's aggregate fields
+                total_execution_time += elapsed_time
+                combined_result += f"File {os.path.basename(file_path)}: {test_file.result}\n"
+
+                # Associate TestFile with TestCase
+                test_case.test_files.add(test_file)
 
             except Exception as e:
                 test_file.result = f"Error: {e}"
                 test_file.execution_time = 0
                 test_file.save()
-                results.append({
-                    'file_id': test_file.id,
-                    'file_name': os.path.basename(file_path),
-                    'error': str(e)
-                })
+                combined_result += f"File {os.path.basename(file_path)}: Error: {e}\n"
 
-        return Response({'results': results}, status=status.HTTP_200_OK)
+        # Update TestCase fields
+        test_case.execution_time = total_execution_time
+        test_case.result = combined_result
+        test_case.save()
+
+        return Response({
+            'test_case_id': test_case.id,
+            'uploaded_at': test_case.executed_at,
+            'execution_time': test_case.execution_time,
+            'result': test_case.result
+        }, status=status.HTTP_200_OK)
