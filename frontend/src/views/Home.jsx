@@ -3,6 +3,7 @@ import UserProfileList from '../components/UserProfileList';
 import UserProfileUpload from '../components/UserProfileUpload';
 import useFetchFiles from '../hooks/useFetchFiles';
 import useFileHandlers from '../hooks/userFileHandlers';
+import { Card } from '@nextui-org/react';
 
 function Home() {
     const { files, loading, error, reload } = useFetchFiles();
@@ -22,7 +23,7 @@ function Home() {
     }
 
     return (
-        <section>
+        <Card className="mt-6 p-6 space-y-4">
             <UserProfileList
                 files={files}
                 selectedFiles={selectedFiles}
@@ -31,7 +32,7 @@ function Home() {
                 handleExecuteTest={handleExecuteTest}
             />
             <UserProfileUpload onUpload={reload} />
-        </section>
+        </Card>
     )
 }
 

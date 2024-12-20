@@ -35,10 +35,10 @@ function UserProfileUpload({ onUpload }) {
     }
 
     return (
-        <div>
-            <h2>Upload New Profiles</h2>
-            <Input type="file" multiple accept=".yaml,.yml" onChange={handleFileChange} ref={fileInputRef} />
-            <Button onPress={handleUpload}>Upload</Button>
+        <div className="flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-4">Upload New Profiles</h2>
+            <Input type="file" multiple accept=".yaml,.yml" onChange={handleFileChange} ref={fileInputRef} fullWidth />
+            <Button onPress={handleUpload} color="secondary" className="mt-4" fullWidth>Upload</Button>
         </div>
     )
 }

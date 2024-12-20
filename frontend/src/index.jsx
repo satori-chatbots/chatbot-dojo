@@ -10,12 +10,12 @@ createRoot(document.getElementById('root')).render(
     <StrictMode>
         <NextUIProvider>
 
-        <main className="dark text-foreground bg-background">
+            <main className="light text-foreground bg-background">
                 <BrowserRouter>
                     <App />
                 </BrowserRouter>
 
-</main>
+            </main>
         </NextUIProvider>
     </StrictMode>,
 );
