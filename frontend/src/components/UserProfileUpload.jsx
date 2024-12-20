@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { uploadFiles } from '../api/fileApi'
+import { Button, Input } from "@nextui-org/react";
 
 function UserProfileUpload({ onUpload }) {
     const [selectedFiles, setSelectedFiles] = useState(null)
@@ -36,8 +37,8 @@ function UserProfileUpload({ onUpload }) {
     return (
         <div>
             <h2>Upload New Profiles</h2>
-            <input type="file" multiple accept=".yaml,.yml" onChange={handleFileChange} ref={fileInputRef} />
-            <button onClick={handleUpload}>Upload</button>
+            <Input type="file" multiple accept=".yaml,.yml" onChange={handleFileChange} ref={fileInputRef} />
+            <Button onPress={handleUpload}>Upload</Button>
         </div>
     )
 }

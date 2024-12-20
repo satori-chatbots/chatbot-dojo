@@ -1,4 +1,5 @@
 import React from 'react'
+import { Button, Input } from "@nextui-org/react";
 
 function UserProfileList({ files, selectedFiles, toggleSelect, handleDelete, handleExecuteTest }) {
     return (
@@ -20,8 +21,8 @@ function UserProfileList({ files, selectedFiles, toggleSelect, handleDelete, han
                             </li>
                         ))}
                     </ul>
-                    <button onClick={handleDelete}>Delete Selected</button>
-                    <button onClick={handleExecuteTest}>Execute Test</button>
+                    <Button onPress={handleDelete}>Delete Selected</Button>
+                    <Button onPress={handleExecuteTest}>Execute Test</Button>
                 </>
             ) : (
                 <p>No profiles uploaded yet.</p>
