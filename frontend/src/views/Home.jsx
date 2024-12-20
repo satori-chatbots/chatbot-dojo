@@ -22,7 +22,7 @@ function Home() {
     }
 
     return (
-        <div className="flex justify-center items-start p-6">
+        <div className="flex justify-center items-start">
             <div className="w-full max-w-4xl">
                 <UserProfileManager
                     files={files}

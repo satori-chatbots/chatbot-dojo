@@ -35,7 +35,7 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
     };
 
     return (
-        <Card className="mt-6 p-6 flex flex-col space-y-6 h-full">
+        <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
             {/* Header */}
             <h1 className="text-3xl font-bold text-center">User Profiles</h1>
 
@@ -57,34 +57,39 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
             {/* List Section */}
             <div className="flex-1 overflow-y-auto">
                 {files.length > 0 ? (
-                    <>
-                        <ul className="space-y-2">
-                            {files.map(file => (
-                                <li key={file.id} className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedFiles.includes(file.id)}
-                                        onChange={() => toggleSelect(file.id)}
-                                        className="form-checkbox h-4 w-4"
-                                    />
-                                    <a href={file.file} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                        {file.file.split('/').pop().replace('.yml', '')}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                        <div className="mt-4 flex space-x-4">
-                            <Button color="danger" className="flex-1" onPress={handleDelete}>
-                                Delete Selected
-                            </Button>
-                            <Button color="primary" className="flex-1" onPress={handleExecuteTest}>
-                                Execute Test
-                            </Button>
-                        </div>
-                    </>
+                    <ul className="space-y-2">
+                        {files.map(file => (
+                            <li key={file.id} className="flex items-start space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedFiles.includes(file.id)}
+                                    onChange={() => toggleSelect(file.id)}
+                                    className="form-checkbox h-4 w-4 mt-1"
+                                />
+                                <a
+                                    href={file.file}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                >
+                                    {file.file.split('/').pop().replace('.yml', '')}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
                 ) : (
                     <p className="text-gray-500 text-center">No profiles uploaded yet.</p>
                 )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-4 flex space-x-4">
+                <Button color="danger" className="flex-1" onPress={handleDelete}>
+                    Delete Selected
+                </Button>
+                <Button color="primary" className="flex-1" onPress={handleExecuteTest}>
+                    Execute Test
+                </Button>
             </div>
         </Card>
     );
