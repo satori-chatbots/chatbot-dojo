@@ -1,6 +1,5 @@
 import React from 'react';
-import UserProfileList from '../components/UserProfileList';
-import UserProfileUpload from '../components/UserProfileUpload';
+import UserProfileManager from '../components/UserProfileManager';
 import useFetchFiles from '../hooks/useFetchFiles';
 import useFileHandlers from '../hooks/userFileHandlers';
 import { Card } from '@nextui-org/react';
@@ -15,25 +14,27 @@ function Home() {
     } = useFileHandlers(reload);
 
     if (loading) {
-        return <p>Loading files...</p>;
+        return <p className="text-center">Loading files...</p>;
     }
 
     if (error) {
-        return <p>Error fetching files: {error.message}</p>;
+        return <p className="text-center text-red-500">Error fetching files: {error.message}</p>;
     }
 
     return (
-        <Card className="mt-6 p-6 space-y-4">
-            <UserProfileList
-                files={files}
-                selectedFiles={selectedFiles}
-                toggleSelect={toggleSelect}
-                handleDelete={handleDelete}
-                handleExecuteTest={handleExecuteTest}
-            />
-            <UserProfileUpload onUpload={reload} />
-        </Card>
-    )
+        <div className="flex justify-center items-start p-6">
+            <div className="w-full max-w-4xl">
+                <UserProfileManager
+                    files={files}
+                    selectedFiles={selectedFiles}
+                    toggleSelect={toggleSelect}
+                    handleDelete={handleDelete}
+                    handleExecuteTest={handleExecuteTest}
+                    reload={reload}
+                />
+            </div>
+        </div>
+    );
 }
 
 export default Home;
