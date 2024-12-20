@@ -8,6 +8,7 @@ class TestFileSerializer(serializers.ModelSerializer):
 
 class TestCaseSerializer(serializers.ModelSerializer):
     test_files = serializers.PrimaryKeyRelatedField(queryset=TestFile.objects.all(), many=True)
+    #test_files = TestFileSerializer(many=True, read_only=True)
 
     class Meta:
         model = TestCase
