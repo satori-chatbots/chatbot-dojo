@@ -22,7 +22,7 @@ function Home() {
     }
 
     return (
-        <div>
+        <section>
             <UserProfileList
                 files={files}
                 selectedFiles={selectedFiles}
@@ -31,8 +31,8 @@ function Home() {
                 handleExecuteTest={handleExecuteTest}
             />
             <UserProfileUpload onUpload={reload} />
-        </div>
-    );
+        </section>
+    )
 }
 
 export default Home;
