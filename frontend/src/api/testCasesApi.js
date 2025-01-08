@@ -1,13 +1,13 @@
 import API_BASE_URL, { ENDPOINTS } from './config';
 
-export const executeTest = async (testCaseId) => {
+export const executeTest = async (testFileIds) => {
     try {
         const response = await fetch(`${API_BASE_URL}${ENDPOINTS.EXECUTE_TEST}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ test_case_id: testCaseId }),
+            body: JSON.stringify({ test_file_ids: testFileIds }),
         });
         if (!response.ok) {
             throw new Error(`Error executing test: ${response.statusText}`);

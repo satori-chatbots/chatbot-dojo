@@ -24,7 +24,7 @@ function useFileHandlers(reload) {
 
         deleteFiles(selectedFiles)
             .then(() => {
-                alert('Selected files deleted successfully.');
+                /*alert('Selected files deleted successfully.');*/
                 setSelectedFiles([]);
                 reload();
             })
@@ -35,14 +35,19 @@ function useFileHandlers(reload) {
     };
 
     const handleExecuteTest = () => {
-        executeTest()
+        if (selectedFiles.length === 0) {
+            alert('No files selected for test execution.');
+            return;
+        }
+
+        executeTest(selectedFiles)
             .then((data) => {
                 setTestResult(data.result);
                 alert('Test executed successfully.');
             })
             .catch((error) => {
                 console.error('Error executing test:', error);
-                alert('Error executing test.');
+                alert(`Error executing test: ${error.message}`);
             });
     };
 

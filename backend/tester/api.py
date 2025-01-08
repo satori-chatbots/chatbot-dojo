@@ -131,25 +131,24 @@ class TestFileViewSet(viewsets.ModelViewSet):
 # - EXECUTE AUTOTEST ON FILES - #
 # ----------------------------- #
 
-class ExecuteAllAPIView(APIView):
+class ExecuteSelectedAPIView(APIView):
 
     def post(self, request, format=None):
         """
-        Execute all test files in the user-yaml directory using Taskyto.
+        Execute selected test files in the user-yaml directory using Taskyto.
         Create a TestCase instance and associate executed TestFiles with it.
         """
-        uploads_dir = os.path.join(settings.MEDIA_ROOT, 'user-yaml')
-        if not os.path.exists(uploads_dir):
-            os.makedirs(uploads_dir)
+        selected_ids = request.data.get('test_file_ids', [])
+        if not selected_ids:
             return Response(
-                {'error': 'Uploads directory did not exist and has been created. Please add files and try again.'},
+                {'error': 'No test file IDs provided.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        test_files = TestFile.objects.all()
+        test_files = TestFile.objects.filter(id__in=selected_ids)
         if not test_files.exists():
             return Response(
-                {'error': 'No test files available to execute.'},
+                {'error': 'No valid test files found for the provided IDs.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

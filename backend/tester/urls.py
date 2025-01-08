@@ -11,7 +11,7 @@ router.register(r'testfiles', api.TestFileViewSet)
 
 urlpatterns = [
     # Custom Routes First
-    path('execute-all/', api.ExecuteAllAPIView.as_view(), name='execute-all'),
+    path('execute-selected/', api.ExecuteSelectedAPIView.as_view(), name='execute-selected'),
 
     # Then Include Router URLs
     path('', include(router.urls)),
