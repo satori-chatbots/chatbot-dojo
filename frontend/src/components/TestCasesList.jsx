@@ -1,4 +1,5 @@
 import React from 'react';
+import { MEDIA_URL } from '../api/config';
 
 function TestCasesList({ testCases }) {
     const getFileName = (filePath) => {
@@ -19,7 +20,12 @@ function TestCasesList({ testCases }) {
                                     {testCase.copied_files && testCase.copied_files.length > 0 ? (
                                         testCase.copied_files.map((filePath, index) => (
                                             <li key={`${filePath}-${index}`}>
-                                                <a href={filePath} target="_blank" rel="noopener noreferrer">
+                                                <a
+                                                    href={`${MEDIA_URL}${filePath}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                                >
                                                     {getFileName(filePath)}
                                                 </a>
                                             </li>

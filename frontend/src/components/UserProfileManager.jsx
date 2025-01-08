@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Button, Input, Card } from "@nextui-org/react";
 import { uploadFiles } from '../api/fileApi';
+import { MEDIA_URL } from '../api/config';
 
 function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, handleExecuteTest, reload }) {
     const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
@@ -67,7 +68,7 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
                                     className="form-checkbox h-4 w-4 mt-1"
                                 />
                                 <a
-                                    href={file.file}
+                                    href={`${MEDIA_URL}${file.relative_path}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"

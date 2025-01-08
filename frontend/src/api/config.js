@@ -1,6 +1,5 @@
 const API_BASE_URL = 'http://localhost:8000';
-
-export default API_BASE_URL;
+const MEDIA_URL = `${API_BASE_URL}/uploads/`;
 
 export const ENDPOINTS = {
     FETCH_FILES: '/testfiles/',
@@ -9,3 +8,6 @@ export const ENDPOINTS = {
     EXECUTE_TEST: '/execute-selected/',
     FETCH_TEST_CASES: '/testcases/',
 };
+
+export default API_BASE_URL;
+export { MEDIA_URL };

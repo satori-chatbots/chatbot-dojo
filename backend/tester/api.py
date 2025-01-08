@@ -155,7 +155,7 @@ class ExecuteSelectedAPIView(APIView):
 
         # Initialize total execution time and collect individual results
         total_execution_time = 0
-        combined_result = ''
+        combined_result = []
         copied_files = []
 
         # Prepare script paths
@@ -172,7 +172,7 @@ class ExecuteSelectedAPIView(APIView):
         # Set executed dir to MEDIA / executed_yaml
         executed_dir_base = os.path.join(settings.MEDIA_ROOT, 'executed_yaml')
         os.makedirs(executed_dir_base, exist_ok=True)
-        print(f"Executed dir: {executed_dir_base}")
+        print(f"Executed base dir: {executed_dir_base}")
 
         # Create TestCase instance first to get its ID
         test_case = TestCase.objects.create()
@@ -182,9 +182,9 @@ class ExecuteSelectedAPIView(APIView):
         os.makedirs(test_case_dir, exist_ok=True)
         print(f"TestCase directory: {test_case_dir}")
 
-        # Set CWD to the script dir
+        # Set CWD to the script dir (avoid using os.chdir)
+        script_cwd = os.path.dirname(os.path.dirname(script_path))
         print(f"Script path: {script_path}")
-        os.chdir(os.path.dirname(os.path.dirname(script_path)))
 
         for test_file in test_files:
             file_path = test_file.file.path
@@ -198,6 +198,7 @@ class ExecuteSelectedAPIView(APIView):
                      '--extract', extract_dir],
                     capture_output=True,
                     text=True,
+                    cwd=script_cwd  # Set the current working directory for subprocess
                 )
                 end_time = time.time()
                 elapsed_time = round(end_time - start_time, 2)
@@ -208,31 +209,33 @@ class ExecuteSelectedAPIView(APIView):
 
                 # Update TestCase's aggregate fields
                 total_execution_time += elapsed_time
-                combined_result += f"File {os.path.basename(file_path)}: {test_file.result}\n"
+                combined_result.append(f"File {os.path.basename(file_path)}: {test_file.result}")
 
                 # Associate TestFile with TestCase
                 test_case.test_files.add(test_file)
 
-                # Copy the executed user-yaml file
+                # Copy the executed user-yaml file into the TestCase subdirectory
                 copied_file_path = shutil.copy(file_path, test_case_dir)
-                copied_files.append(copied_file_path)
+                # Store relative path from MEDIA_ROOT for frontend access
+                copied_file_rel_path = os.path.relpath(copied_file_path, settings.MEDIA_ROOT)
+                copied_files.append(copied_file_rel_path.replace(os.sep, '/'))  # Ensure URL-friendly paths
 
             except Exception as e:
                 test_file.result = f"Error: {e}"
                 test_file.execution_time = 0
                 test_file.save()
-                combined_result += f"File {os.path.basename(file_path)}: Error: {e}\n"
+                combined_result.append(f"File {os.path.basename(file_path)}: Error: {e}")
 
         # Update TestCase fields
         test_case.execution_time = total_execution_time
-        test_case.result = combined_result
+        test_case.result = "\n".join(combined_result)
         test_case.copied_files = copied_files
         test_case.save()
 
         return Response({
             'test_case_id': test_case.id,
-            'uploaded_at': test_case.executed_at,
+            'executed_at': test_case.executed_at,
             'execution_time': test_case.execution_time,
             'result': test_case.result,
-            'copied_files': test_case.copied_files
+            'copied_files': test_case.copied_files  # Relative paths
         }, status=status.HTTP_200_OK)
