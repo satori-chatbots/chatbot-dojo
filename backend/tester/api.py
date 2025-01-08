@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import time
 import configparser
@@ -155,6 +156,7 @@ class ExecuteSelectedAPIView(APIView):
         # Initialize total execution time and collect individual results
         total_execution_time = 0
         combined_result = ''
+        copied_files = []
 
         # Prepare script paths
         base_dir = os.path.dirname(settings.BASE_DIR)
@@ -167,12 +169,22 @@ class ExecuteSelectedAPIView(APIView):
         extract_dir = os.path.join(settings.MEDIA_ROOT, 'results')
         print(f"Extract dir: {extract_dir}")
 
+        # Set executed dir to MEDIA / executed_yaml
+        executed_dir_base = os.path.join(settings.MEDIA_ROOT, 'executed_yaml')
+        os.makedirs(executed_dir_base, exist_ok=True)
+        print(f"Executed dir: {executed_dir_base}")
+
+        # Create TestCase instance first to get its ID
+        test_case = TestCase.objects.create()
+
+        # Create a unique subdirectory for this TestCase
+        test_case_dir = os.path.join(executed_dir_base, f'testcase_{test_case.id}')
+        os.makedirs(test_case_dir, exist_ok=True)
+        print(f"TestCase directory: {test_case_dir}")
+
         # Set CWD to the script dir
         print(f"Script path: {script_path}")
         os.chdir(os.path.dirname(os.path.dirname(script_path)))
-
-        # Create TestCase instance
-        test_case = TestCase.objects.create()
 
         for test_file in test_files:
             file_path = test_file.file.path
@@ -201,6 +213,10 @@ class ExecuteSelectedAPIView(APIView):
                 # Associate TestFile with TestCase
                 test_case.test_files.add(test_file)
 
+                # Copy the executed user-yaml file
+                copied_file_path = shutil.copy(file_path, test_case_dir)
+                copied_files.append(copied_file_path)
+
             except Exception as e:
                 test_file.result = f"Error: {e}"
                 test_file.execution_time = 0
@@ -210,11 +226,13 @@ class ExecuteSelectedAPIView(APIView):
         # Update TestCase fields
         test_case.execution_time = total_execution_time
         test_case.result = combined_result
+        test_case.copied_files = copied_files
         test_case.save()
 
         return Response({
             'test_case_id': test_case.id,
             'uploaded_at': test_case.executed_at,
             'execution_time': test_case.execution_time,
-            'result': test_case.result
+            'result': test_case.result,
+            'copied_files': test_case.copied_files
         }, status=status.HTTP_200_OK)

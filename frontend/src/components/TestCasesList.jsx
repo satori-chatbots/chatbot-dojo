@@ -1,6 +1,10 @@
 import React from 'react';
 
 function TestCasesList({ testCases }) {
+    const getFileName = (filePath) => {
+        return filePath.split('/').pop();
+    };
+
     return (
         <div>
             <h1>Test Cases</h1>
@@ -12,13 +16,17 @@ function TestCasesList({ testCases }) {
                             <p><strong>Execution Time:</strong> {testCase.execution_time} seconds</p>
                             <p><strong>User Profiles Used:</strong>
                                 <ul>
-                                    {testCase.test_files.map(file => (
-                                        <li key={file}>
-                                            <a href={file} target="_blank" rel="noopener noreferrer">
-                                                {file}
-                                            </a>
-                                        </li>
-                                    ))}
+                                    {testCase.copied_files && testCase.copied_files.length > 0 ? (
+                                        testCase.copied_files.map((filePath, index) => (
+                                            <li key={`${filePath}-${index}`}>
+                                                <a href={filePath} target="_blank" rel="noopener noreferrer">
+                                                    {getFileName(filePath)}
+                                                </a>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li>No files available.</li>
+                                    )}
                                 </ul>
                             </p>
                             <p><strong>Conversation:</strong> {testCase.result}</p>
