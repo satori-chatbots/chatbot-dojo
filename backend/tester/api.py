@@ -48,7 +48,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
         directory_path = os.path.join(settings.MEDIA_ROOT, 'user-yaml')
         for filename in os.listdir(directory_path):
             file_path = os.path.join(directory_path, filename)
-            if os.path.isfile(file_path) and filename.endswith('.yml'):
+            if os.path.isfile(file_path) and filename.endswith('.yml') or filename.endswith('.yaml'):
                 if not queryset.filter(file__icontains=filename).exists():
                     new_file = TestFile(file=file_path)
                     new_file.save()

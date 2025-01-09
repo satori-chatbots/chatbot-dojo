@@ -73,7 +73,7 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
                                     rel="noopener noreferrer"
                                     className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
                                 >
-                                    {file.file.split('/').pop().replace('.yml', '')}
+                                    {file.file.split('/').pop().replace(/\.(yml|yaml)$/, '')}
                                 </a>
                             </li>
                         ))}
