@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 import os
+import yaml
 
 def upload_to(instance, filename):
     return os.path.join('user-yaml', filename)
@@ -11,6 +12,7 @@ class TestFile(models.Model):
     file = models.FileField(upload_to=upload_to)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     relative_path = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return os.path.basename(self.file.name)
@@ -19,6 +21,14 @@ class TestFile(models.Model):
         # Set relative_path to the file's relative path
         if self.file and self.file.name:
             self.relative_path = os.path.relpath(self.file.path, settings.MEDIA_ROOT)
+            # Load the "test_name" from the YAML file
+            try:
+                with open(self.file.path, 'r') as file:
+                    data = yaml.safe_load(file)
+                    self.name = data['test_name']
+            except yaml.YAMLError as e:
+                print(f"Error loading YAML file: {e}")
+                self.name = os.path.basename(self.file.name)
         super().save(*args, **kwargs)
 
 # Delete file from media when TestFile object is deleted from database
