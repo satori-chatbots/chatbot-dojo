@@ -15,26 +15,25 @@ function TestCasesList({ testCases }) {
                         <li key={testCase.id}>
                             <p><strong>Executed At:</strong> {new Date(testCase.executed_at).toLocaleString()}</p>
                             <p><strong>Execution Time:</strong> {testCase.execution_time} seconds</p>
-                            <p><strong>User Profiles Used:</strong>
-                                <ul>
-                                    {testCase.copied_files && testCase.copied_files.length > 0 ? (
-                                        testCase.copied_files.map((filePath, index) => (
-                                            <li key={`${filePath}-${index}`}>
-                                                <a
-                                                    href={`${MEDIA_URL}${filePath}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
-                                                >
-                                                    {getFileName(filePath)}
-                                                </a>
-                                            </li>
-                                        ))
-                                    ) : (
-                                        <li>No files available.</li>
-                                    )}
-                                </ul>
-                            </p>
+                            <p><strong>User Profiles Used:</strong></p>
+                            <ul>
+                                {testCase.copied_files && testCase.copied_files.length > 0 ? (
+                                    testCase.copied_files.map((fileObj, index) => (
+                                        <li key={`${fileObj.path}-${index}`}>
+                                            <a
+                                                href={`${MEDIA_URL}${fileObj.path}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                            >
+                                                {fileObj.name}
+                                            </a>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li>No files available.</li>
+                                )}
+                            </ul>
                             <p><strong>Conversation:</strong> {testCase.result}</p>
                         </li>
                     ))}
@@ -43,7 +42,7 @@ function TestCasesList({ testCases }) {
                 <p>No test cases yet.</p>
             )}
         </div>
-    )
+    );
 }
 
 export default TestCasesList

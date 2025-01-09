@@ -13,6 +13,7 @@ from .models import TestCase, TestFile
 from .serializers import TestCaseSerializer, TestFileSerializer
 import os
 from .utils import check_keys
+import yaml
 
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
@@ -218,7 +219,20 @@ class ExecuteSelectedAPIView(APIView):
                 copied_file_path = shutil.copy(file_path, test_case_dir)
                 # Store relative path from MEDIA_ROOT for frontend access
                 copied_file_rel_path = os.path.relpath(copied_file_path, settings.MEDIA_ROOT)
-                copied_files.append(copied_file_rel_path.replace(os.sep, '/'))  # Ensure URL-friendly paths
+
+                # Get the test_name from the YAML file
+                name_extracted = "Unknown"
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, 'r') as file:
+                            data = yaml.safe_load(file)
+                            name_extracted = data.get('test_name', name_extracted)
+                    except yaml.YAMLError as e:
+                        print(f"Error loading YAML file: {e}")
+
+                # Save the path and name of the copied file
+                copied_files.append({"path": copied_file_rel_path, "name": name_extracted})
+
 
             except Exception as e:
                 test_file.result = f"Error: {e}"
