@@ -3,6 +3,14 @@ BACKEND_DIR=backend
 FRONTEND_DIR=frontend
 MANAGE=$(BACKEND_DIR)/manage.py
 
+full_reset:
+	rm $(BACKEND_DIR)/db.sqlite3
+	find $(BACKEND_DIR) -path "*/migrations/*.py" -not -name "__init__.py" -delete
+	find $(BACKEND_DIR) -path "*/migrations/*.pyc"  -delete
+	$(PYTHON) $(MANAGE) makemigrations tester
+	$(PYTHON) $(MANAGE) makemigrations
+	$(PYTHON) $(MANAGE) migrate
+
 run:
 	$(PYTHON) $(MANAGE) runserver
 
