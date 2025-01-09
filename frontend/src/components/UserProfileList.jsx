@@ -17,7 +17,7 @@ function UserProfileList({ files, selectedFiles, toggleSelect, handleDelete, han
                                     className="form-checkbox h-4 w-4"
                                 />
                                 <a href={file.file} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                    {file.file.split('/').pop().replace('.yml', '')}
+                                    {file.file.split('/').pop().replace(/\.(yml|yaml)$/, '')}
                                 </a>
                             </li>
                         ))}
