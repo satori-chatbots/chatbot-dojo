@@ -29,6 +29,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 class TestFileViewSet(viewsets.ModelViewSet):
     queryset = TestFile.objects.all()
     serializer_class = TestFileSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     # Own implementation because now if we delete a file, the row in the DB still exists
     def list(self, request, *args, **kwargs):
@@ -139,11 +140,11 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         file_instances = []
         for f in files:
-            file_instance = TestFile(file=f)
-            file_instance.save()
-            file_instances.append(file_instance)
+            test_file = TestFile(file=f)
+            test_file.save()
+            file_instances.append(test_file)
 
-        serializer = TestFileSerializer(file_instances, many=True)
+        serializer = self.get_serializer(file_instances, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -173,8 +174,6 @@ class ExecuteSelectedAPIView(APIView):
             )
 
         # Initialize total execution time and collect individual results
-        total_execution_time = 0
-        combined_result = []
         copied_files = []
 
         # Prepare script paths
