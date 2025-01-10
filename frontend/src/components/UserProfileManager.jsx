@@ -60,21 +60,26 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
                 {files.length > 0 ? (
                     <ul className="space-y-2">
                         {files.map(file => (
-                            <li key={file.id} className="flex items-start space-x-2">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedFiles.includes(file.id)}
-                                    onChange={() => toggleSelect(file.id)}
-                                    className="form-checkbox h-4 w-4 mt-1"
-                                />
-                                <a
-                                    href={`${MEDIA_URL}${file.relative_path}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
-                                >
-                                    {file.file.split('/').pop().replace(/\.(yml|yaml)$/, '')}
-                                </a>
+                            <li key={file.id} className="flex flex-col space-y-1">
+                                <div className="flex items-start space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedFiles.includes(file.id)}
+                                        onChange={() => toggleSelect(file.id)}
+                                        className="form-checkbox h-4 w-4 mt-1"
+                                    />
+                                    <a
+                                        href={`${file.file}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                    >
+                                        {file.name}
+                                    </a>
+                                </div>
+                                <p className="text-gray-600 text-sm ml-6">
+                                    {file.file.split('/').pop()}
+                                </p>
                             </li>
                         ))}
                     </ul>
