@@ -51,16 +51,16 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         # Check for new files in the directory and add them to the DB
         directory_path = os.path.join(settings.MEDIA_ROOT, "user-yaml")
-        for filename in os.listdir(directory_path):
-            file_path = os.path.join(directory_path, filename)
-            if (
-                os.path.isfile(file_path)
-                and filename.endswith(".yml")
-                or filename.endswith(".yaml")
-            ):
-                if not queryset.filter(file__icontains=filename).exists():
-                    new_file = TestFile(file=file_path)
-                    new_file.save()
+        if os.path.exists(directory_path):
+            for filename in os.listdir(directory_path):
+                file_path = os.path.join(directory_path, filename)
+                if os.path.isfile(file_path) and (filename.endswith(".yml") or filename.endswith(".yaml")):
+                    # Check if the file already exists in the queryset
+                    if not queryset.filter(file__icontains=filename).exists():
+                        # Construct the relative file path
+                        relative_file_path = os.path.join('user-yaml', filename)
+                        new_file = TestFile(file=relative_file_path)
+                        new_file.save()
 
         # Repeat the query after possible deletions
         queryset = self.filter_queryset(self.get_queryset())
