@@ -40,10 +40,7 @@ make run
 In case of problems, I suggest deleting the migrations and the database file and then running the migrations again:
 
 ```bash
-make clean
-make dropdb
-make migrations
-make run
+make full-reset
 ```
 
 ### Frontend setup
