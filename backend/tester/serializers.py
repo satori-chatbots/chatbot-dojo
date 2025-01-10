@@ -7,7 +7,7 @@ class TestFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestFile
         fields = '__all__'
-        read_only_fields = ['relative_path', 'name']
+        read_only_fields = ['name']
 
     def get_file_url(self, obj):
         request = self.context.get('request')
@@ -18,8 +18,9 @@ class TestFileSerializer(serializers.ModelSerializer):
         return None
 
 class TestCaseSerializer(serializers.ModelSerializer):
-    test_files = serializers.PrimaryKeyRelatedField(queryset=TestFile.objects.all(), many=True)
+    # test_files = serializers.PrimaryKeyRelatedField(queryset=TestFile.objects.all(), many=True)
     #test_files = TestFileSerializer(many=True, read_only=True)
+    copied_files = serializers.JSONField()
 
     class Meta:
         model = TestCase
