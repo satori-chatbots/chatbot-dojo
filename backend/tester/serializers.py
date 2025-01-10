@@ -7,7 +7,7 @@ class TestFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestFile
         fields = '__all__'
-        read_only_fields = ['relative_path', 'name']  # Make these fields read-only
+        read_only_fields = ['relative_path', 'name']
 
     def get_file_url(self, obj):
         request = self.context.get('request')
