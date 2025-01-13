@@ -49,9 +49,9 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
             return;
         }
         try {
-            await createProject({ name: newProjectName });
-            reloadProjects();
-            console.log(projects);
+            const newProject = await createProject({ name: newProjectName });
+            await reloadProjects();
+            handleProjectChange(newProject.id);
             setNewProjectName('');
             onOpenChange(false);
 
@@ -69,14 +69,14 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
 
             {/* Project Dropdown */}
             <div className="flex flex-col space-y-4">
-                <Dropdown className="full-width">
+                <Dropdown className="full-width" aria-label="Select Project" >
                     <DropdownTrigger>
                         <Button color="secondary" variant="bordered">
                             {selectedProject ? selectedProject.name : 'Select Project'}
                         </Button>
                     </DropdownTrigger>
-                    <DropdownMenu >
-                        <DropdownItem onPress={() => onOpen()}>
+                    <DropdownMenu className="max-h-[50vh] overflow-y-auto">
+                        <DropdownItem onPress={() => onOpen()} className='text-primary' color='primary'>
                             Create New Project
                         </DropdownItem>
                         {projects && projects.map(project => (
