@@ -31,6 +31,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         handleExecuteTest,
         selectedProject,
         handleProjectChange,
+        setSelectedProject,
         selectedUploadFiles,
         handleUpload,
         handleFileChange,
@@ -53,7 +54,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         try {
             const newProject = await createProject({ name: newProjectName });
             await reloadProjects();
-            handleProjectChange(newProject.id);
+            setSelectedProject(newProject);
             setNewProjectName('');
             onOpenChange(false);
 
@@ -100,11 +101,11 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                             <DropdownItem
                                 key={project.id}
                                 onPress={() => handleProjectChange(project.id)}
-                                className="whitespace-normal"
+
                                 endContent={
                                     <Button color="danger"
                                         variant="light"
-                                        className="h-6 w-6"
+                                        className="h-6 w-6 p-1 py-0.5 rounded-md text-tiny"
                                         onPress={() => handleProjectDelete(project.id)}>
                                         <HiOutlineTrash
                                             className="w-4"
@@ -128,10 +129,15 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                         <>
                             <ModalHeader className="flex flex-col gap-1">Create New Project</ModalHeader>
                             <ModalBody>
-                                <Input placeholder="Project Name"
+                                <Input
+                                    placeholder="Enter project name"
                                     fullWidth
                                     value={newProjectName}
+                                    variant='bordered'
+                                    label="Project Name"
                                     onChange={handleProjectNameChange}
+                                    isInvalid={newProjectName.trim() === '' && newProjectName.length < 255}
+                                    errorMessage={newProjectName.trim() === '' ? 'Please enter a project name (max 255 characters).' : ''}
                                     maxLength={255}
                                 />
                             </ModalBody>

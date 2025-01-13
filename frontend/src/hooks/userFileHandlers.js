@@ -114,6 +114,7 @@ function useFileHandlers(reload, reloadProjects, projects) {
         selectedProject,
         handleProjectChange,
         selectedUploadFiles,
+        setSelectedProject,
         setSelectedUploadFiles,
         fileInputRef,
         handleFileChange,
