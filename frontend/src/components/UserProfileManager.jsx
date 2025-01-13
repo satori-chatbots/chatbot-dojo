@@ -18,7 +18,9 @@ import {
 import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
-import { createProject } from '../api/projectApi';
+import { createProject, deleteProject } from '../api/projectApi';
+import { HiOutlineTrash } from "react-icons/hi";
+
 
 function UserProfileManager({ files, reload, projects, reloadProjects }) {
 
@@ -62,6 +64,19 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         }
     };
 
+    const handleProjectDelete = async (projectId) => {
+        if (!window.confirm('Are you sure you want to delete this project?')) {
+            return;
+        }
+        try {
+            await deleteProject(projectId);
+            await reloadProjects();
+        } catch (error) {
+            console.error('Error deleting project:', error);
+            alert('Error deleting project.');
+        }
+    }
+
     return (
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
             {/* Header */}
@@ -75,12 +90,30 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                             {selectedProject ? selectedProject.name : 'Select Project'}
                         </Button>
                     </DropdownTrigger>
-                    <DropdownMenu className="max-h-[50vh] overflow-y-auto">
+                    <DropdownMenu
+                    className="max-h-[50vh] overflow-y-auto max-w-md"
+                    >
                         <DropdownItem onPress={() => onOpen()} className='text-primary' color='primary'>
                             Create New Project
                         </DropdownItem>
                         {projects && projects.map(project => (
-                            <DropdownItem key={project.id} onPress={() => handleProjectChange(project.id)}>
+                            <DropdownItem
+                                key={project.id}
+                                onPress={() => handleProjectChange(project.id)}
+                                className="whitespace-normal"
+                                endContent={
+                                    <Button color="danger"
+                                        variant="light"
+                                        className="h-6 w-6"
+                                        onPress={() => handleProjectDelete(project.id)}>
+                                        <HiOutlineTrash
+                                            className="w-4"
+                                            color='red'
+                                        />
+
+                                    </Button>
+                                }
+                            >
                                 {project.name}
                             </DropdownItem>
                         ))}
@@ -99,6 +132,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                                     fullWidth
                                     value={newProjectName}
                                     onChange={handleProjectNameChange}
+                                    maxLength={255}
                                 />
                             </ModalBody>
                             <ModalFooter>
