@@ -9,7 +9,7 @@ function Home() {
     const { files, loading, error, reload } = useFetchFiles();
 
 
-    const { projects, reload: reloadProjects } = useFetchProjects();
+    const { projects, error: projectsError, reload: reloadProjects } = useFetchProjects();
 
     if (loading) {
         return <p className="text-center">Loading files...</p>;
@@ -17,6 +17,10 @@ function Home() {
 
     if (error) {
         return <p className="text-center text-red-500">Error fetching user profiles: {error.message}</p>;
+    }
+
+    if (projectsError) {
+        return <p className="text-center text-red-500">Error fetching projects: {projectsError.message}</p>;
     }
 
     return (

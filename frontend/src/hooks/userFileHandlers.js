@@ -4,26 +4,12 @@ import { executeTest } from '../api/testCasesApi';
 import { fetchProjects } from '../api/projectApi';
 
 
-function useFileHandlers(reload) {
+function useFileHandlers(reload, reloadProjects, projects) {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [testResult, setTestResult] = useState(null);
-    const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
     const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
     const fileInputRef = useRef(null);
-
-    // Fetch projects
-    useEffect(() => {
-        fetchProjects()
-            .then(response => {
-                // console.log('Projects:', response);
-                setProjects(response);
-            })
-            .catch(error => {
-                console.error('Error fetching projects:', error);
-                alert('Error fetching projects.');
-            });
-    }, []);
 
     // Fetch files
     const selectFile = (id) => {

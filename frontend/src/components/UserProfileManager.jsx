@@ -12,11 +12,13 @@ import {
     DropdownTrigger,
     DropdownMenu,
     ModalHeader,
-    useDisclosure
+    useDisclosure,
+    select
 } from "@nextui-org/react";
 import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
+import { createProject } from '../api/projectApi';
 
 function UserProfileManager({ files, reload, projects, reloadProjects }) {
 
@@ -31,10 +33,34 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         handleUpload,
         handleFileChange,
         fileInputRef,
-    } = useFileHandlers(reload);
+    } = useFileHandlers(reload, reloadProjects, projects);
 
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
+    const [newProjectName, setNewProjectName] = useState('');
+
+    const handleProjectNameChange = (event) => {
+        setNewProjectName(event.target.value);
+    };
+
+    const handleCreateProject = async () => {
+        if (!newProjectName.trim()) {
+            alert('Please enter a project name.');
+            return;
+        }
+        try {
+            await createProject({ name: newProjectName });
+            reloadProjects();
+            console.log(projects);
+            setNewProjectName('');
+            onOpenChange(false);
+
+
+        } catch (error) {
+            console.error('Error creating project:', error);
+            alert('Error creating project.');
+        }
+    };
 
     return (
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
@@ -69,13 +95,17 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                         <>
                             <ModalHeader className="flex flex-col gap-1">Create New Project</ModalHeader>
                             <ModalBody>
-                                <Input placeholder="Project Name" fullWidth />
+                                <Input placeholder="Project Name"
+                                    fullWidth
+                                    value={newProjectName}
+                                    onChange={handleProjectNameChange}
+                                />
                             </ModalBody>
                             <ModalFooter>
                                 <Button color="danger" variant="light" onPress={onClose}>
                                     Close
                                 </Button>
-                                <Button color="primary" onPress={onClose}>
+                                <Button color="primary" onPress={handleCreateProject}>
                                     Create
                                 </Button>
                             </ModalFooter>
