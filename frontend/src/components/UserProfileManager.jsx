@@ -12,39 +12,13 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         handleDelete,
         handleExecuteTest,
         selectedProject,
-        handleProjectChange
+        handleProjectChange,
+        selectedUploadFiles,
+        handleUpload,
+        handleFileChange,
+        fileInputRef,
     } = useFileHandlers(reload);
 
-
-    const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
-    const fileInputRef = useRef(null);
-    const handleFileChange = (event) => {
-        setSelectedUploadFiles(event.target.files);
-    };
-
-    const handleUpload = () => {
-        if (!selectedUploadFiles || selectedUploadFiles.length === 0) {
-            alert('Please select files to upload.');
-            return;
-        }
-
-        const formData = new FormData();
-        for (let i = 0; i < selectedUploadFiles.length; i++) {
-            formData.append('file', selectedUploadFiles[i]);
-        }
-
-        uploadFiles(formData)
-            .then(() => {
-                reload(); // Refresh the file list
-                setSelectedUploadFiles(null);
-                fileInputRef.current.value = null; // Clear the file input
-                //alert('Files uploaded successfully.');
-            })
-            .catch(error => {
-                console.error('Error uploading files:', error);
-                alert('Error uploading files.');
-            });
-    };
 
     return (
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">

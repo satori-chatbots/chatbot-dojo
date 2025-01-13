@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { deleteFiles } from '../api/fileApi';
 import { executeTest } from '../api/testCasesApi';
 import { fetchProjects } from '../api/projectApi';
+
 
 function useFileHandlers(reload) {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [testResult, setTestResult] = useState(null);
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
+    const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
+    const fileInputRef = useRef(null);
 
     // Fetch projects
     useEffect(() => {
@@ -83,6 +86,38 @@ function useFileHandlers(reload) {
         setSelectedProject(project);
     }
 
+    // Handle file change
+    const handleFileChange = (event) => {
+        setSelectedUploadFiles(event.target.files);
+    };
+
+    // Handle upload
+    const handleUpload = () => {
+        if (!selectedUploadFiles || selectedUploadFiles.length === 0) {
+            alert('Please select files to upload.');
+            return;
+        }
+
+        const formData = new FormData();
+        for (let i = 0; i < selectedUploadFiles.length; i++) {
+            formData.append('file', selectedUploadFiles[i]);
+        }
+
+        uploadFiles(formData)
+            .then(() => {
+                reload(); // Refresh the file list
+                setSelectedUploadFiles(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = null; // Clear the file input
+                }
+                //alert('Files uploaded successfully.');
+            })
+            .catch(error => {
+                console.error('Error uploading files:', error);
+                alert('Error uploading files.');
+            });
+    };
+
     return {
         selectedFiles,
         testResult,
@@ -92,6 +127,11 @@ function useFileHandlers(reload) {
         projects,
         selectedProject,
         handleProjectChange,
+        selectedUploadFiles,
+        setSelectedUploadFiles,
+        fileInputRef,
+        handleFileChange,
+        handleUpload,
     };
 }
 
