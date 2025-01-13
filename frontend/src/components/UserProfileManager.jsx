@@ -1,12 +1,23 @@
 import React, { useRef, useState } from 'react';
-import { Button, Input, Card } from "@nextui-org/react";
+import { Button, Input, Card, Dropdown, Modal, ModalBody, DropdownItem, DropdownTrigger, DropdownMenu } from "@nextui-org/react";
+import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
 
-function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, handleExecuteTest, reload }) {
+function UserProfileManager({ files, reload, projects, reloadProjects }) {
+
+    const {
+        selectedFiles,
+        selectFile,
+        handleDelete,
+        handleExecuteTest,
+        selectedProject,
+        handleProjectChange
+    } = useFileHandlers(reload);
+
+
     const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
     const fileInputRef = useRef(null);
-
     const handleFileChange = (event) => {
         setSelectedUploadFiles(event.target.files);
     };
@@ -27,7 +38,7 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
                 reload(); // Refresh the file list
                 setSelectedUploadFiles(null);
                 fileInputRef.current.value = null; // Clear the file input
-                alert('Files uploaded successfully.');
+                //alert('Files uploaded successfully.');
             })
             .catch(error => {
                 console.error('Error uploading files:', error);
@@ -39,6 +50,24 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
             {/* Header */}
             <h1 className="text-3xl font-bold text-center">User Profiles</h1>
+
+            <div className="flex flex-col space-y-4">
+                <Dropdown className="full-width">
+                    <DropdownTrigger>
+                        <Button color="secondary" variant="bordered">
+                            {selectedProject ? selectedProject.name : 'Select Project'}
+                        </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu aria-label="Static Actions">
+                        <DropdownItem >Create Project</DropdownItem>
+                        {projects && projects.map(project => (
+                            <DropdownItem key={project.id} onPress={() => handleProjectChange(project.id)}>
+                                {project.name}
+                            </DropdownItem>
+                        ))}
+                    </DropdownMenu>
+                </Dropdown>
+            </div>
 
             {/* Upload Section */}
             <div className="flex flex-col space-y-4">
@@ -65,7 +94,7 @@ function UserProfileManager({ files, selectedFiles, toggleSelect, handleDelete, 
                                     <input
                                         type="checkbox"
                                         checked={selectedFiles.includes(file.id)}
-                                        onChange={() => toggleSelect(file.id)}
+                                        onChange={() => selectFile(file.id)}
                                         className="form-checkbox h-4 w-4 mt-1"
                                     />
                                     <a

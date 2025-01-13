@@ -8,6 +8,7 @@ from . import api
 router = routers.DefaultRouter()
 router.register(r'testcases', api.TestCaseViewSet)
 router.register(r'testfiles', api.TestFileViewSet)
+router.register(r'projects', api.ProjectViewSet)
 
 urlpatterns = [
     # Custom Routes First

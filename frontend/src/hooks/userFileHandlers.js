@@ -1,17 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { deleteFiles } from '../api/fileApi';
 import { executeTest } from '../api/testCasesApi';
+import { fetchProjects } from '../api/projectApi';
 
 function useFileHandlers(reload) {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [testResult, setTestResult] = useState(null);
+    const [projects, setProjects] = useState([]);
+    const [selectedProject, setSelectedProject] = useState(null);
 
-    const toggleSelect = (id) => {
+    // Fetch projects
+    useEffect(() => {
+        fetchProjects()
+            .then(response => {
+                // console.log('Projects:', response);
+                setProjects(response);
+            })
+            .catch(error => {
+                console.error('Error fetching projects:', error);
+                alert('Error fetching projects.');
+            });
+    }, []);
+
+    // Fetch files
+    const selectFile = (id) => {
         setSelectedFiles((prev) =>
             prev.includes(id) ? prev.filter((fileId) => fileId !== id) : [...prev, id]
         );
     };
 
+    // Delete selected files
     const handleDelete = () => {
         if (selectedFiles.length === 0) {
             alert('No files selected for deletion.');
@@ -34,13 +52,22 @@ function useFileHandlers(reload) {
             });
     };
 
+    // Execute test on selected files and project
     const handleExecuteTest = () => {
         if (selectedFiles.length === 0) {
             alert('No files selected for test execution.');
             return;
         }
 
-        executeTest(selectedFiles)
+        if (!selectedProject) {
+            alert('Please select a project to execute the test.');
+            return;
+        }
+
+        console.log('Selected files:', selectedFiles);
+        console.log('Selected project:', selectedProject);
+
+        executeTest(selectedFiles, selectedProject.id)
             .then((data) => {
                 setTestResult(data.result);
                 alert('Test executed successfully.');
@@ -51,12 +78,20 @@ function useFileHandlers(reload) {
             });
     };
 
+    const handleProjectChange = (projectId) => {
+        const project = projects.find(project => project.id === projectId);
+        setSelectedProject(project);
+    }
+
     return {
         selectedFiles,
         testResult,
-        toggleSelect,
+        selectFile,
         handleDelete,
         handleExecuteTest,
+        projects,
+        selectedProject,
+        handleProjectChange,
     };
 }
 

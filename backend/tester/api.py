@@ -8,17 +8,34 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.conf import settings
-from .models import TestCase, TestFile
-from .serializers import TestCaseSerializer, TestFileSerializer
+from .models import TestCase, TestFile, Project
+from .serializers import TestCaseSerializer, TestFileSerializer, ProjectSerializer
 import os
 from .utils import check_keys
 import yaml
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 
+
+# ----------------- #
+# - TEST CASES API #
+# ----------------- #
 
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
+
+# ---------- #
+# - PROJECTS #
+# ---------- #
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    # For now we dont need pagination since there are not many projects
+    # And it makes the frontend not be able to access response.data.length
+    pagination_class = None
 
 
 # ------------------------- #
@@ -54,11 +71,13 @@ class TestFileViewSet(viewsets.ModelViewSet):
         if os.path.exists(directory_path):
             for filename in os.listdir(directory_path):
                 file_path = os.path.join(directory_path, filename)
-                if os.path.isfile(file_path) and (filename.endswith(".yml") or filename.endswith(".yaml")):
+                if os.path.isfile(file_path) and (
+                    filename.endswith(".yml") or filename.endswith(".yaml")
+                ):
                     # Check if the file already exists in the queryset
                     if not queryset.filter(file__icontains=filename).exists():
                         # Construct the relative file path
-                        relative_file_path = os.path.join('user-yaml', filename)
+                        relative_file_path = os.path.join("user-yaml", filename)
                         new_file = TestFile(file=relative_file_path)
                         new_file.save()
 
@@ -144,7 +163,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
             test_file.save()
             file_instances.append(test_file)
 
-        serializer = self.get_serializer(file_instances, many=True, context={'request': request})
+        serializer = self.get_serializer(
+            file_instances, many=True, context={"request": request}
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -160,10 +181,27 @@ class ExecuteSelectedAPIView(APIView):
         Create a TestCase instance and associate executed TestFiles with it.
         """
         selected_ids = request.data.get("test_file_ids", [])
+        project_id = request.data.get("project_id")
+
         if not selected_ids:
             return Response(
                 {"error": "No test file IDs provided."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not project_id:
+            return Response(
+                {"error": "No project ID provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check if the project exists
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {"error": "Project not found, make sure to create a project first."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         test_files = TestFile.objects.filter(id__in=selected_ids)
@@ -192,38 +230,40 @@ class ExecuteSelectedAPIView(APIView):
         os.makedirs(executed_dir_base, exist_ok=True)
         print(f"Executed base dir: {executed_dir_base}")
 
-        # Create TestCase instance first to get its ID
-        test_case = TestCase.objects.create()
+        # Make in a transaction to avoid partial saves
+        with transaction.atomic():
+            # Create TestCase instance first to get its ID
+            test_case = TestCase.objects.create(project=project)
 
-        # Create a unique subdirectory for this TestCase
-        test_case_dir = os.path.join(executed_dir_base, f"testcase_{test_case.id}")
-        os.makedirs(test_case_dir, exist_ok=True)
-        print(f"TestCase directory: {test_case_dir}")
+            # Create a unique subdirectory for this TestCase
+            test_case_dir = os.path.join(executed_dir_base, f"testcase_{test_case.id}")
+            os.makedirs(test_case_dir, exist_ok=True)
+            print(f"TestCase directory: {test_case_dir}")
 
-        # Copy all the yaml files to the new directory and save the relative path and name
-        for test_file in test_files:
-            file_path = test_file.file.path
-            copied_file_path = shutil.copy(file_path, test_case_dir)
-            # Store relative path from MEDIA_ROOT for frontend access
-            copied_file_rel_path = os.path.relpath(
-                copied_file_path, settings.MEDIA_ROOT
-            )
-            # Get the test_name from the YAML file
-            name_extracted = "Unknown"
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, "r") as file:
-                        data = yaml.safe_load(file)
-                        name_extracted = data.get("test_name", name_extracted)
-                except yaml.YAMLError as e:
-                    print(f"Error loading YAML file: {e}")
+            # Copy all the yaml files to the new directory and save the relative path and name
+            for test_file in test_files:
+                file_path = test_file.file.path
+                copied_file_path = shutil.copy(file_path, test_case_dir)
+                # Store relative path from MEDIA_ROOT for frontend access
+                copied_file_rel_path = os.path.relpath(
+                    copied_file_path, settings.MEDIA_ROOT
+                )
+                # Get the test_name from the YAML file
+                name_extracted = "Unknown"
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, "r") as file:
+                            data = yaml.safe_load(file)
+                            name_extracted = data.get("test_name", name_extracted)
+                    except yaml.YAMLError as e:
+                        print(f"Error loading YAML file: {e}")
 
-            # Save the path and name of the copied file
-            copied_files.append({"path": copied_file_rel_path, "name": name_extracted})
+                # Save the path and name of the copied file
+                copied_files.append({"path": copied_file_rel_path, "name": name_extracted})
 
-        # Save the copied files to the TestCase instance
-        test_case.copied_files = copied_files
-        test_case.save()
+            # Save the copied files to the TestCase instance
+            test_case.copied_files = copied_files
+            test_case.save()
 
         # Set CWD to the script dir (avoid using os.chdir)
         script_cwd = os.path.dirname(os.path.dirname(script_path))
