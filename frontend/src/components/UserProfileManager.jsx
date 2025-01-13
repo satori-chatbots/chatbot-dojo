@@ -1,5 +1,19 @@
 import React, { useRef, useState } from 'react';
-import { Button, Input, Card, Dropdown, Modal, ModalBody, DropdownItem, DropdownTrigger, DropdownMenu } from "@nextui-org/react";
+import {
+    Button,
+    Input,
+    Card,
+    Dropdown,
+    Modal,
+    ModalContent,
+    ModalFooter,
+    ModalBody,
+    DropdownItem,
+    DropdownTrigger,
+    DropdownMenu,
+    ModalHeader,
+    useDisclosure
+} from "@nextui-org/react";
 import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
@@ -19,12 +33,15 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         fileInputRef,
     } = useFileHandlers(reload);
 
+    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
 
     return (
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
             {/* Header */}
             <h1 className="text-3xl font-bold text-center">User Profiles</h1>
 
+            {/* Project Dropdown */}
             <div className="flex flex-col space-y-4">
                 <Dropdown className="full-width">
                     <DropdownTrigger>
@@ -32,8 +49,10 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                             {selectedProject ? selectedProject.name : 'Select Project'}
                         </Button>
                     </DropdownTrigger>
-                    <DropdownMenu aria-label="Static Actions">
-                        <DropdownItem >Create Project</DropdownItem>
+                    <DropdownMenu >
+                        <DropdownItem onPress={() => onOpen()}>
+                            Create New Project
+                        </DropdownItem>
                         {projects && projects.map(project => (
                             <DropdownItem key={project.id} onPress={() => handleProjectChange(project.id)}>
                                 {project.name}
@@ -42,6 +61,28 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                     </DropdownMenu>
                 </Dropdown>
             </div>
+
+            {/* Create Project Modal */}
+            <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">Create New Project</ModalHeader>
+                            <ModalBody>
+                                <Input placeholder="Project Name" fullWidth />
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="danger" variant="light" onPress={onClose}>
+                                    Close
+                                </Button>
+                                <Button color="primary" onPress={onClose}>
+                                    Create
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
 
             {/* Upload Section */}
             <div className="flex flex-col space-y-4">
