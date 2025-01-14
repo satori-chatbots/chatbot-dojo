@@ -4,6 +4,7 @@ node_modules/
 
 # uploads and results directory
 uploads/
+filevault/
 test-results/
 test_files/
 

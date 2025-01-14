@@ -224,7 +224,7 @@ class ExecuteSelectedAPIView(APIView):
         # Load OPENAI_API_KEY from keys.properties
         check_keys(["OPENAI_API_KEY"])
 
-        # Set extract dir to MEDIA / results
+        # Set extract dir to MEDIA / results /
         extract_dir = os.path.join(settings.MEDIA_ROOT, "results")
         print(f"Extract dir: {extract_dir}")
 
@@ -286,7 +286,10 @@ class ExecuteSelectedAPIView(APIView):
             status=status.HTTP_202_ACCEPTED,
         )
 
-def run_asyn_test_execution(script_path, script_cwd, test_case_dir, extract_dir, test_case):
+
+def run_asyn_test_execution(
+    script_path, script_cwd, test_case_dir, extract_dir, test_case
+):
     """
     Run the autotest script asynchronously to avoid blocking the response.
     """

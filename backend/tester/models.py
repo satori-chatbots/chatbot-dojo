@@ -8,7 +8,7 @@ import yaml
 
 def upload_to(instance, filename):
     """
-    Returns the path where the Test Files are stored (MEDIA_DIR/user-yaml, that is, uploads/user-yaml)
+    Returns the path where the Test Files are stored (MEDIA_DIR/user-yaml, that is, filevault/user-yaml)
     """
     return os.path.join("user-yaml", filename)
 

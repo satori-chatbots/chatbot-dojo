@@ -1,5 +1,5 @@
 const API_BASE_URL = 'http://localhost:8000';
-const MEDIA_URL = `${API_BASE_URL}/uploads/`;
+const MEDIA_URL = `${API_BASE_URL}/filevault/`;
 
 export const ENDPOINTS = {
     FETCH_FILES: '/testfiles/',
