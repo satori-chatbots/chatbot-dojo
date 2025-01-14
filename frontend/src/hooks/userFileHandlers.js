@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { deleteFiles } from '../api/fileApi';
+import { deleteFiles, uploadFiles } from '../api/fileApi';
 import { executeTest } from '../api/testCasesApi';
 import { fetchProjects } from '../api/projectApi';
 
