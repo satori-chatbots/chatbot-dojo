@@ -141,36 +141,72 @@ class TestFileViewSet(viewsets.ModelViewSet):
         parser_classes=[MultiPartParser, FormParser],
     )
     def upload(self, request):
-        """
-        Endpoint to upload multiple files.
-        Expects multipart/form-data with files under the key 'file':
-        {
-            "file": [file1, file2, ...]
-        }
+        uploaded_files = request.FILES.getlist('file')
+        errors = []
+        test_names = set()
 
-        Args:
-            request (Request): The request object.
+        # Collect all existing test_names
+        existing_test_names = set(TestFile.objects.values_list("name", flat=True))
 
-        Returns:
-            Response: If successful, returns the serialized data of the uploaded files.
-        """
-        files = request.FILES.getlist("file")
-        if not files:
+        # Validate all files first
+        for f in uploaded_files:
+            try:
+                content = f.read()
+                f.seek(0)  # Reset pointer so Django can save the file
+                data = yaml.safe_load(content)
+                test_name = data.get("test_name", None)
+            except Exception as e:
+                errors.append({
+                    "file": f.name,
+                    "error": f"Error reading YAML: {e}"
+                })
+                continue
+
+            if not test_name:
+                errors.append({
+                    "file": f.name,
+                    "error": "test_name is missing in YAML."
+                })
+                continue
+
+            if test_name in existing_test_names:
+                errors.append({
+                    "file": f.name,
+                    "error": f"test_name '{test_name}' is already used."
+                })
+                continue
+
+            if test_name in test_names:
+                errors.append({
+                    "file": f.name,
+                    "error": f"Duplicate test_name '{test_name}' in uploaded files."
+                })
+                continue
+
+            test_names.add(test_name)
+
+        if errors:
             return Response(
-                {"error": "No files provided."}, status=status.HTTP_400_BAD_REQUEST
+                {"errors": errors},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        file_instances = []
-        for f in files:
-            test_file = TestFile(file=f)
-            test_file.save()
-            file_instances.append(test_file)
+        # All files are valid, proceed to save them atomically
+        saved_files = []
+        try:
+            with transaction.atomic():
+                for f in uploaded_files:
+                    data = yaml.safe_load(f.read())
+                    test_name = data.get("test_name")
+                    instance = TestFile.objects.create(file=f, name=test_name)
+                    saved_files.append(instance.id)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to save files: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        serializer = self.get_serializer(
-            file_instances, many=True, context={"request": request}
-        )
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
+        return Response({"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED)
 
 # ----------------------------- #
 # - EXECUTE AUTOTEST ON FILES - #
@@ -224,7 +260,7 @@ class ExecuteSelectedAPIView(APIView):
         # Load OPENAI_API_KEY from keys.properties
         check_keys(["OPENAI_API_KEY"])
 
-        # Set extract dir to MEDIA / results /
+        # Set extract dir to MEDIA / results
         extract_dir = os.path.join(settings.MEDIA_ROOT, "results")
         print(f"Extract dir: {extract_dir}")
 
@@ -286,12 +322,9 @@ class ExecuteSelectedAPIView(APIView):
             status=status.HTTP_202_ACCEPTED,
         )
 
-
-def run_asyn_test_execution(
-    script_path, script_cwd, test_case_dir, extract_dir, test_case
-):
+def run_asyn_test_execution(script_path, script_cwd, test_case_dir, extract_dir, test_case):
     """
-    Run the autotest script asynchronously to avoid blocking the response.
+
     """
     try:
         start_time = time.time()
@@ -318,11 +351,9 @@ def run_asyn_test_execution(
 
         test_case.execution_time = elapsed_time
         test_case.result = result.stdout.strip() or result.stderr.strip()
-        test_case.executing = False
         test_case.save()
 
     except Exception as e:
         test_case.result = f"Error: {e}"
         test_case.execution_time = 0
-        test_case.executing = False
         test_case.save()

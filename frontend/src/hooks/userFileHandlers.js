@@ -59,7 +59,7 @@ function useFileHandlers(reload, reloadProjects, projects) {
         executeTest(selectedFiles, selectedProject.id)
             .then((data) => {
                 setTestResult(data.result);
-                alert('Test started successfully.');
+                alert('Test executed successfully.');
             })
             .catch((error) => {
                 console.error('Error executing test:', error);
@@ -100,7 +100,7 @@ function useFileHandlers(reload, reloadProjects, projects) {
             })
             .catch(error => {
                 console.error('Error uploading files:', error);
-                alert('Error uploading files.');
+                alert('Error uploading files: ' + error);
             });
     };
 
