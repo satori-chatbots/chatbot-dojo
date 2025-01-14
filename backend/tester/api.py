@@ -15,15 +15,18 @@ from .utils import check_keys
 import yaml
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+import threading
 
 
 # ----------------- #
 # - TEST CASES API #
 # ----------------- #
 
+
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
+
 
 # ---------- #
 # - PROJECTS #
@@ -259,7 +262,9 @@ class ExecuteSelectedAPIView(APIView):
                         print(f"Error loading YAML file: {e}")
 
                 # Save the path and name of the copied file
-                copied_files.append({"path": copied_file_rel_path, "name": name_extracted})
+                copied_files.append(
+                    {"path": copied_file_rel_path, "name": name_extracted}
+                )
 
             # Save the copied files to the TestCase instance
             test_case.copied_files = copied_files
@@ -271,44 +276,50 @@ class ExecuteSelectedAPIView(APIView):
 
         # Execute the script for the directory with all the copied files
         # This is done to avoid the for loop, also we get just one report with all the files
-        try:
-            start_time = time.time()
-            result = subprocess.run(
-                [
-                    "python",
-                    script_path,
-                    "--technology",
-                    "taskyto",
-                    "--chatbot",
-                    "http://127.0.0.1:5000",
-                    "--user",
-                    test_case_dir,
-                    "--extract",
-                    extract_dir,
-                ],
-                capture_output=True,
-                text=True,
-                cwd=script_cwd,
-            )
-            end_time = time.time()
-            elapsed_time = round(end_time - start_time, 2)
-
-            test_case.execution_time = elapsed_time
-            test_case.result = result.stdout.strip() or result.stderr.strip()
-            test_case.save()
-
-        except Exception as e:
-            test_case.result = f"Error: {e}"
-            test_case.execution_time = 0
-            test_case.save()
+        threading.Thread(
+            target=run_asyn_test_execution,
+            args=(script_path, script_cwd, test_case_dir, extract_dir, test_case),
+        ).start()
 
         return Response(
-            {
-                "test_case_id": test_case.id,
-                "executed_at": test_case.executed_at,
-                "execution_time": test_case.execution_time,
-                "result": test_case.result,
-                "copied_files": test_case.copied_files,
-            },
-            status=status.HTTP_200_OK,
+            {"message": "Started execution", "test_case_id": test_case.id},
+            status=status.HTTP_202_ACCEPTED,
         )
+
+def run_asyn_test_execution(script_path, script_cwd, test_case_dir, extract_dir, test_case):
+    """
+    Run the autotest script asynchronously to avoid blocking the response.
+    """
+    try:
+        start_time = time.time()
+        result = subprocess.run(
+            [
+                "python",
+                script_path,
+                "--technology",
+                "taskyto",
+                "--chatbot",
+                "http://127.0.0.1:5000",
+                "--user",
+                test_case_dir,
+                "--extract",
+                extract_dir,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=script_cwd,
+        )
+
+        end_time = time.time()
+        elapsed_time = round(end_time - start_time, 2)
+
+        test_case.execution_time = elapsed_time
+        test_case.result = result.stdout.strip() or result.stderr.strip()
+        test_case.executing = False
+        test_case.save()
+
+    except Exception as e:
+        test_case.result = f"Error: {e}"
+        test_case.execution_time = 0
+        test_case.executing = False
+        test_case.save()
