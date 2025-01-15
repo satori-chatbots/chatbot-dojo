@@ -77,12 +77,33 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 if os.path.isfile(file_path) and (
                     filename.endswith(".yml") or filename.endswith(".yaml")
                 ):
-                    # Check if the file already exists in the queryset
+                    # Check if the file is already in the DB
                     if not queryset.filter(file__icontains=filename).exists():
-                        # Construct the relative file path
-                        relative_file_path = os.path.join("user-yaml", filename)
-                        new_file = TestFile(file=relative_file_path)
-                        new_file.save()
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            try:
+                                data = yaml.safe_load(f)
+                                test_name = data.get("test_name")
+                            except Exception as e:
+                                # log the error and continue
+                                print(f"Error reading YAML file: {e}")
+                                continue
+
+                            # Ensure test_name exists and is unique
+                            if (
+                                test_name
+                                and not TestFile.objects.filter(name=test_name).exists()
+                            ):
+                                relative_file_path = os.path.join("user-yaml", filename)
+                                new_file = TestFile(
+                                    file=relative_file_path, name=test_name
+                                )
+                                new_file.save()
+                            else:
+                                # test_name missing or already in DB -> skip or handle as needed
+                                print(
+                                    f"File with test_name '{test_name}' already exists. Skipping."
+                                )
+                                pass
 
         # Repeat the query after possible deletions
         queryset = self.filter_queryset(self.get_queryset())
@@ -141,9 +162,10 @@ class TestFileViewSet(viewsets.ModelViewSet):
         parser_classes=[MultiPartParser, FormParser],
     )
     def upload(self, request):
-        uploaded_files = request.FILES.getlist('file')
+        uploaded_files = request.FILES.getlist("file")
         errors = []
         test_names = set()
+        already_reported_test_names = set()
 
         # Collect all existing test_names
         existing_test_names = set(TestFile.objects.values_list("name", flat=True))
@@ -156,31 +178,35 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 data = yaml.safe_load(content)
                 test_name = data.get("test_name", None)
             except Exception as e:
-                errors.append({
-                    "file": f.name,
-                    "error": f"Error reading YAML: {e}"
-                })
+                errors.append({"file": f.name, "error": f"Error reading YAML: {e}"})
                 continue
 
             if not test_name:
-                errors.append({
-                    "file": f.name,
-                    "error": "test_name is missing in YAML."
-                })
+                errors.append(
+                    {"file": f.name, "error": "test_name is missing in YAML."}
+                )
                 continue
 
             if test_name in existing_test_names:
-                errors.append({
-                    "file": f.name,
-                    "error": f"test_name '{test_name}' is already used."
-                })
+                if test_name not in already_reported_test_names:
+                    already_reported_test_names.add(test_name)
+                    errors.append(
+                        {
+                            "file": f.name,
+                            "error": f"test_name '{test_name}' is already used.",
+                        }
+                    )
                 continue
 
             if test_name in test_names:
-                errors.append({
-                    "file": f.name,
-                    "error": f"Duplicate test_name '{test_name}' in uploaded files."
-                })
+                if test_name not in already_reported_test_names:
+                    already_reported_test_names.add(test_name)
+                    errors.append(
+                        {
+                            "file": f.name,
+                            "error": f"Duplicate test_name '{test_name}' in uploaded files.",
+                        }
+                    )
                 continue
 
             test_names.add(test_name)
@@ -206,7 +232,10 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response({"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED
+        )
+
 
 # ----------------------------- #
 # - EXECUTE AUTOTEST ON FILES - #
@@ -322,10 +351,11 @@ class ExecuteSelectedAPIView(APIView):
             status=status.HTTP_202_ACCEPTED,
         )
 
-def run_asyn_test_execution(script_path, script_cwd, test_case_dir, extract_dir, test_case):
-    """
 
-    """
+def run_asyn_test_execution(
+    script_path, script_cwd, test_case_dir, extract_dir, test_case
+):
+    """ """
     try:
         start_time = time.time()
         result = subprocess.run(

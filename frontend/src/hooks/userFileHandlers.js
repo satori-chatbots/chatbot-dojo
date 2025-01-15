@@ -100,7 +100,7 @@ function useFileHandlers(reload, reloadProjects, projects) {
             })
             .catch(error => {
                 console.error('Error uploading files:', error);
-                alert('Error uploading files: ' + error);
+                alert('Error uploading files:\n' + error.message);
             });
     };
 

@@ -15,11 +15,16 @@ export const uploadFiles = (formData) => {
         method: 'POST',
         body: formData,
     })
-        .then(response => {
+        .then(async (response) => {
+            const data = await response.json();
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                const errorMessage =
+                    data.error ||
+                    (data.errors && data.errors.map(e => e.error).join(', ')) ||
+                    `HTTP error! Status: ${response.status}`;
+                throw new Error(errorMessage);
             }
-            return response.json();
+            return data;
         });
 };
 
