@@ -8,14 +8,28 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.conf import settings
-from .models import TestCase, TestFile, Project
-from .serializers import TestCaseSerializer, TestFileSerializer, ProjectSerializer
+from .models import ChatbotTechnology, TestCase, TestFile, Project
+from .serializers import (
+    ChatbotTechnologySerializer,
+    TestCaseSerializer,
+    TestFileSerializer,
+    ProjectSerializer,
+)
 import os
 from .utils import check_keys
 import yaml
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 import threading
+
+# ---------------------- #
+# - CHATBOT TECHNOLOGY - #
+# ---------------------- #
+
+
+class ChatbotTechnologyViewSet(viewsets.ModelViewSet):
+    queryset = ChatbotTechnology.objects.all()
+    serializer_class = ChatbotTechnologySerializer
 
 
 # ----------------- #
@@ -39,6 +53,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
     # For now we dont need pagination since there are not many projects
     # And it makes the frontend not be able to access response.data.length
     pagination_class = None
+
+    @action(detail=False, methods=["get"], url_path="technologies")
+    def list_technologies(self, request):
+        """List all available Chatbot Technologies."""
+        technologies = ChatbotTechnology.objects.all()
+        serializer = ChatbotTechnologySerializer(technologies, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # ------------------------- #

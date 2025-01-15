@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import TestCase, TestFile, Project
+from .models import ChatbotTechnology, TestCase, TestFile, Project
 
 
 class TestFileSerializer(serializers.ModelSerializer):
@@ -19,8 +19,17 @@ class TestFileSerializer(serializers.ModelSerializer):
         return None
 
 
+class ChatbotTechnologySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatbotTechnology
+        fields = "__all__"
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     test_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    chatbot_technology = serializers.PrimaryKeyRelatedField(
+        queryset=ChatbotTechnology.objects.all()
+    )
 
     class Meta:
         model = Project

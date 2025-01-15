@@ -41,9 +41,19 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     const [newProjectName, setNewProjectName] = useState('');
+    const [technology, setTechnology] = useState('');
+    const [chatbotURL, setChatbotURL] = useState('');
 
     const handleProjectNameChange = (event) => {
         setNewProjectName(event.target.value);
+    };
+
+    const handleTechnologyChange = (event) => {
+        setTechnology(event.target.value);
+    };
+
+    const handleChatbotURLChange = (event) => {
+        setChatbotURL(event.target.value);
     };
 
     const handleCreateProject = async () => {
@@ -52,10 +62,16 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
             return;
         }
         try {
-            const newProject = await createProject({ name: newProjectName });
+            const newProject = await createProject({
+                name: newProjectName,
+                technology: technology,
+                chatbotURL: chatbotURL
+            });
             await reloadProjects();
             setSelectedProject(newProject);
             setNewProjectName('');
+            setTechnology('');
+            setChatbotURL('');
             onOpenChange(false);
 
 
@@ -92,7 +108,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                         </Button>
                     </DropdownTrigger>
                     <DropdownMenu
-                    className="max-h-[50vh] overflow-y-auto max-w-md"
+                        className="max-h-[50vh] overflow-y-auto max-w-md"
                     >
                         <DropdownItem onPress={() => onOpen()} className='text-primary' color='primary'>
                             Create New Project
@@ -139,6 +155,28 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                                     isInvalid={newProjectName.trim() === '' && newProjectName.length < 255}
                                     errorMessage={newProjectName.trim() === '' ? 'Please enter a project name (max 255 characters).' : ''}
                                     maxLength={255}
+                                />
+                                <Input
+                                    placeholder="Enter technology"
+                                    fullWidth
+                                    value={technology}
+                                    variant='bordered'
+                                    label="Technology"
+                                    onChange={handleTechnologyChange}
+                                    isInvalid={technology.trim() === ''}
+                                    errorMessage={technology.trim() === '' ? 'Please enter a technology.' : ''}
+                                    maxLength={255}
+                                />
+                                <Input
+                                    placeholder="Enter chatbot URL"
+                                    fullWidth
+                                    value={chatbotURL}
+                                    variant='bordered'
+                                    label="Chatbot URL"
+                                    onChange={handleChatbotURLChange}
+                                    isInvalid={!isValidURL(chatbotURL)}
+                                    errorMessage={!isValidURL(chatbotURL) ? 'Please enter a valid URL.' : ''}
+                                    maxLength={500}
                                 />
                             </ModalBody>
                             <ModalFooter>
@@ -213,6 +251,18 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
             </div>
         </Card>
     );
-}
+};
+
+const isValidURL = (url) => {
+    const pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+        '(\\#[-a-z\\d_]*)?$', 'i');
+    return !!pattern.test(url);
+};
+
+
 
 export default UserProfileManager;

@@ -72,8 +72,9 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    chatbot_technology = models.OneToOneField(
-        "ChatbotTechnology", related_name="project", on_delete=models.CASCADE
+    # A project can only have one chatbot technology, but a technology can be used in multiple projects
+    chatbot_technology = models.ForeignKey(
+        "ChatbotTechnology", related_name="projects", on_delete=models.CASCADE
     )
 
     def __str__(self):
@@ -81,13 +82,17 @@ class Project(models.Model):
 
 
 class ChatbotTechnology(models.Model):
-    """Information about the technology of the chatbot used, it is linked to a project
+    """Information about the technology of the chatbot used, it can be used by multiple projects
 
-    Contains the used technology and the link to access the chatbot
+    Contains the used technology and the link to access the chatbot, also a name to identify it
     """
 
+    name = models.CharField(max_length=255)
     technology = models.CharField(max_length=255)
     link = models.URLField()
+
+    def __str__(self):
+        return self.name
 
 
 class TestCase(models.Model):
