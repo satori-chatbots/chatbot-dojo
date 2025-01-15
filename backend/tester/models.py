@@ -66,18 +66,22 @@ def set_name(sender, instance, created, **kwargs):
 
 class Project(models.Model):
     """
-    A Project is a collection of test cases
+    A Project is a collection of test cases, it uses one chatbot technology
     """
 
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    chatbot_technology = models.OneToOneField(
+        "ChatbotTechnology", related_name="project", on_delete=models.CASCADE
+    )
 
     def __str__(self):
         return self.name
 
 
 class ChatbotTechnology(models.Model):
-    """Information about the technology of the chatbot used
+    """Information about the technology of the chatbot used, it is linked to a project
 
     Contains the used technology and the link to access the chatbot
     """
