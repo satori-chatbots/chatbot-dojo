@@ -293,6 +293,10 @@ class ExecuteSelectedAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # Get the technology and link from the project
+        technology = project.chatbot_technology.technology
+        link = project.chatbot_technology.link
+
         test_files = TestFile.objects.filter(id__in=selected_ids)
         if not test_files.exists():
             return Response(
@@ -364,7 +368,15 @@ class ExecuteSelectedAPIView(APIView):
         # This is done to avoid the for loop, also we get just one report with all the files
         threading.Thread(
             target=run_asyn_test_execution,
-            args=(script_path, script_cwd, test_case_dir, extract_dir, test_case),
+            args=(
+                script_path,
+                script_cwd,
+                test_case_dir,
+                extract_dir,
+                test_case,
+                technology,
+                link,
+            ),
         ).start()
 
         return Response(
@@ -374,7 +386,7 @@ class ExecuteSelectedAPIView(APIView):
 
 
 def run_asyn_test_execution(
-    script_path, script_cwd, test_case_dir, extract_dir, test_case
+    script_path, script_cwd, test_case_dir, extract_dir, test_case, technology, link
 ):
     """ """
     try:
@@ -384,9 +396,9 @@ def run_asyn_test_execution(
                 "python",
                 script_path,
                 "--technology",
-                "taskyto",
+                technology,
                 "--chatbot",
-                "http://127.0.0.1:5000",
+                link,
                 "--user",
                 test_case_dir,
                 "--extract",

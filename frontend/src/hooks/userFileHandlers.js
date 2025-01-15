@@ -59,7 +59,7 @@ function useFileHandlers(reload, reloadProjects, projects) {
         executeTest(selectedFiles, selectedProject.id)
             .then((data) => {
                 setTestResult(data.result);
-                alert('Test executed successfully.');
+                alert(data.message);
             })
             .catch((error) => {
                 console.error('Error executing test:', error);
