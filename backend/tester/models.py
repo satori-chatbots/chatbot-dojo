@@ -8,9 +8,9 @@ import yaml
 
 def upload_to(instance, filename):
     """
-    Returns the path where the Test Files are stored (MEDIA_DIR/user-profiles/<project_name>/<filename>)
+    Returns the path where the Test Files are stored (MEDIA_DIR/user-profiles/<project_id>/<filename>)
     """
-    return os.path.join("user-profiles", instance.project.name, filename)
+    return os.path.join("user-profiles", str(instance.project.id), filename)
 
 
 class TestFile(models.Model):

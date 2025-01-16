@@ -81,7 +81,6 @@ class TestFileViewSet(viewsets.ModelViewSet):
     # Own implementation because now if we delete a file, the row in the DB still exists
     def list(self, request, *args, **kwargs):
         """Return a list of all the YAML files uploaded, if one is missing, delete the row in the DB.
-        If a new file is found in the directory, add it to the DB.
 
         Args:
             request (Request): The request object.
@@ -89,53 +88,20 @@ class TestFileViewSet(viewsets.ModelViewSet):
         Returns:
             Response: Serialized data of the files.
         """
-        queryset = self.filter_queryset(self.get_queryset())
+        project_id = request.query_params.get("project_id", None)
+        if project_id is not None:
+            project = get_object_or_404(Project, id=project_id)
+            queryset = self.filter_queryset(self.get_queryset()).filter(project=project)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
 
         # Check if a file is missing, if so, delete the row in the DB
         for file in queryset:
             if not os.path.exists(file.file.path):
                 file.delete()
 
-        # Check for new files in the directory and add them to the DB
-        """
-        directory_path = os.path.join(settings.MEDIA_ROOT, "user-yaml")
-        if os.path.exists(directory_path):
-            for filename in os.listdir(directory_path):
-                file_path = os.path.join(directory_path, filename)
-                if os.path.isfile(file_path) and (
-                    filename.endswith(".yml") or filename.endswith(".yaml")
-                ):
-                    # Check if the file is already in the DB
-                    if not queryset.filter(file__icontains=filename).exists():
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            try:
-                                data = yaml.safe_load(f)
-                                test_name = data.get("test_name")
-                            except Exception as e:
-                                # log the error and continue
-                                print(f"Error reading YAML file: {e}")
-                                continue
-
-                            # Ensure test_name exists and is unique
-                            if (
-                                test_name
-                                and not TestFile.objects.filter(name=test_name).exists()
-                            ):
-                                relative_file_path = os.path.join("user-yaml", filename)
-                                new_file = TestFile(
-                                    file=relative_file_path, name=test_name
-                                )
-                                new_file.save()
-                            else:
-                                # test_name missing or already in DB -> skip or handle as needed
-                                print(
-                                    f"File with test_name '{test_name}' already exists. Skipping."
-                                )
-                                pass
-                                """
-
         # Repeat the query after possible deletions
-        queryset = self.filter_queryset(self.get_queryset())
+        # queryset = self.filter_queryset(self.get_queryset())
 
         # Paginate the queryset if needed
         page = self.paginate_queryset(queryset)
