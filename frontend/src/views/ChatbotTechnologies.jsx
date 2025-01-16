@@ -160,12 +160,12 @@ const ChatbotTechnologies = () => {
     ];
 
     return (
-        <div className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
-            <h1 className="text-3xl font-bold text-center">Chatbot Technologies</h1>
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto max-h-[80vh]">
+            <h1 className="text-2xl sm:text-3xl font-bold text-center">Chatbot Technologies</h1>
 
             {/* Button to open modal */}
             <Button color="primary" onPress={onOpen}
-                className="max-w-[200px] mx-auto"
+                className="max-w-full sm:max-w-[200px] mx-auto"
             >
                 Create New Technology
             </Button>
@@ -248,9 +248,10 @@ const ChatbotTechnologies = () => {
                 </ModalContent>
             </Modal>
 
-            <h2 className='text-2xl font-bold text-center'>Existing Technologies</h2>
+            <h2 className='text-xl sm:text-2xl font-bold text-center'>Existing Technologies</h2>
             {/* Table of existing technologies */}
-            <Table aria-label="Chatbot Technologies Table">
+            <Table aria-label="Chatbot Technologies Table"
+                className="overflow-x-auto">
                 <TableHeader columns={columns}>
                     <TableColumn key="name" allowsSorting>Name</TableColumn>
                     <TableColumn key="technology" allowsSorting>Technology</TableColumn>
@@ -261,16 +262,15 @@ const ChatbotTechnologies = () => {
                 <TableBody>
                     {technologies.map((tech) => (
                         <TableRow key={tech.id}>
-                            <TableCell>{tech.name}</TableCell>
-                            <TableCell>{tech.technology}</TableCell>
-                            <TableCell>
+                            <TableCell className="px-2 sm:px-4">{tech.name}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{tech.technology}</TableCell>
+                            <TableCell className="px-2 sm:px-4">
                                 <a href={tech.link} target="_blank" rel="noopener noreferrer">
                                     {tech.link}
                                 </a>
                             </TableCell>
-                            <TableCell
-                                className='flex space-x-2'
-                            >
+                            <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
+
                                 <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEdit(tech)}>
                                     Edit
                                 </Button>
