@@ -22,7 +22,7 @@ import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
 import { createProject, deleteProject } from '../api/projectApi';
 import { HiOutlineTrash } from "react-icons/hi";
-import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
+import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';
 import useFetchProjects from '../hooks/useFetchProjects';
 import useFetchFiles from '../hooks/useFetchFiles';
 import { executeTest } from '../api/testCasesApi';
@@ -180,8 +180,6 @@ function UserProfileManager() {
         // Clear the selected files
         setSelectedFiles([]);
 
-        // Clear files
-
         // Reload the files
         reloadFiles();
 
@@ -207,6 +205,11 @@ function UserProfileManager() {
             alert('Please enter a project name.');
             return;
         }
+        if (!technology) {
+            alert('Please select a technology.');
+            return;
+        }
+
         try {
             const newProject = await createProject({
                 name: newProjectName,
@@ -214,12 +217,11 @@ function UserProfileManager() {
             });
             await reloadProjects();
             setSelectedProject(newProject);
-            setNewProjectName('');
-            setTechnology('');
+            handleFormReset();
             onOpenChange(false);
         } catch (error) {
             console.error('Error creating project:', error);
-            alert('Error creating project.');
+            alert(`Error creating project: ${error.message}`);
         }
     };
 

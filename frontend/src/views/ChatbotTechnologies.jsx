@@ -2,11 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
     Button,
     Input,
-    Card,
-    Dropdown,
-    DropdownItem,
-    DropdownTrigger,
-    DropdownMenu,
     Select,
     SelectItem,
     Modal,
@@ -16,7 +11,6 @@ import {
     ModalHeader,
     useDisclosure,
     Form,
-    Tab,
 } from "@nextui-org/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
@@ -40,6 +34,7 @@ const ChatbotTechnologies = () => {
         link: '',
     });
 
+    // State of the modal to create new technology
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     useEffect(() => {
@@ -256,7 +251,7 @@ const ChatbotTechnologies = () => {
                     <TableColumn key="name" allowsSorting>Name</TableColumn>
                     <TableColumn key="technology" allowsSorting>Technology</TableColumn>
                     <TableColumn key="link" allowsSorting>URL</TableColumn>
-                    <TableColumn key="actions">Actions</TableColumn>
+                    <TableColumn className='text-center' key="actions">Actions</TableColumn>
 
                 </TableHeader>
                 <TableBody>

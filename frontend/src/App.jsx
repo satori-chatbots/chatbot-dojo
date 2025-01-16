@@ -3,6 +3,7 @@ import { Routes, Route, Link } from 'react-router-dom';
 import Home from './views/Home';
 import Dashboard from './views/Dashboard';
 import ChatbotTechnologies from './views/ChatbotTechnologies';
+import ProjectsDashboard from './views/ProjectsDashboard';
 
 function App() {
     return (
@@ -15,6 +16,8 @@ function App() {
                     <Link to="/chatbot-technologies" className="hover:underline">
                         Chatbot Technologies
                     </Link>
+                    <Link to="/projects" className="hover:underline">Projects</Link>
+
                 </nav>
             </header>
 
@@ -24,6 +27,7 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
+                    <Route path="/projects" element={<ProjectsDashboard />} />
                 </Routes>
             </main>
 
