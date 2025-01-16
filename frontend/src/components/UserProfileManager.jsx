@@ -73,7 +73,8 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
     };
 
 
-    const handleCreateProject = async () => {
+    const handleCreateProject = async (event) => {
+        event.preventDefault();
         if (!newProjectName.trim()) {
             alert('Please enter a project name.');
             return;
@@ -88,8 +89,6 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
             setNewProjectName('');
             setTechnology('');
             onOpenChange(false);
-
-
         } catch (error) {
             console.error('Error creating project:', error);
             alert('Error creating project.');
@@ -163,32 +162,34 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                 <ModalContent>
                     {(onClose) => (
                         <>
-                            <ModalHeader className="flex flex-col gap-1">Create New Project</ModalHeader>
-                            <ModalBody>
+                            <ModalHeader className="flex flex-col gap-1 items-center">
+                                Create New Project
+                            </ModalHeader>
+                            <ModalBody className="flex flex-col gap-4 items-center">
                                 <Form
-                                    className='flex flex-col gap-4'
+                                    className="w-full flex flex-col gap-4"
                                     onSubmit={handleCreateProject}
                                     onReset={handleFormReset}
-                                    validationBehavior='native'
+                                    validationBehavior="native"
                                 >
                                     <Input
                                         placeholder="Enter project name"
                                         fullWidth
                                         isRequired
-                                        labelPlacement='outside'
+                                        labelPlacement="outside"
                                         value={newProjectName}
-                                        variant='bordered'
+                                        variant="bordered"
                                         label="Project Name"
                                         onChange={handleProjectNameChange}
-                                        errorMessage='Please enter a project name'
+                                        errorMessage="Please enter a project name"
                                         maxLength={255}
-                                        minLength={4}
+                                        minLength={3}
                                     />
                                     <Select
                                         placeholder="Select chatbot technology"
                                         fullWidth
-                                        labelPlacement='outside'
                                         label="Technology"
+                                        labelPlacement="outside"
                                         onChange={handleTechnologyChange}
                                         isRequired
                                     >
@@ -197,18 +198,18 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                                                 {tech.name}
                                             </SelectItem>
                                         ))}
-
                                     </Select>
-
                                     <ModalFooter className="w-full flex justify-center gap-4">
-                                        <Button color="danger" type="reset">
+                                        <Button type="reset" color="danger" variant="light" onPress={onClose}>
                                             Reset
                                         </Button>
-                                        <Button color="primary" type="submit"
-                                            isDisabled={newProjectName.trim() === '' || technology === ''}>
+                                        <Button
+                                            type="submit"
+                                            color="primary"
+                                            isDisabled={newProjectName.trim() === '' || technology === ''}
+                                        >
                                             Create
                                         </Button>
-
                                     </ModalFooter>
                                 </Form>
                             </ModalBody>
@@ -217,63 +218,71 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                 </ModalContent>
             </Modal>
 
-            {/* Upload Section */}
-            <div className="flex flex-col space-y-4">
-                <Input
-                    type="file"
-                    multiple
-                    accept=".yaml,.yml"
-                    onChange={handleFileChange}
-                    ref={fileInputRef}
-                    fullWidth
-                />
-                <Button onPress={handleUpload} color="secondary" fullWidth>
-                    Upload
-                </Button>
-            </div>
+            {/* Project Details */}
+            {selectedProject ? (
+                <div>
+                    {/* Upload Section */}
+                    <div className="flex flex-col space-y-4">
+                        <Input
+                            type="file"
+                            multiple
+                            accept=".yaml,.yml"
+                            onChange={handleFileChange}
+                            ref={fileInputRef}
+                            fullWidth
+                        />
+                        <Button onPress={handleUpload} color="secondary" fullWidth>
+                            Upload
+                        </Button>
+                    </div>
 
-            {/* List Section */}
-            <div className="flex-1 overflow-y-auto">
-                {files.length > 0 ? (
-                    <ul className="space-y-2">
-                        {files.map(file => (
-                            <li key={file.id} className="flex flex-col space-y-1">
-                                <div className="flex items-start space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedFiles.includes(file.id)}
-                                        onChange={() => selectFile(file.id)}
-                                        className="form-checkbox h-4 w-4 mt-1"
-                                    />
-                                    <a
-                                        href={`${file.file}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
-                                    >
-                                        {file.name}
-                                    </a>
-                                </div>
-                                <p className="text-gray-600 text-sm ml-6">
-                                    {file.file.split('/').pop()}
-                                </p>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-gray-500 text-center">No profiles uploaded yet.</p>
-                )}
-            </div>
+                    {/* List Section */}
+                    <div className="flex-1 overflow-y-auto">
+                        {files.length > 0 ? (
+                            <ul className="space-y-2">
+                                {files.map(file => (
+                                    <li key={file.id} className="flex flex-col space-y-1">
+                                        <div className="flex items-start space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedFiles.includes(file.id)}
+                                                onChange={() => selectFile(file.id)}
+                                                className="form-checkbox h-4 w-4 mt-1"
+                                            />
+                                            <a
+                                                href={`${file.file}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                            >
+                                                {file.name}
+                                            </a>
+                                        </div>
+                                        <p className="text-gray-600 text-sm ml-6">
+                                            {file.file.split('/').pop()}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-gray-500 text-center">No profiles uploaded yet.</p>
+                        )}
+                    </div>
 
-            {/* Action Buttons */}
-            <div className="mt-4 flex space-x-4">
-                <Button color="danger" className="flex-1" onPress={handleDelete}>
-                    Delete Selected
-                </Button>
-                <Button color="primary" className="flex-1" onPress={handleExecuteTest}>
-                    Execute Test
-                </Button>
-            </div>
+                    {/* Action Buttons */}
+                    <div className="mt-4 flex space-x-4">
+                        <Button color="danger" className="flex-1" onPress={handleDelete}>
+                            Delete Selected
+                        </Button>
+                        <Button color="primary" className="flex-1" onPress={handleExecuteTest}>
+                            Execute Test
+                        </Button>
+                    </div>
+                </div>
+            ) : (
+                <p className="text-gray-500 text-center">Select a project to start working!</p>
+            )}
+
         </Card>
     );
 };

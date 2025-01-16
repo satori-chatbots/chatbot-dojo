@@ -8,22 +8,25 @@ import yaml
 
 def upload_to(instance, filename):
     """
-    Returns the path where the Test Files are stored (MEDIA_DIR/user-yaml, that is, filevault/user-yaml)
+    Returns the path where the Test Files are stored (MEDIA_DIR/user-profiles/<project_name>/<filename>)
     """
-    return os.path.join("user-yaml", filename)
+    return os.path.join("user-profiles", instance.project.name, filename)
 
 
 class TestFile(models.Model):
     """
     Model to store the uploaded User Profiles YAML files
 
-    These are the models that are available to the user to run tests
+    These are the models that are available to the user to run tests, each testfile belongs to a project
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
     """
 
     file = models.FileField(upload_to=upload_to)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
+    project = models.ForeignKey(
+        "Project", related_name="test_files", on_delete=models.CASCADE
+    )
 
     # This shouldnt be necessary since we are making sure the file field is always relative
     # Anyway, I leave it as a comment in case we need to go back to it in the future

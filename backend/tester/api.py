@@ -97,6 +97,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 file.delete()
 
         # Check for new files in the directory and add them to the DB
+        """
         directory_path = os.path.join(settings.MEDIA_ROOT, "user-yaml")
         if os.path.exists(directory_path):
             for filename in os.listdir(directory_path):
@@ -131,6 +132,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
                                     f"File with test_name '{test_name}' already exists. Skipping."
                                 )
                                 pass
+                                """
 
         # Repeat the query after possible deletions
         queryset = self.filter_queryset(self.get_queryset())
@@ -190,12 +192,24 @@ class TestFileViewSet(viewsets.ModelViewSet):
     )
     def upload(self, request):
         uploaded_files = request.FILES.getlist("file")
+        project_id = request.data.get("project")
         errors = []
         test_names = set()
         already_reported_test_names = set()
 
-        # Collect all existing test_names
-        existing_test_names = set(TestFile.objects.values_list("name", flat=True))
+        # Check if the project exists
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {"error": "Project not found, make sure to create a project first."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Collect all existing test_names in the project
+        existing_test_names = set(
+            TestFile.objects.filter(project=project).values_list("name", flat=True)
+        )
 
         # Validate all files first
         for f in uploaded_files:
@@ -251,7 +265,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 for f in uploaded_files:
                     data = yaml.safe_load(f.read())
                     test_name = data.get("test_name")
-                    instance = TestFile.objects.create(file=f, name=test_name)
+                    instance = TestFile.objects.create(file=f, name=test_name, project=project)
                     saved_files.append(instance.id)
         except Exception as e:
             return Response(

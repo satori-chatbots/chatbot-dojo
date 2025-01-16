@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { deleteFiles, uploadFiles } from '../api/fileApi';
 import { executeTest } from '../api/testCasesApi';
 import { fetchProjects } from '../api/projectApi';
+import { form } from '@nextui-org/react';
 
 
 function useFileHandlers(reload, reloadProjects, projects) {
@@ -89,6 +90,8 @@ function useFileHandlers(reload, reloadProjects, projects) {
             formData.append('file', selectedUploadFiles[i]);
         }
 
+        formData.append('project', selectedProject.id);
+        console.log(formData);
         uploadFiles(formData)
             .then(() => {
                 reload(); // Refresh the file list
