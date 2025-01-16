@@ -19,9 +19,19 @@ import {
     Tab,
 } from "@nextui-org/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
-import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
+import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
 
 const ChatbotTechnologies = () => {
+    const [editData, setEditData] = useState(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+
+    // Function to open edit modal
+    const handleEdit = (tech) => {
+        console.log('Editing:', tech);
+        setEditData(tech);
+        setIsEditOpen(true);
+    };
+
     const [technologies, setTechnologies] = useState([]);
     const [technologyChoices, setTechnologyChoices] = useState([]);
     const [formData, setFormData] = useState({
@@ -65,6 +75,19 @@ const ChatbotTechnologies = () => {
         event.preventDefault();
         const data = Object.fromEntries(new FormData(event.currentTarget));
         //console.log('Creating chatbot technology:', data);
+        // Check if the URL is valid
+        if (!data.link.match(/^https?:\/\//)) {
+            alert('Please enter a valid URL');
+            return;
+        }
+
+        // Check there is a technology selected
+        if (!data.technology) {
+            alert('Please select a technology');
+            return;
+        }
+
+
 
         try {
             await createChatbotTechnology(data);
@@ -92,6 +115,41 @@ const ChatbotTechnologies = () => {
         });
     };
 
+    // Update technology
+    const handleUpdate = async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.currentTarget));
+        // Check if the URL is valid
+        if (!data.link.match(/^https?:\/\//)) {
+            alert('Please enter a valid URL');
+            return;
+        }
+
+        // Check there is a technology selected
+        if (!data.technology) {
+            alert('Please select a technology');
+            return;
+        }
+
+        try {
+            await updateChatbotTechnology(editData.id, data);
+            setIsEditOpen(false);
+            await loadTechnologies();
+        } catch (error) {
+            alert(`Error updating chatbot technology: ${error.message}`);
+        }
+    };
+
+    // Delete existing technology
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this technology?')) return;
+        try {
+            await deleteChatbotTechnology(id);
+            await loadTechnologies();
+        } catch (error) {
+            alert(`Error deleting chatbot technology: ${error.message}`);
+        }
+    };
 
     // Columns for table
     const columns = [
@@ -213,15 +271,80 @@ const ChatbotTechnologies = () => {
                             <TableCell
                                 className='flex space-x-2'
                             >
-                                <Button size="sm" color="secondary" variant='ghost'
-                                >Edit</Button>
-                                <Button size="sm" color="danger" variant='ghost'>Delete</Button>
+                                <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEdit(tech)}>
+                                    Edit
+                                </Button>
+                                <Button size="sm" color="danger" variant='ghost' onPress={() => handleDelete(tech.id)}>
+                                    Delete
+                                </Button>
                             </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
             </Table>
+
+            {/* Modal for editing */}
+            <Modal
+                isOpen={isEditOpen}
+                onOpenChange={setIsEditOpen}
+            >
+                <ModalContent>
+                    {() => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1 items-center">
+                                Edit Technology
+                            </ModalHeader>
+                            <ModalBody className="flex flex-col gap-4 items-center">
+                                <Form
+                                    className="w-full flex flex-col gap-4"
+                                    onSubmit={handleUpdate}
+                                    onReset={() => setIsEditOpen(false)}
+                                >
+                                    <Input
+                                        isRequired
+                                        label="Name"
+                                        name="name"
+                                        defaultValue={editData?.name || ''}
+                                        type="text"
+                                    />
+                                    <Select
+                                        isRequired
+                                        label="Technology"
+                                        placeholder='Select a new Technology'
+                                        name="technology"
+
+                                    >
+                                        {technologyChoices.map(([key, value]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {value}
+                                            </SelectItem>
+                                        ))}
+                                    </Select>
+                                    <Input
+                                        isRequired
+                                        label="URL"
+                                        name="link"
+                                        defaultValue={editData?.link || ''}
+                                        type="url"
+                                    />
+                                    <ModalFooter className="w-full flex justify-center gap-4">
+                                        <Button type="reset" color="danger">
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" color="primary">
+                                            Save
+                                        </Button>
+                                    </ModalFooter>
+                                </Form>
+                            </ModalBody>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
         </div>
+
+
     );
 };
 

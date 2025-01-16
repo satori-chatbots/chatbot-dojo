@@ -50,3 +50,39 @@ export const fetchTechnologyChoices = async () => {
         throw error;
     }
 };
+
+export const updateChatbotTechnology = async (id, data) => {
+    try {
+        const response = await fetch(`${API_URL}${id}/`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating chatbot technology:', error);
+        throw error;
+    }
+};
+
+export const deleteChatbotTechnology = async (id) => {
+    try {
+        const response = await fetch(`${API_URL}${id}/`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // Handle empty (204) responses
+        if (response.status === 204) {
+            return;
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting chatbot technology:', error);
+        throw error;
+    }
+};
