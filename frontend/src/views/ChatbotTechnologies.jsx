@@ -78,9 +78,8 @@ const ChatbotTechnologies = () => {
             // Close modal
             onOpenChange(false);
         } catch (error) {
-            onOpenChange(false);
-            console.log('Error creating chatbot technology:', error);
-            alert('Error creating chatbot technology\n', error);
+            console.log('DFSDError creating chatbot technology:', error);
+            alert(`Error creating chatbot technology: ${error.message}`);
         }
     };
 

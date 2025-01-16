@@ -26,7 +26,9 @@ export const createChatbotTechnology = async (data) => {
             body: JSON.stringify(data),
         });
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            const errorMessage = errorData.link ? errorData.link.join(', ') : `HTTP error! status: ${response.status}`;
+            throw new Error(errorMessage);
         }
         return await response.json();
     } catch (error) {
