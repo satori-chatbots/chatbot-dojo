@@ -4,18 +4,21 @@ import {
     Input,
     Card,
     Dropdown,
-    Form,
+    DropdownItem,
+    DropdownTrigger,
+    DropdownMenu,
+    Select,
+    SelectItem,
     Modal,
     ModalContent,
     ModalFooter,
     ModalBody,
-    DropdownItem,
-    DropdownTrigger,
-    DropdownMenu,
     ModalHeader,
     useDisclosure,
-    select
+    Form,
+    Tab,
 } from "@nextui-org/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
 
 const ChatbotTechnologies = () => {
@@ -29,25 +32,6 @@ const ChatbotTechnologies = () => {
 
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
-    const [newTechnologyName, setNewTechnologyName] = useState('');
-    const [newTechnologyChoice, setNewTechnologyChoice] = useState({ key: '', value: '' });
-    const [newTechnologyLink, setNewTechnologyLink] = useState('');
-
-    const handleTechnologyNameChange = (event) => {
-        setNewTechnologyName(event.target.value);
-    }
-
-    const handleTechnologyChoiceChange = (key, value) => {
-        /* console.log(key, value); */
-        setNewTechnologyChoice({ key, value });
-    }
-
-    const handleTechnologyLinkChange = (event) => {
-
-        setNewTechnologyLink(event.target.value);
-    }
-
-
     useEffect(() => {
         loadTechnologies();
         loadTechnologyChoices();
@@ -58,132 +42,186 @@ const ChatbotTechnologies = () => {
             const data = await fetchChatbotTechnologies();
             setTechnologies(data);
         } catch (error) {
-            // Handle error
+            console.error('Error fetching chatbot technologies:', error);
         }
     };
 
     const loadTechnologyChoices = async () => {
         try {
             const choices = await fetchTechnologyChoices();
-            setTechnologyChoices(choices);
-            console.log(choices);
-            setFormData(prev => ({ ...prev, technology: choices[0][0] || '' }));
+            setTechnologyChoices(choices); // each choice is [key, value]
+            // Set initial selection
+            setFormData(prev => ({
+                ...prev,
+                technology: choices[0]?.[0] || ''
+            }));
         } catch (error) {
-            // Handle error
+            console.error('Error fetching technology choices:', error);
         }
     };
 
-    const handleChange = (e) => {
+    // Called after the form is submitted
+    const handleFormSubmit = async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.currentTarget));
+        //console.log('Creating chatbot technology:', data);
+
+        try {
+            await createChatbotTechnology(data);
+            // Reset form
+            setFormData({
+                name: '',
+                technology: technologyChoices[0]?.[0] || '',
+                link: '',
+            });
+            loadTechnologies();
+            // Close modal
+            onOpenChange(false);
+        } catch (error) {
+            onOpenChange(false);
+            console.log('Error creating chatbot technology:', error);
+            alert('Error creating chatbot technology\n', error);
+        }
+    };
+
+    // Called when the form is reset
+    const handleFormReset = () => {
         setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
+            name: '',
+            technology: technologyChoices[0]?.[0] || '',
+            link: '',
         });
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await createChatbotTechnology(formData);
-            setFormData({ name: '', technology: technologyChoices[0] || '', link: '' });
-            loadTechnologies();
-        } catch (error) {
-            // Handle error
-        }
-    };
+
+    // Columns for table
+    const columns = [
+        { name: 'Name', key: 'name' },
+        { name: 'Technology', key: 'technology' },
+        { name: 'URL', key: 'link' },
+        { name: 'Actions', key: 'actions' },
+    ];
 
     return (
-        <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
-            {/* Header */}
+        <div className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
             <h1 className="text-3xl font-bold text-center">Chatbot Technologies</h1>
 
-            {/* Create Chatbot Technology Modal */}
-            <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+            {/* Button to open modal */}
+            <Button color="primary" onPress={onOpen}
+                className="max-w-[200px] mx-auto"
+            >
+                Create New Technology
+            </Button>
+
+            {/* Modal to create new technology */}
+            <Modal isOpen={isOpen}
+                onOpenChange={onOpenChange}
+            >
                 <ModalContent>
-                    {(onClose) => (
+                    {() => (
                         <>
-                            <ModalHeader className="flex flex-col gap-1">Create New Technology</ModalHeader>
-                            <ModalBody>
-                                <Input
-                                    placeholder='Enter a name to identify the technology'
-                                    fullWidth
-                                    value={newTechnologyName}
-                                    variant='bordered'
-                                    label='Technology Name'
-                                    onChange={handleTechnologyNameChange}
-                                    isInvalid={newTechnologyName.trim() === ''}
-                                    errorMessage={newTechnologyName.trim() === '' ? 'Technology name is required' : ''}
-                                    maxLength={255}
-                                    minLength={4}
-                                />
-                                <Dropdown className='full-width'>
-                                    <DropdownTrigger>
-                                        <Button>
-                                            {newTechnologyChoice.value || 'Select a technology'}
-                                        </Button>
-                                    </DropdownTrigger>
-                                    <DropdownMenu>
-                                        {technologyChoices.map((choice) => (
-                                            <DropdownItem key={choice[0]} onPress={() => handleTechnologyChoiceChange(choice[0], choice[1])}>
-                                                {choice[1]}
-                                            </DropdownItem>
+                            <ModalHeader className="flex flex-col gap-1 items-center">
+                                Create New Technology
+                            </ModalHeader>
+                            <ModalBody className="flex flex-col gap-4 items-center">
+                                <Form
+                                    className="w-full flex flex-col gap-4"
+                                    onSubmit={handleFormSubmit}
+                                    onReset={handleFormReset}
+                                    validationBehavior="native"
+                                >
+                                    <Input
+                                        isRequired
+                                        errorMessage="Please enter a valid name"
+                                        label="Name"
+                                        labelPlacement="outside"
+                                        name="name"
+                                        placeholder="Enter a name to identify the technology"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        type="text"
+                                    />
 
+                                    {/* Select for technology choices */}
+                                    <Select
+                                        isRequired
+                                        label="Technology"
+                                        labelPlacement="outside"
+                                        placeholder="Select Technology"
+                                        name="technology"
+                                        value={formData.technology}
+                                        onChange={(val) => {
+                                            // 'val' is expected to be a string
+                                            setFormData((prev) => ({ ...prev, technology: val }));
+                                        }}
+                                        fullWidth
+                                    >
+                                        {technologyChoices.map(([key, value]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {value}
+                                            </SelectItem>
                                         ))}
-                                    </DropdownMenu>
-                                </Dropdown>
-                                <Input
+                                    </Select>
 
-                                    placeholder='Enter a link to the technology'
-                                    fullWidth
-                                    value={newTechnologyLink}
-                                    variant='bordered'
-                                    type='url'
-                                    label='Technology Link'
-                                    onChange={handleTechnologyLinkChange}
-                                    isInvalid={newTechnologyLink.trim() === ''}
-                                    errorMessage={newTechnologyLink.trim() === '' ? 'Technology link is required' : ''}
-                                    maxLength={255}
-                                    minLength={5}
-                                />
+                                    <Input
+                                        isRequired
+                                        errorMessage="Please enter a valid URL"
+                                        label="Link"
+                                        labelPlacement="outside"
+                                        name="link"
+                                        placeholder="Enter a link to the technology"
+                                        value={formData.link}
+                                        onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                                        type="url"
+                                    />
+
+                                    <ModalFooter className="w-full flex justify-center gap-4">
+                                        <Button type="reset" color="danger">
+                                            Reset
+                                        </Button>
+                                        <Button type="submit" color="primary">
+                                            Create
+                                        </Button>
+                                    </ModalFooter>
+                                </Form>
                             </ModalBody>
-                            <ModalFooter>
-                                <Button
-                                    color='danger' variant='light' onPress={onClose}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    color='primary' onPress={handleSubmit}
-                                >
-                                    Create
-                                </Button>
-                            </ModalFooter>
                         </>
                     )}
                 </ModalContent>
             </Modal>
 
-            {/* Create Chatbot Technology Button */}
-            <Button
-                color='primary'
-                onPress={() => onOpen()}
+            <h2 className='text-2xl font-bold text-center'>Existing Technologies</h2>
+            {/* Table of existing technologies */}
+            <Table aria-label="Chatbot Technologies Table">
+                <TableHeader columns={columns}>
+                    <TableColumn key="name" allowsSorting>Name</TableColumn>
+                    <TableColumn key="technology" allowsSorting>Technology</TableColumn>
+                    <TableColumn key="link" allowsSorting>URL</TableColumn>
+                    <TableColumn key="actions">Actions</TableColumn>
 
-            >
-                Create New Technology
-            </Button>
-
-
-
-
-
-            <h2>Existing Chatbot Technologies</h2>
-            <ul>
-                {technologies.map((tech) => (
-                    <li key={tech.id}>
-                        <strong>{tech.name}</strong> - {tech.technology} - <a href={tech.link} target="_blank" rel="noopener noreferrer">Link</a>
-                    </li>
-                ))}
-            </ul>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                    {technologies.map((tech) => (
+                        <TableRow key={tech.id}>
+                            <TableCell>{tech.name}</TableCell>
+                            <TableCell>{tech.technology}</TableCell>
+                            <TableCell>
+                                <a href={tech.link} target="_blank" rel="noopener noreferrer">
+                                    {tech.link}
+                                </a>
+                            </TableCell>
+                            <TableCell
+                            className='flex space-x-2'
+                            >
+                                <Button size="sm" color="secondary" variant='ghost'
+                                >Edit</Button>
+                                <Button size="sm" color="danger" variant='ghost'>Delete</Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
     );
 };
 

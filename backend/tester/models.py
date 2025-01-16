@@ -104,7 +104,8 @@ class ChatbotTechnology(models.Model):
 
     name = models.CharField(max_length=255)
     technology = models.CharField(max_length=255, choices=TECHNOLOGY_CHOICES)
-    link = models.URLField()
+    # Changed from URLField to CharField because it causes errors when not writing http://
+    link = models.CharField(max_length=255)
 
     def __str__(self):
         return self.name
