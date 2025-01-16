@@ -23,7 +23,11 @@ function useFetchProjects() {
         loadProjects()
     }, [])
 
-    return { projects, loading, error, reload: loadProjects }
+    const reloadProjects = () => {
+        loadProjects();
+    };
+
+    return { projects, loading, error, reloadProjects }
 }
 
 export default useFetchProjects

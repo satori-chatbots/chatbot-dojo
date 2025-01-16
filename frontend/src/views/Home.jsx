@@ -6,31 +6,10 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { Card } from '@nextui-org/react';
 
 function Home() {
-    const { files, loading, error, reload } = useFetchFiles();
-
-
-    const { projects, error: projectsError, reload: reloadProjects } = useFetchProjects();
-
-    if (loading) {
-        return <p className="text-center">Loading files...</p>;
-    }
-
-    if (error) {
-        return <p className="text-center text-red-500">Error fetching user profiles: {error.message}</p>;
-    }
-
-    if (projectsError) {
-        return <p className="text-center text-red-500">Error fetching projects: {projectsError.message}</p>;
-    }
-
     return (
         <div className="flex justify-center items-start">
             <div className="w-full max-w-4xl">
                 <UserProfileManager
-                    files={files}
-                    reload={reload}
-                    projects={projects}
-                    reloadProjects={reloadProjects}
                 />
             </div>
         </div>

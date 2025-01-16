@@ -23,12 +23,42 @@ import { MEDIA_URL } from '../api/config';
 import { createProject, deleteProject } from '../api/projectApi';
 import { HiOutlineTrash } from "react-icons/hi";
 import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
+import useFetchProjects from '../hooks/useFetchProjects';
+import useFetchFiles from '../hooks/useFetchFiles';
 
 
-function UserProfileManager({ files, reload, projects, reloadProjects }) {
+function UserProfileManager() {
 
+    // List of available chatbot technologies (eg Taskyto, Rasa, etc.)
     const [availableTechnologies, setAvailableTechnologies] = useState([]);
 
+    // Fetch the list of projects
+    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
+
+    // Control the selected project
+    const [selectedProject, setSelectedProject] = useState(null);
+
+    // Control the project creation modal
+    const [newProjectName, setNewProjectName] = useState('');
+    const [technology, setTechnology] = useState('');
+
+    // Controls if the modal is open or not
+    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
+    // List of files selected with checkboxes
+    const [selectedFiles, setSelectedFiles] = useState([]);
+
+    // List of files to upload
+    const fileInputRef = useRef(null);
+
+
+    const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
+
+    // List of files in the selected project
+    const { files, loading, error, reloadFiles } = useFetchFiles(selectedProject ? selectedProject.id : null);
+
+
+    // Initialize with the available technologies
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -45,29 +75,126 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
     }, []);
 
 
-    const {
-        selectedFiles,
-        selectFile,
-        handleDelete,
-        handleExecuteTest,
-        selectedProject,
-        handleProjectChange,
-        setSelectedProject,
-        selectedUploadFiles,
-        handleUpload,
-        handleFileChange,
-        fileInputRef,
-    } = useFileHandlers(reload, reloadProjects, projects);
+    /* ------------------------------------------------------ */
+    /* ------------------ File Handlers --------------------- */
+    /* ------------------------------------------------------ */
 
-    const { isOpen, onOpen, onOpenChange } = useDisclosure();
-
-    const [newProjectName, setNewProjectName] = useState('');
-    const [technology, setTechnology] = useState('');
-
-    const handleProjectNameChange = (event) => {
-        setNewProjectName(event.target.value);
+    // This is for the checkboxes
+    const selectFile = (id) => {
+        setSelectedFiles((prev) =>
+            prev.includes(id) ? prev.filter((fileId) => fileId !== id) : [...prev, id]
+        );
     };
 
+
+    const handleFileChange = (event) => {
+        setSelectedUploadFiles(event.target.files);
+    };
+
+    // Handle upload
+    const handleUpload = () => {
+        if (!selectedUploadFiles || selectedUploadFiles.length === 0) {
+            alert('Please select files to upload.');
+            return;
+        }
+
+        const formData = new FormData();
+        for (let i = 0; i < selectedUploadFiles.length; i++) {
+            formData.append('file', selectedUploadFiles[i]);
+        }
+
+        formData.append('project', selectedProject.id);
+        console.log(formData);
+        uploadFiles(formData)
+            .then(() => {
+                reloadFiles(); // Refresh the file list
+                setSelectedUploadFiles(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = null; // Clear the file input
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading files:', error);
+                alert('Error uploading files:\n' + error.message);
+            });
+    };
+
+    // Delete selected files
+    const handleDelete = () => {
+        if (selectedFiles.length === 0) {
+            alert('No files selected for deletion.');
+            return;
+        }
+
+        if (!window.confirm('Are you sure you want to delete the selected files?')) {
+            return;
+        }
+
+        deleteFiles(selectedFiles)
+            .then(() => {
+                setSelectedFiles([]);
+                reloadFiles();
+            })
+            .catch((error) => {
+                console.error('Error deleting files:', error);
+                alert('Error deleting files.');
+            });
+    };
+
+    // Execute test on selected files and project
+    const handleExecuteTest = () => {
+        if (selectedFiles.length === 0) {
+            alert('No files selected for test execution.');
+            return;
+        }
+
+        if (!selectedProject) {
+            alert('Please select a project to execute the test.');
+            return;
+        }
+
+        console.log('Selected files:', selectedFiles);
+        console.log('Selected project:', selectedProject);
+
+        executeTest(selectedFiles, selectedProject.id)
+            .then((data) => {
+                setTestResult(data.result);
+                alert(data.message);
+            })
+            .catch((error) => {
+                console.error('Error executing test:', error);
+                alert(`Error executing test: ${error.message}`);
+            });
+    };
+
+
+    /* ------------------------------------------------------ */
+    /* ------------------ Project Handlers ------------------ */
+    /* ------------------------------------------------------ */
+
+    const handleProjectChange = (projectId) => {
+        const project = projects.find(project => project.id === projectId);
+        setSelectedProject(project);
+
+        // Clear the selected files
+        setSelectedFiles([]);
+
+        // Clear files
+
+        // Reload the files
+        reloadFiles();
+
+
+    };
+
+    // For the project creation (name)
+    const handleProjectNameChange = (event) => {
+        setNewProjectName(event.target.value);
+
+
+    };
+
+    // For the project creation (technology)
     const handleTechnologyChange = (event) => {
         setTechnology(event.target.value);
     };
@@ -102,6 +229,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         try {
             await deleteProject(projectId);
             await reloadProjects();
+            setSelectedProject(null);
         } catch (error) {
             console.error('Error deleting project:', error);
             alert('Error deleting project.');
@@ -112,6 +240,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         setNewProjectName('');
         setTechnology('');
     }
+
 
     return (
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { fetchFiles } from '../api/fileApi'
 
-function useFetchFiles() {
+function useFetchFiles(project_id) {
     const [files, setFiles] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
     const loadFiles = () => {
         setLoading(true)
-        fetchFiles()
+        fetchFiles(project_id)
             .then(data => {
                 setFiles(data)
                 setLoading(false)
@@ -21,9 +21,13 @@ function useFetchFiles() {
 
     useEffect(() => {
         loadFiles()
-    }, [])
+    }, [project_id])
 
-    return { files, loading, error, reload: loadFiles }
+    const reloadFiles = () => {
+        loadFiles()
+    };
+
+    return { files, loading, error, reloadFiles }
 }
 
 export default useFetchFiles

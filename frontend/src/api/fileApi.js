@@ -1,7 +1,10 @@
 import API_BASE_URL, { ENDPOINTS } from './config';
 
-export const fetchFiles = () => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}`)
+export const fetchFiles = (project_id) => {
+    if (!project_id) {
+        return Promise.resolve([]);
+    }
+    return fetch(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}?project_id=${project_id}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
