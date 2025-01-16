@@ -15,6 +15,8 @@ from .serializers import (
     TestFileSerializer,
     ProjectSerializer,
 )
+from django.http import JsonResponse
+from .models import TECHNOLOGY_CHOICES
 import os
 from .utils import check_keys
 import yaml
@@ -25,6 +27,10 @@ import threading
 # ---------------------- #
 # - CHATBOT TECHNOLOGY - #
 # ---------------------- #
+
+
+def get_technology_choices(request):
+    return JsonResponse({"technology_choices": TECHNOLOGY_CHOICES})
 
 
 class ChatbotTechnologyViewSet(viewsets.ModelViewSet):

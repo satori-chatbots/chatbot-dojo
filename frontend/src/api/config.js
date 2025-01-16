@@ -8,6 +8,8 @@ export const ENDPOINTS = {
     EXECUTE_TEST: '/execute-selected/',
     FETCH_TEST_CASES: '/testcases/',
     PROJECTS: '/projects/',
+    CHATBOTTECHNOLOGIES: '/chatbottechnologies/',
+    TECHNOLOGIES_CHOICES: '/chatbottechnologies/choices/',
 };
 
 export default API_BASE_URL;

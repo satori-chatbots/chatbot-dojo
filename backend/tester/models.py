@@ -81,6 +81,21 @@ class Project(models.Model):
         return self.name
 
 
+TECHNOLOGY_CHOICES = [
+    ("rasa", "Rasa"),
+    ("taskyto", "Taskyto"),
+    ("ada-uam", "Ada UAM"),
+    ("millionbot", "Millionbot"),
+    ("genion", "Genion"),
+    ("lola", "Lola"),
+    ("serviceform", "Serviceform"),
+    ("kuki", "Kuki"),
+    ("julie", "Julie"),
+    ("rivas_catalina", "Rivas Catalina"),
+    ("saic_malaga", "Saic Malaga"),
+]
+
+
 class ChatbotTechnology(models.Model):
     """Information about the technology of the chatbot used, it can be used by multiple projects
 
@@ -88,7 +103,7 @@ class ChatbotTechnology(models.Model):
     """
 
     name = models.CharField(max_length=255)
-    technology = models.CharField(max_length=255)
+    technology = models.CharField(max_length=255, choices=TECHNOLOGY_CHOICES)
     link = models.URLField()
 
     def __str__(self):

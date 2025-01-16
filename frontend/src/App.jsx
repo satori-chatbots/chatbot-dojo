@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import Home from './views/Home';
 import Dashboard from './views/Dashboard';
+import ChatbotTechnologies from './views/ChatbotTechnologies';
 
 function App() {
     return (
@@ -11,6 +12,9 @@ function App() {
                 <nav className="flex justify-center space-x-4">
                     <Link to="/" className="hover:underline">Home</Link>
                     <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                    <Link to="/chatbot-technologies" className="hover:underline">
+                        Chatbot Technologies
+                    </Link>
                 </nav>
             </header>
 
@@ -19,6 +23,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
                 </Routes>
             </main>
 

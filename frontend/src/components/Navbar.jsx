@@ -9,6 +9,7 @@ const Navbar = () => {
             <ul className="navbar-nav">
                 <li className="nav-item">
                     <a href="/dashboard" className="nav-link">dashboard</a>
+                    <a href="/chatbot-technologies" className="nav-link">Chatbot Technologies</a>
                 </li>
             </ul>
         </nav>

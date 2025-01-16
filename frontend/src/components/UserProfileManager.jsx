@@ -155,6 +155,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                                     isInvalid={newProjectName.trim() === '' && newProjectName.length < 255}
                                     errorMessage={newProjectName.trim() === '' ? 'Please enter a project name (max 255 characters).' : ''}
                                     maxLength={255}
+                                    minLength={4}
                                 />
                                 <Input
                                     placeholder="Enter technology"
@@ -181,9 +182,10 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                             </ModalBody>
                             <ModalFooter>
                                 <Button color="danger" variant="light" onPress={onClose}>
-                                    Close
+                                    Cancel
                                 </Button>
-                                <Button color="primary" onPress={handleCreateProject}>
+                                <Button color="primary" onPress={handleCreateProject}
+                                    isDisabled={newProjectName.trim() === '' || technology.trim() === '' || !isValidURL(chatbotURL)}>
                                     Create
                                 </Button>
                             </ModalFooter>
