@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Button,
     Input,
@@ -13,16 +13,38 @@ import {
     DropdownMenu,
     ModalHeader,
     useDisclosure,
-    select
+    Select,
+    SelectItem,
+    Form
 } from "@nextui-org/react";
+import { Select } from '@nextui-org/react';
 import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
 import { createProject, deleteProject } from '../api/projectApi';
 import { HiOutlineTrash } from "react-icons/hi";
+import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
 
 
 function UserProfileManager({ files, reload, projects, reloadProjects }) {
+
+    const [availableTechnologies, setAvailableTechnologies] = useState([]);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const technologies = await fetchChatbotTechnologies();
+                console.log(technologies);
+                setAvailableTechnologies(technologies);
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        };
+
+        loadData();
+    }, []);
+
 
     const {
         selectedFiles,
@@ -42,7 +64,6 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
 
     const [newProjectName, setNewProjectName] = useState('');
     const [technology, setTechnology] = useState('');
-    const [chatbotURL, setChatbotURL] = useState('');
 
     const handleProjectNameChange = (event) => {
         setNewProjectName(event.target.value);
@@ -52,9 +73,6 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         setTechnology(event.target.value);
     };
 
-    const handleChatbotURLChange = (event) => {
-        setChatbotURL(event.target.value);
-    };
 
     const handleCreateProject = async () => {
         if (!newProjectName.trim()) {
@@ -64,14 +82,12 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         try {
             const newProject = await createProject({
                 name: newProjectName,
-                technology: technology,
-                chatbotURL: chatbotURL
+                chatbot_technology: technology,
             });
             await reloadProjects();
             setSelectedProject(newProject);
             setNewProjectName('');
             setTechnology('');
-            setChatbotURL('');
             onOpenChange(false);
 
 
@@ -153,39 +169,32 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                                     label="Project Name"
                                     onChange={handleProjectNameChange}
                                     isInvalid={newProjectName.trim() === '' && newProjectName.length < 255}
-                                    errorMessage={newProjectName.trim() === '' ? 'Please enter a project name (max 255 characters).' : ''}
+                                    errorMessage='Please enter a project name'
                                     maxLength={255}
                                     minLength={4}
                                 />
-                                <Input
-                                    placeholder="Enter technology"
+                                <Select
+                                    placeholder="Select chatbot technology"
                                     fullWidth
-                                    value={technology}
-                                    variant='bordered'
                                     label="Technology"
                                     onChange={handleTechnologyChange}
-                                    isInvalid={technology.trim() === ''}
-                                    errorMessage={technology.trim() === '' ? 'Please enter a technology.' : ''}
-                                    maxLength={255}
-                                />
-                                <Input
-                                    placeholder="Enter chatbot URL"
-                                    fullWidth
-                                    value={chatbotURL}
-                                    variant='bordered'
-                                    label="Chatbot URL"
-                                    onChange={handleChatbotURLChange}
-                                    isInvalid={!isValidURL(chatbotURL)}
-                                    errorMessage={!isValidURL(chatbotURL) ? 'Please enter a valid URL.' : ''}
-                                    maxLength={500}
-                                />
+                                    isInvalid={technology === ''}
+                                >
+                                    {availableTechnologies.map((tech) => (
+                                        <SelectItem key={tech.id} value={tech.name}>
+                                            {tech.name}
+                                        </SelectItem>
+                                    ))}
+
+                                </Select>
+
                             </ModalBody>
                             <ModalFooter>
                                 <Button color="danger" variant="light" onPress={onClose}>
                                     Cancel
                                 </Button>
                                 <Button color="primary" onPress={handleCreateProject}
-                                    isDisabled={newProjectName.trim() === '' || technology.trim() === '' || !isValidURL(chatbotURL)}>
+                                    isDisabled={newProjectName.trim() === '' || technology === ''}>
                                     Create
                                 </Button>
                             </ModalFooter>
@@ -255,15 +264,7 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
     );
 };
 
-const isValidURL = (url) => {
-    const pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
-        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
-        '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
-        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
-        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
-        '(\\#[-a-z\\d_]*)?$', 'i');
-    return !!pattern.test(url);
-};
+
 
 
 
