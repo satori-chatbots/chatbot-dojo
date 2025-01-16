@@ -17,7 +17,6 @@ import {
     SelectItem,
     Form
 } from "@nextui-org/react";
-import { Select } from '@nextui-org/react';
 import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';
@@ -110,6 +109,11 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
         }
     }
 
+    const handleFormReset = () => {
+        setNewProjectName('');
+        setTechnology('');
+    }
+
     return (
         <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
             {/* Header */}
@@ -161,43 +165,53 @@ function UserProfileManager({ files, reload, projects, reloadProjects }) {
                         <>
                             <ModalHeader className="flex flex-col gap-1">Create New Project</ModalHeader>
                             <ModalBody>
-                                <Input
-                                    placeholder="Enter project name"
-                                    fullWidth
-                                    value={newProjectName}
-                                    variant='bordered'
-                                    label="Project Name"
-                                    onChange={handleProjectNameChange}
-                                    isInvalid={newProjectName.trim() === '' && newProjectName.length < 255}
-                                    errorMessage='Please enter a project name'
-                                    maxLength={255}
-                                    minLength={4}
-                                />
-                                <Select
-                                    placeholder="Select chatbot technology"
-                                    fullWidth
-                                    label="Technology"
-                                    onChange={handleTechnologyChange}
-                                    isInvalid={technology === ''}
+                                <Form
+                                    className='flex flex-col gap-4'
+                                    onSubmit={handleCreateProject}
+                                    onReset={handleFormReset}
+                                    validationBehavior='native'
                                 >
-                                    {availableTechnologies.map((tech) => (
-                                        <SelectItem key={tech.id} value={tech.name}>
-                                            {tech.name}
-                                        </SelectItem>
-                                    ))}
+                                    <Input
+                                        placeholder="Enter project name"
+                                        fullWidth
+                                        isRequired
+                                        labelPlacement='outside'
+                                        value={newProjectName}
+                                        variant='bordered'
+                                        label="Project Name"
+                                        onChange={handleProjectNameChange}
+                                        errorMessage='Please enter a project name'
+                                        maxLength={255}
+                                        minLength={4}
+                                    />
+                                    <Select
+                                        placeholder="Select chatbot technology"
+                                        fullWidth
+                                        labelPlacement='outside'
+                                        label="Technology"
+                                        onChange={handleTechnologyChange}
+                                        isRequired
+                                    >
+                                        {availableTechnologies.map((tech) => (
+                                            <SelectItem key={tech.id} value={tech.name}>
+                                                {tech.name}
+                                            </SelectItem>
+                                        ))}
 
-                                </Select>
+                                    </Select>
 
+                                    <ModalFooter className="w-full flex justify-center gap-4">
+                                        <Button color="danger" type="reset">
+                                            Reset
+                                        </Button>
+                                        <Button color="primary" type="submit"
+                                            isDisabled={newProjectName.trim() === '' || technology === ''}>
+                                            Create
+                                        </Button>
+
+                                    </ModalFooter>
+                                </Form>
                             </ModalBody>
-                            <ModalFooter>
-                                <Button color="danger" variant="light" onPress={onClose}>
-                                    Cancel
-                                </Button>
-                                <Button color="primary" onPress={handleCreateProject}
-                                    isDisabled={newProjectName.trim() === '' || technology === ''}>
-                                    Create
-                                </Button>
-                            </ModalFooter>
                         </>
                     )}
                 </ModalContent>
