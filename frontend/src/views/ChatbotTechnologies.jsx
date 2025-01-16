@@ -166,12 +166,13 @@ const ChatbotTechnologies = () => {
                                     <Input
                                         isRequired
                                         errorMessage="Please enter a valid URL"
-                                        label="Link"
+                                        label="URL"
                                         labelPlacement="outside"
                                         name="link"
-                                        placeholder="Enter a link to the technology"
+                                        placeholder="Enter a URL to the technology"
                                         value={formData.link}
                                         onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                                        isInvalid={formData.link.length > 0 && !formData.link.match(/^https?:\/\//)}
                                         type="url"
                                     />
 
@@ -211,7 +212,7 @@ const ChatbotTechnologies = () => {
                                 </a>
                             </TableCell>
                             <TableCell
-                            className='flex space-x-2'
+                                className='flex space-x-2'
                             >
                                 <Button size="sm" color="secondary" variant='ghost'
                                 >Edit</Button>
