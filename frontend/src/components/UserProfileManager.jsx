@@ -25,7 +25,8 @@ import { HiOutlineTrash } from "react-icons/hi";
 import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
 import useFetchProjects from '../hooks/useFetchProjects';
 import useFetchFiles from '../hooks/useFetchFiles';
-
+import { executeTest } from '../api/testCasesApi';
+import { deleteFiles } from '../api/fileApi';
 
 function UserProfileManager() {
 
@@ -158,7 +159,6 @@ function UserProfileManager() {
 
         executeTest(selectedFiles, selectedProject.id)
             .then((data) => {
-                setTestResult(data.result);
                 alert(data.message);
             })
             .catch((error) => {

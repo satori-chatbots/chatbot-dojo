@@ -1,127 +1,68 @@
 import { useEffect, useState, useRef } from 'react';
-import { deleteFiles, uploadFiles } from '../api/fileApi';
+import { deleteFiles, uploadFiles, fetchFiles } from '../api/fileApi';
 import { executeTest } from '../api/testCasesApi';
 import { fetchProjects } from '../api/projectApi';
 import { form } from '@nextui-org/react';
 
-
 function useFileHandlers(reload, reloadProjects, projects) {
-    const [selectedFiles, setSelectedFiles] = useState([]);
     const [testResult, setTestResult] = useState(null);
-    const [selectedProject, setSelectedProject] = useState(null);
-    const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
-    const fileInputRef = useRef(null);
 
-    // Fetch files
-    const selectFile = (id) => {
-        setSelectedFiles((prev) =>
-            prev.includes(id) ? prev.filter((fileId) => fileId !== id) : [...prev, id]
-        );
-    };
+    function useFetchFiles() {
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
 
-    // Delete selected files
-    const handleDelete = () => {
-        if (selectedFiles.length === 0) {
-            alert('No files selected for deletion.');
-            return;
-        }
+        const loadFiles = () => {
+            setLoading(true);
+            fetchFiles()
+                .then(data => {
+                    setFiles(data);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    setError(err);
+                    setLoading(false);
+                });
+        };
 
-        if (!window.confirm('Are you sure you want to delete the selected files?')) {
-            return;
-        }
+        useEffect(() => {
+            loadFiles();
+        }, []);
 
-        deleteFiles(selectedFiles)
-            .then(() => {
-                /*alert('Selected files deleted successfully.');*/
-                setSelectedFiles([]);
-                reload();
-            })
-            .catch((error) => {
-                console.error('Error deleting files:', error);
-                alert('Error deleting files.');
-            });
-    };
-
-    // Execute test on selected files and project
-    const handleExecuteTest = () => {
-        if (selectedFiles.length === 0) {
-            alert('No files selected for test execution.');
-            return;
-        }
-
-        if (!selectedProject) {
-            alert('Please select a project to execute the test.');
-            return;
-        }
-
-        console.log('Selected files:', selectedFiles);
-        console.log('Selected project:', selectedProject);
-
-        executeTest(selectedFiles, selectedProject.id)
-            .then((data) => {
-                setTestResult(data.result);
-                alert(data.message);
-            })
-            .catch((error) => {
-                console.error('Error executing test:', error);
-                alert(`Error executing test: ${error.message}`);
-            });
-    };
-
-    const handleProjectChange = (projectId) => {
-        const project = projects.find(project => project.id === projectId);
-        setSelectedProject(project);
+        return { files, loading, error, reload: loadFiles };
     }
 
+    const { files, loading, error, reload: reloadFiles } = useFetchFiles();
+
+    // Fetch files
+
+
+
+
+
+
     // Handle file change
-    const handleFileChange = (event) => {
-        setSelectedUploadFiles(event.target.files);
-    };
 
-    // Handle upload
-    const handleUpload = () => {
-        if (!selectedUploadFiles || selectedUploadFiles.length === 0) {
-            alert('Please select files to upload.');
-            return;
-        }
 
-        const formData = new FormData();
-        for (let i = 0; i < selectedUploadFiles.length; i++) {
-            formData.append('file', selectedUploadFiles[i]);
-        }
 
-        formData.append('project', selectedProject.id);
-        console.log(formData);
-        uploadFiles(formData)
-            .then(() => {
-                reload(); // Refresh the file list
-                setSelectedUploadFiles(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = null; // Clear the file input
-                }
-                //alert('Files uploaded successfully.');
-            })
-            .catch(error => {
-                console.error('Error uploading files:', error);
-                alert('Error uploading files:\n' + error.message);
-            });
-    };
 
     return {
-        selectedFiles,
-        testResult,
+
         selectFile,
         handleDelete,
         handleExecuteTest,
         projects,
-        selectedProject,
+
         handleProjectChange,
         selectedUploadFiles,
-        setSelectedProject,
+
         setSelectedUploadFiles,
         fileInputRef,
         handleFileChange,
         handleUpload,
+        files,
+        loading,
+        error,
+        reloadFiles,
     };
 }
 
