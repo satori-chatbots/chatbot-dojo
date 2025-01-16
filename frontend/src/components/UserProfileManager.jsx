@@ -27,6 +27,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import useFetchFiles from '../hooks/useFetchFiles';
 import { executeTest } from '../api/testCasesApi';
 import { deleteFiles } from '../api/fileApi';
+import CreateProjectModal from './CreateProjectModal';
 
 function UserProfileManager() {
 
@@ -287,65 +288,17 @@ function UserProfileManager() {
             </div>
 
             {/* Create Project Modal */}
-            <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-                <ModalContent>
-                    {(onClose) => (
-                        <>
-                            <ModalHeader className="flex flex-col gap-1 items-center">
-                                Create New Project
-                            </ModalHeader>
-                            <ModalBody className="flex flex-col gap-4 items-center">
-                                <Form
-                                    className="w-full flex flex-col gap-4"
-                                    onSubmit={handleCreateProject}
-                                    onReset={handleFormReset}
-                                    validationBehavior="native"
-                                >
-                                    <Input
-                                        placeholder="Enter project name"
-                                        fullWidth
-                                        isRequired
-                                        labelPlacement="outside"
-                                        value={newProjectName}
-                                        variant="bordered"
-                                        label="Project Name"
-                                        onChange={handleProjectNameChange}
-                                        errorMessage="Please enter a project name"
-                                        maxLength={255}
-                                        minLength={3}
-                                    />
-                                    <Select
-                                        placeholder="Select chatbot technology"
-                                        fullWidth
-                                        label="Technology"
-                                        labelPlacement="outside"
-                                        onChange={handleTechnologyChange}
-                                        isRequired
-                                    >
-                                        {availableTechnologies.map((tech) => (
-                                            <SelectItem key={tech.id} value={tech.name}>
-                                                {tech.name}
-                                            </SelectItem>
-                                        ))}
-                                    </Select>
-                                    <ModalFooter className="w-full flex justify-center gap-4">
-                                        <Button type="reset" color="danger" variant="light" onPress={onClose}>
-                                            Reset
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            color="primary"
-                                            isDisabled={newProjectName.trim() === '' || technology === ''}
-                                        >
-                                            Create
-                                        </Button>
-                                    </ModalFooter>
-                                </Form>
-                            </ModalBody>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
+            <CreateProjectModal
+                isOpen={isOpen}
+                onOpenChange={onOpenChange}
+                handleCreateProject={handleCreateProject}
+                handleFormReset={handleFormReset}
+                newProjectName={newProjectName}
+                handleProjectNameChange={handleProjectNameChange}
+                availableTechnologies={availableTechnologies}
+                technology={technology}
+                handleTechnologyChange={handleTechnologyChange}
+            />
 
             {/* Project Details */}
             {selectedProject ? (
