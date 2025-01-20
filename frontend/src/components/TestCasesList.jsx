@@ -34,7 +34,8 @@ function TestCasesList({ testCases }) {
                                     <li>No files available.</li>
                                 )}
                             </ul>
-                            <p><strong>Conversation:</strong> {testCase.result}</p>
+                            <p style={{ whiteSpace: 'pre-wrap' }}><strong>Conversation:</strong> {testCase.result}</p>
+                            <br />
                         </li>
                     ))}
                 </ul>
