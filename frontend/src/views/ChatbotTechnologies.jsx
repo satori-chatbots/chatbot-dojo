@@ -16,18 +16,23 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from 
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
 
 const ChatbotTechnologies = () => {
-    const [editData, setEditData] = useState({});
+    const [editData, setEditData] = useState({
+        name: '',
+        technology: '',
+        link: '',
+    });
+
     const [isEditOpen, setIsEditOpen] = useState(false);
 
     // Function to open edit modal
     const handleEdit = (tech) => {
-        console.log('Editing:', tech);
         setEditData(tech);
         setIsEditOpen(true);
     };
 
     const [technologies, setTechnologies] = useState([]);
     const [technologyChoices, setTechnologyChoices] = useState([]);
+
     const [formData, setFormData] = useState({
         name: '',
         technology: '',
@@ -108,6 +113,17 @@ const ChatbotTechnologies = () => {
             technology: technologyChoices[0]?.[0] || '',
             link: '',
         });
+    };
+
+    // Handle the reset of the edit form so it clears the data
+    const handleEditFormReset = () => {
+        console.log('Resetting edit form');
+        setEditData({
+            name: '',
+            technology: technologyChoices[0]?.[0] || '',
+            link: '',
+        });
+
     };
 
     // Update technology
@@ -292,13 +308,14 @@ const ChatbotTechnologies = () => {
                                 <Form
                                     className="w-full flex flex-col gap-4"
                                     onSubmit={handleUpdate}
-                                    onReset={() => setIsEditOpen(false)}
+                                    onReset={handleEditFormReset}
                                 >
                                     <Input
                                         isRequired
                                         label="Name"
                                         name="name"
-                                        defaultValue={editData?.name || ''}
+                                        value={editData.name}
+                                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                                         type="text"
                                     />
                                     <Select
@@ -306,6 +323,10 @@ const ChatbotTechnologies = () => {
                                         label="Technology"
                                         placeholder='Select a new Technology'
                                         name="technology"
+                                        value={editData.technology}
+                                        onChange={(val) => {
+                                            setEditData((prev) => ({ ...prev, technology: val }));
+                                        }}
                                         defaultSelectedKeys={[editData?.technology]}
 
                                     >
@@ -319,12 +340,13 @@ const ChatbotTechnologies = () => {
                                         isRequired
                                         label="URL"
                                         name="link"
-                                        defaultValue={editData?.link || ''}
+                                        value={editData.link}
+                                        onChange={(e) => setEditData({ ...editData, link: e.target.value })}
                                         type="url"
                                     />
                                     <ModalFooter className="w-full flex justify-center gap-4">
                                         <Button type="reset" color="danger">
-                                            Cancel
+                                            Reset
                                         </Button>
                                         <Button type="submit" color="primary">
                                             Save
