@@ -40,6 +40,10 @@ const ProjectsDashboard = () => {
     // State of the available technologies
     const [availableTechnologies, setAvailableTechnologies] = useState([]);
 
+    // State with a map of the available technologies so they can be accessed easily
+    const [technologyMap, setTechnologyMap] = useState({});
+
+
     // State with the id of the project to edit
     const [editProjectId, setEditProjectId] = useState(null);
 
@@ -54,14 +58,22 @@ const ProjectsDashboard = () => {
             try {
                 const technologies = await fetchChatbotTechnologies();
                 setAvailableTechnologies(technologies);
+
+                // Build a map for quick lookups
+                const techMap = technologies.reduce((acc, tech) => {
+                    acc[tech.id] = tech.name;
+                    return acc;
+                }, {});
+                setTechnologyMap(techMap);
             } catch (error) {
                 console.error('Error fetching technologies:', error);
                 alert(`Error fetching technologies: ${error.message}`);
             }
-        }
+        };
 
         loadTechnologies();
     }, []);
+
 
 
     /* ------------------------------------- */
@@ -113,6 +125,7 @@ const ProjectsDashboard = () => {
         setEditProjectId(project.id);
         setEditProjectName(project.name);
         setEditTechnology(project.chatbot_technology || '');
+        console.log('project technology:', project.chatbot_technology);
         onEditOpen();
     };
 
@@ -203,7 +216,9 @@ const ProjectsDashboard = () => {
                     {projects.map(project => (
                         <TableRow key={project.id}>
                             <TableCell className="px-2 sm:px-4">{project.name}</TableCell>
-                            <TableCell className="px-2 sm:px-4">{project.chatbot_technology}</TableCell>
+                            <TableCell className="px-2 sm:px-4">
+                                {technologyMap[project.chatbot_technology] || project.chatbot_technology}
+                            </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
                                 <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditClick(project)}>
                                     Edit

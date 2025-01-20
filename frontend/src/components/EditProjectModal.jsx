@@ -58,7 +58,8 @@ const EditProjectModal = ({
                                     labelPlacement="outside"
                                     onChange={handleTechnologyChange}
                                     isRequired
-                                    value={technology}
+                                    defaultSelectedKeys={[technology.id]}
+
                                 >
                                     {availableTechnologies.map((tech) => (
                                         <SelectItem key={tech.id} value={tech.name}>
@@ -67,7 +68,7 @@ const EditProjectModal = ({
                                     ))}
                                 </Select>
                                 <ModalFooter className="w-full flex justify-center gap-4">
-                                    <Button type="reset" color="danger" variant="light" onPress={onClose}>
+                                    <Button type="reset" color="danger" variant="light">
                                         Reset
                                     </Button>
                                     <Button

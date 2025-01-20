@@ -67,7 +67,7 @@ const CreateProjectModal = ({
                                     ))}
                                 </Select>
                                 <ModalFooter className="w-full flex justify-center gap-4">
-                                    <Button type="reset" color="danger" variant="light" onPress={onClose}>
+                                    <Button type="reset" color="danger" variant="light">
                                         Reset
                                     </Button>
                                     <Button
