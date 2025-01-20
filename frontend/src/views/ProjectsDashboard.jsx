@@ -16,7 +16,8 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from 
 import CreateProjectModal from '../components/CreateProjectModal';
 import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';
-import { createProject, deleteProject } from '../api/projectApi';
+import { createProject, deleteProject, updateProject } from '../api/projectApi';
+import EditProjectModal from '../components/EditProjectModal';
 
 
 const ProjectsDashboard = () => {
@@ -33,8 +34,19 @@ const ProjectsDashboard = () => {
     // Projects state
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
 
+    // State of the modal to edit project
+    const { isOpen: isEditOpen, onOpen: onEditOpen, onOpenChange: onEditOpenChange } = useDisclosure();
+
     // State of the available technologies
     const [availableTechnologies, setAvailableTechnologies] = useState([]);
+
+    // State with the id of the project to edit
+    const [editProjectId, setEditProjectId] = useState(null);
+
+    // State with the project name and technology to edit
+    const [editProjectName, setEditProjectName] = useState('');
+    const [editTechnology, setEditTechnology] = useState('');
+
 
     // Init the available technologies and projects
     useEffect(() => {
@@ -96,6 +108,29 @@ const ProjectsDashboard = () => {
         }
     };
 
+    // Handle the edit project modal
+    const handleEditClick = (project) => {
+        setEditProjectId(project.id);
+        setEditProjectName(project.name);
+        setEditTechnology(project.chatbot_technology || '');
+        onEditOpen();
+    };
+
+    // Function to handle the edit project modal
+    const handleUpdateProject = async (event) => {
+        event.preventDefault();
+        try {
+            await updateProject(editProjectId, {
+                name: editProjectName,
+                chatbot_technology: editTechnology,
+            });
+            onEditOpenChange(false);
+            reloadProjects();
+        } catch (error) {
+            console.error('Error updating project:', error);
+            alert(`Error updating project: ${error.message}`);
+        }
+    };
     // Function to handle the deletion
     const handleProjectDelete = async (projectId) => {
         if (!window.confirm('Are you sure you want to delete this project?')) {
@@ -170,7 +205,7 @@ const ProjectsDashboard = () => {
                             <TableCell className="px-2 sm:px-4">{project.name}</TableCell>
                             <TableCell className="px-2 sm:px-4">{project.chatbot_technology}</TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
-                                <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditProject(project.id)}>
+                                <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditClick(project)}>
                                     Edit
                                 </Button>
                                 <Button size="sm" color="danger" variant='ghost' onPress={() => handleProjectDelete(project.id)}>
@@ -181,6 +216,22 @@ const ProjectsDashboard = () => {
                     ))}
                 </TableBody>
             </Table>
+
+            {/* Modal to edit project */}
+            <EditProjectModal
+                isOpen={isEditOpen}
+                onOpenChange={onEditOpenChange}
+                handleEditProject={handleUpdateProject}
+                handleFormReset={() => {
+                    setEditProjectName('');
+                    setEditTechnology('');
+                }}
+                newProjectName={editProjectName}
+                handleProjectNameChange={(e) => setEditProjectName(e.target.value)}
+                availableTechnologies={availableTechnologies}
+                technology={editTechnology}
+                handleTechnologyChange={(e) => setEditTechnology(e.target.value)}
+            />
         </div>
     );
 }

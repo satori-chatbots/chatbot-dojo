@@ -47,3 +47,19 @@ export const deleteProject = (id) => {
             return response.status;
         });
 }
+
+export const updateProject = (id, project) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(project),
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        });
+}
