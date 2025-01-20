@@ -16,7 +16,7 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from 
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
 
 const ChatbotTechnologies = () => {
-    const [editData, setEditData] = useState(null);
+    const [editData, setEditData] = useState({});
     const [isEditOpen, setIsEditOpen] = useState(false);
 
     // Function to open edit modal
@@ -265,7 +265,6 @@ const ChatbotTechnologies = () => {
                                 </a>
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
-
                                 <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEdit(tech)}>
                                     Edit
                                 </Button>
@@ -307,6 +306,7 @@ const ChatbotTechnologies = () => {
                                         label="Technology"
                                         placeholder='Select a new Technology'
                                         name="technology"
+                                        defaultSelectedKeys={[editData?.technology]}
 
                                     >
                                         {technologyChoices.map(([key, value]) => (
