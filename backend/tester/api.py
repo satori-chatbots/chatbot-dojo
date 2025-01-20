@@ -300,10 +300,6 @@ class ExecuteSelectedAPIView(APIView):
         # Load OPENAI_API_KEY from keys.properties
         check_keys(["OPENAI_API_KEY"])
 
-        # Set extract dir to MEDIA / results
-        extract_dir = os.path.join(settings.MEDIA_ROOT, "results")
-        print(f"Extract dir: {extract_dir}")
-
         # Set executed dir to MEDIA / executed_yaml
         executed_dir_base = os.path.join(settings.MEDIA_ROOT, "executed_yaml")
         os.makedirs(executed_dir_base, exist_ok=True)
@@ -313,6 +309,10 @@ class ExecuteSelectedAPIView(APIView):
         with transaction.atomic():
             # Create TestCase instance first to get its ID
             test_case = TestCase.objects.create(project=project)
+
+            # Set extract dir to MEDIA / results / {test_case_id}
+            extract_dir = os.path.join(settings.MEDIA_ROOT, "results", str(test_case.id))
+            print(f"Extract dir: {extract_dir}")
 
             # Create a unique subdirectory for this TestCase
             test_case_dir = os.path.join(executed_dir_base, f"testcase_{test_case.id}")
