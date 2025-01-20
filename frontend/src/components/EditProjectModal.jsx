@@ -22,6 +22,7 @@ const EditProjectModal = ({
     availableTechnologies,
     technology,
     handleTechnologyChange,
+    technologyMap,
 }) => {
     return (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
@@ -58,7 +59,7 @@ const EditProjectModal = ({
                                     labelPlacement="outside"
                                     onChange={handleTechnologyChange}
                                     isRequired
-                                    defaultSelectedKeys={[technology.id]}
+                                    defaultSelectedKeys={technologyMap[technology].name}
 
                                 >
                                     {availableTechnologies.map((tech) => (

@@ -61,7 +61,7 @@ const ProjectsDashboard = () => {
 
                 // Build a map for quick lookups
                 const techMap = technologies.reduce((acc, tech) => {
-                    acc[tech.id] = tech.name;
+                    acc[tech.id] = { name: tech.name, technology: tech.technology };
                     return acc;
                 }, {});
                 setTechnologyMap(techMap);
@@ -217,7 +217,7 @@ const ProjectsDashboard = () => {
                         <TableRow key={project.id}>
                             <TableCell className="px-2 sm:px-4">{project.name}</TableCell>
                             <TableCell className="px-2 sm:px-4">
-                                {technologyMap[project.chatbot_technology] || project.chatbot_technology}
+                                {technologyMap[project.chatbot_technology].name || project.chatbot_technology}
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
                                 <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditClick(project)}>
@@ -246,6 +246,7 @@ const ProjectsDashboard = () => {
                 availableTechnologies={availableTechnologies}
                 technology={editTechnology}
                 handleTechnologyChange={(e) => setEditTechnology(e.target.value)}
+                technologyMap={technologyMap}
             />
         </div>
     );
