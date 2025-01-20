@@ -217,7 +217,7 @@ const ProjectsDashboard = () => {
                         <TableRow key={project.id}>
                             <TableCell className="px-2 sm:px-4">{project.name}</TableCell>
                             <TableCell className="px-2 sm:px-4">
-                                {technologyMap[project.chatbot_technology].name || project.chatbot_technology}
+                                {technologyMap[project.chatbot_technology]?.name || "Loading..."}
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
                                 <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditClick(project)}>
