@@ -179,15 +179,10 @@ const ProjectsDashboard = () => {
         max-w-full sm:max-w-4xl
         mx-auto
         my-auto
-        max-h-[80vh]">
+        max-h-[90vh]">
             <h1 className="text-2xl sm:text-3xl font-bold text-center">Projects</h1>
 
-            {/* Button to open modal */}
-            <Button color="primary" onPress={onOpen}
-                className="max-w-full sm:max-w-[200px] mx-auto"
-            >
-                Create New Project
-            </Button>
+
 
             {/* Modal to create new project */}
             <CreateProjectModal
@@ -205,7 +200,7 @@ const ProjectsDashboard = () => {
             <h2 className='text-xl sm:text-2xl font-bold text-center'>My Projects:</h2>
             {/* Table of projects */}
             <Table aria-label="Projects Table"
-                className="overflow-x-auto">
+                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
                 <TableHeader columns={columns}>
                     <TableColumn key="name" allowsSorting>
                         Name
@@ -238,6 +233,13 @@ const ProjectsDashboard = () => {
                     ))}
                 </TableBody>
             </Table>
+
+            {/* Button to open modal */}
+            <Button color="primary" onPress={onOpen}
+                className="max-w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
+            >
+                Create New Project
+            </Button>
 
             {/* Modal to edit project */}
             <EditProjectModal

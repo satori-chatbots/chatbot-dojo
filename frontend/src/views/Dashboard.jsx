@@ -119,7 +119,7 @@ function Dashboard() {
             w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl
             mx-auto
             my-auto
-            max-h-[80vh]
+            max-h-[90vh]
             p-4 sm:p-6 lg:p-8"
         >
             <h1 className="text-2xl sm:text-3xl font-bold text-center">Dashboard</h1>
@@ -178,7 +178,8 @@ function Dashboard() {
             </Form>
 
 
-            <Table aria-label="Test Cases Table" isStriped>
+            <Table aria-label="Test Cases Table" isStriped
+                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
                 <TableHeader columns={columns}>
                     {columns.map(column => (
                         <TableColumn key={column.key}>

@@ -23,6 +23,7 @@ const ChatbotTechnologies = () => {
     });
 
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Function to open edit modal
     const handleEdit = (tech) => {
@@ -45,6 +46,7 @@ const ChatbotTechnologies = () => {
     useEffect(() => {
         loadTechnologies();
         loadTechnologyChoices();
+        setLoading(false);
     }, []);
 
     const loadTechnologies = async () => {
@@ -171,20 +173,16 @@ const ChatbotTechnologies = () => {
     ];
 
     return (
-        (<div className="p-4 sm:p-6 lg:p-8
-        flex flex-col
-        space-y-4 sm:space-y-6
-        max-w-full sm:max-w-4xl
-        mx-auto
-        my-auto
-        max-h-[80vh]">
+        (<div className="flex flex-col
+            items-center
+            space-y-4 sm:space-y-6 lg:space-y-8
+            w-full sm:max-w-4xl
+            mx-auto
+            my-auto
+            max-h-[90vh]
+            p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-center">Chatbot Technologies</h1>
-            {/* Button to open modal */}
-            <Button color="primary" onPress={onOpen}
-                className="max-w-full sm:max-w-[200px] mx-auto"
-            >
-                Create New Technology
-            </Button>
+
             {/* Modal to create new technology */}
             <Modal isOpen={isOpen}
                 onOpenChange={onOpenChange}
@@ -265,7 +263,9 @@ const ChatbotTechnologies = () => {
             <h2 className='text-xl sm:text-2xl font-bold text-center'>Existing Technologies</h2>
             {/* Table of existing technologies */}
             <Table aria-label="Chatbot Technologies Table"
-                className="overflow-x-auto">
+                //isStriped={technologies.length > 4}
+                isLoading={loading}
+                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
                 <TableHeader columns={columns}>
                     <TableColumn key="name" allowsSorting>Name</TableColumn>
                     <TableColumn key="technology" allowsSorting>Technology</TableColumn>
@@ -274,7 +274,8 @@ const ChatbotTechnologies = () => {
 
                 </TableHeader>
                 <TableBody
-                    emptyState="Create a new technology to get started.">
+                    isLoading={loading}
+                    emptyContent="Create a new technology to get started.">
                     {technologies.map((tech) => (
                         <TableRow key={tech.id}>
                             <TableCell className="px-2 sm:px-4">{tech.name}</TableCell>
@@ -296,6 +297,14 @@ const ChatbotTechnologies = () => {
                     ))}
                 </TableBody>
             </Table>
+
+            {/* Button to open modal */}
+            <Button color="primary" onPress={onOpen}
+                className="w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
+            >
+                Create New Technology
+            </Button>
+
             {/* Modal for editing */}
             <Modal
                 isOpen={isEditOpen}
