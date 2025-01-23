@@ -43,17 +43,17 @@ class GlobalReportViewSet(viewsets.ModelViewSet):
     serializer_class = GlobalReportSerializer
 
     def list(self, request, *args, **kwargs):
-        project_id = request.query_params.get("project_id", None)
-        if project_id is not None:
-            project = get_object_or_404(Project, id=project_id)
+        test_cases = request.query_params.get("test_cases_ids", None)
+
+        if test_cases is not None:
+            test_cases = test_cases.split(",")
             queryset = self.filter_queryset(self.get_queryset()).filter(
-                global_report__test_case__project=project
+                test_case__in=test_cases
             )
         else:
             queryset = self.filter_queryset(self.get_queryset())
 
         serializer = self.get_serializer(queryset, many=True)
-
         return Response(serializer.data)
 
 
