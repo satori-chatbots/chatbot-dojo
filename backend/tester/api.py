@@ -8,7 +8,14 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.conf import settings
-from .models import ChatbotTechnology, TestCase, TestFile, Project
+from .models import (
+    ChatbotTechnology,
+    GlobalReport,
+    TestCase,
+    TestError,
+    TestFile,
+    Project,
+)
 from .serializers import (
     ChatbotTechnologySerializer,
     TestCaseSerializer,
@@ -231,7 +238,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 for f in uploaded_files:
                     data = yaml.safe_load(f.read())
                     test_name = data.get("test_name")
-                    instance = TestFile.objects.create(file=f, name=test_name, project=project)
+                    instance = TestFile.objects.create(
+                        file=f, name=test_name, project=project
+                    )
                     saved_files.append(instance.id)
         except Exception as e:
             return Response(
@@ -311,7 +320,9 @@ class ExecuteSelectedAPIView(APIView):
             test_case = TestCase.objects.create(project=project)
 
             # Set extract dir to MEDIA / results / {test_case_id}
-            extract_dir = os.path.join(settings.MEDIA_ROOT, "results", str(test_case.id))
+            extract_dir = os.path.join(
+                settings.MEDIA_ROOT, "results", str(test_case.id)
+            )
             print(f"Extract dir: {extract_dir}")
 
             # Create a unique subdirectory for this TestCase
@@ -344,6 +355,8 @@ class ExecuteSelectedAPIView(APIView):
 
             # Save the copied files to the TestCase instance
             test_case.copied_files = copied_files
+
+            test_case.status = "RUNNING"
             test_case.save()
 
         # Set CWD to the script dir (avoid using os.chdir)
@@ -377,7 +390,7 @@ def run_asyn_test_execution(
     """ """
     try:
         start_time = time.time()
-        result = subprocess.run(
+        process = subprocess.Popen(
             [
                 "python",
                 script_path,
@@ -390,19 +403,79 @@ def run_asyn_test_execution(
                 "--extract",
                 extract_dir,
             ],
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             cwd=script_cwd,
         )
-
+        stdout, stderr = process.communicate()
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
 
         test_case.execution_time = elapsed_time
-        test_case.result = result.stdout.strip() or result.stderr.strip()
+        test_case.result = stdout.decode().strip() or stderr.decode().strip()
+        test_case.status = "COMPLETED"
+        print("COMPLETED")
+
+        # Report saved in extract_dir / __report__ / report_*.yml
+        report_path = os.path.join(extract_dir, "__report__")
+
+        report_file = None
+        for file in os.listdir(report_path):
+            if file.startswith("report_") and file.endswith(".yml"):
+                report_file = file
+                break
+
+        if report_file is not None:
+            with open(os.path.join(report_path, report_file), "r") as file:
+                documents = list(yaml.safe_load_all(file))
+
+        # In the documents there is a global, and then a test_report for each test_case
+
+        # Global One:
+        global_report = documents[0]
+
+        global_avg_response_time = global_report["Global report"][
+            "Average assistant response time"
+        ]
+        global_min_response_time = global_report["Global report"][
+            "Mínimum assistant response time"
+        ]
+        global_max_response_time = global_report["Global report"][
+            "Maximum assistant response time"
+        ]
+
+        global_report_instance = GlobalReport.objects.create(
+            name="Global Report",
+            avg_execution_time=global_avg_response_time,
+            min_execution_time=global_min_response_time,
+            max_execution_time=global_max_response_time,
+            test_case=test_case,
+        )
+
+        global_report_instance.save()
+
+        global_errors = global_report["Global report"]["Errors"]
+        print(f"Global errors: {global_errors}")
+        for error in global_errors:
+            error_code = error["error"]
+            error_count = error["count"]
+            error_conversations = [conv for conv in error["conversations"]]
+
+            test_error = TestError.objects.create(
+                code=error_code,
+                count=error_count,
+                conversations=error_conversations,
+                global_report=global_report_instance,
+            )
+
+            test_error.save()
+
+        global_report_instance.save()
+
         test_case.save()
 
     except Exception as e:
         test_case.result = f"Error: {e}"
         test_case.execution_time = 0
+        test_case.status = "ERROR"
         test_case.save()
