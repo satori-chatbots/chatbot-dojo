@@ -22,9 +22,16 @@ function Dashboard() {
     }
 
     const handleProjectChange = (selectedIds) => {
-        console.log(selectedIds);
+        //console.log(selectedIds);
         if (selectedIds.has('all')) {
-            setSelectedProjects([...projects.map(project => String(project.id))]);
+            // If all projects are already selected, deselect all
+            if (selectedProjects.length === projects.length) {
+                setSelectedProjects([]);
+            }
+            // Otherwise, select all
+            else {
+                setSelectedProjects([...projects.map(project => String(project.id))]);
+            }
         } else {
             setSelectedProjects([...selectedIds].map(id => String(id)));
         }
@@ -59,7 +66,7 @@ function Dashboard() {
                     onSelectionChange={handleProjectChange}
                 >
                     <SelectItem key="all"
-                    className="text-primary"
+                        className="text-primary"
                     >
                         All Projects
                     </SelectItem>
