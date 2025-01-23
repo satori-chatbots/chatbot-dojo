@@ -15,6 +15,7 @@ from .models import (
     TestError,
     TestFile,
     Project,
+    TestReport,
 )
 from .serializers import (
     ChatbotTechnologySerializer,
@@ -431,7 +432,9 @@ def run_asyn_test_execution(
 
         # In the documents there is a global, and then a test_report for each test_case
 
-        # Global One:
+        # ----------------- #
+        # - GLOBAL REPORT - #
+        # ----------------- #
         global_report = documents[0]
 
         global_avg_response_time = global_report["Global report"][
@@ -454,8 +457,9 @@ def run_asyn_test_execution(
 
         global_report_instance.save()
 
+        # Errors in the global report
         global_errors = global_report["Global report"]["Errors"]
-        print(f"Global errors: {global_errors}")
+        # print(f"Global errors: {global_errors}")
         for error in global_errors:
             error_code = error["error"]
             error_count = error["count"]
@@ -471,6 +475,52 @@ def run_asyn_test_execution(
             test_error.save()
 
         global_report_instance.save()
+
+        # ---------------- #
+        # - TEST REPORTS - #
+        # ---------------- #
+
+        # Test reports are in the documents from 1 to n
+        for test_report in documents[1:]:
+            test_report_name = test_report["Test name"]
+            test_report_avg_response_time = test_report[
+                "Average assistant response time"
+            ]
+            test_report_min_response_time = test_report[
+                "Mínimum assistant response time"
+            ]
+            test_report_max_response_time = test_report[
+                "Maximum assistant response time"
+            ]
+
+            test_report_instance = TestReport.objects.create(
+                name=test_report_name,
+                avg_execution_time=test_report_avg_response_time,
+                min_execution_time=test_report_min_response_time,
+                max_execution_time=test_report_max_response_time,
+                global_report=global_report_instance,
+            )
+
+            test_report_instance.save()
+
+            # Errors in the test report
+            test_errors = test_report["Errors"]
+            print(f"Test errors: {test_errors}")
+            for error in test_errors:
+                error_code = error["error"]
+                error_count = error["count"]
+                error_conversations = [conv for conv in error["conversations"]]
+
+                test_error = TestError.objects.create(
+                    code=error_code,
+                    count=error_count,
+                    conversations=error_conversations,
+                    test_report=test_report_instance,
+                )
+
+                test_error.save()
+
+            test_report_instance.save()
 
         test_case.save()
 
