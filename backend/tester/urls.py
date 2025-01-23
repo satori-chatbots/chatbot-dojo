@@ -10,6 +10,7 @@ router.register(r"testcases", api.TestCaseViewSet)
 router.register(r"testfiles", api.TestFileViewSet)
 router.register(r"projects", api.ProjectViewSet)
 router.register(r"chatbottechnologies", api.ChatbotTechnologyViewSet)
+router.register(r"globalreports", api.GlobalReportViewSet)
 
 urlpatterns = [
     # Custom Routes First

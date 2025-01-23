@@ -19,6 +19,7 @@ from .models import (
 )
 from .serializers import (
     ChatbotTechnologySerializer,
+    GlobalReportSerializer,
     TestCaseSerializer,
     TestFileSerializer,
     ProjectSerializer,
@@ -31,6 +32,30 @@ import yaml
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 import threading
+
+# ---------------------- #
+# - GLOBAL REPORTS API - #
+# ---------------------- #
+
+
+class GlobalReportViewSet(viewsets.ModelViewSet):
+    queryset = GlobalReport.objects.all()
+    serializer_class = GlobalReportSerializer
+
+    def list(self, request, *args, **kwargs):
+        project_id = request.query_params.get("project_id", None)
+        if project_id is not None:
+            project = get_object_or_404(Project, id=project_id)
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                global_report__test_case__project=project
+            )
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)
+
 
 # ---------------------- #
 # - CHATBOT TECHNOLOGY - #
@@ -66,13 +91,9 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         else:
             queryset = self.filter_queryset(self.get_queryset())
 
-
-
         serializer = self.get_serializer(queryset, many=True)
 
         return Response(serializer.data)
-
-
 
 
 # ---------- #

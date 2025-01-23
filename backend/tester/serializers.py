@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ChatbotTechnology, TestCase, TestFile, Project
+from .models import ChatbotTechnology, GlobalReport, TestCase, TestFile, Project
 
 
 class TestFileSerializer(serializers.ModelSerializer):
@@ -44,4 +44,9 @@ class TestCaseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TestCase
+        fields = "__all__"
+
+class GlobalReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GlobalReport
         fields = "__all__"
