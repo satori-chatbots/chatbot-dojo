@@ -10,7 +10,7 @@ createRoot(document.getElementById('root')).render(
 
     <HeroUIProvider>
         <NextThemesProvider attribute="class" defaultTheme="light">
-            <main className="text-foreground bg-background">
+            <main className="text-foreground bg-background dark:bg-[radial-gradient(circle_at_top_left,theme(colors.blue.950)_-100%,transparent_40%),radial-gradient(circle_at_bottom_right,theme(colors.purple.950)_-100%,transparent_40%)]">
                 <BrowserRouter>
                     <App />
                 </BrowserRouter>
