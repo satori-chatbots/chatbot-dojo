@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Switch } from "@heroui/react";
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem } from "@heroui/react";
+import { Card, CardFooter } from "@nextui-org/react";
 
 export const MoonIcon = (props) => {
     return (
@@ -50,7 +51,7 @@ export const SunIcon = (props) => {
 function App() {
     const [mounted, setMounted] = useState(false)
     const { theme, setTheme } = useTheme()
-    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -64,15 +65,20 @@ function App() {
         localStorage.setItem('theme', newTheme);
     };
 
+    const handleLinkClick = () => {
+        setIsMenuOpen(false);
+    };
+
     if (!mounted) return null;
 
-
     return (
-
         <div className="flex flex-col min-h-screen">
             {/* Header */}
-            <Navbar onMenuOpenChange={setIsMenuOpen}
-                maxWidth='lg'>
+            <Navbar
+                onMenuOpenChange={setIsMenuOpen}
+                maxWidth='lg'
+                isMenuOpen={isMenuOpen}
+            >
                 <NavbarMenuToggle
                     aria-label={isMenuOpen ? "Close menu" : "Open menu"}
                     className="sm:hidden"
@@ -103,27 +109,26 @@ function App() {
                     />
                 </NavbarContent>
 
-                <NavbarMenu isOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen}>
+                <NavbarMenu >
                     <NavbarMenuItem>
-                        <Link to="/" className="hover:underline">Home</Link>
+                        <Link to="/" className="hover:underline" onClick={handleLinkClick}>Home</Link>
                     </NavbarMenuItem>
                     <NavbarMenuItem>
-                        <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                        <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>Dashboard</Link>
                     </NavbarMenuItem>
                     <NavbarMenuItem>
-                        <Link to="/chatbot-technologies" className="hover:underline">
+                        <Link to="/chatbot-technologies" className="hover:underline" onClick={handleLinkClick}>
                             Chatbot Technologies
                         </Link>
                     </NavbarMenuItem>
                     <NavbarMenuItem>
-                        <Link to="/projects" className="hover:underline">Projects</Link>
+                        <Link to="/projects" className="hover:underline" onClick={handleLinkClick}>Projects</Link>
                     </NavbarMenuItem>
                 </NavbarMenu>
             </Navbar>
 
             {/* Main Content */}
             <main className="flex-1 w-full m-auto flex">
-
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/dashboard" element={<Dashboard />} />
@@ -133,7 +138,7 @@ function App() {
             </main>
 
             {/* Footer */}
-            <footer className="w-full py-3 flex items-center justify-center">
+            <footer className="w-full py-3 flex items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
                 <p className="text-primary">MISO</p>
             </footer>
         </div>
