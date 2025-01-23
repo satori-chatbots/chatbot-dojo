@@ -53,8 +53,18 @@ function App() {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
     useEffect(() => {
-        setMounted(true)
-    }, [])
+        setMounted(true);
+        const storedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(storedTheme);
+    }, []);
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    };
+
+    if (!mounted) return null;
 
 
     return (
@@ -83,13 +93,13 @@ function App() {
 
                 <NavbarContent justify='end'>
                     <Switch
-                        defaultSelected
+                        defaultSelected={theme === 'dark'}
                         color="success"
                         endContent={<MoonIcon />}
                         size="md"
                         startContent={<SunIcon />}
                         value={mounted}
-                        onChange={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                        onChange={toggleTheme}
                     />
                 </NavbarContent>
 
