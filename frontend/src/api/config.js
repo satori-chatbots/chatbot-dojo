@@ -10,6 +10,7 @@ export const ENDPOINTS = {
     PROJECTS: '/projects/',
     CHATBOTTECHNOLOGIES: '/chatbottechnologies/',
     TECHNOLOGIES_CHOICES: '/chatbottechnologies/choices/',
+    GLOBALREPORTS: '/globalreports/',
 };
 
 export default API_BASE_URL;

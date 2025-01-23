@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
 import useFetchProjects from '../hooks/useFetchProjects';
+import { fetchGlobalReportsByTestCases } from '../api/reportsApi';
+import { MEDIA_URL } from '../api/config';
 import { Button, Form, Select, SelectItem } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
+import { Link } from '@heroui/react';
 
 function Dashboard() {
 
@@ -18,6 +21,9 @@ function Dashboard() {
     // Selected Projects State
     const [selectedProjects, setSelectedProjects] = useState([]);
 
+    // Global Reports of Test Cases
+    const [globalReports, setGlobalReports] = useState([]);
+
     /* ----------------------------- */
     /* Handlers for Project Selector */
     /* ----------------------------- */
@@ -25,6 +31,7 @@ function Dashboard() {
 
     const handleProjectChange = (selectedIds) => {
         if (selectedIds.has('all')) {
+            console.log(projects)
             if (selectedProjects.length === projects.length) {
                 setSelectedProjects([]);
             } else {
@@ -43,10 +50,19 @@ function Dashboard() {
         }
 
         try {
+            // Get the test cases
             setLoading(true);
             setError(null);
             const testCases = await fetchTestCasesByProjects(selectedProjects);
             setTestCases(testCases);
+
+            // Get the global reports for each test case
+            const testCaseIds = testCases.map(testCase => testCase.id);
+            if (testCaseIds.length !== 0) {
+                const reports = await fetchGlobalReportsByTestCases(testCaseIds);
+                setGlobalReports(reports);
+                console.log(reports);
+            }
         } catch (err) {
             console.log(err);
         } finally {
@@ -100,7 +116,7 @@ function Dashboard() {
             flex flex-col
             items-center
             space-y-4 sm:space-y-6 lg:space-y-8
-            w-full sm:w-xl sm:max-w-xl lg:max-w-2xl 2xl:max-w-5xl
+            w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl
             mx-auto
             my-auto
             max-h-[80vh]
@@ -198,13 +214,15 @@ function Dashboard() {
                                 ) : (
                                     <ul>
                                         {testCase.copied_files.map(file => (
-                                            <li key={file.name}>{file.name}</li>
+                                            <li key={file.name}>
+                                                <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
+                                            </li>
                                         ))}
                                     </ul>
                                 )}
                             </TableCell>
                             <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
-                            <TableCell>{testCase.num_errors}</TableCell>
+                            <TableCell>{globalReports.find(report => report.test_case === testCase.id)?.num_errors}</TableCell>
                             <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
                         </TableRow>
                     ))}
