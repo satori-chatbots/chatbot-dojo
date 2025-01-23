@@ -4,6 +4,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { Button, Form, Select, SelectItem } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
+import { Accordion, AccordionItem } from "@heroui/react";
 
 function Dashboard() {
 
@@ -75,6 +76,25 @@ function Dashboard() {
         { name: 'Project', key: 'project' },
     ];
 
+    const formatExecutionTime = (seconds) => {
+        // Check if it is still running
+        if (seconds === null) {
+            return 'Running';
+        }
+
+        if (seconds >= 3600) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = ((seconds % 3600) / 60).toFixed(2);
+            return `${hours}h ${minutes}m`;
+        } else if (seconds >= 60) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = (seconds % 60).toFixed(2);
+            return `${minutes}m ${remainingSeconds}s`;
+        } else {
+            return `${seconds.toFixed(2)}s`;
+        }
+    };
+
     return (
         <div className="
             flex flex-col
@@ -142,7 +162,7 @@ function Dashboard() {
             </Form>
 
 
-            <Table aria-label="Test Cases Table">
+            <Table aria-label="Test Cases Table" isStriped>
                 <TableHeader columns={columns}>
                     {columns.map(column => (
                         <TableColumn key={column.key}>
@@ -156,12 +176,36 @@ function Dashboard() {
                     emptyContent={"No Test Cases to display."}>
                     {testCases.map(testCase => (
                         <TableRow key={testCase.id}>
-                            <TableCell>{testCase.name}</TableCell>
+                            <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
                             <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
-                            <TableCell>{testCase.user_profiles}</TableCell>
-                            <TableCell>{testCase.execution_time}</TableCell>
+                            <TableCell>
+                                {testCase.copied_files.length > 3 ? (
+                                    <Accordion
+                                        isCompact={true}
+                                    >
+                                        <AccordionItem
+                                            title={`View ${testCase.copied_files.length} files`}
+                                            isCompact={true}
+                                            classNames={{ title: "text-sm mx-0" }}
+                                        >
+                                            <ul>
+                                                {testCase.copied_files.map(file => (
+                                                    <li key={file.name}>{file.name}</li>
+                                                ))}
+                                            </ul>
+                                        </AccordionItem>
+                                    </Accordion>
+                                ) : (
+                                    <ul>
+                                        {testCase.copied_files.map(file => (
+                                            <li key={file.name}>{file.name}</li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </TableCell>
+                            <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
                             <TableCell>{testCase.num_errors}</TableCell>
-                            <TableCell>{testCase.project}</TableCell>
+                            <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
