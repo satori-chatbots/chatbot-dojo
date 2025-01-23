@@ -16,7 +16,7 @@ import {
     Select,
     SelectItem,
     Form
-} from "@nextui-org/react";
+} from "@heroui/react";
 import useFileHandlers from '../hooks/userFileHandlers';
 import { uploadFiles } from '../api/fileApi';
 import { MEDIA_URL } from '../api/config';

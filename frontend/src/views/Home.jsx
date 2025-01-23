@@ -3,7 +3,7 @@ import UserProfileManager from '../components/UserProfileManager';
 import useFetchFiles from '../hooks/useFetchFiles';
 import useFileHandlers from '../hooks/userFileHandlers';
 import useFetchProjects from '../hooks/useFetchProjects';
-import { Card } from '@nextui-org/react';
+import { Card } from "@heroui/react";
 
 function Home() {
     return (

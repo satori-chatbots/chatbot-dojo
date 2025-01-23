@@ -11,8 +11,8 @@ import {
     ModalHeader,
     useDisclosure,
     Form,
-} from "@nextui-org/react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
+} from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import CreateProjectModal from '../components/CreateProjectModal';
 import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';

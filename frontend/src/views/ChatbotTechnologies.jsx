@@ -11,8 +11,8 @@ import {
     ModalHeader,
     useDisclosure,
     Form,
-} from "@nextui-org/react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
+} from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
 
 const ChatbotTechnologies = () => {
@@ -171,16 +171,14 @@ const ChatbotTechnologies = () => {
     ];
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto max-h-[80vh]">
+        (<div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto max-h-[80vh]">
             <h1 className="text-2xl sm:text-3xl font-bold text-center">Chatbot Technologies</h1>
-
             {/* Button to open modal */}
             <Button color="primary" onPress={onOpen}
                 className="max-w-full sm:max-w-[200px] mx-auto"
             >
                 Create New Technology
             </Button>
-
             {/* Modal to create new technology */}
             <Modal isOpen={isOpen}
                 onOpenChange={onOpenChange}
@@ -258,7 +256,6 @@ const ChatbotTechnologies = () => {
                     )}
                 </ModalContent>
             </Modal>
-
             <h2 className='text-xl sm:text-2xl font-bold text-center'>Existing Technologies</h2>
             {/* Table of existing technologies */}
             <Table aria-label="Chatbot Technologies Table"
@@ -292,7 +289,6 @@ const ChatbotTechnologies = () => {
                     ))}
                 </TableBody>
             </Table>
-
             {/* Modal for editing */}
             <Modal
                 isOpen={isEditOpen}
@@ -358,10 +354,7 @@ const ChatbotTechnologies = () => {
                     )}
                 </ModalContent>
             </Modal>
-
-        </div>
-
-
+        </div>)
     );
 };
 
