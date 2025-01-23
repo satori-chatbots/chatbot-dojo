@@ -7,7 +7,7 @@ import ProjectsDashboard from './views/ProjectsDashboard';
 
 function App() {
     return (
-        <div className="flex flex-col min-h-screen bg-background font-sans antialiased">
+        <div className="flex flex-col min-h-screen">
             {/* Header */}
             <header className="w-full py-4">
                 <nav className="flex justify-center space-x-4">
@@ -22,7 +22,7 @@ function App() {
             </header>
 
             {/* Main Content */}
-            <main className="flex-grow flex flex-col items-center justify-center p-6">
+            <main className="flex-1 w-full m-auto flex">
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/dashboard" element={<Dashboard />} />

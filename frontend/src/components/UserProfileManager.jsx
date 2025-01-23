@@ -246,7 +246,7 @@ function UserProfileManager() {
 
 
     return (
-        <Card className="p-6 flex flex-col space-y-6 max-w-4xl mx-auto max-h-[80vh]">
+        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full">
             {/* Header */}
             <h1 className="text-3xl font-bold text-center">User Profiles</h1>
 
@@ -321,7 +321,7 @@ function UserProfileManager() {
                     </div>
 
                     {/* List Section */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto mt-4">
                         {files.length > 0 ? (
                             <ul className="space-y-2">
                                 {files.map(file => (

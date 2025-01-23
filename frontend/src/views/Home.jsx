@@ -7,11 +7,14 @@ import { Card } from "@heroui/react";
 
 function Home() {
     return (
-        <div className="flex justify-center items-start">
-            <div className="w-full max-w-4xl">
-                <UserProfileManager
-                />
-            </div>
+        <div className="flex flex-col
+        items-center justify-center
+        p-6
+        w-full
+        ">
+
+                <UserProfileManager />
+
         </div>
     );
 }
