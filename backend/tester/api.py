@@ -55,6 +55,25 @@ class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
 
+    def list(self, request, *args, **kwargs):
+        project_ids = request.query_params.get("project_ids", None)
+
+        if project_ids is not None:
+            projects = Project.objects.filter(id__in=project_ids.split(","))
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                project__in=projects
+            )
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
+
+
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+
+
 
 # ---------- #
 # - PROJECTS #

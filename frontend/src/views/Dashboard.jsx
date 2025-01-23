@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
 import useFetchProjects from '../hooks/useFetchProjects';
-import { MEDIA_URL } from '../api/config';
 import { Button, Form, Select, SelectItem } from "@heroui/react";
+import { fetchTestCasesByProjects } from '../api/testCasesApi';
 
 function Dashboard() {
 
     // Initialize testCases state as empty
     const [testCases, setTestCases] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
 
@@ -18,9 +20,6 @@ function Dashboard() {
     /* Handlers for Project Selector */
     /* ----------------------------- */
 
-    const handleSelectAll = () => {
-        setSelectedProjects(projects.map(project => String(project.id)));
-    }
 
     const handleProjectChange = (selectedIds) => {
         if (selectedIds.has('all')) {
@@ -36,18 +35,18 @@ function Dashboard() {
 
     const handleFilterProjects = async (e) => {
         e.preventDefault();
-        console.log(selectedProjects);
+        //console.log(selectedProjects);
+        if (selectedProjects.length === 0) {
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
-            const response = await fetch(`/api/testcases?projects=${selectedProjects.join(',')}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch test cases');
-            }
-            const data = await response.json();
-            setTestCases(data);
+            const testCases = await fetchTestCasesByProjects(selectedProjects);
+            setTestCases(testCases);
         } catch (err) {
-            setError(err.message);
+            console.log(err);
         } finally {
             setLoading(false);
         }
@@ -82,11 +81,12 @@ function Dashboard() {
             <Form
                 className="
                 flex col sm:flex-row
-                space-y-4 sm:space-x-4 sm:space-y-0
+                space-y-6 sm:space-x-4 sm:space-y-0
                 w-full sm:w-xl sm:max-w-xl lg:max-w-2xl 2xl:max-w-3xl
                 mb-4
                 "
                 onSubmit={handleFilterProjects}
+                validationBehavior="native"
             >
                 <Select
                     label="Filter by Project(s):"
@@ -95,8 +95,11 @@ function Dashboard() {
                         h-10 sm:h-12
                         "
                     size="sm"
+                    isRequired
+                    errorMessage="Please select at least one project."
                     selectionMode="multiple"
                     selectedKeys={selectedProjects}
+
                     onSelectionChange={handleProjectChange}
                 >
                     <SelectItem key="all" className="text-primary">
@@ -129,6 +132,10 @@ function Dashboard() {
 
             <h1>Test Cases</h1>
 
+
+            {loading ? (
+                <div>Loading</div>) : <div>
+                {testCases.length} </div>}
         </div>
     );
 }
