@@ -8,6 +8,8 @@ function TestCasesList({ testCases }) {
 
     return (
         <div>
+            {/* Project Selector */}
+
             <h1>Test Cases</h1>
             {testCases.length > 0 ? (
                 <ul>
