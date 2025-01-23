@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
 import useFetchProjects from '../hooks/useFetchProjects';
 import { Button, Form, Select, SelectItem } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 
 function Dashboard() {
@@ -52,9 +53,9 @@ function Dashboard() {
         }
     }
 
-    /* ----------------------------- */
+    /* ---------------------------------- */
     /* Conditional Rendering for Projects */
-    /* ----------------------------- */
+    /* ---------------------------------- */
 
     if (loadingProjects) {
         return <div>Loading projects...</div>;
@@ -64,12 +65,22 @@ function Dashboard() {
         return <div>Error loading projects: {errorProjects}</div>;
     }
 
+    // Columns for the Test Cases Table
+    const columns = [
+        { name: 'Name', key: 'name' },
+        { name: 'Executed At', key: 'executed_at' },
+        { name: 'Profiles Used', key: 'user_profiles' },
+        { name: 'Execution Time', key: 'execution_time' },
+        { name: 'Number of Errors', key: 'num_errors' },
+        { name: 'Project', key: 'project' },
+    ];
+
     return (
         <div className="
             flex flex-col
             items-center
-            space-y-4
-            w-full
+            space-y-4 sm:space-y-6 lg:space-y-8
+            w-full sm:w-xl sm:max-w-xl lg:max-w-2xl 2xl:max-w-5xl
             mx-auto
             my-auto
             max-h-[80vh]
@@ -82,7 +93,7 @@ function Dashboard() {
                 className="
                 flex col sm:flex-row
                 space-y-6 sm:space-x-4 sm:space-y-0
-                w-full sm:w-xl sm:max-w-xl lg:max-w-2xl 2xl:max-w-3xl
+                w-full sm:w-xl sm:max-w-xl lg:max-w-2xl
                 mb-4
                 "
                 onSubmit={handleFilterProjects}
@@ -130,12 +141,33 @@ function Dashboard() {
                 </Button>
             </Form>
 
-            <h1>Test Cases</h1>
 
+            <Table aria-label="Test Cases Table">
+                <TableHeader columns={columns}>
+                    {columns.map(column => (
+                        <TableColumn key={column.key}>
+                            {column.name}
+                        </TableColumn>
+                    ))}
+                </TableHeader>
 
-            {loading ? (
-                <div>Loading</div>) : <div>
-                {testCases.length} </div>}
+                <TableBody
+                    isLoading={loading}
+                    emptyContent={"No Test Cases to display."}>
+                    {testCases.map(testCase => (
+                        <TableRow key={testCase.id}>
+                            <TableCell>{testCase.name}</TableCell>
+                            <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
+                            <TableCell>{testCase.user_profiles}</TableCell>
+                            <TableCell>{testCase.execution_time}</TableCell>
+                            <TableCell>{testCase.num_errors}</TableCell>
+                            <TableCell>{testCase.project}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+
+            </Table>
+
         </div>
     );
 }
