@@ -218,7 +218,8 @@ const ProjectsDashboard = () => {
                         Actions
                     </TableColumn>
                 </TableHeader>
-                <TableBody>
+                <TableBody
+                    emptyState="Create a new project to get started.">
                     {projects.map(project => (
                         <TableRow key={project.id}>
                             <TableCell className="px-2 sm:px-4">{project.name}</TableCell>

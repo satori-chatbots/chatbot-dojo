@@ -273,7 +273,8 @@ const ChatbotTechnologies = () => {
                     <TableColumn className='text-center' key="actions">Actions</TableColumn>
 
                 </TableHeader>
-                <TableBody>
+                <TableBody
+                    emptyState="Create a new technology to get started.">
                     {technologies.map((tech) => (
                         <TableRow key={tech.id}>
                             <TableCell className="px-2 sm:px-4">{tech.name}</TableCell>
