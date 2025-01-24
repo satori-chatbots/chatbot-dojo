@@ -55,13 +55,14 @@ function Dashboard() {
             setError(null);
             const testCases = await fetchTestCasesByProjects(selectedProjects);
             setTestCases(testCases);
+            //console.log(testCases);
 
             // Get the global reports for each test case
             const testCaseIds = testCases.map(testCase => testCase.id);
             if (testCaseIds.length !== 0) {
                 const reports = await fetchGlobalReportsByTestCases(testCaseIds);
                 setGlobalReports(reports);
-                console.log(reports);
+                //console.log(reports);
             }
         } catch (err) {
             console.log(err);
@@ -207,7 +208,7 @@ function Dashboard() {
                                         >
                                             <ul>
                                                 {testCase.copied_files.map(file => (
-                                                    <li key={file.name}>{file.name}</li>
+                                                    <li key={file.id}>{file.name}</li>
                                                 ))}
                                             </ul>
                                         </AccordionItem>
@@ -215,7 +216,7 @@ function Dashboard() {
                                 ) : (
                                     <ul>
                                         {testCase.copied_files.map(file => (
-                                            <li key={file.name}>
+                                            <li key={file.id}>
                                                 <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
                                             </li>
                                         ))}

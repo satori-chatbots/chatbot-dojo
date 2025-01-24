@@ -65,7 +65,7 @@ function UserProfileManager() {
         const loadData = async () => {
             try {
                 const technologies = await fetchChatbotTechnologies();
-                console.log(technologies);
+                //console.log(technologies);
                 setAvailableTechnologies(technologies);
 
             } catch (error) {
@@ -106,7 +106,7 @@ function UserProfileManager() {
         }
 
         formData.append('project', selectedProject.id);
-        console.log(formData);
+        //console.log(formData);
         uploadFiles(formData)
             .then(() => {
                 reloadFiles(); // Refresh the file list
@@ -155,8 +155,8 @@ function UserProfileManager() {
             return;
         }
 
-        console.log('Selected files:', selectedFiles);
-        console.log('Selected project:', selectedProject);
+        //console.log('Selected files:', selectedFiles);
+        //console.log('Selected project:', selectedProject);
 
         executeTest(selectedFiles, selectedProject.id)
             .then((data) => {
