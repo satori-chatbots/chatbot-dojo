@@ -112,17 +112,17 @@ const ChatbotTechnologies = () => {
     const handleFormReset = () => {
         setFormData({
             name: '',
-            technology: technologyChoices[0]?.[0] || '',
+            technology: '',
             link: '',
         });
     };
 
     // Handle the reset of the edit form so it clears the data
     const handleEditFormReset = () => {
-        console.log('Resetting edit form');
+        // console.log('Resetting edit form');
         setEditData({
             name: '',
-            technology: technologyChoices[0]?.[0] || '',
+            technology: '',
             link: '',
         });
 
@@ -336,10 +336,10 @@ const ChatbotTechnologies = () => {
                                         placeholder='Select a new Technology'
                                         name="technology"
                                         value={editData.technology}
-                                        onChange={(val) => {
-                                            setEditData((prev) => ({ ...prev, technology: val }));
+                                        onChange={(e) => {
+                                            setEditData((prev) => ({ ...prev, technology: e.target.value }));
                                         }}
-                                        defaultSelectedKeys={[editData?.technology]}
+                                        selectedKeys={[editData?.technology]}
 
                                     >
                                         {technologyChoices.map(([key, value]) => (
