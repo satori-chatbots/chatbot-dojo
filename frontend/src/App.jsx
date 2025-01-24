@@ -101,12 +101,13 @@ function App() {
                     <Switch
                         defaultSelected={theme === 'dark'}
                         color="success"
-                        endContent={<MoonIcon />}
+                        endContent={<span aria-hidden="true"><MoonIcon /></span>}
                         size="md"
-                        startContent={<SunIcon />}
+                        startContent={<span aria-hidden="true"><SunIcon /></span>}
                         value={mounted}
                         onChange={toggleTheme}
                     />
+
                 </NavbarContent>
 
                 <NavbarMenu >

@@ -31,7 +31,7 @@ function Dashboard() {
 
     const handleProjectChange = (selectedIds) => {
         if (selectedIds.has('all')) {
-            console.log(projects)
+            // console.log(projects)
             if (selectedProjects.length === projects.length) {
                 setSelectedProjects([]);
             } else {
@@ -208,7 +208,7 @@ function Dashboard() {
                                         >
                                             <ul>
                                                 {testCase.copied_files.map(file => (
-                                                    <li key={file.id}>{file.name}</li>
+                                                    <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
                                                 ))}
                                             </ul>
                                         </AccordionItem>
@@ -216,7 +216,7 @@ function Dashboard() {
                                 ) : (
                                     <ul>
                                         {testCase.copied_files.map(file => (
-                                            <li key={file.id}>
+                                            <li key={`${testCase.id}-${file.name}`}>
                                                 <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
                                             </li>
                                         ))}
