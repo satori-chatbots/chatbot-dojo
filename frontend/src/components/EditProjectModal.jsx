@@ -59,7 +59,7 @@ const EditProjectModal = ({
                                     labelPlacement="outside"
                                     onChange={handleTechnologyChange}
                                     isRequired
-                                    defaultSelectedKeys={technologyMap[technology].name}
+                                    defaultSelectedKeys={technologyMap[technology]?.name}
 
                                 >
                                     {availableTechnologies.map((tech) => (
