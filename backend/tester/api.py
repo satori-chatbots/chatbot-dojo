@@ -23,6 +23,7 @@ from .serializers import (
     TestCaseSerializer,
     TestFileSerializer,
     ProjectSerializer,
+    TestErrorSerializer,
 )
 from django.http import JsonResponse
 from .models import TECHNOLOGY_CHOICES
@@ -32,6 +33,32 @@ import yaml
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 import threading
+
+# ------------------- #
+# - TEST ERRORS API - #
+# ------------------- #
+
+
+class TestErrorViewSet(viewsets.ModelViewSet):
+    queryset = TestError.objects.all()
+    serializer_class = TestErrorSerializer
+
+    def list(self, request, *args, **kwargs):
+        global_report_ids = request.query_params.get("global_report_ids", None)
+
+        if global_report_ids is not None:
+            global_reports = GlobalReport.objects.filter(
+                id__in=global_report_ids.split(",")
+            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                global_report__in=global_reports
+            )
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 # ---------------------- #
 # - GLOBAL REPORTS API - #
