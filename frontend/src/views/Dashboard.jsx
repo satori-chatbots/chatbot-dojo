@@ -9,6 +9,8 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from 
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from '@heroui/react';
+import { useMemo } from 'react';
+
 
 function Dashboard() {
 
@@ -125,14 +127,45 @@ function Dashboard() {
 
     // Columns for the Test Cases Table
     const columns = [
-        { name: 'Name', key: 'name' },
-        { name: 'Status', key: 'status' },
-        { name: 'Executed At', key: 'executed_at' },
+        { name: 'Name', key: 'name', sortable: true },
+        { name: 'Status', key: 'status', sortable: true },
+        { name: 'Executed At', key: 'executed_at', sortable: true },
         { name: 'Profiles Used', key: 'user_profiles' },
-        { name: 'Execution Time', key: 'execution_time' },
-        { name: 'Testing Errors', key: 'num_errors' },
-        { name: 'Project', key: 'project' },
+        { name: 'Execution Time', key: 'execution_time', sortable: true },
+        { name: 'Testing Errors', key: 'num_errors', sortable: true },
+        { name: 'Project', key: 'project', sortable: true },
     ];
+
+    const [sortDescriptor, setSortDescriptor] = useState({
+        column: 'executed_at',
+        direction: 'descending',
+    });
+
+    const derivedTestCases = useMemo(() => {
+        return testCases.map(tc => {
+            const displayName = tc.name || `Test Case: ${tc.id}`;
+            const report = globalReports.find(r => r.test_case === tc.id);
+            const numErrors = report ? errorCounts[report.id] || 0 : 0;
+            const testCaseErrors = errors.filter(err => err.global_report === report?.id);
+            return {
+                ...tc,
+                displayName,
+                num_errors: numErrors,
+                testCaseErrors
+            };
+        });
+    }, [testCases, globalReports, errorCounts, errors]);
+
+    const sortedTestCases = useMemo(() => {
+        const { column, direction } = sortDescriptor;
+        return [...derivedTestCases].sort((a, b) => {
+            const first = column === 'name' ? a.displayName : a[column];
+            const second = column === 'name' ? b.displayName : b[column];
+            const cmp = first < second ? -1 : first > second ? 1 : 0;
+            return direction === 'descending' ? -cmp : cmp;
+        });
+    }, [derivedTestCases, sortDescriptor]);
+
 
     const formatExecutionTime = (seconds) => {
         // Check if it is still running
@@ -146,7 +179,7 @@ function Dashboard() {
             return `${hours}h ${minutes}m`;
         } else if (seconds >= 60) {
             const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = (seconds % 60).toFixed(2);
+            const remainingSeconds = (seconds % 60).toFixed(0);
             return `${minutes}m ${remainingSeconds}s`;
         } else {
             return `${seconds.toFixed(2)}s`;
@@ -220,109 +253,95 @@ function Dashboard() {
             </Form>
 
 
-            <Table aria-label="Test Cases Table" isStriped
-                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
+            <Table
+                aria-label="Test Cases Table"
+                isStriped
+                // 4) Add sort props
+                sortDescriptor={sortDescriptor}
+                onSortChange={setSortDescriptor}
+                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
+            >
                 <TableHeader columns={columns}>
-                    {columns.map(column => (
-                        <TableColumn key={column.key} allowsSorting={true}>
+                    {(column) => (
+                        <TableColumn
+                            key={column.key}
+                            allowsSorting={column.sortable}
+                        >
                             {column.name}
                         </TableColumn>
-                    ))}
+                    )}
                 </TableHeader>
-
                 <TableBody
+                    items={sortedTestCases}
                     isLoading={loading}
                     loadingContent={<Spinner label='Loading Test Cases...' />}
-                    emptyContent={"No Test Cases to display."}>
-                    {testCases.map(testCase => {
-                        return (
-                            <TableRow key={testCase.id}>
-                                <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
-                                <TableCell>
-                                    <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
-                                        {testCase.status}
-                                    </Chip>
-                                </TableCell>
-                                <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
-                                <TableCell>
-                                    {testCase.copied_files.length > 3 ? (
-                                        <Accordion
+                    emptyContent={"No Test Cases to display."}
+                >
+                    {(testCase) => (
+                        <TableRow key={testCase.id}>
+                            <TableCell>{testCase.displayName}</TableCell>
+                            <TableCell>
+                                <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
+                                    {testCase.status}
+                                </Chip>
+                            </TableCell>
+                            <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
+                            <TableCell>
+                                {testCase.copied_files.length > 3 ? (
+                                    <Accordion
+                                        isCompact={true}
+                                    >
+                                        <AccordionItem
+                                            title={`View ${testCase.copied_files.length} files`}
                                             isCompact={true}
+                                            classNames={{ title: "text-sm mx-0" }}
                                         >
-                                            <AccordionItem
-                                                title={`View ${testCase.copied_files.length} files`}
-                                                isCompact={true}
-                                                classNames={{ title: "text-sm mx-0" }}
-                                            >
-                                                <ul>
-                                                    {testCase.copied_files.map(file => (
-                                                        <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
-                                                    ))}
-                                                </ul>
-                                            </AccordionItem>
-                                        </Accordion>
-                                    ) : (
-                                        <ul>
-                                            {testCase.copied_files.map(file => (
-                                                <li key={`${testCase.id}-${file.name}`}>
-                                                    <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </TableCell>
-                                <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
-                                <TableCell>
-                                    {(() => {
-                                        const report = globalReports.find(report => report.test_case === testCase.id);
-                                        const count = report ? errorCounts[report.id] : 0;
-                                        if (!report) {
-                                            return (
-                                                <Accordion isCompact={true}>
-                                                    <AccordionItem
-                                                        title="No Errors"
-                                                        isCompact={true}
-                                                        classNames={{ title: "text-sm mx-0" }}
-                                                    >
-                                                    </AccordionItem>
-                                                </Accordion>
-                                            )
-                                        }
-                                        const errorsForReport = errors.filter(e => e.global_report === report.id);
-                                        // Group by code
-                                        const errorsByCode = errorsForReport.reduce((acc, cur) => {
-                                            acc[cur.code] = (acc[cur.code] || 0) + cur.count;
-                                            return acc;
-                                        }, {});
-                                        // Show Accordion
-                                        return (
-                                            <Accordion isCompact={true}>
-                                                <AccordionItem
-                                                    title={`Total Errors: ${count}`}
-                                                    isCompact={true}
-                                                    classNames={{ title: "text-sm mx-0" }}
-                                                >
-                                                    <ul>
-                                                        {Object.entries(errorsByCode).map(([code, ct]) => (
-                                                            <li key={code}>
-                                                                Error {code}: {ct}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </AccordionItem>
-                                            </Accordion>
-                                        );
-                                    })()}
-                                </TableCell>
-                                <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
-                            </TableRow>
-                        )
-                    })}
+                                            <ul>
+                                                {testCase.copied_files.map(file => (
+                                                    <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
+                                                ))}
+                                            </ul>
+                                        </AccordionItem>
+                                    </Accordion>
+                                ) : (
+                                    <ul>
+                                        {testCase.copied_files.map(file => (
+                                            <li key={`${testCase.id}-${file.name}`}>
+                                                <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </TableCell>
+                            <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
+                            <TableCell>
+                                {testCase.num_errors > 0 ? (
+                                    <Accordion isCompact>
+                                        <AccordionItem title={`${testCase.num_errors} errors`}>
+                                            <ul>
+                                                {testCase.testCaseErrors.map(err => (
+                                                    <li key={err.id}>
+                                                        Error {err.code}: {err.count}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </AccordionItem>
+                                    </Accordion>
+                                ) : (
+                                    <Accordion isCompact>
+                                        <AccordionItem title="No errors" />
+                                    </Accordion>
+                                )}
+                            </TableCell>
+
+                            <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
 
             </Table>
 
-        </div>
+        </div >
     );
 }
 
