@@ -228,8 +228,6 @@ function Dashboard() {
                     isLoading={loading}
                     emptyContent={"No Test Cases to display."}>
                     {testCases.map(testCase => {
-                        const report = globalReports.find(report => report.test_case === testCase.id);
-                        const count = report ? errorCounts[report.id] : 0;
                         return (
                             <TableRow key={testCase.id}>
                                 <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
@@ -263,7 +261,37 @@ function Dashboard() {
                                 </TableCell>
                                 <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
                                 <TableCell>
-                                    {count}
+                                    {(() => {
+                                        const report = globalReports.find(report => report.test_case === testCase.id);
+                                        const count = report ? errorCounts[report.id] : 0;
+                                        if (!report) {
+                                            return count;
+                                        }
+                                        const errorsForReport = errors.filter(e => e.global_report === report.id);
+                                        // Group by code
+                                        const errorsByCode = errorsForReport.reduce((acc, cur) => {
+                                            acc[cur.code] = (acc[cur.code] || 0) + cur.count;
+                                            return acc;
+                                        }, {});
+                                        // Show Accordion
+                                        return (
+                                            <Accordion isCompact={true}>
+                                                <AccordionItem
+                                                    title={`Total Errors: ${count}`}
+                                                    isCompact={true}
+                                                    classNames={{ title: "text-sm mx-0" }}
+                                                >
+                                                    <ul>
+                                                        {Object.entries(errorsByCode).map(([code, ct]) => (
+                                                            <li key={code}>
+                                                                Error {code}: {ct}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </AccordionItem>
+                                            </Accordion>
+                                        );
+                                    })()}
                                 </TableCell>
                                 <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
                             </TableRow>
