@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
 import useFetchProjects from '../hooks/useFetchProjects';
+import { fetchTestErrorsByGlobalReports } from '../api/testErrorsApi';
 import { fetchGlobalReportsByTestCases } from '../api/reportsApi';
 import { MEDIA_URL } from '../api/config';
 import { Button, Form, Select, SelectItem } from "@heroui/react";
@@ -18,11 +19,23 @@ function Dashboard() {
 
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
 
+
+
     // Selected Projects State
     const [selectedProjects, setSelectedProjects] = useState([]);
 
+    /* IMPORTANT: */
+    /* A Test Case contains a Global Report which itself can contain multiple errors */
+
     // Global Reports of Test Cases
     const [globalReports, setGlobalReports] = useState([]);
+
+    // Erros of Global Reports
+    const [errors, setErrors] = useState([]);
+
+    // Error count for each Global Report
+    const [errorCounts, setErrorCounts] = useState({});
+
 
     /* ----------------------------- */
     /* Handlers for Project Selector */
@@ -55,14 +68,36 @@ function Dashboard() {
             setError(null);
             const testCases = await fetchTestCasesByProjects(selectedProjects);
             setTestCases(testCases);
-            //console.log(testCases);
 
             // Get the global reports for each test case
             const testCaseIds = testCases.map(testCase => testCase.id);
             if (testCaseIds.length !== 0) {
-                const reports = await fetchGlobalReportsByTestCases(testCaseIds);
-                setGlobalReports(reports);
-                //console.log(reports);
+                const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
+
+                // Fetch errors based on local data
+                const globalReportIds = fetchedReports.map(report => report.id);
+                let fetchedErrors = [];
+                if (globalReportIds.length !== 0) {
+                    fetchedErrors = await fetchTestErrorsByGlobalReports(globalReportIds);
+                    setErrors(fetchedErrors);
+                    console.log("Errors");
+                    console.log(fetchedErrors);
+                }
+
+                setGlobalReports(fetchedReports);
+                console.log("Fetched Reports");
+                console.log(fetchedReports);
+
+                // Calculate the error count
+                const updatedErrorCounts = {};
+                fetchedErrors.forEach(error => {
+                    if (error.global_report in updatedErrorCounts) {
+                        updatedErrorCounts[error.global_report] += error.count;
+                    } else {
+                        updatedErrorCounts[error.global_report] = error.count;
+                    }
+                });
+                setErrorCounts(updatedErrorCounts);
             }
         } catch (err) {
             console.log(err);
@@ -192,42 +227,48 @@ function Dashboard() {
                 <TableBody
                     isLoading={loading}
                     emptyContent={"No Test Cases to display."}>
-                    {testCases.map(testCase => (
-                        <TableRow key={testCase.id}>
-                            <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
-                            <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
-                            <TableCell>
-                                {testCase.copied_files.length > 3 ? (
-                                    <Accordion
-                                        isCompact={true}
-                                    >
-                                        <AccordionItem
-                                            title={`View ${testCase.copied_files.length} files`}
+                    {testCases.map(testCase => {
+                        const report = globalReports.find(report => report.test_case === testCase.id);
+                        const count = report ? errorCounts[report.id] : 0;
+                        return (
+                            <TableRow key={testCase.id}>
+                                <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
+                                <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
+                                <TableCell>
+                                    {testCase.copied_files.length > 3 ? (
+                                        <Accordion
                                             isCompact={true}
-                                            classNames={{ title: "text-sm mx-0" }}
                                         >
-                                            <ul>
-                                                {testCase.copied_files.map(file => (
-                                                    <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
-                                                ))}
-                                            </ul>
-                                        </AccordionItem>
-                                    </Accordion>
-                                ) : (
-                                    <ul>
-                                        {testCase.copied_files.map(file => (
-                                            <li key={`${testCase.id}-${file.name}`}>
-                                                <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </TableCell>
-                            <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
-                            <TableCell>{globalReports.find(report => report.test_case === testCase.id)?.num_errors}</TableCell>
-                            <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
-                        </TableRow>
-                    ))}
+                                            <AccordionItem
+                                                title={`View ${testCase.copied_files.length} files`}
+                                                isCompact={true}
+                                                classNames={{ title: "text-sm mx-0" }}
+                                            >
+                                                <ul>
+                                                    {testCase.copied_files.map(file => (
+                                                        <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
+                                                    ))}
+                                                </ul>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    ) : (
+                                        <ul>
+                                            {testCase.copied_files.map(file => (
+                                                <li key={`${testCase.id}-${file.name}`}>
+                                                    <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </TableCell>
+                                <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
+                                <TableCell>
+                                    {count}
+                                </TableCell>
+                                <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
+                            </TableRow>
+                        )
+                    })}
                 </TableBody>
 
             </Table>
