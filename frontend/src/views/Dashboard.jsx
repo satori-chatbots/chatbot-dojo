@@ -4,7 +4,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchTestErrorsByGlobalReports } from '../api/testErrorsApi';
 import { fetchGlobalReportsByTestCases } from '../api/reportsApi';
 import { MEDIA_URL } from '../api/config';
-import { Button, Chip, Form, Select, SelectItem } from "@heroui/react";
+import { Button, Chip, Form, Select, SelectItem, Spinner } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
@@ -224,7 +224,7 @@ function Dashboard() {
                 className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
                 <TableHeader columns={columns}>
                     {columns.map(column => (
-                        <TableColumn key={column.key}>
+                        <TableColumn key={column.key} allowsSorting={true}>
                             {column.name}
                         </TableColumn>
                     ))}
@@ -232,6 +232,7 @@ function Dashboard() {
 
                 <TableBody
                     isLoading={loading}
+                    loadingContent={<Spinner label='Loading Test Cases...' />}
                     emptyContent={"No Test Cases to display."}>
                     {testCases.map(testCase => {
                         return (
