@@ -124,7 +124,7 @@ function Dashboard() {
         { name: 'Executed At', key: 'executed_at' },
         { name: 'Profiles Used', key: 'user_profiles' },
         { name: 'Execution Time', key: 'execution_time' },
-        { name: 'Number of Errors', key: 'num_errors' },
+        { name: 'Testing Errors', key: 'num_errors' },
         { name: 'Project', key: 'project' },
     ];
 
@@ -265,7 +265,16 @@ function Dashboard() {
                                         const report = globalReports.find(report => report.test_case === testCase.id);
                                         const count = report ? errorCounts[report.id] : 0;
                                         if (!report) {
-                                            return count;
+                                            return (
+                                                <Accordion isCompact={true}>
+                                                    <AccordionItem
+                                                        title="No Errors"
+                                                        isCompact={true}
+                                                        classNames={{ title: "text-sm mx-0" }}
+                                                    >
+                                                    </AccordionItem>
+                                                </Accordion>
+                                            )
                                         }
                                         const errorsForReport = errors.filter(e => e.global_report === report.id);
                                         // Group by code
