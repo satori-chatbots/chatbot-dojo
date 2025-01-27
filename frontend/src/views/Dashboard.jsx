@@ -4,7 +4,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchTestErrorsByGlobalReports } from '../api/testErrorsApi';
 import { fetchGlobalReportsByTestCases } from '../api/reportsApi';
 import { MEDIA_URL } from '../api/config';
-import { Button, Form, Select, SelectItem } from "@heroui/react";
+import { Button, Chip, Form, Select, SelectItem } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
@@ -19,6 +19,11 @@ function Dashboard() {
 
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
 
+    const statusColorMap = {
+        COMPLETED: 'success',
+        ERROR: 'danger',
+        RUNNING: 'warning',
+    };
 
 
     // Selected Projects State
@@ -121,7 +126,7 @@ function Dashboard() {
     // Columns for the Test Cases Table
     const columns = [
         { name: 'Name', key: 'name' },
-        {name: 'Status', key: 'status'},
+        { name: 'Status', key: 'status' },
         { name: 'Executed At', key: 'executed_at' },
         { name: 'Profiles Used', key: 'user_profiles' },
         { name: 'Execution Time', key: 'execution_time' },
@@ -232,7 +237,11 @@ function Dashboard() {
                         return (
                             <TableRow key={testCase.id}>
                                 <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
-                                <TableCell>{testCase.status}</TableCell>
+                                <TableCell>
+                                    <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
+                                        {testCase.status}
+                                    </Chip>
+                                </TableCell>
                                 <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
                                 <TableCell>
                                     {testCase.copied_files.length > 3 ? (
