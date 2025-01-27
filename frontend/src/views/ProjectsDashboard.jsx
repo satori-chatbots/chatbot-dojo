@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Button,
     Input,
@@ -11,6 +11,7 @@ import {
     ModalHeader,
     useDisclosure,
     Form,
+    Spinner,
 } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import CreateProjectModal from '../components/CreateProjectModal';
@@ -21,6 +22,9 @@ import EditProjectModal from '../components/EditProjectModal';
 
 
 const ProjectsDashboard = () => {
+
+    // Loading state
+    const [loading, setLoading] = useState(false);
 
     // State of the modal to create new project
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -57,12 +61,15 @@ const ProjectsDashboard = () => {
 
     const loadTechnologies = async () => {
         try {
+            setLoading(true);
             const technologies = await fetchChatbotTechnologies();
             setTechnologies(technologies);
             // console.log('technologies:', technologies);
 
         } catch (error) {
             console.error('Error fetching technologies:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -179,10 +186,29 @@ const ProjectsDashboard = () => {
 
     /* Columns */
     const columns = [
-        { name: 'Name', key: 'name' },
-        { name: 'Technology', key: 'technology' },
+        { name: 'Name', key: 'name', sortable: true },
+        { name: 'Technology', key: 'technology', sortable: true },
         { name: 'Actions', key: 'actions' },
-    ]
+    ];
+
+    const [sortDescriptor, setSortDescriptor] = useState({
+        column: 'name',
+        direction: 'ascending',
+    });
+
+    const sortedProjects = useMemo(() => {
+        const { column, direction } = sortDescriptor;
+        return [...projects].sort((a, b) => {
+            const first = column === 'technology'
+                ? technologies.find(t => t.id === a.chatbot_technology)?.name ?? ''
+                : a[column] ?? '';
+            const second = column === 'technology'
+                ? technologies.find(t => t.id === b.chatbot_technology)?.name ?? ''
+                : b[column] ?? '';
+            const cmp = first < second ? -1 : first > second ? 1 : 0;
+            return direction === 'descending' ? -cmp : cmp;
+        });
+    }, [projects, technologies, sortDescriptor]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8
@@ -260,27 +286,33 @@ const ProjectsDashboard = () => {
 
             <h2 className='text-xl sm:text-2xl font-bold text-center'>My Projects:</h2>
             {/* Table of projects */}
-            <Table aria-label="Projects Table"
-                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
+            <Table
+                aria-label="Projects Table"
+                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
+                sortDescriptor={sortDescriptor}
+                onSortChange={setSortDescriptor}
+            >
                 <TableHeader columns={columns}>
-                    <TableColumn key="name" allowsSorting>
-                        Name
-                    </TableColumn>
-                    <TableColumn key="technology" allowsSorting>
-                        Technology
-                    </TableColumn>
-                    <TableColumn className='text-center'
-                        key="actions">
-                        Actions
-                    </TableColumn>
+                    {(column) => (
+                        <TableColumn
+                            key={column.key}
+                            allowsSorting={column.sortable}
+                        >
+                            {column.name}
+                        </TableColumn>
+                    )}
                 </TableHeader>
                 <TableBody
-                    emptyState="Create a new project to get started.">
-                    {projects.map(project => (
+                    emptyState="Create a new project to get started."
+                    isLoading={loading}
+                    loadingContent={<Spinner label='Loading Test Cases...' />}
+                    items={sortedProjects}
+                >
+                    {sortedProjects.map((project) => (
                         <TableRow key={project.id}>
-                            <TableCell className="px-2 sm:px-4">{project.name}</TableCell>
-                            <TableCell className="px-2 sm:px-4">
-                                {technologies.find(tech => tech.id === project.chatbot_technology)?.name || 'Loading...'}
+                            <TableCell>{project.name}</TableCell>
+                            <TableCell>
+                                {technologies.find(t => t.id === project.chatbot_technology)?.name || 'Loading...'}
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
                                 <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditClick(project)}>
