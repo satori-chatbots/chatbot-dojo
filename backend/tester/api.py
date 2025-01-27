@@ -387,6 +387,9 @@ class ExecuteSelectedAPIView(APIView):
             # Create TestCase instance first to get its ID
             test_case = TestCase.objects.create(project=project)
 
+            # Set it to RUNNING
+            test_case.status = "RUNNING"
+
             # Set extract dir to MEDIA / results / {test_case_id}
             extract_dir = os.path.join(
                 settings.MEDIA_ROOT, "results", str(test_case.id)
@@ -496,6 +499,9 @@ def run_asyn_test_execution(
         if report_file is not None:
             with open(os.path.join(report_path, report_file), "r") as file:
                 documents = list(yaml.safe_load_all(file))
+        else:
+            # When the report is not created it is because there was an error
+            test_case.result = "ERROR"
 
         # In the documents there is a global, and then a test_report for each test_case
 

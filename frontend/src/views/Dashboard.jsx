@@ -121,6 +121,7 @@ function Dashboard() {
     // Columns for the Test Cases Table
     const columns = [
         { name: 'Name', key: 'name' },
+        {name: 'Status', key: 'status'},
         { name: 'Executed At', key: 'executed_at' },
         { name: 'Profiles Used', key: 'user_profiles' },
         { name: 'Execution Time', key: 'execution_time' },
@@ -231,6 +232,7 @@ function Dashboard() {
                         return (
                             <TableRow key={testCase.id}>
                                 <TableCell>{testCase.name ? testCase.name : "Test Case: " + testCase.id}</TableCell>
+                                <TableCell>{testCase.status}</TableCell>
                                 <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
                                 <TableCell>
                                     {testCase.copied_files.length > 3 ? (

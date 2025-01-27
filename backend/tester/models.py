@@ -127,16 +127,14 @@ class TestCase(models.Model):
     result = models.TextField(blank=True, null=True)
     # Global execution time of the test case measured by the API, not the script
     execution_time = models.FloatField(blank=True, null=True)
-    # If the test case is still running
-    executing = models.BooleanField(default=True)
+    # If the execution was Successful, Failed or Running
+    status = models.CharField(max_length=255, blank=True, null=True)
     # These are the user profiles used
     copied_files = models.JSONField(blank=True, null=True)
     # Test case belongs to only one project
     project = models.ForeignKey(
         Project, related_name="test_cases", on_delete=models.CASCADE
     )
-    # Status
-    status = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"TestCase {self.id}"
@@ -197,8 +195,16 @@ class TestError(models.Model):
     conversations = models.JSONField(blank=True, null=True)
     # Test error belongs to either a test report or a global report
     test_report = models.ForeignKey(
-        TestReport, related_name="test_errors", on_delete=models.CASCADE, blank=True, null=True
+        TestReport,
+        related_name="test_errors",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
     )
     global_report = models.ForeignKey(
-        GlobalReport, related_name="test_errors", on_delete=models.CASCADE, blank=True, null=True
+        GlobalReport,
+        related_name="test_errors",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
     )
