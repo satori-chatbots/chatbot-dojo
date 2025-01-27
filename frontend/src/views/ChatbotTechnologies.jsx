@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Button,
     Input,
@@ -11,6 +11,7 @@ import {
     ModalHeader,
     useDisclosure,
     Form,
+    Spinner,
 } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
@@ -44,9 +45,14 @@ const ChatbotTechnologies = () => {
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     useEffect(() => {
-        loadTechnologies();
-        loadTechnologyChoices();
-        setLoading(false);
+        try {
+            loadTechnologies();
+            loadTechnologyChoices();
+        } catch (error) {
+            console.error('Error loading chatbot technologies:', error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     const loadTechnologies = async () => {
@@ -166,11 +172,25 @@ const ChatbotTechnologies = () => {
 
     // Columns for table
     const columns = [
-        { name: 'Name', key: 'name' },
-        { name: 'Technology', key: 'technology' },
-        { name: 'URL', key: 'link' },
-        { name: 'Actions', key: 'actions' },
+        { name: 'Name', key: 'name', sortable: true },
+        { name: 'Technology', key: 'technology', sortable: true },
+        { name: 'URL', key: 'link', sortable: true },
+        { name: 'Actions', key: 'actions', sortable: false },
     ];
+
+    const [sortDescriptor, setSortDescriptor] = useState({
+        column: 'name',
+        direction: 'ascending',
+    });
+
+    const sortedChatbotTechnologies = useMemo(() => {
+        const { column, direction } = sortDescriptor;
+        return [...technologies].sort((a, b) => {
+            const first = column === 'name' ? a.name : column === 'technology' ? a.technology : a.link;
+            const second = column === 'name' ? b.name : column === 'technology' ? b.technology : b.link;
+            return direction === 'ascending' ? first.localeCompare(second) : second.localeCompare(first);
+        });
+    }, [technologies, sortDescriptor]);
 
     return (
         (<div className="flex flex-col
@@ -260,23 +280,32 @@ const ChatbotTechnologies = () => {
                     )}
                 </ModalContent>
             </Modal>
+
             <h2 className='text-xl sm:text-2xl font-bold text-center'>Existing Technologies</h2>
+
             {/* Table of existing technologies */}
             <Table aria-label="Chatbot Technologies Table"
                 //isStriped={technologies.length > 4}
-                isLoading={loading}
-                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'>
+                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
+                sortDescriptor={sortDescriptor}
+                onSortChange={setSortDescriptor}
+            >
                 <TableHeader columns={columns}>
-                    <TableColumn key="name" allowsSorting>Name</TableColumn>
-                    <TableColumn key="technology" allowsSorting>Technology</TableColumn>
-                    <TableColumn key="link" allowsSorting>URL</TableColumn>
-                    <TableColumn className='text-center' key="actions">Actions</TableColumn>
-
+                    {(column) => (
+                        <TableColumn
+                            key={column.key}
+                            allowsSorting={column.sortable}
+                        >
+                            {column.name}
+                        </TableColumn>
+                    )}
                 </TableHeader>
                 <TableBody
                     isLoading={loading}
-                    emptyContent="Create a new technology to get started.">
-                    {technologies.map((tech) => (
+                    loadingContent={<Spinner label="Loading..." />}
+                    emptyContent="Create a new technology to get started."
+                >
+                    {sortedChatbotTechnologies.map((tech) => (
                         <TableRow key={tech.id}>
                             <TableCell className="px-2 sm:px-4">{tech.name}</TableCell>
                             <TableCell className="px-2 sm:px-4">{tech.technology}</TableCell>
