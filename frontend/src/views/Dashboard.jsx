@@ -144,7 +144,7 @@ function Dashboard() {
 
     const derivedTestCases = useMemo(() => {
         return testCases.map(tc => {
-            const displayName = tc.name || `Test Case: ${tc.id}`;
+            const displayName = tc.name || 'Unnamed Test Case';
             const report = globalReports.find(r => r.test_case === tc.id);
             const numErrors = report ? errorCounts[report.id] || 0 : 0;
             const testCaseErrors = errors.filter(err => err.global_report === report?.id);

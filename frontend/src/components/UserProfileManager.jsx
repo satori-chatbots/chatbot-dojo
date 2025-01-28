@@ -53,6 +53,11 @@ function UserProfileManager() {
     // List of files to upload
     const fileInputRef = useRef(null);
 
+    // State to control the modal for the execution name
+    const [isExecuteOpen, setIsExecuteOpen] = useState(false);
+
+    const [executionName, setExecutionName] = useState('');
+
 
     const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
 
@@ -75,6 +80,12 @@ function UserProfileManager() {
 
         loadData();
     }, []);
+
+    // Function to check if the test case name already exists
+    async function checkTestCaseName(projectId, name) {
+        return false;
+
+    }
 
 
     /* ------------------------------------------------------ */
@@ -143,8 +154,8 @@ function UserProfileManager() {
             });
     };
 
-    // Execute test on selected files and project
-    const handleExecuteTest = () => {
+    // Open the modal for the execution name
+    const openExecuteModal = () => {
         if (selectedFiles.length === 0) {
             alert('No files selected for test execution.');
             return;
@@ -155,12 +166,21 @@ function UserProfileManager() {
             return;
         }
 
-        //console.log('Selected files:', selectedFiles);
-        //console.log('Selected project:', selectedProject);
+        setIsExecuteOpen(true);
+    };
 
-        executeTest(selectedFiles, selectedProject.id)
+    // Execute test on selected files and project
+    const handleExecuteTest = () => {
+
+        const finalName = executionName.trim();
+
+        console.log('Name:', finalName);
+
+        executeTest(selectedFiles, selectedProject.id, finalName)
             .then((data) => {
                 alert(data.message);
+                setIsExecuteOpen(false);
+                setExecutionName('');
             })
             .catch((error) => {
                 console.error('Error executing test:', error);
@@ -358,7 +378,7 @@ function UserProfileManager() {
                         <Button color="danger" className="flex-1" onPress={handleDelete}>
                             Delete Selected
                         </Button>
-                        <Button color="primary" className="flex-1" onPress={handleExecuteTest}>
+                        <Button color="primary" className="flex-1" onPress={openExecuteModal}>
                             Execute Test
                         </Button>
                     </div>
@@ -367,6 +387,23 @@ function UserProfileManager() {
                 <p className="text-gray-500 text-center">Select a project to start working!</p>
             )}
 
+            {/* Modal execution name */}
+            <Modal isOpen={isExecuteOpen} onOpenChange={setIsExecuteOpen}>
+                <ModalContent>
+                    <ModalHeader>Execute Test</ModalHeader>
+                    <ModalBody>
+                        <Input
+                            label="Execution Name (optional)"
+                            value={executionName}
+                            onValueChange={setExecutionName}
+                        />
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="light" onPress={() => setIsExecuteOpen(false)}>Cancel</Button>
+                        <Button color="primary" onPress={handleExecuteTest}>Execute</Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </Card>
     );
 };

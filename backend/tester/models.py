@@ -121,6 +121,8 @@ class TestCase(models.Model):
     """
 
     id = models.AutoField(primary_key=True)
+    # Name of the test case
+    name = models.CharField(max_length=255)
     # Timestamp of when the test case was executed
     executed_at = models.DateTimeField(auto_now_add=True)
     # STDOUT of the test case
@@ -135,6 +137,15 @@ class TestCase(models.Model):
     project = models.ForeignKey(
         Project, related_name="test_cases", on_delete=models.CASCADE
     )
+
+    def save(self, *args, **kwargs):
+        # Save the test case, if given name is null, set it to TestCase <id>
+        creating = self.pk is None
+        super().save(*args, **kwargs)
+
+        if not self.name or not self.name.strip():
+            self.name = f"TestCase {self.id}"
+            super().save(update_fields=["name"])
 
     def __str__(self):
         return f"TestCase {self.id}"

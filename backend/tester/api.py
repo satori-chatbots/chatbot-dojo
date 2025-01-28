@@ -334,6 +334,7 @@ class ExecuteSelectedAPIView(APIView):
         """
         selected_ids = request.data.get("test_file_ids", [])
         project_id = request.data.get("project_id")
+        test_name = request.data.get("test_name")
 
         if not selected_ids:
             return Response(
@@ -385,7 +386,11 @@ class ExecuteSelectedAPIView(APIView):
         # Make in a transaction to avoid partial saves
         with transaction.atomic():
             # Create TestCase instance first to get its ID
-            test_case = TestCase.objects.create(project=project)
+            if test_name:
+                print(f"Test name: {test_name}")
+                test_case = TestCase.objects.create(project=project, name=test_name)
+            else:
+                test_case = TestCase.objects.create(project=project)
 
             # Set it to RUNNING
             test_case.status = "RUNNING"
