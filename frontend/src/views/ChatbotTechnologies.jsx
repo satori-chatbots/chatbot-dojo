@@ -124,7 +124,6 @@ const ChatbotTechnologies = () => {
         }
 
         setValidationErrors({});
-        setLoadingValidation(false);
         return true;
     };
 
