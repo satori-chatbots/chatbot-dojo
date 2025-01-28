@@ -194,7 +194,7 @@ function UserProfileManager() {
 
         if (existsResponse.exists) {
             // Name already taken
-            setValidationErrors({ name: "Name already exists" });
+            setValidationErrors({ name: 'This name is already taken, choose another one or leave it blank for auto-generation.' });
         } else {
             // Name is fine, proceed
             setValidationErrors({});
@@ -434,6 +434,7 @@ function UserProfileManager() {
                             validationErrors={validationErrors}
                         >
                             <Input
+                                name="name"
                                 label="Execution Name (optional)"
                                 value={executionName}
                                 onValueChange={setExecutionName}
