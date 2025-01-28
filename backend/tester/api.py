@@ -138,7 +138,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if test_name is None:
+        if test_name is None or not test_name.strip():
             return Response({"exists": False}, status=status.HTTP_200_OK)
 
         exists = TestCase.objects.filter(project=project_id, name=test_name).exists()

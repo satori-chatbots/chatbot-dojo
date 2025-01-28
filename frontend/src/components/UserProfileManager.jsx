@@ -65,6 +65,12 @@ function UserProfileManager() {
     // List of files in the selected project
     const { files, loading, error, reloadFiles } = useFetchFiles(selectedProject ? selectedProject.id : null);
 
+    // Loading state for the serverside validation
+    const [loadingValidation, setLoadingValidation] = useState(false);
+
+    // Errors for the serverside validation
+    const [validationErrors, setValidationErrors] = useState({});
+
 
     // Initialize with the available technologies
     useEffect(() => {
@@ -81,12 +87,6 @@ function UserProfileManager() {
 
         loadData();
     }, []);
-
-    // Function to check if the test case name already exists
-    async function checkTestCaseName(projectId, name) {
-        return false;
-
-    }
 
 
     /* ------------------------------------------------------ */
@@ -168,6 +168,40 @@ function UserProfileManager() {
         }
 
         setIsExecuteOpen(true);
+    };
+
+    // Handle the submit of the execution name
+    const handleSubmitPressed = async (e) => {
+        // Prevent the reload
+        e.preventDefault();
+
+        setLoadingValidation(true);
+
+        //console.log("checkpoint");
+        //console.log("name:", executionName);
+
+        // If user left the name blank, skip validation
+        if (!executionName.trim()) {
+            setValidationErrors({});
+            setLoadingValidation(false);
+            handleExecuteTest();
+            return;
+        }
+
+        // Otherwise, check if this name exists
+        const existsResponse = await checkTestCaseName(selectedProject.id, executionName.trim());
+        console.log("exists:", existsResponse);
+
+        if (existsResponse.exists) {
+            // Name already taken
+            setValidationErrors({ name: "Name already exists" });
+        } else {
+            // Name is fine, proceed
+            setValidationErrors({});
+            handleExecuteTest();
+        }
+
+        setLoadingValidation(false);
     };
 
     // Execute test on selected files and project
@@ -395,17 +429,15 @@ function UserProfileManager() {
                     <ModalBody className="flex flex-col gap-4 items-center">
                         <Form
                             className='w-full'
-                            onSubmit={(e) => {
-                                // Prevent the reload
-                                e.preventDefault();
-                                handleExecuteTest();
-                            }}
+                            onSubmit={handleSubmitPressed}
                             onReset={() => setIsExecuteOpen(false)}
+                            validationErrors={validationErrors}
                         >
                             <Input
                                 label="Execution Name (optional)"
                                 value={executionName}
                                 onValueChange={setExecutionName}
+                                isDisabled={loadingValidation}
                             />
                             <ModalFooter className="w-full flex justify-center gap-4">
                                 <Button type="reset" color="danger" variant="light">
