@@ -13,6 +13,8 @@ export const ENDPOINTS = {
     GLOBALREPORTS: '/globalreports/',
     TESTERRORS: '/testerrors/',
     CHECK_TEST_CASE_NAME: '/testcases/check-name/',
+    CHECK_PROJECT_NAME: '/projects/check-name/',
+    CHECK_CHATBOT_NAME: '/chatbottechnologies/check-name/',
 };
 
 export default API_BASE_URL;

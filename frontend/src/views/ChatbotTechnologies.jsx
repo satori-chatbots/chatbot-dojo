@@ -14,7 +14,7 @@ import {
     Spinner,
 } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
-import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology } from '../api/chatbotTechnologyApi';
+import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology, checkChatbotTechnologyName } from '../api/chatbotTechnologyApi';
 
 const ChatbotTechnologies = () => {
     const [editData, setEditData] = useState({
@@ -29,6 +29,7 @@ const ChatbotTechnologies = () => {
     // Function to open edit modal
     const handleEdit = (tech) => {
         setEditData(tech);
+        setOriginalName(tech.name);
         setIsEditOpen(true);
     };
 
@@ -43,6 +44,15 @@ const ChatbotTechnologies = () => {
 
     // State of the modal to create new technology
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
+    // Loading state for the serverside validation
+    const [loadingValidation, setLoadingValidation] = useState(false);
+
+    // Errors for the serverside validation
+    const [validationErrors, setValidationErrors] = useState({});
+
+    // State for the original name
+    const [originalName, setOriginalName] = useState('');
 
     useEffect(() => {
         try {
@@ -78,24 +88,56 @@ const ChatbotTechnologies = () => {
         }
     };
 
+    // Handle validation of the form for both edit and create
+    const handleValidation = async (event, data, oldName = "") => {
+        event.preventDefault();
+        setLoadingValidation(true);
+
+        // URL check
+        if (!data.link.match(/^https?:\/\//)) {
+            alert("Please enter a valid URL");
+            setLoadingValidation(false);
+            return false;
+        }
+
+        // Technology check
+        if (!data.technology) {
+            alert("Please select a technology");
+            setLoadingValidation(false);
+            return false;
+        }
+
+        // Skip check only if the user truly didn't change their name
+        if (oldName && data.name === oldName) {
+            console.log("Skipping validation for name, name:", data.name, "originalName:", oldName);
+            setValidationErrors({});
+            setLoadingValidation(false);
+            return true;
+        }
+
+        // Otherwise, check if the name exists
+        const existsResponse = await checkChatbotTechnologyName(data.name);
+        if (existsResponse.exists) {
+            setValidationErrors({ name: "Name already exists" });
+            setLoadingValidation(false);
+            return false;
+        }
+
+        setValidationErrors({});
+        setLoadingValidation(false);
+        return true;
+    };
+
     // Called after the form is submitted
     const handleFormSubmit = async (event) => {
         event.preventDefault();
+
         const data = Object.fromEntries(new FormData(event.currentTarget));
-        //console.log('Creating chatbot technology:', data);
-        // Check if the URL is valid
-        if (!data.link.match(/^https?:\/\//)) {
-            alert('Please enter a valid URL');
-            return;
-        }
-
-        // Check there is a technology selected
-        if (!data.technology) {
-            alert('Please select a technology');
-            return;
-        }
 
 
+        // Validate the form
+        const isValid = await handleValidation(event, data);
+        if (!isValid) return;
 
         try {
             await createChatbotTechnology(data);
@@ -111,6 +153,8 @@ const ChatbotTechnologies = () => {
         } catch (error) {
             console.log('DFSDError creating chatbot technology:', error);
             alert(`Error creating chatbot technology: ${error.message}`);
+        } finally {
+            setLoadingValidation(false);
         }
     };
 
@@ -138,17 +182,10 @@ const ChatbotTechnologies = () => {
     const handleUpdate = async (event) => {
         event.preventDefault();
         const data = Object.fromEntries(new FormData(event.currentTarget));
-        // Check if the URL is valid
-        if (!data.link.match(/^https?:\/\//)) {
-            alert('Please enter a valid URL');
-            return;
-        }
 
-        // Check there is a technology selected
-        if (!data.technology) {
-            alert('Please select a technology');
-            return;
-        }
+        // Now pass the stored originalName
+        const isValid = await handleValidation(event, data, originalName);
+        if (!isValid) return;
 
         try {
             await updateChatbotTechnology(editData.id, data);
@@ -219,10 +256,10 @@ const ChatbotTechnologies = () => {
                                     onSubmit={handleFormSubmit}
                                     onReset={handleFormReset}
                                     validationBehavior="native"
+                                    validationErrors={validationErrors}
                                 >
                                     <Input
                                         isRequired
-                                        errorMessage="Please enter a valid name"
                                         label="Name"
                                         labelPlacement="outside"
                                         name="name"
@@ -337,7 +374,13 @@ const ChatbotTechnologies = () => {
             {/* Modal for editing */}
             <Modal
                 isOpen={isEditOpen}
-                onOpenChange={setIsEditOpen}
+                onOpenChange={
+                    () => {
+                        setIsEditOpen(false);
+                        handleEditFormReset();
+                        setValidationErrors({});
+                    }
+                }
             >
                 <ModalContent>
                     {() => (
@@ -350,6 +393,8 @@ const ChatbotTechnologies = () => {
                                     className="w-full flex flex-col gap-4"
                                     onSubmit={handleUpdate}
                                     onReset={handleEditFormReset}
+                                    validationBehavior="native"
+                                    validationErrors={validationErrors}
                                 >
                                     <Input
                                         isRequired

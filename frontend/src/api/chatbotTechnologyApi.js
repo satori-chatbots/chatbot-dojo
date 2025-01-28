@@ -86,3 +86,16 @@ export const deleteChatbotTechnology = async (id) => {
         throw error;
     }
 };
+
+export const checkChatbotTechnologyName = async (name) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}${ENDPOINTS.CHECK_CHATBOT_NAME}?chatbot_name=${name}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error checking chatbot technology name:', error);
+        throw error;
+    }
+}

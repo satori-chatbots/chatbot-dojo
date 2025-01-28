@@ -63,3 +63,13 @@ export const updateProject = (id, project) => {
             return response.json();
         });
 }
+
+export const checkProjectName = (name) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.CHECK_PROJECT_NAME}?project_name=${name}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        });
+}

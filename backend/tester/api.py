@@ -97,6 +97,20 @@ class ChatbotTechnologyViewSet(viewsets.ModelViewSet):
     queryset = ChatbotTechnology.objects.all()
     serializer_class = ChatbotTechnologySerializer
 
+    # Check if the technology name is already used
+    @action(detail=False, methods=["get"], url_path="check-name")
+    def check_name(self, request):
+        """Check if a technology name is already used. It cant be none or empty."""
+        name = request.query_params.get("chatbot_name", None)
+        if name is None or not name.strip():
+            return Response(
+                {"error": "No technology name provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exists = ChatbotTechnology.objects.filter(name=name).exists()
+        return Response({"exists": exists}, status=status.HTTP_200_OK)
+
 
 # ----------------- #
 # - TEST CASES API #
@@ -163,6 +177,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
         technologies = ChatbotTechnology.objects.all()
         serializer = ChatbotTechnologySerializer(technologies, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # Check if the project name is already used
+    @action(detail=False, methods=["get"], url_path="check-name")
+    def check_name(self, request):
+        """Check if a project name is already used. It cant be none or empty."""
+        name = request.query_params.get("project_name", None)
+        if name is None or not name.strip():
+            return Response(
+                {"error": "No project name provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exists = Project.objects.filter(name=name).exists()
+        return Response({"exists": exists}, status=status.HTTP_200_OK)
 
 
 # ------------------------- #

@@ -190,7 +190,7 @@ function UserProfileManager() {
 
         // Otherwise, check if this name exists
         const existsResponse = await checkTestCaseName(selectedProject.id, executionName.trim());
-        console.log("exists:", existsResponse);
+        //console.log("exists:", existsResponse);
 
         if (existsResponse.exists) {
             // Name already taken
