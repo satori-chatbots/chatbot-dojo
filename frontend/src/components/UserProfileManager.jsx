@@ -28,6 +28,7 @@ import useFetchFiles from '../hooks/useFetchFiles';
 import { executeTest } from '../api/testCasesApi';
 import { deleteFiles } from '../api/fileApi';
 import CreateProjectModal from './CreateProjectModal';
+import { checkTestCaseName } from '../api/testCasesApi';
 
 function UserProfileManager() {
 

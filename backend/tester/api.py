@@ -122,6 +122,28 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"], url_path="check-name")
+    def check_name(self, request, *args, **kwargs):
+        """Check if a test name is already used in the project.
+
+        In the request query params, provide the `project_id` and `test_name`."""
+        project_id = request.query_params.get("project_id", None)
+        test_name = request.query_params.get("test_name", None)
+
+        print(f"Test name: {test_name}")
+
+        if project_id is None:
+            return Response(
+                {"error": "No project ID provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if test_name is None:
+            return Response({"exists": False}, status=status.HTTP_200_OK)
+
+        exists = TestCase.objects.filter(project=project_id, name=test_name).exists()
+        return Response({"exists": exists}, status=status.HTTP_200_OK)
+
 
 # ---------- #
 # - PROJECTS #
