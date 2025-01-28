@@ -17,7 +17,7 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from 
 import CreateProjectModal from '../components/CreateProjectModal';
 import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
-import { createProject, deleteProject, updateProject } from '../api/projectApi';
+import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import EditProjectModal from '../components/EditProjectModal';
 
 
@@ -53,6 +53,15 @@ const ProjectsDashboard = () => {
     // State with the id of the project to edit
     const [editProjectId, setEditProjectId] = useState(null);
 
+    // Loading state for the serverside validation
+    const [loadingValidation, setLoadingValidation] = useState(false);
+
+    // Errors for the serverside validation
+    const [validationErrors, setValidationErrors] = useState({});
+
+    // State for the original name
+    const [originalName, setOriginalName] = useState('');
+
     // Init the available technologies and projects
     useEffect(() => {
         loadTechnologies();
@@ -81,13 +90,47 @@ const ProjectsDashboard = () => {
 
     // Function to handle the change of the new project name
     const handleProjectNameChange = (e) => {
-        setNewProjectName(e.target.value);
+        setCreateFormData((prev) => ({ ...prev, name: e.target.value }));
     };
 
     // Function to handle the change of the selected technology
     const handleTechnologyChange = (e) => {
-        setTechnology(e.target.value);
+        setCreateFormData((prev) => ({ ...prev, technology: e.target.value }));
     };
+
+    const handleFormValidation = async (event, name, technology, oldName = "") => {
+        // Return false if the validation didn't pass
+
+        event.preventDefault();
+        setLoadingValidation(true);
+
+        if (!name.trim()) {
+            setLoadingValidation(false);
+            return false;
+        }
+
+        if (!technology) {
+            setLoadingValidation(false);
+            return false;
+        }
+
+        if (oldName && name === oldName) {
+            setLoadingValidation(false);
+            return true;
+        }
+
+        const existsResponse = await checkProjectName(name);
+        if (existsResponse.exists) {
+            setValidationErrors({ name: 'Project name already exists' });
+            setLoadingValidation(false);
+            return false;
+        }
+
+        setValidationErrors({});
+        setLoadingValidation(false);
+        return true;
+    };
+
 
     // Function to handle the creation of a new project
     const handleCreateProject = async (event) => {
@@ -95,13 +138,10 @@ const ProjectsDashboard = () => {
         const newProjectName = createFormData.name;
         const technology = createFormData.technology;
 
-        if (!newProjectName.trim()) {
-            alert('Please enter a project name.');
-            return;
-        }
+        // Validation
+        const isValid = await handleFormValidation(event, newProjectName, technology);
 
-        if (!technology) {
-            alert('Please select a technology.');
+        if (!isValid) {
             return;
         }
 
@@ -113,17 +153,24 @@ const ProjectsDashboard = () => {
             });
             await reloadProjects();
             handleFormReset();
-            onOpenChange(false);
+            setIsCreateOpen(false);
 
         } catch (error) {
             console.error('Error creating project:', error);
-            alert(`Error creating project: ${error.message}`);
+            //alert(`Error updating project: ${error.message}`);
+
+            const errorData = JSON.parse(error.message);
+            // Format the data
+            const errors = Object.entries(errorData).map(([key, value]) => `${key}: ${value}`);
+            alert(`Error creating project: ${errors.join('\n')}`);
         }
     };
+
 
     // Handle the edit project modal
     const handleEditClick = (project) => {
         setEditProjectId(project.id);
+        setOriginalName(project.name);
 
         setEditFormData({
             name: project.name,
@@ -139,13 +186,9 @@ const ProjectsDashboard = () => {
     const handleUpdateProject = async (event) => {
         event.preventDefault();
 
-        if (!editFormData.name.trim()) {
-            alert('Please enter a project name.');
-            return;
-        }
-
-        if (!editFormData.technology) {
-            alert('Please select a technology.');
+        // Validation
+        const isValid = await handleFormValidation(event, editFormData.name, editFormData.technology, originalName);
+        if (!isValid) {
             return;
         }
 
@@ -158,7 +201,12 @@ const ProjectsDashboard = () => {
             reloadProjects();
         } catch (error) {
             console.error('Error updating project:', error);
-            alert(`Error updating project: ${error.message}`);
+            //alert(`Error updating project: ${error.message}`);
+
+            const errorData = JSON.parse(error.message);
+            // Format the data
+            const errors = Object.entries(errorData).map(([key, value]) => `${key}: ${value}`);
+            alert(`Error updating project: ${errors.join('\n')}`);
         }
     };
     // Function to handle the deletion
@@ -179,6 +227,14 @@ const ProjectsDashboard = () => {
     // Function to reset the form
     const handleEditFormReset = () => {
         setEditFormData({
+            name: '',
+            technology: '',
+        });
+    };
+
+    // Function to reset the form
+    const handleFormReset = () => {
+        setCreateFormData({
             name: '',
             technology: '',
         });
@@ -236,9 +292,11 @@ const ProjectsDashboard = () => {
                                     onSubmit={handleCreateProject}
                                     onReset={handleFormReset}
                                     validationBehavior="native"
+                                    validationErrors={validationErrors}
                                 >
                                     <Input
                                         placeholder="Enter project name"
+                                        name="name"
                                         fullWidth
                                         isRequired
                                         labelPlacement="outside"
@@ -246,9 +304,9 @@ const ProjectsDashboard = () => {
                                         variant="bordered"
                                         label="Project Name"
                                         onChange={handleProjectNameChange}
-                                        errorMessage="Please enter a project name"
                                         maxLength={255}
                                         minLength={3}
+                                        isDisabled={loadingValidation}
                                     />
                                     <Select
                                         placeholder="Select chatbot technology"
@@ -258,6 +316,7 @@ const ProjectsDashboard = () => {
                                         onChange={handleTechnologyChange}
                                         isRequired
                                         value={createFormData.technology}
+                                        isDisabled={loadingValidation}
                                     >
                                         {technologies.map((tech) => (
                                             <SelectItem key={tech.id} value={tech.name}>
@@ -330,12 +389,18 @@ const ProjectsDashboard = () => {
             {/* Button to open modal */}
             <Button color="primary"
                 className="max-w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
+                onPress={() => setIsCreateOpen(true)}
             >
                 Create New Project
             </Button>
 
             {/* Modal to edit project */}
-            <Modal isOpen={isEditOpen} onOpenChange={setIsEditOpen}>
+            <Modal isOpen={isEditOpen}
+                onOpenChange={() => {
+                    setIsEditOpen(false);
+                    handleEditFormReset();
+                    setValidationErrors({});
+                }}>
                 <ModalContent>
                     {(onClose) => (
                         <>
@@ -348,9 +413,11 @@ const ProjectsDashboard = () => {
                                     onSubmit={handleUpdateProject}
                                     onReset={handleEditFormReset}
                                     validationBehavior="native"
+                                    validationErrors={validationErrors}
                                 >
                                     <Input
                                         placeholder="Enter project name"
+                                        name="name"
                                         fullWidth
                                         isRequired
                                         labelPlacement="outside"
@@ -358,7 +425,6 @@ const ProjectsDashboard = () => {
                                         variant="bordered"
                                         label="Project Name"
                                         onChange={(e) => { setEditFormData((prev) => ({ ...prev, name: e.target.value })) }}
-                                        errorMessage="Please enter a project name"
                                         maxLength={255}
                                         minLength={3}
                                     />
@@ -400,5 +466,6 @@ const ProjectsDashboard = () => {
         </div>
     );
 }
+
 
 export default ProjectsDashboard;

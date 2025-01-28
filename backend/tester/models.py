@@ -72,7 +72,8 @@ class Project(models.Model):
     A Project is a collection of test cases, it uses one chatbot technology
     """
 
-    name = models.CharField(max_length=255)
+    # Name of the project, must be unique
+    name = models.CharField(max_length=255, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # A project can only have one chatbot technology, but a technology can be used in multiple projects
@@ -105,7 +106,8 @@ class ChatbotTechnology(models.Model):
     Contains the used technology and the link to access the chatbot, also a name to identify it
     """
 
-    name = models.CharField(max_length=255)
+    # Name of the chatbot technology, must be unique
+    name = models.CharField(max_length=255, unique=True)
     technology = models.CharField(max_length=255, choices=TECHNOLOGY_CHOICES)
     link = models.URLField()
 

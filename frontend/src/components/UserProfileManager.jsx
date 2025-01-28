@@ -444,6 +444,7 @@ function UserProfileManager() {
                                 <Button type="reset" color="danger" variant="light">
                                     Cancel
                                 </Button>
+                                {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
                                 <Button type="submit" color="primary">
                                     Execute
                                 </Button>

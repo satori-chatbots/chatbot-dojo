@@ -261,6 +261,7 @@ const ChatbotTechnologies = () => {
                                     <Input
                                         isRequired
                                         label="Name"
+                                        isDisabled={loadingValidation}
                                         labelPlacement="outside"
                                         name="name"
                                         placeholder="Enter a name to identify the technology"
@@ -272,6 +273,7 @@ const ChatbotTechnologies = () => {
                                     {/* Select for technology choices */}
                                     <Select
                                         isRequired
+                                        isDisabled={loadingValidation}
                                         label="Technology"
                                         labelPlacement="outside"
                                         placeholder="Select Technology"
@@ -292,6 +294,7 @@ const ChatbotTechnologies = () => {
 
                                     <Input
                                         isRequired
+                                        isDisabled={loadingValidation}
                                         errorMessage="Please enter a valid URL"
                                         label="URL"
                                         labelPlacement="outside"
@@ -307,6 +310,8 @@ const ChatbotTechnologies = () => {
                                         <Button type="reset" color="danger">
                                             Reset
                                         </Button>
+                                        {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
+
                                         <Button type="submit" color="primary">
                                             Create
                                         </Button>
@@ -401,12 +406,14 @@ const ChatbotTechnologies = () => {
                                         label="Name"
                                         name="name"
                                         value={editData.name}
+                                        isDisabled={loadingValidation}
                                         onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                                         type="text"
                                     />
                                     <Select
                                         isRequired
                                         label="Technology"
+                                        isDisabled={loadingValidation}
                                         placeholder='Select a new Technology'
                                         name="technology"
                                         value={editData.technology}
@@ -428,6 +435,7 @@ const ChatbotTechnologies = () => {
                                         name="link"
                                         value={editData.link}
                                         onChange={(e) => setEditData({ ...editData, link: e.target.value })}
+                                        isDisabled={loadingValidation}
                                         type="url"
                                     />
                                     <ModalFooter className="w-full flex justify-center gap-4">

@@ -28,9 +28,10 @@ export const createProject = (project) => {
         },
         body: JSON.stringify(project),
     })
-        .then(response => {
+        .then(async response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                const errorData = await response.json();
+                throw new Error(JSON.stringify(errorData));
             }
             return response.json();
         });
@@ -56,9 +57,10 @@ export const updateProject = (id, project) => {
         },
         body: JSON.stringify(project),
     })
-        .then(response => {
+        .then(async response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                const errorData = await response.json();
+                throw new Error(JSON.stringify(errorData));
             }
             return response.json();
         });
