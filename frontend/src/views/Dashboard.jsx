@@ -133,6 +133,7 @@ function Dashboard() {
         { name: 'Profiles Used', key: 'user_profiles' },
         { name: 'Execution Time', key: 'execution_time', sortable: true },
         { name: 'Testing Errors', key: 'num_errors', sortable: true },
+        { name: 'Total Cost', key: 'total_cost', sortable: true },
         { name: 'Project', key: 'project', sortable: true },
     ];
 
@@ -147,11 +148,13 @@ function Dashboard() {
             const report = globalReports.find(r => r.test_case === tc.id);
             const numErrors = report ? errorCounts[report.id] || 0 : 0;
             const testCaseErrors = errors.filter(err => err.global_report === report?.id);
+            const totalCost = parseFloat(report?.total_cost || 0).toFixed(5);
             return {
                 ...tc,
                 displayName,
                 num_errors: numErrors,
-                testCaseErrors
+                testCaseErrors,
+                total_cost: totalCost
             };
         });
     }, [testCases, globalReports, errorCounts, errors]);
@@ -317,7 +320,7 @@ function Dashboard() {
                             <TableCell>
                                 {testCase.num_errors > 0 ? (
                                     <Accordion isCompact>
-                                        <AccordionItem title={`${testCase.num_errors} errors`}>
+                                        <AccordionItem title={<span className="text-sm">{`${testCase.num_errors} errors`}</span>}>
                                             <ul>
                                                 {testCase.testCaseErrors.map(err => (
                                                     <li key={err.id}>
@@ -329,11 +332,13 @@ function Dashboard() {
                                     </Accordion>
                                 ) : (
                                     <Accordion isCompact>
-                                        <AccordionItem title="No errors" />
+                                        <AccordionItem title={<span className="text-sm">No errors</span>} />
                                     </Accordion>
                                 )}
                             </TableCell>
-
+                            <TableCell>
+                                ${testCase.total_cost}
+                            </TableCell>
                             <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
                         </TableRow>
                     )}

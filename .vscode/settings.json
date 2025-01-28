@@ -1,0 +1,6 @@
+{
+    "[dynamic csv]": {
+        "editor.inlayHints.maximumLength": 0,
+        "editor.inlayHints.fontFamily": ""
+    }
+}

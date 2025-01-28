@@ -514,17 +514,20 @@ def run_asyn_test_execution(
             "Average assistant response time"
         ]
         global_min_response_time = global_report["Global report"][
-            "Mínimum assistant response time"
+            "Minimum assistant response time"
         ]
         global_max_response_time = global_report["Global report"][
             "Maximum assistant response time"
         ]
+
+        global_total_cost = global_report["Global report"]["Total Cost"]
 
         global_report_instance = GlobalReport.objects.create(
             name="Global Report",
             avg_execution_time=global_avg_response_time,
             min_execution_time=global_min_response_time,
             max_execution_time=global_max_response_time,
+            total_cost=global_total_cost,
             test_case=test_case,
         )
 
@@ -560,17 +563,20 @@ def run_asyn_test_execution(
                 "Average assistant response time"
             ]
             test_report_min_response_time = test_report[
-                "Mínimum assistant response time"
+                "Minimum assistant response time"
             ]
             test_report_max_response_time = test_report[
                 "Maximum assistant response time"
             ]
+
+            test_total_cost = test_report["Total Cost"]
 
             test_report_instance = TestReport.objects.create(
                 name=test_report_name,
                 avg_execution_time=test_report_avg_response_time,
                 min_execution_time=test_report_min_response_time,
                 max_execution_time=test_report_max_response_time,
+                total_cost=test_total_cost,
                 global_report=global_report_instance,
             )
 

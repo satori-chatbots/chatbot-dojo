@@ -155,6 +155,7 @@ class GlobalReport(models.Model):
     avg_execution_time = models.FloatField(blank=True, null=True)
     min_execution_time = models.FloatField(blank=True, null=True)
     max_execution_time = models.FloatField(blank=True, null=True)
+    total_cost = models.FloatField(blank=True, null=True)
     # Test report belongs to only one test case
     test_case = models.ForeignKey(
         TestCase, related_name="global_reports", on_delete=models.CASCADE
@@ -175,6 +176,7 @@ class TestReport(models.Model):
     avg_execution_time = models.FloatField(blank=True, null=True)
     min_execution_time = models.FloatField(blank=True, null=True)
     max_execution_time = models.FloatField(blank=True, null=True)
+    total_cost = models.FloatField(blank=True, null=True)
     # Test report belongs to only one global report
     global_report = models.ForeignKey(
         GlobalReport, related_name="test_reports", on_delete=models.CASCADE
