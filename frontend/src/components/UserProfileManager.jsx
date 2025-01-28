@@ -29,6 +29,7 @@ import { executeTest } from '../api/testCasesApi';
 import { deleteFiles } from '../api/fileApi';
 import CreateProjectModal from './CreateProjectModal';
 import { checkTestCaseName } from '../api/testCasesApi';
+import { checkProjectName } from '../api/projectApi';
 
 function UserProfileManager() {
 
@@ -65,12 +66,17 @@ function UserProfileManager() {
     // List of files in the selected project
     const { files, loading, error, reloadFiles } = useFetchFiles(selectedProject ? selectedProject.id : null);
 
-    // Loading state for the serverside validation
+    // Loading state for the serverside validation of the execution name
     const [loadingValidation, setLoadingValidation] = useState(false);
 
-    // Errors for the serverside validation
+    // Errors for the serverside validation of the execution name
     const [validationErrors, setValidationErrors] = useState({});
 
+    // Loading state for the serverside validation of the project
+    const [loadingProjectValidation, setLoadingProjectValidation] = useState(false);
+
+    // Errors for the serverside validation of the project
+    const [projectValidationErrors, setProjectValidationErrors] = useState({});
 
     // Initialize with the available technologies
     useEffect(() => {
@@ -244,8 +250,6 @@ function UserProfileManager() {
     // For the project creation (name)
     const handleProjectNameChange = (event) => {
         setNewProjectName(event.target.value);
-
-
     };
 
     // For the project creation (technology)
@@ -253,15 +257,35 @@ function UserProfileManager() {
         setTechnology(event.target.value);
     };
 
+    const handleProjectValidation = async (event, name, technology) => {
+        event.preventDefault();
+
+        setLoadingProjectValidation(true);
+
+        if (!name.trim()) {
+            return false;
+        }
+
+        if (!technology) {
+            return false;
+        }
+
+        const existsResponse = await checkProjectName(name.trim());
+        if (existsResponse.exists) {
+            setProjectValidationErrors({ name: 'This name is already taken, choose another one.' });
+            return false;
+        }
+
+        setProjectValidationErrors({});
+        return true;
+    };
+
 
     const handleCreateProject = async (event) => {
         event.preventDefault();
-        if (!newProjectName.trim()) {
-            alert('Please enter a project name.');
-            return;
-        }
-        if (!technology) {
-            alert('Please select a technology.');
+
+        const isValid = await handleProjectValidation(event, newProjectName, technology);
+        if (!isValid) {
             return;
         }
 
@@ -345,17 +369,68 @@ function UserProfileManager() {
             </div>
 
             {/* Create Project Modal */}
-            <CreateProjectModal
-                isOpen={isOpen}
-                onOpenChange={onOpenChange}
-                handleCreateProject={handleCreateProject}
-                handleFormReset={handleFormReset}
-                newProjectName={newProjectName}
-                handleProjectNameChange={handleProjectNameChange}
-                availableTechnologies={availableTechnologies}
-                technology={technology}
-                handleTechnologyChange={handleTechnologyChange}
-            />
+            <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+                <ModalContent>
+                    {() => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1 items-center">
+                                Create New Project
+                            </ModalHeader>
+                            <ModalBody className="flex flex-col gap-4 items-center">
+                                <Form
+                                    className="w-full flex flex-col gap-4"
+                                    onSubmit={handleCreateProject}
+                                    onReset={handleFormReset}
+                                    validationBehavior="native"
+                                    validationErrors={projectValidationErrors}
+                                >
+                                    <Input
+                                        placeholder="Enter project name"
+                                        name="name"
+                                        fullWidth
+                                        isRequired
+                                        labelPlacement="outside"
+                                        value={newProjectName}
+                                        variant="bordered"
+                                        label="Project Name"
+                                        onChange={handleProjectNameChange}
+                                        maxLength={255}
+                                        minLength={3}
+                                        isDisabled={loadingValidation}
+                                    />
+                                    <Select
+                                        placeholder="Select chatbot technology"
+                                        fullWidth
+                                        label="Technology"
+                                        labelPlacement="outside"
+                                        onChange={handleTechnologyChange}
+                                        isRequired
+                                        value={technology}
+                                        isDisabled={loadingValidation}
+                                    >
+                                        {availableTechnologies.map(technology => (
+                                            <SelectItem key={technology.id} value={technology.id}>
+                                                {technology.name}
+                                            </SelectItem>
+                                        ))}
+                                    </Select>
+                                    <ModalFooter className="w-full flex justify-center gap-4">
+                                        <Button type="reset" color="danger" variant="light">
+                                            Reset
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            color="primary"
+                                        >
+                                            Create
+                                        </Button>
+                                    </ModalFooter>
+                                </Form>
+                            </ModalBody>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
 
             {/* Project Details */}
             {selectedProject ? (
