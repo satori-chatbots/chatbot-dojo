@@ -391,17 +391,31 @@ function UserProfileManager() {
             <Modal isOpen={isExecuteOpen} onOpenChange={setIsExecuteOpen}>
                 <ModalContent>
                     <ModalHeader>Execute Test</ModalHeader>
-                    <ModalBody>
-                        <Input
-                            label="Execution Name (optional)"
-                            value={executionName}
-                            onValueChange={setExecutionName}
-                        />
+                    <ModalBody className="flex flex-col gap-4 items-center">
+                        <Form
+                            className='w-full'
+                            onSubmit={(e) => {
+                                // Prevent the reload
+                                e.preventDefault();
+                                handleExecuteTest();
+                            }}
+                            onReset={() => setIsExecuteOpen(false)}
+                        >
+                            <Input
+                                label="Execution Name (optional)"
+                                value={executionName}
+                                onValueChange={setExecutionName}
+                            />
+                            <ModalFooter className="w-full flex justify-center gap-4">
+                                <Button type="reset" color="danger" variant="light">
+                                    Cancel
+                                </Button>
+                                <Button type="submit" color="primary">
+                                    Execute
+                                </Button>
+                            </ModalFooter>
+                        </Form>
                     </ModalBody>
-                    <ModalFooter>
-                        <Button variant="light" onPress={() => setIsExecuteOpen(false)}>Cancel</Button>
-                        <Button color="primary" onPress={handleExecuteTest}>Execute</Button>
-                    </ModalFooter>
                 </ModalContent>
             </Modal>
         </Card>
