@@ -4,6 +4,7 @@ import Home from './views/Home';
 import Dashboard from './views/Dashboard';
 import ChatbotTechnologies from './views/ChatbotTechnologies';
 import ProjectsDashboard from './views/ProjectsDashboard';
+import TestCase from './views/TestCase';
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Switch } from "@heroui/react";
@@ -139,6 +140,7 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
                         <Route path="/projects" element={<ProjectsDashboard />} />
+                        <Route path="/test-case/:id" element={<TestCase />} />
                     </Routes>
                 </main>
 

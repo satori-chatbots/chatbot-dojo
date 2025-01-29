@@ -259,10 +259,10 @@ function Dashboard() {
             <Table
                 aria-label="Test Cases Table"
                 isStriped
-                // 4) Add sort props
                 sortDescriptor={sortDescriptor}
                 onSortChange={setSortDescriptor}
                 className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
+                selectionMode='single'
             >
                 <TableHeader columns={columns}>
                     {(column) => (
@@ -281,7 +281,7 @@ function Dashboard() {
                     emptyContent={"No Test Cases to display."}
                 >
                     {(testCase) => (
-                        <TableRow key={testCase.id}>
+                        <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
                             <TableCell>{testCase.displayName}</TableCell>
                             <TableCell>
                                 <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
