@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useHref } from 'react-router-dom';
 import Home from './views/Home';
 import Dashboard from './views/Dashboard';
 import ChatbotTechnologies from './views/ChatbotTechnologies';
@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Switch } from "@heroui/react";
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem } from "@heroui/react";
 import { Card, CardFooter } from "@nextui-org/react";
+import { HeroUIProvider } from "@heroui/react";
 
 export const MoonIcon = (props) => {
     return (
@@ -52,6 +53,7 @@ function App() {
     const [mounted, setMounted] = useState(false)
     const { theme, setTheme } = useTheme()
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         setMounted(true);
@@ -72,77 +74,80 @@ function App() {
     if (!mounted) return null;
 
     return (
-        <div className="flex flex-col min-h-screen">
-            {/* Header */}
-            <Navbar
-                onMenuOpenChange={setIsMenuOpen}
-                maxWidth='lg'
-                isMenuOpen={isMenuOpen}
-            >
-                <NavbarMenuToggle
-                    aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-                    className="sm:hidden"
-                />
+        <HeroUIProvider navigate={navigate} useHref={useHref}>
 
-                <NavbarBrand>
-                    <Link to="/" className="text-primary">SENSEI</Link>
-                </NavbarBrand>
-
-                <NavbarContent className="hidden sm:flex gap-4" justify='center'>
-                    <Link to="/" className="hover:underline">Home</Link>
-                    <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-                    <Link to="/chatbot-technologies" className="hover:underline">
-                        Chatbot Technologies
-                    </Link>
-                    <Link to="/projects" className="hover:underline">Projects</Link>
-                </NavbarContent>
-
-                <NavbarContent justify='end'>
-                    <Switch
-                        defaultSelected={theme === 'dark'}
-                        color="success"
-                        endContent={<span aria-hidden="true"><MoonIcon /></span>}
-                        size="md"
-                        startContent={<span aria-hidden="true"><SunIcon /></span>}
-                        value={mounted}
-                        onChange={toggleTheme}
+            <div className="flex flex-col min-h-screen">
+                {/* Header */}
+                <Navbar
+                    onMenuOpenChange={setIsMenuOpen}
+                    maxWidth='lg'
+                    isMenuOpen={isMenuOpen}
+                >
+                    <NavbarMenuToggle
+                        aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                        className="sm:hidden"
                     />
 
-                </NavbarContent>
+                    <NavbarBrand>
+                        <Link to="/" className="text-primary">SENSEI</Link>
+                    </NavbarBrand>
 
-                <NavbarMenu >
-                    <NavbarMenuItem>
-                        <Link to="/" className="hover:underline" onClick={handleLinkClick}>Home</Link>
-                    </NavbarMenuItem>
-                    <NavbarMenuItem>
-                        <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>Dashboard</Link>
-                    </NavbarMenuItem>
-                    <NavbarMenuItem>
-                        <Link to="/chatbot-technologies" className="hover:underline" onClick={handleLinkClick}>
+                    <NavbarContent className="hidden sm:flex gap-4" justify='center'>
+                        <Link to="/" className="hover:underline">Home</Link>
+                        <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                        <Link to="/chatbot-technologies" className="hover:underline">
                             Chatbot Technologies
                         </Link>
-                    </NavbarMenuItem>
-                    <NavbarMenuItem>
-                        <Link to="/projects" className="hover:underline" onClick={handleLinkClick}>Projects</Link>
-                    </NavbarMenuItem>
-                </NavbarMenu>
-            </Navbar>
+                        <Link to="/projects" className="hover:underline">Projects</Link>
+                    </NavbarContent>
 
-            {/* Main Content */}
-            <main className="flex-1 w-full m-auto flex">
-                <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
-                    <Route path="/projects" element={<ProjectsDashboard />} />
-                </Routes>
-            </main>
+                    <NavbarContent justify='end'>
+                        <Switch
+                            defaultSelected={theme === 'dark'}
+                            color="success"
+                            endContent={<span aria-hidden="true"><MoonIcon /></span>}
+                            size="md"
+                            startContent={<span aria-hidden="true"><SunIcon /></span>}
+                            value={mounted}
+                            onChange={toggleTheme}
+                        />
 
-            {/* Footer */}
-            <footer className="w-full py-3 flex items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
-                <p className="text-primary">MISO</p>
-            </footer>
-        </div>
+                    </NavbarContent>
+
+                    <NavbarMenu >
+                        <NavbarMenuItem>
+                            <Link to="/" className="hover:underline" onClick={handleLinkClick}>Home</Link>
+                        </NavbarMenuItem>
+                        <NavbarMenuItem>
+                            <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>Dashboard</Link>
+                        </NavbarMenuItem>
+                        <NavbarMenuItem>
+                            <Link to="/chatbot-technologies" className="hover:underline" onClick={handleLinkClick}>
+                                Chatbot Technologies
+                            </Link>
+                        </NavbarMenuItem>
+                        <NavbarMenuItem>
+                            <Link to="/projects" className="hover:underline" onClick={handleLinkClick}>Projects</Link>
+                        </NavbarMenuItem>
+                    </NavbarMenu>
+                </Navbar>
+
+                {/* Main Content */}
+                <main className="flex-1 w-full m-auto flex">
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
+                        <Route path="/projects" element={<ProjectsDashboard />} />
+                    </Routes>
+                </main>
+
+                {/* Footer */}
+                <footer className="w-full py-3 flex items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
+                    <p className="text-primary">MISO</p>
+                </footer>
+            </div>
+        </HeroUIProvider>
     );
 }
 

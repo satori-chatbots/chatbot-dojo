@@ -3,12 +3,10 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
-import { HeroUIProvider } from "@heroui/react"
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 createRoot(document.getElementById('root')).render(
 
-    <HeroUIProvider>
         <NextThemesProvider attribute="class" defaultTheme="light">
             <main className="text-foreground bg-background dark:bg-[radial-gradient(circle_at_top_left,theme(colors.blue.950)_-100%,transparent_40%),radial-gradient(circle_at_bottom_right,theme(colors.purple.950)_-100%,transparent_40%)]">
                 <BrowserRouter>
@@ -17,5 +15,4 @@ createRoot(document.getElementById('root')).render(
 
             </main>
         </NextThemesProvider>
-    </HeroUIProvider>
 );
