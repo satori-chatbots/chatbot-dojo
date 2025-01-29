@@ -50,3 +50,14 @@ export const checkTestCaseName = (projectId, name) => {
             return response.json();
         });
 }
+
+export const fetchTestCaseById = (testCaseId) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.FETCH_TEST_CASES}?testcase_id=${testCaseId}`)
+        .then(response => {
+            if (!response.ok) {
+                const errorData = response.json();
+                throw new Error(JSON.stringify(errorData));
+            }
+            return response.json();
+        });
+}

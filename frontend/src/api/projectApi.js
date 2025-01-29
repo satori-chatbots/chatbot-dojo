@@ -70,7 +70,8 @@ export const checkProjectName = (name) => {
     return fetch(`${API_BASE_URL}${ENDPOINTS.CHECK_PROJECT_NAME}?project_name=${name}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                const errorData = response.json();
+                throw new Error(JSON.stringify(errorData));
             }
             return response.json();
         });
