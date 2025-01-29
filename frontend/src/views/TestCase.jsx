@@ -3,9 +3,59 @@ import { useParams } from 'react-router-dom';
 import { Tabs, Tab } from "@heroui/tabs";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
 import { Accordion, AccordionItem, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
+import { fetchTestCaseById } from '../api/testCasesApi';
+import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
+import { useEffect, useState } from 'react';
 
 function TestCase() {
     const { id } = useParams();
+
+    // State for the test case
+    const [testCase, setTestCase] = useState({});
+    // State for the global report
+    const [globalReport, setGlobalReport] = useState({});
+
+
+    // Initial fetch of the test case and global report
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const fetchedTestCase = await fetchTestCaseById(id);
+                setTestCase(fetchedTestCase);
+
+                const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
+                setGlobalReport(fetchedGlobalReport);
+
+                console.log(fetchedTestCase);
+                console.log(fetchedGlobalReport);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        fetchData();
+    }, [id]);
+
+    // Function to format the execution time
+    const formatExecutionTime = (time) => {
+        // If < 60s return XX.XXs
+        if (time < 60) {
+            return `${time.toFixed(2)}s`;
+        }
+
+        // If < 3600s return XXm XXs
+        if (time < 3600) {
+            const minutes = Math.floor(time / 60);
+            const seconds = time % 60;
+            return `${minutes}m ${seconds.toFixed(2)}s`;
+        }
+
+        // Else return XXh XXm XXs
+        const hours = Math.floor(time / 3600);
+        const minutes = Math.floor((time % 3600) / 60);
+        const seconds = time % 60;
+        return `${hours}h ${minutes}m ${seconds.toFixed(2)}s`;
+    };
 
     return (
         <div className="container mx-auto p-4">
@@ -25,15 +75,15 @@ function TestCase() {
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
                                         <p className="text-sm font-medium">Average:</p>
-                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                        <p className="text-2xl font-bold">{formatExecutionTime(globalReport.avg_execution_time)}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">Max:</p>
-                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                        <p className="text-2xl font-bold">{formatExecutionTime(globalReport.max_execution_time)}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">Min:</p>
-                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                        <p className="text-2xl font-bold">{formatExecutionTime(globalReport.min_execution_time)}</p>
                                     </div>
                                 </div>
                             </CardBody>
@@ -358,10 +408,7 @@ function TestCase() {
                                                                         For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE </p>
                                                                 </div>
                                                             </CardBody>
-
-
                                                         </Card>
-
                                                     </div>
                                                 </AccordionItem>
                                             </Accordion>
