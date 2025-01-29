@@ -123,12 +123,15 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         project_ids = request.query_params.get("project_ids", None)
+        testcase_id = request.query_params.get("testcase_id", None)
 
         if project_ids is not None:
             projects = Project.objects.filter(id__in=project_ids.split(","))
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 project__in=projects
             )
+        elif testcase_id is not None:
+            queryset = self.filter_queryset(self.get_queryset()).filter(id=testcase_id)
         else:
             queryset = self.filter_queryset(self.get_queryset())
 
