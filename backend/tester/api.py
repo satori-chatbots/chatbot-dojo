@@ -71,17 +71,26 @@ class GlobalReportViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         test_cases = request.query_params.get("test_cases_ids", None)
+        test_case = request.query_params.get("test_case_id", None)
 
         if test_cases is not None:
             test_cases = test_cases.split(",")
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 test_case__in=test_cases
             )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        elif test_case is not None:
+            # Get the global report for a single test case
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                test_case=test_case
+            ).first()
+            serializer = self.get_serializer(queryset)
+            return Response(serializer.data)
         else:
             queryset = self.filter_queryset(self.get_queryset())
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
 
 
 # ---------------------- #
