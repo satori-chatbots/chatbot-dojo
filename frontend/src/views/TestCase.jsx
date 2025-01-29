@@ -2,9 +2,10 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { Tabs, Tab } from "@heroui/tabs";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
-import { Accordion, AccordionItem, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
+import { Accordion, AccordionItem, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
 import { fetchTestCaseById } from '../api/testCasesApi';
 import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
+import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
 import { useEffect, useState } from 'react';
 
 function TestCase() {
@@ -15,6 +16,11 @@ function TestCase() {
     // State for the global report
     const [globalReport, setGlobalReport] = useState({});
 
+    // State for the errors of the Global Report
+    const [globalErrors, setGlobalErrors] = useState([]);
+
+    // Global Loading State
+    const [globalLoading, setGlobalLoading] = useState(true);
 
     // Initial fetch of the test case and global report
     useEffect(() => {
@@ -26,10 +32,15 @@ function TestCase() {
                 const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
                 setGlobalReport(fetchedGlobalReport);
 
-                console.log(fetchedTestCase);
-                console.log(fetchedGlobalReport);
+                console.log("Global Report ID: ", fetchedGlobalReport.id);
+                const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(fetchedGlobalReport.id);
+                setGlobalErrors(fetchedGlobalErrors);
+
+                console.log(fetchedGlobalErrors)
             } catch (error) {
                 console.error(error);
+            } finally {
+                setGlobalLoading(false);
             }
         };
 
@@ -102,13 +113,19 @@ function TestCase() {
                                         <TableColumn>Count</TableColumn>
                                         <TableColumn>Conversations</TableColumn>
                                     </TableHeader>
-                                    <TableBody>
-                                        <TableRow>
-                                            <TableCell>PLACEHOLDER</TableCell>
-                                            <TableCell>PLACEHOLDER</TableCell>
-                                            <TableCell>PLACEHOLDER</TableCell>
-                                            <TableCell>PLACEHOLDER</TableCell>
-                                        </TableRow>
+                                    <TableBody
+                                        isLoading={globalLoading}
+                                        loadingContent={<Spinner />}
+                                        emptyContent="No errors found"
+                                    >
+                                        {globalErrors.map((error) => (
+                                            <TableRow key={error.id}>
+                                                <TableCell>{error.code}</TableCell>
+                                                <TableCell>SDF</TableCell>
+                                                <TableCell>{error.count}</TableCell>
+                                                <TableCell>{error.conversations}</TableCell>
+                                            </TableRow>
+                                        ))}
                                     </TableBody>
                                 </Table>
                             </CardBody>
