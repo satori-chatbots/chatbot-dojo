@@ -120,7 +120,7 @@ function TestCase() {
                                 <h2 className="text-2xl font-bold">Cost</h2>
                             </CardHeader>
                             <CardBody>
-                                <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                <p className="text-2xl font-bold">${globalReport.total_cost}</p>
                             </CardBody>
                         </Card>
                     </div>
