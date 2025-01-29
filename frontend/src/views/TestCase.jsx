@@ -123,7 +123,13 @@ function TestCase() {
                                                 <TableCell>{error.code}</TableCell>
                                                 <TableCell>SDF</TableCell>
                                                 <TableCell>{error.count}</TableCell>
-                                                <TableCell>{error.conversations}</TableCell>
+                                                <TableCell>
+                                                    <ul>
+                                                        {error.conversations.map((conv, index) => (
+                                                            <li key={index}>{conv}</li>
+                                                        ))}
+                                                    </ul>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
