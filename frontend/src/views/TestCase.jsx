@@ -109,7 +109,6 @@ function TestCase() {
                                 <Table removeWrapper>
                                     <TableHeader>
                                         <TableColumn>Error Code</TableColumn>
-                                        <TableColumn>Error Message</TableColumn>
                                         <TableColumn>Count</TableColumn>
                                         <TableColumn>Conversations</TableColumn>
                                     </TableHeader>
@@ -121,7 +120,6 @@ function TestCase() {
                                         {globalErrors.map((error) => (
                                             <TableRow key={error.id}>
                                                 <TableCell>{error.code}</TableCell>
-                                                <TableCell>SDF</TableCell>
                                                 <TableCell>{error.count}</TableCell>
                                                 <TableCell>
                                                     <ul>
