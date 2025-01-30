@@ -47,6 +47,8 @@ class TestErrorViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         global_report_ids = request.query_params.get("global_report_ids", None)
         global_report_id = request.query_params.get("global_report_id", None)
+        test_report_ids = request.query_params.get("test_report_ids", None)
+        test_report_id = request.query_params.get("test_report_id", None)
 
         if global_report_ids is not None:
             global_reports = GlobalReport.objects.filter(
@@ -61,6 +63,18 @@ class TestErrorViewSet(viewsets.ModelViewSet):
         elif global_report_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 global_report=global_report_id
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        elif test_report_ids is not None:
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                test_report__in=test_report_ids.split(",")
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        elif test_report_id is not None:
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                test_report=test_report_id
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)

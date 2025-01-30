@@ -7,6 +7,7 @@ import { fetchTestCaseById } from '../api/testCasesApi';
 import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
 import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
 import { fetchTestReportByGlobalReportId } from '../api/testReportApi';
+import { fetchTestErrorByTestReport } from '../api/testErrorsApi';
 import { useEffect, useState } from 'react';
 
 function TestCase() {
@@ -16,6 +17,8 @@ function TestCase() {
     const [testCase, setTestCase] = useState({});
     // State for the global report
     const [globalReport, setGlobalReport] = useState({});
+    // State for the test reports
+    const [testReports, setTestReports] = useState([]);
 
     // State for the errors of the Global Report
     const [globalErrors, setGlobalErrors] = useState([]);
@@ -55,6 +58,13 @@ function TestCase() {
                     // Fetch test reports of the global report
                     const fetchedTestReports = await fetchTestReportByGlobalReportId(fetchedGlobalReport.id);
                     console.log(fetchedTestReports);
+
+                    // Fetch the errors of each test report and add them to the test report object
+                    for (const report of fetchedTestReports) {
+                        const fetchedErrors = await fetchTestErrorByTestReport(report.id);
+                        report.errors = fetchedErrors;
+                    }
+
                 }
             } catch (error) {
                 console.error(error);
