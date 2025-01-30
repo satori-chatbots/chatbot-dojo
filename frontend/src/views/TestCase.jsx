@@ -246,15 +246,15 @@ function TestCase() {
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div>
                                                         <p className="text-sm font-medium">Average:</p>
-                                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                        <p className="text-2xl font-bold">{formatExecutionTime(report.avg_execution_time)}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-medium">Max:</p>
-                                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                        <p className="text-2xl font-bold">{formatExecutionTime(report.max_execution_time)}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-medium">Min:</p>
-                                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                        <p className="text-2xl font-bold">{formatExecutionTime(report.min_execution_time)}</p>
                                                     </div>
                                                 </div>
                                             </CardBody>
