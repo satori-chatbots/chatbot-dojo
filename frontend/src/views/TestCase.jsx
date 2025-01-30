@@ -273,13 +273,25 @@ function TestCase() {
                                                         <TableColumn>Count</TableColumn>
                                                         <TableColumn>Conversations</TableColumn>
                                                     </TableHeader>
-                                                    <TableBody>
-                                                        <TableRow>
-                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                        </TableRow>
+                                                    <TableBody
+                                                        isLoading={globalLoading}
+                                                        loadingContent={<Spinner />}
+                                                        emptyContent="No errors found"
+                                                    >
+                                                        {report.errors && report.errors.map((error) => (
+                                                            <TableRow key={error.id}>
+                                                                <TableCell>{error.code}</TableCell>
+                                                                <TableCell>{error.message}</TableCell>
+                                                                <TableCell>{error.count}</TableCell>
+                                                                <TableCell>
+                                                                    <ul>
+                                                                        {error.conversations?.map((conv, index) => (
+                                                                            <li key={index}>{conv}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
                                                     </TableBody>
                                                 </Table>
                                             </CardBody>
