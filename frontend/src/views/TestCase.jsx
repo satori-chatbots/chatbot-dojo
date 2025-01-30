@@ -22,6 +22,9 @@ function TestCase() {
     // Global Loading State
     const [globalLoading, setGlobalLoading] = useState(true);
 
+    // Status of the test case
+    const [status, setStatus] = useState("");
+
     // Initial fetch of the test case and global report
     useEffect(() => {
         const fetchData = async () => {
@@ -29,14 +32,25 @@ function TestCase() {
                 const fetchedTestCase = await fetchTestCaseById(id);
                 setTestCase(fetchedTestCase);
 
-                const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
-                setGlobalReport(fetchedGlobalReport);
+                const status = fetchedTestCase[0].status;
+                setStatus(status);
+                //console.log("Test Case Status: ", status);
 
-                console.log("Global Report ID: ", fetchedGlobalReport.id);
-                const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(fetchedGlobalReport.id);
-                setGlobalErrors(fetchedGlobalErrors);
+                if (status === "RUNNING") {
+                    return;
+                }
 
-                console.log(fetchedGlobalErrors)
+                else if (status === "COMPLETED" || status === "ERROR") {
+
+                    const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
+                    setGlobalReport(fetchedGlobalReport);
+
+                    //console.log("Global Report ID: ", fetchedGlobalReport.id);
+                    const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(fetchedGlobalReport.id);
+                    setGlobalErrors(fetchedGlobalErrors);
+
+                    //console.log(fetchedGlobalErrors)
+                }
             } catch (error) {
                 console.error(error);
             } finally {
@@ -67,6 +81,31 @@ function TestCase() {
         const seconds = time % 60;
         return `${hours}h ${minutes}m ${seconds.toFixed(2)}s`;
     };
+
+    if (globalLoading) {
+        return (
+            <div className="container mx-auto p-4 flex flex-col items-center justify-center">
+                <Spinner size="lg" />
+                <p className="mt-4 text-xl">Loading test case data...</p>
+            </div>
+        );
+    }
+
+    // Add early return for running state
+    if (status === "RUNNING") {
+        return (
+            <div className="container mx-auto p-4">
+                <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
+                <Card shadow="sm" className="text-center p-4">
+                    <CardBody>
+                        <Spinner size="lg" className="mb-4" />
+                        <h2 className="text-2xl font-bold">Test Case is Running</h2>
+                        <p className="text-gray-600 mt-2">Please wait while the test case completes...</p>
+                    </CardBody>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto p-4">

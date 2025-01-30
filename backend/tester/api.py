@@ -150,14 +150,16 @@ class TestCaseViewSet(viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 project__in=projects
             )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         elif testcase_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(id=testcase_id)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         else:
             queryset = self.filter_queryset(self.get_queryset())
-
-        serializer = self.get_serializer(queryset, many=True)
-
-        return Response(serializer.data)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request, *args, **kwargs):
