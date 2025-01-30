@@ -65,6 +65,10 @@ function TestCase() {
                         report.errors = fetchedErrors;
                     }
 
+
+                    setTestReports(fetchedTestReports);
+                    console.log("Test Reports: ", fetchedTestReports);
+
                 }
             } catch (error) {
                 console.error(error);
@@ -207,290 +211,292 @@ function TestCase() {
                     <div className="space-y-4">
 
                         <Accordion>
-                            <AccordionItem title={
-                                <Card shadow="sm" className="w-full">
-                                    <CardHeader>
-                                        <h2 className="text-2xl font-bold">User Profile 1</h2>
-                                    </CardHeader>
-                                    <CardBody>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div>
-                                                <p className="text-sm font-medium">Avg Execution Time:</p>
-                                                <p className="text-2xl font-bold">PLACEHOLDER</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium">Total Cost:</p>
-                                                <p className="text-2xl font-bold">PLACEHOLDER</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium">Total Errors:</p>
-                                                <p className="text-2xl font-bold">PLACEHOLDER</p>
-                                            </div>
-                                        </div>
-                                    </CardBody>
-                                </Card>
-                            }>
-
-                                <div className="mt-4 space-y-4">
-                                    {/* Execution Times */}
-                                    <Card shadow="sm">
+                            {testReports.map((report) => (
+                                <AccordionItem title={
+                                    <Card shadow="sm" className="w-full">
                                         <CardHeader>
-                                            <h2 className="text-2xl font-bold">Execution Times</h2>
+                                            <h2 className="text-2xl font-bold">{report.name}</h2>
                                         </CardHeader>
                                         <CardBody>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div>
-                                                    <p className="text-sm font-medium">Average:</p>
-                                                    <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                    <p className="text-sm font-medium">Avg Execution Time:</p>
+                                                    <p className="text-2xl font-bold">{formatExecutionTime(report.avg_execution_time)}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-medium">Max:</p>
-                                                    <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                    <p className="text-sm font-medium">Total Cost:</p>
+                                                    <p className="text-2xl font-bold">${report.total_cost}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-medium">Min:</p>
-                                                    <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                    <p className="text-sm font-medium">Total Errors:</p>
+                                                    <p className="text-2xl font-bold">{report.errors.length}</p>
                                                 </div>
                                             </div>
                                         </CardBody>
                                     </Card>
+                                }>
 
-                                    {/* Errors */}
-                                    <Card shadow="sm">
-                                        <CardHeader>
-                                            <h2 className="text-2xl font-bold">Errors</h2>
-                                        </CardHeader>
-                                        <CardBody>
-                                            <Table removeWrapper>
-                                                <TableHeader>
-                                                    <TableColumn>Error Code</TableColumn>
-                                                    <TableColumn>Error Message</TableColumn>
-                                                    <TableColumn>Count</TableColumn>
-                                                    <TableColumn>Conversations</TableColumn>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    <TableRow>
-                                                        <TableCell>PLACEHOLDER</TableCell>
-                                                        <TableCell>PLACEHOLDER</TableCell>
-                                                        <TableCell>PLACEHOLDER</TableCell>
-                                                        <TableCell>PLACEHOLDER</TableCell>
-                                                    </TableRow>
-                                                </TableBody>
-                                            </Table>
-                                        </CardBody>
-                                    </Card>
-
-                                    {/* Conversations */}
-                                    <Card shadow="sm">
-                                        <CardHeader>
-                                            <h2 className="text-2xl font-bold">Conversations</h2>
-                                        </CardHeader>
-                                        <CardBody>
-                                            <Accordion>
-                                                <AccordionItem title="Conversation 1">
-                                                    {/* ------------------------ */}
-                                                    {/* - Conversation Details - */}
-                                                    {/* ------------------------ */}
-                                                    <div className="space-y-4">
-                                                        {/* Basic Information */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Basic Information</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <Table removeWrapper hideHeader>
-                                                                    <TableHeader>
-                                                                        <TableColumn>Key</TableColumn>
-                                                                        <TableColumn>Value</TableColumn>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Serial Number</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Language</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Context</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </CardBody>
-                                                        </Card>
-
-                                                        {/* Ask About */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Ask About</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <Table removeWrapper hideHeader>
-                                                                    <TableHeader>
-                                                                        <TableColumn>Value</TableColumn>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        <TableRow>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </CardBody>
-                                                        </Card>
-
-                                                        {/* Conversation Details */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Conversation Details</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <Table removeWrapper hideHeader>
-                                                                    <TableHeader>
-                                                                        <TableColumn>Key</TableColumn>
-                                                                        <TableColumn>Value</TableColumn>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Interaction Style</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Number</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Steps</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">All Answered</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </CardBody>
-                                                        </Card>
-
-                                                        {/* Errors */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Errors</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <Table removeWrapper hideHeader>
-                                                                    <TableHeader>
-                                                                        <TableColumn>Error Code</TableColumn>
-                                                                        <TableColumn>Error Message</TableColumn>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">PLACEHOLDER</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </CardBody>
-                                                        </Card>
-
-                                                        {/* Total Time and Cost */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Total Time and Cost</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <Table removeWrapper hideHeader>
-                                                                    <TableHeader>
-                                                                        <TableColumn>Key</TableColumn>
-                                                                        <TableColumn>Value</TableColumn>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Total Time</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Total Cost</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </CardBody>
-                                                        </Card>
-
-
-                                                        {/* Response Time Report */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Response Time Report</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <Table removeWrapper hideHeader>
-                                                                    <TableHeader>
-                                                                        <TableColumn>Step</TableColumn>
-                                                                        <TableColumn>Time</TableColumn>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Average</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Maximum</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium">Minimum</TableCell>
-                                                                            <TableCell>PLACEHOLDER</TableCell>
-                                                                        </TableRow>
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </CardBody>
-                                                        </Card>
-
-                                                        {/* Interaction */}
-                                                        <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                            <CardHeader>
-                                                                <h3 className="text-xl font-bold">Interaction</h3>
-                                                            </CardHeader>
-                                                            <CardBody>
-                                                                <div className="mb-4 text-blue-600 dark:text-blue-400">
-                                                                    <p className="font-bold">User:</p>
-                                                                    <p>Hey there! 😊 I’m in the mood for some pizza tonight. Can I get a small marinara
-                                                                        pizza? Also, I’d love to grab a can of Pepsi with that. What do you think? How
-                                                                        much is that going to set me back? 🍕🥤</p>
-                                                                </div>
-                                                                <div className="mb-4 text-green-600 dark:text-green-400">
-                                                                    <p className="font-bold">Assistant:</p>
-                                                                    <p>Hello</p>
-                                                                </div>
-                                                                <div className="mb-4 text-blue-600 dark:text-blue-400">
-                                                                    <p className="font-bold">User:</p>
-                                                                    <p>! That sounds like a delicious choice! A small marinara pizza and a can of\
-                                                                        \ Pepsi is a classic combo. Let me check the price for you. \n\nBy the way, do\
-                                                                        \ you usually go for marinara, or do you have a favorite topping? I’m always curious\
-                                                                        \ about what people like! \U0001F60A</p>
-                                                                </div>
-                                                                <div className="mb-4 text-green-600 dark:text-green-400">
-                                                                    <p className="font-bold">Assistant:</p>
-                                                                    <p>I''m sorry, I did not get what you said. I can help you ordering predefined
-                                                                        or custom pizzas, and then drinks.`
-
-                                                                        For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE </p>
-                                                                </div>
-                                                            </CardBody>
-                                                        </Card>
+                                    <div className="mt-4 space-y-4">
+                                        {/* Execution Times */}
+                                        <Card shadow="sm">
+                                            <CardHeader>
+                                                <h2 className="text-2xl font-bold">Execution Times</h2>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div>
+                                                        <p className="text-sm font-medium">Average:</p>
+                                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
                                                     </div>
-                                                </AccordionItem>
-                                            </Accordion>
-                                        </CardBody>
-                                    </Card>
-                                </div>
-                            </AccordionItem>
+                                                    <div>
+                                                        <p className="text-sm font-medium">Max:</p>
+                                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium">Min:</p>
+                                                        <p className="text-2xl font-bold">PLACEHOLDER</p>
+                                                    </div>
+                                                </div>
+                                            </CardBody>
+                                        </Card>
+
+                                        {/* Errors */}
+                                        <Card shadow="sm">
+                                            <CardHeader>
+                                                <h2 className="text-2xl font-bold">Errors</h2>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <Table removeWrapper>
+                                                    <TableHeader>
+                                                        <TableColumn>Error Code</TableColumn>
+                                                        <TableColumn>Error Message</TableColumn>
+                                                        <TableColumn>Count</TableColumn>
+                                                        <TableColumn>Conversations</TableColumn>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        <TableRow>
+                                                            <TableCell>PLACEHOLDER</TableCell>
+                                                            <TableCell>PLACEHOLDER</TableCell>
+                                                            <TableCell>PLACEHOLDER</TableCell>
+                                                            <TableCell>PLACEHOLDER</TableCell>
+                                                        </TableRow>
+                                                    </TableBody>
+                                                </Table>
+                                            </CardBody>
+                                        </Card>
+
+                                        {/* Conversations */}
+                                        <Card shadow="sm">
+                                            <CardHeader>
+                                                <h2 className="text-2xl font-bold">Conversations</h2>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <Accordion>
+                                                    <AccordionItem title="Conversation 1">
+                                                        {/* ------------------------ */}
+                                                        {/* - Conversation Details - */}
+                                                        {/* ------------------------ */}
+                                                        <div className="space-y-4">
+                                                            {/* Basic Information */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Basic Information</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <Table removeWrapper hideHeader>
+                                                                        <TableHeader>
+                                                                            <TableColumn>Key</TableColumn>
+                                                                            <TableColumn>Value</TableColumn>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Serial Number</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Language</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Context</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </CardBody>
+                                                            </Card>
+
+                                                            {/* Ask About */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Ask About</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <Table removeWrapper hideHeader>
+                                                                        <TableHeader>
+                                                                            <TableColumn>Value</TableColumn>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            <TableRow>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </CardBody>
+                                                            </Card>
+
+                                                            {/* Conversation Details */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Conversation Details</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <Table removeWrapper hideHeader>
+                                                                        <TableHeader>
+                                                                            <TableColumn>Key</TableColumn>
+                                                                            <TableColumn>Value</TableColumn>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Interaction Style</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Number</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Steps</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">All Answered</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </CardBody>
+                                                            </Card>
+
+                                                            {/* Errors */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Errors</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <Table removeWrapper hideHeader>
+                                                                        <TableHeader>
+                                                                            <TableColumn>Error Code</TableColumn>
+                                                                            <TableColumn>Error Message</TableColumn>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">PLACEHOLDER</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </CardBody>
+                                                            </Card>
+
+                                                            {/* Total Time and Cost */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Total Time and Cost</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <Table removeWrapper hideHeader>
+                                                                        <TableHeader>
+                                                                            <TableColumn>Key</TableColumn>
+                                                                            <TableColumn>Value</TableColumn>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Total Time</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Total Cost</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </CardBody>
+                                                            </Card>
+
+
+                                                            {/* Response Time Report */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Response Time Report</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <Table removeWrapper hideHeader>
+                                                                        <TableHeader>
+                                                                            <TableColumn>Step</TableColumn>
+                                                                            <TableColumn>Time</TableColumn>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Average</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Maximum</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                            <TableRow>
+                                                                                <TableCell className="font-medium">Minimum</TableCell>
+                                                                                <TableCell>PLACEHOLDER</TableCell>
+                                                                            </TableRow>
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </CardBody>
+                                                            </Card>
+
+                                                            {/* Interaction */}
+                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                <CardHeader>
+                                                                    <h3 className="text-xl font-bold">Interaction</h3>
+                                                                </CardHeader>
+                                                                <CardBody>
+                                                                    <div className="mb-4 text-blue-600 dark:text-blue-400">
+                                                                        <p className="font-bold">User:</p>
+                                                                        <p>Hey there! 😊 I’m in the mood for some pizza tonight. Can I get a small marinara
+                                                                            pizza? Also, I’d love to grab a can of Pepsi with that. What do you think? How
+                                                                            much is that going to set me back? 🍕🥤</p>
+                                                                    </div>
+                                                                    <div className="mb-4 text-green-600 dark:text-green-400">
+                                                                        <p className="font-bold">Assistant:</p>
+                                                                        <p>Hello</p>
+                                                                    </div>
+                                                                    <div className="mb-4 text-blue-600 dark:text-blue-400">
+                                                                        <p className="font-bold">User:</p>
+                                                                        <p>! That sounds like a delicious choice! A small marinara pizza and a can of\
+                                                                            \ Pepsi is a classic combo. Let me check the price for you. \n\nBy the way, do\
+                                                                            \ you usually go for marinara, or do you have a favorite topping? I’m always curious\
+                                                                            \ about what people like! \U0001F60A</p>
+                                                                    </div>
+                                                                    <div className="mb-4 text-green-600 dark:text-green-400">
+                                                                        <p className="font-bold">Assistant:</p>
+                                                                        <p>I''m sorry, I did not get what you said. I can help you ordering predefined
+                                                                            or custom pizzas, and then drinks.`
+
+                                                                            For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE </p>
+                                                                    </div>
+                                                                </CardBody>
+                                                            </Card>
+                                                        </div>
+                                                    </AccordionItem>
+                                                </Accordion>
+                                            </CardBody>
+                                        </Card>
+                                    </div>
+                                </AccordionItem>
+                            ))}
                         </Accordion>
                     </div>
                 </Tab>
