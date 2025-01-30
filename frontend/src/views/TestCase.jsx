@@ -6,6 +6,7 @@ import { Accordion, AccordionItem, Spinner, Table, TableBody, TableCell, TableCo
 import { fetchTestCaseById } from '../api/testCasesApi';
 import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
 import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
+import { fetchTestReportByGlobalReportId } from '../api/testReportApi';
 import { useEffect, useState } from 'react';
 
 function TestCase() {
@@ -41,15 +42,19 @@ function TestCase() {
                 }
 
                 else if (status === "COMPLETED" || status === "ERROR") {
-
+                    // Fetch the global report
                     const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
                     setGlobalReport(fetchedGlobalReport);
-
                     //console.log("Global Report ID: ", fetchedGlobalReport.id);
+
+                    // Fetch the errors of the global report
                     const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(fetchedGlobalReport.id);
                     setGlobalErrors(fetchedGlobalErrors);
-
                     //console.log(fetchedGlobalErrors)
+
+                    // Fetch test reports of the global report
+                    const fetchedTestReports = await fetchTestReportByGlobalReportId(fetchedGlobalReport.id);
+                    console.log(fetchedTestReports);
                 }
             } catch (error) {
                 console.error(error);

@@ -12,6 +12,7 @@ router.register(r"projects", api.ProjectViewSet)
 router.register(r"chatbottechnologies", api.ChatbotTechnologyViewSet)
 router.register(r"globalreports", api.GlobalReportViewSet)
 router.register(r"testerrors", api.TestErrorViewSet)
+router.register(r"testreports", api.TestReportViewSet)
 
 urlpatterns = [
     # Custom Routes First
