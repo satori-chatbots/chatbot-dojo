@@ -40,11 +40,11 @@ function TestCase() {
                 setStatus(status);
                 //console.log("Test Case Status: ", status);
 
-                if (status === "RUNNING") {
+                if (status === "RUNNING" || status === "ERROR") {
                     return;
                 }
 
-                else if (status === "COMPLETED" || status === "ERROR") {
+                else if (status === "COMPLETED") {
                     // Fetch the global report
                     const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
                     setGlobalReport(fetchedGlobalReport);
@@ -57,7 +57,7 @@ function TestCase() {
 
                     // Fetch test reports of the global report
                     const fetchedTestReports = await fetchTestReportByGlobalReportId(fetchedGlobalReport.id);
-                    console.log(fetchedTestReports);
+                    // console.log(fetchedTestReports);
 
                     // Fetch the errors of each test report and add them to the test report object
                     for (const report of fetchedTestReports) {
@@ -120,6 +120,27 @@ function TestCase() {
                         <Spinner size="lg" className="mb-4" />
                         <h2 className="text-2xl font-bold">Test Case is Running</h2>
                         <p className="text-gray-600 mt-2">Please wait while the test case completes...</p>
+                    </CardBody>
+                </Card>
+            </div>
+        );
+    }
+
+    // Add early return for error state
+    if (status === "ERROR") {
+        return (
+            <div className="container mx-auto p-4">
+                <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
+                <Card shadow="sm" className="text-center p-4">
+                    <CardHeader>
+                        <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">Test Case Failed</h2>
+                    </CardHeader>
+                    <CardBody>
+                        {/* Output of the terminal */}
+                        <p className="text-xl font-bold">Error Output</p>
+                        <pre className="whitespace-pre-wrap text-left bg-gray-100 dark:bg-default-100 p-4 rounded-lg mt-4">
+                            {testCase[0].result}
+                        </pre>
                     </CardBody>
                 </Card>
             </div>
