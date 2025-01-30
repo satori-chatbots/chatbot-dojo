@@ -22,8 +22,8 @@ export const fetchTestErrorByGlobalReport = (globalReportId) => {
         });
 };
 
-export const fetchTestErrorByTestReports = (testReportIds) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.TESTERRORS}?test_report_ids=${testReportIds.join(',')}`)
+export const fetchTestErrorByProfileReports = (profileReportIds) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.TESTERRORS}?profile_report_ids=${profileReportIds.join(',')}`)
         .then(response => {
             if (!response.ok) {
                 const errorData = response.json();
@@ -33,8 +33,8 @@ export const fetchTestErrorByTestReports = (testReportIds) => {
         });
 }
 
-export const fetchTestErrorByTestReport = (testReportId) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.TESTERRORS}?test_report_id=${testReportId}`)
+export const fetchTestErrorByProfileReport = (profileReportId) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.TESTERRORS}?profile_report_id=${profileReportId}`)
         .then(response => {
             if (!response.ok) {
                 const errorData = response.json();

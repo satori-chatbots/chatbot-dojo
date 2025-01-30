@@ -6,13 +6,13 @@ from .models import (
     TestError,
     TestFile,
     Project,
-    TestReport,
+    ProfileReport,
 )
 
 
-class TestReportSerializer(serializers.ModelSerializer):
+class ProfileReportSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TestReport
+        model = ProfileReport
         fields = "__all__"
 
 

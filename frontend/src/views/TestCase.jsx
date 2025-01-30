@@ -6,8 +6,8 @@ import { Accordion, AccordionItem, Spinner, Table, TableBody, TableCell, TableCo
 import { fetchTestCaseById } from '../api/testCasesApi';
 import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
 import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
-import { fetchTestReportByGlobalReportId } from '../api/testReportApi';
-import { fetchTestErrorByTestReport } from '../api/testErrorsApi';
+import { fetchProfileReportByGlobalReportId } from '../api/profileReportApi';
+import { fetchTestErrorByProfileReport } from '../api/testErrorsApi';
 import { useEffect, useState } from 'react';
 
 function TestCase() {
@@ -18,7 +18,7 @@ function TestCase() {
     // State for the global report
     const [globalReport, setGlobalReport] = useState({});
     // State for the test reports
-    const [testReports, setTestReports] = useState([]);
+    const [profileReports, setProfileReports] = useState([]);
 
     // State for the errors of the Global Report
     const [globalErrors, setGlobalErrors] = useState([]);
@@ -56,18 +56,18 @@ function TestCase() {
                     //console.log(fetchedGlobalErrors)
 
                     // Fetch test reports of the global report
-                    const fetchedTestReports = await fetchTestReportByGlobalReportId(fetchedGlobalReport.id);
+                    const fetchedProfileReports = await fetchProfileReportByGlobalReportId(fetchedGlobalReport.id);
                     // console.log(fetchedTestReports);
 
                     // Fetch the errors of each test report and add them to the test report object
-                    for (const report of fetchedTestReports) {
-                        const fetchedErrors = await fetchTestErrorByTestReport(report.id);
+                    for (const report of fetchedProfileReports) {
+                        const fetchedErrors = await fetchTestErrorByProfileReport(report.id);
                         report.errors = fetchedErrors;
                     }
 
 
-                    setTestReports(fetchedTestReports);
-                    console.log("Test Reports: ", fetchedTestReports);
+                    setProfileReports(fetchedProfileReports);
+                    console.log("Test Reports: ", fetchedProfileReports);
 
                 }
             } catch (error) {
@@ -232,7 +232,7 @@ function TestCase() {
                     <div className="space-y-4">
 
                         <Accordion>
-                            {testReports.map((report) => (
+                            {profileReports.map((report) => (
                                 <AccordionItem title={
                                     <Card shadow="sm" className="w-full">
                                         <CardHeader>

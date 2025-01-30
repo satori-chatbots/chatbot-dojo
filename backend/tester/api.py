@@ -12,11 +12,12 @@ from .models import (
     ChatbotTechnology,
     Conversation,
     GlobalReport,
+    ProfileReport,
     TestCase,
     TestError,
     TestFile,
     Project,
-    TestReport,
+    ProfileReport,
 )
 from .serializers import (
     ChatbotTechnologySerializer,
@@ -25,7 +26,7 @@ from .serializers import (
     TestFileSerializer,
     ProjectSerializer,
     TestErrorSerializer,
-    TestReportSerializer,
+    ProfileReportSerializer,
 )
 from django.http import JsonResponse
 from .models import TECHNOLOGY_CHOICES
@@ -48,8 +49,8 @@ class TestErrorViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         global_report_ids = request.query_params.get("global_report_ids", None)
         global_report_id = request.query_params.get("global_report_id", None)
-        test_report_ids = request.query_params.get("test_report_ids", None)
-        test_report_id = request.query_params.get("test_report_id", None)
+        profile_report_ids = request.query_params.get("profile_report_ids", None)
+        profile_report_id = request.query_params.get("profile_report_id", None)
 
         if global_report_ids is not None:
             global_reports = GlobalReport.objects.filter(
@@ -67,15 +68,15 @@ class TestErrorViewSet(viewsets.ModelViewSet):
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        elif test_report_ids is not None:
+        elif profile_report_ids is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
-                test_report__in=test_report_ids.split(",")
+                profile_report__in=profile_report_ids.split(",")
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        elif test_report_id is not None:
+        elif profile_report_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
-                test_report=test_report_id
+                profile_report=profile_report_id
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
@@ -86,13 +87,13 @@ class TestErrorViewSet(viewsets.ModelViewSet):
 
 
 # -------------------- #
-# - TEST REPORTS API - #
+# - PROFILE REPORTS API - #
 # -------------------- #
 
 
-class TestReportViewSet(viewsets.ModelViewSet):
-    queryset = TestReport.objects.all()
-    serializer_class = TestReportSerializer
+class ProfileReportViewSet(viewsets.ModelViewSet):
+    queryset = ProfileReport.objects.all()
+    serializer_class = ProfileReportSerializer
 
     def list(self, request, *args, **kwargs):
         global_report_ids = request.query_params.get("global_report_ids", None)
@@ -634,7 +635,7 @@ def run_asyn_test_execution(
             # When the report is not created it is because there was an error
             test_case.result = "ERROR"
 
-        # In the documents there is a global, and then a test_report for each test_case
+        # In the documents there is a global, and then a profile_report for each test_case
 
         # ----------------- #
         # - GLOBAL REPORT - #
@@ -688,33 +689,33 @@ def run_asyn_test_execution(
         # ---------------- #
 
         # Test reports are in the documents from 1 to n
-        for test_report in documents[1:]:
-            test_report_name = test_report["Test name"]
-            test_report_avg_response_time = test_report[
+        for profile_report in documents[1:]:
+            profile_report_name = profile_report["Test name"]
+            profile_report_avg_response_time = profile_report[
                 "Average assistant response time"
             ]
-            test_report_min_response_time = test_report[
+            profile_report_min_response_time = profile_report[
                 "Minimum assistant response time"
             ]
-            test_report_max_response_time = test_report[
+            profile_report_max_response_time = profile_report[
                 "Maximum assistant response time"
             ]
 
-            test_total_cost = test_report["Total Cost"]
+            test_total_cost = profile_report["Total Cost"]
 
-            test_report_instance = TestReport.objects.create(
-                name=test_report_name,
-                avg_execution_time=test_report_avg_response_time,
-                min_execution_time=test_report_min_response_time,
-                max_execution_time=test_report_max_response_time,
+            profile_report_instance = ProfileReport.objects.create(
+                name=profile_report_name,
+                avg_execution_time=profile_report_avg_response_time,
+                min_execution_time=profile_report_min_response_time,
+                max_execution_time=profile_report_max_response_time,
                 total_cost=test_total_cost,
                 global_report=global_report_instance,
             )
 
-            test_report_instance.save()
+            profile_report_instance.save()
 
             # Errors in the test report
-            test_errors = test_report["Errors"]
+            test_errors = profile_report["Errors"]
             print(f"Test errors: {test_errors}")
             for error in test_errors:
                 error_code = error["error"]
@@ -725,20 +726,20 @@ def run_asyn_test_execution(
                     code=error_code,
                     count=error_count,
                     conversations=error_conversations,
-                    test_report=test_report_instance,
+                    profile_report=profile_report_instance,
                 )
 
                 test_error.save()
 
-            test_report_instance.save()
+            profile_report_instance.save()
 
-            conversations_dir = os.path.join(extract_dir, test_report_name)
+            conversations_dir = os.path.join(extract_dir, profile_report_name)
             print(f"Conversations dir: {conversations_dir}")
 
             if os.path.exists(conversations_dir):
                 print("Conversations dir exists")
 
-            test_report_instance.save()
+            profile_report_instance.save()
 
         test_case.save()
 
