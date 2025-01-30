@@ -229,7 +229,7 @@ function TestCase() {
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-medium">Total Errors:</p>
-                                                    <p className="text-2xl font-bold">{report.errors.length}</p>
+                                                    <p className="text-2xl font-bold">{report.errors.reduce((sum, error) => sum + error.count, 0)}</p>
                                                 </div>
                                             </div>
                                         </CardBody>
