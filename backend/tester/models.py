@@ -191,6 +191,19 @@ class ProfileReport(models.Model):
     min_execution_time = models.FloatField(blank=True, null=True)
     max_execution_time = models.FloatField(blank=True, null=True)
     total_cost = models.FloatField(blank=True, null=True)
+
+    # Conversation data
+    serial = models.CharField(max_length=255)
+    language = models.CharField(max_length=50)
+    personality = models.CharField(max_length=255)
+    context_details = models.JSONField()
+
+    # Conversation specs
+    interaction_style = models.JSONField()
+    number_conversations = models.IntegerField()
+    steps = models.IntegerField(blank=True, null=True)
+    all_answered = models.BooleanField(blank=True, null=True)
+
     # Test report belongs to only one global report
     global_report = models.ForeignKey(
         GlobalReport, related_name="profile_reports", on_delete=models.CASCADE
@@ -208,36 +221,13 @@ class Conversation(models.Model):
         ProfileReport, related_name="conversations", on_delete=models.CASCADE
     )
 
-    # Basic Info
-    serial = models.CharField(max_length=255)
-    language = models.CharField(max_length=50)
-
-    # Context & Configuration
-    # TODO: De alguna manera tendre que copiar el archivo de la personalidad no?
-    personality = models.CharField(max_length=255)
-    context_details = models.JSONField()
-
-    # Ask About & Parameters
+    # Test configuration
     ask_about = models.JSONField()
-    parameters = models.JSONField()
 
-    # Conversation Stats
-    interaction_style = models.CharField(max_length=50)
-    number = models.IntegerField()
-    steps = models.IntegerField()
-    # TODO: Este parametro no entiendo del todo que es, ademas esta anidado en steps
-    all_answered = models.JSONField()
-
-    # Output Data
+    # Results
     data_output = models.JSONField()
-
-    # Errors & Performance
     errors = models.JSONField()
-
-    # Costs
     total_cost = models.FloatField()
-
-    # Times
     conversation_time = models.FloatField()
 
     # Response Times
