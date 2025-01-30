@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from django.conf import settings
 from .models import (
     ChatbotTechnology,
+    Conversation,
     GlobalReport,
     TestCase,
     TestError,
@@ -728,6 +729,14 @@ def run_asyn_test_execution(
                 )
 
                 test_error.save()
+
+            test_report_instance.save()
+
+            conversations_dir = os.path.join(extract_dir, test_report_name)
+            print(f"Conversations dir: {conversations_dir}")
+
+            if os.path.exists(conversations_dir):
+                print("Conversations dir exists")
 
             test_report_instance.save()
 
