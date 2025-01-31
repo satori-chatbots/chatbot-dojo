@@ -587,6 +587,92 @@ class ExecuteSelectedAPIView(APIView):
         )
 
 
+def process_profile_report_from_conversation(conversation_file_path):
+    """Read common fields from first conversation file"""
+    to_print = False
+
+    with open(conversation_file_path, "r") as file:
+        data = yaml.safe_load_all(file)
+        first_doc = next(data)
+
+        # Extract conversation specs
+        conv_specs = first_doc.get("conversation", {})
+        interaction_style = next(
+            (
+                item["interaction_style"]
+                for item in conv_specs
+                if "interaction_style" in item
+            ),
+            {},
+        )
+        number = next((item["number"] for item in conv_specs if "number" in item), 0)
+        steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
+        all_answered = next(
+            (item["all_answered"] for item in conv_specs if "all_answered" in item),
+            None,
+        )
+
+        if to_print:
+            print("-" * 50)
+            print("- PROFILE REPORT FROM CONVERSATION -")
+            print(f"Serial: {first_doc.get('serial')}")
+            print(f"Language: {first_doc.get('language')}")
+            print(
+                f"Personality: {next((item['personality'] for item in first_doc.get('context', []) if 'personality' in item), '')}"
+            )
+            print(
+                f"Context details: {[(item) for item in first_doc.get('context', []) if 'personality' not in item]}"
+            )
+            print(f"Interaction style: {interaction_style}")
+            print(f"Number conversations: {number}")
+
+        return {
+            "serial": first_doc.get("serial"),
+            "language": first_doc.get("language"),
+            "personality": next(
+                (
+                    item["personality"]
+                    for item in first_doc.get("context", [])
+                    if "personality" in item
+                ),
+                "",
+            ),
+            "context_details": [
+                item
+                for item in first_doc.get("context", [])
+                if "personality" not in item
+            ],
+            "interaction_style": interaction_style,
+            "number_conversations": number,
+            "steps": steps,
+            "all_answered": all_answered,
+        }
+
+
+def process_conversation(conversation_file_path):
+    """Process individual conversation file"""
+    with open(conversation_file_path, "r") as file:
+        docs = list(yaml.safe_load_all(file))
+        main_doc = docs[0]
+
+        # Split the document at the separator lines
+        conversation_data = {
+            "ask_about": main_doc.get("ask_about", {}),
+            "data_output": main_doc.get("data_output", {}),
+            "errors": main_doc.get("errors", {}),
+            "total_cost": float(main_doc.get("total_cost($)", 0)),
+            "conversation_time": float(docs[1].get("conversation time", 0)),
+            "response_times": docs[1].get("assistant response time", []),
+            "response_time_avg": docs[1]
+            .get("response time report", {})
+            .get("average", 0),
+            "response_time_max": docs[1].get("response time report", {}).get("max", 0),
+            "response_time_min": docs[1].get("response time report", {}).get("min", 0),
+            "interaction": docs[2].get("interaction", []),
+        }
+        return conversation_data
+
+
 def run_asyn_test_execution(
     script_path, script_cwd, test_case_dir, extract_dir, test_case, technology, link
 ):
@@ -684,11 +770,11 @@ def run_asyn_test_execution(
 
         global_report_instance.save()
 
-        # ---------------- #
-        # - TEST REPORTS - #
-        # ---------------- #
+        # ------------------- #
+        # - PROFILE REPORTS - #
+        # ------------------- #
 
-        # Test reports are in the documents from 1 to n
+        # Profile reports are in the documents from 1 to n
         for profile_report in documents[1:]:
             profile_report_name = profile_report["Test name"]
             profile_report_avg_response_time = profile_report[
@@ -710,11 +796,52 @@ def run_asyn_test_execution(
                 max_execution_time=profile_report_max_response_time,
                 total_cost=test_total_cost,
                 global_report=global_report_instance,
+                # Initialize common fields
+                # Decided this so that if the first conversation file is missing, the profile report is still created
+                serial="",
+                language="",
+                personality="",
+                context_details=[],
+                interaction_style={},
+                number_conversations=0,
             )
 
-            profile_report_instance.save()
+            # Process conversations directory
+            # It is the {project_id}/{profile_report_name}/{a date + hour}
+            conversations_dir = os.path.join(extract_dir, profile_report_name)
+            # Since we dont have the date and hour, we get the first directory (the only one)
+            conversations_dir = os.path.join(
+                conversations_dir, os.listdir(conversations_dir)[0]
+            )
+            print(f"Conversations dir: {conversations_dir}")
+            if os.path.exists(conversations_dir):
+                # Get the first conversation file to extract common fields
+                conv_files = sorted(
+                    [f for f in os.listdir(conversations_dir) if f.endswith(".yml")]
+                )
+                print(f"Conversation files: {conv_files}")
+                if conv_files:
+                    print(f"First conversation file: {conv_files[0]}")
+                    first_conv_path = os.path.join(conversations_dir, conv_files[0])
+                    profile_data = process_profile_report_from_conversation(
+                        first_conv_path
+                    )
 
-            # Errors in the test report
+                    # Update profile report with common fields
+                    for field, value in profile_data.items():
+                        setattr(profile_report_instance, field, value)
+                    profile_report_instance.save()
+
+                    # Process each conversation file
+                    for conv_file in conv_files:
+                        conv_path = os.path.join(conversations_dir, conv_file)
+                        conv_data = process_conversation(conv_path)
+
+                        Conversation.objects.create(
+                            profile_report=profile_report_instance, **conv_data
+                        )
+
+            # Errors in the profile report
             test_errors = profile_report["Errors"]
             print(f"Test errors: {test_errors}")
             for error in test_errors:
@@ -730,14 +857,6 @@ def run_asyn_test_execution(
                 )
 
                 test_error.save()
-
-            profile_report_instance.save()
-
-            conversations_dir = os.path.join(extract_dir, profile_report_name)
-            print(f"Conversations dir: {conversations_dir}")
-
-            if os.path.exists(conversations_dir):
-                print("Conversations dir exists")
 
             profile_report_instance.save()
 
