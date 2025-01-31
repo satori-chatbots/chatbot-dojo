@@ -8,6 +8,7 @@ import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
 import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
 import { fetchProfileReportByGlobalReportId } from '../api/profileReportApi';
 import { fetchTestErrorByProfileReport } from '../api/testErrorsApi';
+import { fetchConversationsByProfileReport } from '../api/conversationsApi';
 import { useEffect, useState } from 'react';
 
 function TestCase() {
@@ -65,6 +66,11 @@ function TestCase() {
                         report.errors = fetchedErrors;
                     }
 
+                    // Fetch the conversations of each test report and add them to the test report object
+                    for (const report of fetchedProfileReports) {
+                        const fetchedConversations = await fetchConversationsByProfileReport(report.id);
+                        report.conversations = fetchedConversations;
+                    }
 
                     setProfileReports(fetchedProfileReports);
                     console.log("Test Reports: ", fetchedProfileReports);
@@ -290,7 +296,6 @@ function TestCase() {
                                                 <Table removeWrapper>
                                                     <TableHeader>
                                                         <TableColumn>Error Code</TableColumn>
-                                                        <TableColumn>Error Message</TableColumn>
                                                         <TableColumn>Count</TableColumn>
                                                         <TableColumn>Conversations</TableColumn>
                                                     </TableHeader>
@@ -302,7 +307,6 @@ function TestCase() {
                                                         {report.errors && report.errors.map((error) => (
                                                             <TableRow key={error.id}>
                                                                 <TableCell>{error.code}</TableCell>
-                                                                <TableCell>{error.message}</TableCell>
                                                                 <TableCell>{error.count}</TableCell>
                                                                 <TableCell>
                                                                     <ul>
@@ -402,205 +406,131 @@ function TestCase() {
                                             </CardHeader>
                                             <CardBody>
                                                 <Accordion>
-                                                    <AccordionItem title="Conversation 1">
-                                                        {/* ------------------------ */}
-                                                        {/* - Conversation Details - */}
-                                                        {/* ------------------------ */}
-                                                        <div className="space-y-4">
-                                                            {/* Basic Information */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Basic Information</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <Table removeWrapper hideHeader>
-                                                                        <TableHeader>
-                                                                            <TableColumn>Key</TableColumn>
-                                                                            <TableColumn>Value</TableColumn>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Serial Number</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Language</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Context</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </CardBody>
-                                                            </Card>
+                                                    {report.conversations.map((conversation, convIndex) => (
+                                                        <AccordionItem key={convIndex} title={`Conversation ${convIndex + 1}`}>
+                                                            {/* ------------------------ */}
+                                                            {/* - Conversation Details - */}
+                                                            {/* ------------------------ */}
+                                                            <div className="space-y-4">
+                                                                {/* Ask About */}
+                                                                <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                    <CardHeader>
+                                                                        <h3 className="text-xl font-bold">Ask About</h3>
+                                                                    </CardHeader>
+                                                                    <CardBody>
+                                                                        <Table removeWrapper hideHeader>
+                                                                            <TableHeader>
+                                                                                <TableColumn>Value</TableColumn>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {conversation.ask_about.map((item, index) => (
+                                                                                    <TableRow key={index}>
+                                                                                        <TableCell>{typeof item === 'string' ? item : JSON.stringify(item)}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </CardBody>
+                                                                </Card>
 
-                                                            {/* Ask About */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Ask About</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <Table removeWrapper hideHeader>
-                                                                        <TableHeader>
-                                                                            <TableColumn>Value</TableColumn>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            <TableRow>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </CardBody>
-                                                            </Card>
+                                                                {/* Errors */}
+                                                                <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                    <CardHeader>
+                                                                        <h3 className="text-xl font-bold">Errors</h3>
+                                                                    </CardHeader>
+                                                                    <CardBody>
+                                                                        <Table removeWrapper hideHeader>
+                                                                            <TableHeader>
+                                                                                <TableColumn>Error Code</TableColumn>
+                                                                                <TableColumn>Error Message</TableColumn>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {conversation.errors.map((error, index) => (
+                                                                                    <TableRow key={index}>
+                                                                                        <TableCell className="font-medium">{Object.keys(error)[0]}</TableCell>
+                                                                                        <TableCell>{Object.values(error)[0]}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </CardBody>
+                                                                </Card>
 
-                                                            {/* Conversation Details */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Conversation Details</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <Table removeWrapper hideHeader>
-                                                                        <TableHeader>
-                                                                            <TableColumn>Key</TableColumn>
-                                                                            <TableColumn>Value</TableColumn>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Interaction Style</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Number</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Steps</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">All Answered</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </CardBody>
-                                                            </Card>
+                                                                {/* Total Time and Cost */}
+                                                                <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                    <CardHeader>
+                                                                        <h3 className="text-xl font-bold">Total Time and Cost</h3>
+                                                                    </CardHeader>
+                                                                    <CardBody>
+                                                                        <Table removeWrapper hideHeader>
+                                                                            <TableHeader>
+                                                                                <TableColumn>Key</TableColumn>
+                                                                                <TableColumn>Value</TableColumn>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                <TableRow>
+                                                                                    <TableCell className="font-medium">Total Time</TableCell>
+                                                                                    <TableCell>{conversation.conversation_time.toFixed(2)}s</TableCell>
+                                                                                </TableRow>
+                                                                                <TableRow>
+                                                                                    <TableCell className="font-medium">Total Cost</TableCell>
+                                                                                    <TableCell>${conversation.total_cost.toFixed(6)}</TableCell>
+                                                                                </TableRow>
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </CardBody>
+                                                                </Card>
 
-                                                            {/* Errors */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Errors</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <Table removeWrapper hideHeader>
-                                                                        <TableHeader>
-                                                                            <TableColumn>Error Code</TableColumn>
-                                                                            <TableColumn>Error Message</TableColumn>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">PLACEHOLDER</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </CardBody>
-                                                            </Card>
+                                                                {/* Response Time Report */}
+                                                                <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                    <CardHeader>
+                                                                        <h3 className="text-xl font-bold">Response Time Report</h3>
+                                                                    </CardHeader>
+                                                                    <CardBody>
+                                                                        <Table removeWrapper hideHeader>
+                                                                            <TableHeader>
+                                                                                <TableColumn>Key</TableColumn>
+                                                                                <TableColumn>Value</TableColumn>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                <TableRow>
+                                                                                    <TableCell className="font-medium">Average</TableCell>
+                                                                                    <TableCell>{conversation.response_time_avg.toFixed(2)}s</TableCell>
+                                                                                </TableRow>
+                                                                                <TableRow>
+                                                                                    <TableCell className="font-medium">Maximum</TableCell>
+                                                                                    <TableCell>{conversation.response_time_max.toFixed(2)}s</TableCell>
+                                                                                </TableRow>
+                                                                                <TableRow>
+                                                                                    <TableCell className="font-medium">Minimum</TableCell>
+                                                                                    <TableCell>{conversation.response_time_min.toFixed(2)}s</TableCell>
+                                                                                </TableRow>
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </CardBody>
+                                                                </Card>
 
-                                                            {/* Total Time and Cost */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Total Time and Cost</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <Table removeWrapper hideHeader>
-                                                                        <TableHeader>
-                                                                            <TableColumn>Key</TableColumn>
-                                                                            <TableColumn>Value</TableColumn>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Total Time</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Total Cost</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </CardBody>
-                                                            </Card>
-
-
-                                                            {/* Response Time Report */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Response Time Report</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <Table removeWrapper hideHeader>
-                                                                        <TableHeader>
-                                                                            <TableColumn>Step</TableColumn>
-                                                                            <TableColumn>Time</TableColumn>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Average</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Maximum</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                            <TableRow>
-                                                                                <TableCell className="font-medium">Minimum</TableCell>
-                                                                                <TableCell>PLACEHOLDER</TableCell>
-                                                                            </TableRow>
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </CardBody>
-                                                            </Card>
-
-                                                            {/* Interaction */}
-                                                            <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
-                                                                <CardHeader>
-                                                                    <h3 className="text-xl font-bold">Interaction</h3>
-                                                                </CardHeader>
-                                                                <CardBody>
-                                                                    <div className="mb-4 text-blue-600 dark:text-blue-400">
-                                                                        <p className="font-bold">User:</p>
-                                                                        <p>Hey there! 😊 I’m in the mood for some pizza tonight. Can I get a small marinara
-                                                                            pizza? Also, I’d love to grab a can of Pepsi with that. What do you think? How
-                                                                            much is that going to set me back? 🍕🥤</p>
-                                                                    </div>
-                                                                    <div className="mb-4 text-green-600 dark:text-green-400">
-                                                                        <p className="font-bold">Assistant:</p>
-                                                                        <p>Hello</p>
-                                                                    </div>
-                                                                    <div className="mb-4 text-blue-600 dark:text-blue-400">
-                                                                        <p className="font-bold">User:</p>
-                                                                        <p>! That sounds like a delicious choice! A small marinara pizza and a can of\
-                                                                            \ Pepsi is a classic combo. Let me check the price for you. \n\nBy the way, do\
-                                                                            \ you usually go for marinara, or do you have a favorite topping? I’m always curious\
-                                                                            \ about what people like! \U0001F60A</p>
-                                                                    </div>
-                                                                    <div className="mb-4 text-green-600 dark:text-green-400">
-                                                                        <p className="font-bold">Assistant:</p>
-                                                                        <p>I''m sorry, I did not get what you said. I can help you ordering predefined
-                                                                            or custom pizzas, and then drinks.`
-
-                                                                            For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE </p>
-                                                                    </div>
-                                                                </CardBody>
-                                                            </Card>
-                                                        </div>
-                                                    </AccordionItem>
+                                                                {/* Interaction */}
+                                                                <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                    <CardHeader>
+                                                                        <h3 className="text-xl font-bold">Interaction</h3>
+                                                                    </CardHeader>
+                                                                    <CardBody>
+                                                                        {conversation.interaction.map((message, index) => (
+                                                                            <div key={index}
+                                                                                className={`mb-4 ${Object.keys(message)[0] === 'User'
+                                                                                    ? 'text-blue-600 dark:text-blue-400'
+                                                                                    : 'text-green-600 dark:text-green-400'
+                                                                                    }`}>
+                                                                                <p className="font-bold">{Object.keys(message)[0]}:</p>
+                                                                                <p>{Object.values(message)[0]}</p>
+                                                                            </div>
+                                                                        ))}
+                                                                    </CardBody>
+                                                                </Card>
+                                                            </div>
+                                                        </AccordionItem>
+                                                    ))}
                                                 </Accordion>
                                             </CardBody>
                                         </Card>
