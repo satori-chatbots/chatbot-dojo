@@ -607,10 +607,17 @@ def process_profile_report_from_conversation(conversation_file_path):
         )
         number = next((item["number"] for item in conv_specs if "number" in item), 0)
         steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
-        all_answered = next(
-            (item["all_answered"] for item in conv_specs if "all_answered" in item),
-            None,
+        # Extract all_answered with limit if present
+        all_answered_item = next(
+            (item for item in conv_specs if "all_answered" in item),
+            None
         )
+        all_answered = None
+        if all_answered_item:
+            if isinstance(all_answered_item["all_answered"], dict):
+                all_answered = all_answered_item["all_answered"]
+            else:
+                all_answered = {"value": all_answered_item["all_answered"]}
 
         if to_print:
             print("-" * 50)

@@ -202,7 +202,7 @@ class ProfileReport(models.Model):
     interaction_style = models.JSONField()
     number_conversations = models.IntegerField()
     steps = models.IntegerField(blank=True, null=True)
-    all_answered = models.BooleanField(blank=True, null=True)
+    all_answered = models.JSONField(blank=True, null=True)
 
     # Test report belongs to only one global report
     global_report = models.ForeignKey(

@@ -373,11 +373,18 @@ function TestCase() {
                                                                 <TableCell>{report.steps}</TableCell>
                                                             </TableRow>
                                                         )}
-                                                        {/* If all_answered exists, display the boolean*/}
+                                                        {/* If all_answered exists, display in a more readable format */}
                                                         {report.all_answered && (
                                                             <TableRow>
                                                                 <TableCell className="font-medium">All Answered</TableCell>
-                                                                <TableCell>{report.all_answered}</TableCell>
+                                                                <TableCell>
+                                                                    {Object.entries(report.all_answered).map(([key, value]) => (
+                                                                        <div key={key} className="flex gap-2">
+                                                                            <span>{key}:</span>
+                                                                            <span>{value}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </TableCell>
                                                             </TableRow>
                                                         )}
 
