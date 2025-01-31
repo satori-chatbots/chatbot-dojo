@@ -318,6 +318,76 @@ function TestCase() {
                                             </CardBody>
                                         </Card>
 
+                                        {/* Profile Details */}
+                                        <Card shadow="sm">
+                                            <CardHeader>
+                                                <h2 className="text-2xl font-bold">Profile Details</h2>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <Table removeWrapper hideHeader>
+                                                    <TableHeader>
+                                                        <TableColumn>Key</TableColumn>
+                                                        <TableColumn>Value</TableColumn>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">Serial</TableCell>
+                                                            <TableCell>{report.serial}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">Language</TableCell>
+                                                            <TableCell>{report.language}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">Personality</TableCell>
+                                                            <TableCell>{report.personality}</TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">Context</TableCell>
+                                                            <TableCell>
+                                                                <ul>
+                                                                    {report.context_details?.map((context, index) => (
+                                                                        <li key={index}>{context}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">Interaction Style</TableCell>
+                                                            <TableCell>
+                                                                <ul>
+                                                                    {report.interaction_style?.map((style, index) => (
+                                                                        <li key={index}>{style}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">Number of Conversations</TableCell>
+                                                            <TableCell>{report.number_conversations}</TableCell>
+                                                        </TableRow>
+                                                        {/* If steps exist, display the int*/}
+                                                        {report.steps && (
+                                                            <TableRow>
+                                                                <TableCell className="font-medium">Steps</TableCell>
+                                                                <TableCell>{report.steps}</TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                        {/* If all_answered exists, display the boolean*/}
+                                                        {report.all_answered && (
+                                                            <TableRow>
+                                                                <TableCell className="font-medium">All Answered</TableCell>
+                                                                <TableCell>{report.all_answered}</TableCell>
+                                                            </TableRow>
+                                                        )}
+
+
+                                                    </TableBody>
+                                                </Table>
+                                            </CardBody>
+                                        </Card>
+
+
                                         {/* Conversations */}
                                         <Card shadow="sm">
                                             <CardHeader>
