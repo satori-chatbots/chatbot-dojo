@@ -433,6 +433,30 @@ function TestCase() {
                                                                     </CardBody>
                                                                 </Card>
 
+                                                                {/* Answer */}
+                                                                <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
+                                                                    <CardHeader>
+                                                                        <h3 className="text-xl font-bold">Answer</h3>
+                                                                    </CardHeader>
+                                                                    <CardBody>
+                                                                        <Table removeWrapper hideHeader>
+                                                                            <TableHeader>
+                                                                                <TableColumn>Key</TableColumn>
+                                                                                <TableColumn>Value</TableColumn>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {conversation.data_output.map((item, index) => (
+                                                                                    <TableRow key={index}>
+                                                                                        <TableCell className="font-medium">{Object.keys(item)[0]}</TableCell>
+                                                                                        <TableCell>{Object.values(item)[0] ?? 'None'}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </CardBody>
+                                                                </Card>
+
+
                                                                 {/* Errors */}
                                                                 <Card shadow="none" className="border-none bg-gray-50 dark:bg-default-100">
                                                                     <CardHeader>
@@ -444,7 +468,9 @@ function TestCase() {
                                                                                 <TableColumn>Error Code</TableColumn>
                                                                                 <TableColumn>Error Message</TableColumn>
                                                                             </TableHeader>
-                                                                            <TableBody>
+                                                                            <TableBody
+                                                                                emptyContent="There are no errors in this conversation"
+                                                                            >
                                                                                 {conversation.errors.map((error, index) => (
                                                                                     <TableRow key={index}>
                                                                                         <TableCell className="font-medium">{Object.keys(error)[0]}</TableCell>
