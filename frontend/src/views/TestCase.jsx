@@ -418,18 +418,51 @@ function TestCase() {
                                                                         <h3 className="text-xl font-bold">Ask About</h3>
                                                                     </CardHeader>
                                                                     <CardBody>
-                                                                        <Table removeWrapper hideHeader>
-                                                                            <TableHeader>
-                                                                                <TableColumn>Value</TableColumn>
-                                                                            </TableHeader>
-                                                                            <TableBody>
-                                                                                {conversation.ask_about.map((item, index) => (
-                                                                                    <TableRow key={index}>
-                                                                                        <TableCell>{typeof item === 'string' ? item : JSON.stringify(item)}</TableCell>
-                                                                                    </TableRow>
-                                                                                ))}
-                                                                            </TableBody>
-                                                                        </Table>
+                                                                        {/* Questions Section */}
+                                                                        <div className="mb-4">
+                                                                            <h4 className="text-lg font-semibold mb-2">Questions</h4>
+                                                                            <div className="space-y-2 pl-4">
+                                                                                {conversation.ask_about
+                                                                                    .filter(item => typeof item === 'string')
+                                                                                    .map((question, index) => (
+                                                                                        <p key={index} className="text-default-600">
+                                                                                            • {question}
+                                                                                        </p>
+                                                                                    ))}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Variables Section */}
+                                                                        <div>
+                                                                            <h4 className="text-lg font-semibold mb-2">Variables</h4>
+                                                                            <Table
+                                                                                removeWrapper
+                                                                                hideHeader
+                                                                                className="pl-4"
+                                                                            >
+                                                                                <TableHeader>
+                                                                                    <TableColumn>Variable</TableColumn>
+                                                                                    <TableColumn>Value</TableColumn>
+                                                                                </TableHeader>
+                                                                                <TableBody>
+                                                                                    {conversation.ask_about
+                                                                                        .filter(item => typeof item === 'object')
+                                                                                        .map((item, index) => {
+                                                                                            const [key, value] = Object.entries(item)[0];
+                                                                                            return (
+                                                                                                <TableRow key={index}>
+                                                                                                    <TableCell className="font-medium w-1/3">{key}</TableCell>
+                                                                                                    <TableCell>
+                                                                                                        {Array.isArray(value)
+                                                                                                            ? value.join(', ')
+                                                                                                            : value}
+                                                                                                    </TableCell>
+                                                                                                </TableRow>
+                                                                                            );
+                                                                                        })}
+                                                                                </TableBody>
+                                                                            </Table>
+                                                                        </div>
                                                                     </CardBody>
                                                                 </Card>
 
