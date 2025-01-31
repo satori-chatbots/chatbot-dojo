@@ -11,7 +11,7 @@ from .models import (
 )
 
 
-class ConversationSerializer(serializers.Serializer):
+class ConversationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
         fields = "__all__"
