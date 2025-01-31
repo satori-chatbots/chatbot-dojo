@@ -16,6 +16,7 @@ export const ENDPOINTS = {
     CHECK_PROJECT_NAME: '/projects/check-name/',
     CHECK_CHATBOT_NAME: '/chatbottechnologies/check-name/',
     PROFILERPORTS: '/profilereports/',
+    CONVERSATIONS: '/conversations/',
 };
 
 export default API_BASE_URL;

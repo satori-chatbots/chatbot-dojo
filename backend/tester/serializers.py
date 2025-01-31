@@ -7,7 +7,14 @@ from .models import (
     TestFile,
     Project,
     ProfileReport,
+    Conversation,
 )
+
+
+class ConversationSerializer(serializers.Serializer):
+    class Meta:
+        model = Conversation
+        fields = "__all__"
 
 
 class ProfileReportSerializer(serializers.ModelSerializer):

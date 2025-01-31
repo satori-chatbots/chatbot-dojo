@@ -21,6 +21,7 @@ from .models import (
 )
 from .serializers import (
     ChatbotTechnologySerializer,
+    ConversationSerializer,
     GlobalReportSerializer,
     TestCaseSerializer,
     TestFileSerializer,
@@ -36,6 +37,40 @@ import yaml
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 import threading
+
+# --------------------- #
+# - CONVERSATIONS API - #
+# --------------------- #
+
+
+class ConversationViewSet(viewsets.ModelViewSet):
+    queryset = Conversation.objects.all()
+    serializer_class = ConversationSerializer
+
+    def list(self, request, *args, **kwargs):
+        profile_report_ids = request.query_params.get("profile_report_ids", None)
+        profile_report_id = request.query_params.get("profile_report_id", None)
+
+        if profile_report_ids is not None:
+            profile_reports = ProfileReport.objects.filter(
+                id__in=profile_report_ids.split(",")
+            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                profile_report__in=profile_reports
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        elif profile_report_id is not None:
+            queryset = self.filter_queryset(self.get_queryset()).filter(
+                profile_report=profile_report_id
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+
 
 # ------------------- #
 # - TEST ERRORS API - #
@@ -609,8 +644,7 @@ def process_profile_report_from_conversation(conversation_file_path):
         steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
         # Extract all_answered with limit if present
         all_answered_item = next(
-            (item for item in conv_specs if "all_answered" in item),
-            None
+            (item for item in conv_specs if "all_answered" in item), None
         )
         all_answered = None
         if all_answered_item:
