@@ -752,34 +752,55 @@ def run_asyn_test_execution(
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
 
+        if test_case.status == "STOPPED":
+            print("Test execution was stopped by the user.")
+            test_case.result = "Test execution was stopped by the user."
+            test_case.execution_time = elapsed_time
+            test_case.save()
+            return
+
         test_case.execution_time = elapsed_time
         test_case.result = stdout.decode().strip() or stderr.decode().strip()
-
-        if test_case.status == "STOPPED":
-            print("-" * 50)
-            print("Test execution was stopped by the user.")
-            return
 
         test_case.status = "COMPLETED"
         print("COMPLETED")
 
         # Report saved in extract_dir / __report__ / report_*.yml
         report_path = os.path.join(extract_dir, "__report__")
-
-        report_file = None
-        for file in os.listdir(report_path):
-            if file.startswith("report_") and file.endswith(".yml"):
-                report_file = file
-                break
-
-        if report_file is not None:
-            with open(os.path.join(report_path, report_file), "r") as file:
-                documents = list(yaml.safe_load_all(file))
-        else:
+        if not os.path.exists(report_path):
             if test_case.status == "STOPPED":
                 return
-            # When the report is not created it is because there was an error
-            test_case.result = "ERROR"
+            test_case.status = "ERROR"
+            test_case.result = "Report directory not found"
+            test_case.save()
+            return
+
+        # Try to find report file
+        report_file = None
+        try:
+            for file in os.listdir(report_path):
+                if file.startswith("report_") and file.endswith(".yml"):
+                    report_file = file
+                    break
+        except OSError:
+            if test_case.status == "STOPPED":
+                return
+            test_case.status = "ERROR"
+            test_case.result = "Error accessing report directory"
+            test_case.save()
+            return
+
+        if report_file is None:
+            if test_case.status == "STOPPED":
+                return
+            test_case.status = "ERROR"
+            test_case.result = "No report file found"
+            test_case.save()
+            return
+
+        # Only proceed with report processing if not stopped
+        test_case.status = "COMPLETED"
+        test_case.save()
 
         # In the documents there is a global, and then a profile_report for each test_case
 
