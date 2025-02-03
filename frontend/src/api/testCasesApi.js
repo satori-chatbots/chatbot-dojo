@@ -62,17 +62,21 @@ export const fetchTestCaseById = (testCaseId) => {
         });
 }
 
-export const stopTestExecution = (testCaseId) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.STOP_TEST_EXECUTION.replace(':testCaseId', testCaseId)}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => {
+export const stopTestExecution = async (testCaseId) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}${ENDPOINTS.STOP_TEST_EXECUTION}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ test_case_id: testCaseId }),
+        });
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error stopping test execution');
         }
-        return response.json();
-    });
-}
+        return await response.json();
+    } catch (error) {
+        throw error;
+    }
+};

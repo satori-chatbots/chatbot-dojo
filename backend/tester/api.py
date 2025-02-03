@@ -38,6 +38,8 @@ import yaml
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 import threading
+import logging
+import psutil
 
 # --------------------- #
 # - CONVERSATIONS API - #
@@ -752,6 +754,12 @@ def run_asyn_test_execution(
 
         test_case.execution_time = elapsed_time
         test_case.result = stdout.decode().strip() or stderr.decode().strip()
+
+        if test_case.status == "STOPPED":
+            print("-" * 50)
+            print("Test execution was stopped by the user.")
+            return
+
         test_case.status = "COMPLETED"
         print("COMPLETED")
 
@@ -768,6 +776,8 @@ def run_asyn_test_execution(
             with open(os.path.join(report_path, report_file), "r") as file:
                 documents = list(yaml.safe_load_all(file))
         else:
+            if test_case.status == "STOPPED":
+                return
             # When the report is not created it is because there was an error
             test_case.result = "ERROR"
 
@@ -913,29 +923,61 @@ def run_asyn_test_execution(
         test_case.save()
 
     except Exception as e:
+        if test_case.status == "STOPPED":
+            return
+        print("SETUP ERROR")
         test_case.result = f"Error: {e}"
         test_case.execution_time = 0
         test_case.status = "ERROR"
         test_case.save()
 
 
+logger = logging.getLogger(__name__)
+
+
 @api_view(["POST"])
-def stop_test_execution(request, test_case_id):
+def stop_test_execution(request):
+    test_case_id = request.data.get("test_case_id")
+    logger.info(f"Stopping test case: {test_case_id}")
+
     try:
         test_case = TestCase.objects.get(id=test_case_id)
 
         if test_case.process_id and test_case.status == "RUNNING":
             try:
+                # Check if process exists
+                process = psutil.Process(test_case.process_id)
+
                 # Kill process and children
-                os.kill(test_case.process_id, signal.SIGTERM)
+                for child in process.children(recursive=True):
+                    child.terminate()
+                process.terminate()
+
+                # Wait for processes to terminate
+                gone, alive = psutil.wait_procs([process], timeout=3)
+
+                # Force kill if still alive
+                for p in alive:
+                    p.kill()
+
                 test_case.status = "STOPPED"
                 test_case.result = "Test execution stopped by user"
                 test_case.save()
+
+                logger.info(f"Test case {test_case_id} stopped successfully")
                 return Response({"message": "Test execution stopped"}, status=200)
-            except ProcessLookupError:
-                return Response({"error": "Process not found"}, status=404)
+
+            except psutil.NoSuchProcess:
+                logger.warning(f"Process {test_case.process_id} not found")
+                # Still mark as stopped if process not found
+                test_case.status = "STOPPED"
+                test_case.result = "Test execution stopped (process not found)"
+                test_case.save()
+                return Response({"message": "Test execution stopped"}, status=200)
         else:
+            logger.warning(f"No running process found for test case {test_case_id}")
             return Response({"error": "No running process found"}, status=400)
 
     except TestCase.DoesNotExist:
+        logger.error(f"Test case {test_case_id} not found")
         return Response({"error": "Test case not found"}, status=404)

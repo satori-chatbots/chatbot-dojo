@@ -29,7 +29,7 @@ urlpatterns = [
     ),
     path
     (
-        "test-cases/<int:test_case_id>/stop/",
+        "test-cases-stop/",
         api.stop_test_execution,
         name="stop-test-execution",
     ),
