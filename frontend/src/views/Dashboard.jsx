@@ -142,39 +142,31 @@ function Dashboard() {
     }
 
     const handleFilterProjects = async (e) => {
-        e.preventDefault();
-        //console.log(selectedProjects);
+        if (e) {
+            e.preventDefault();
+        }
         if (selectedProjects.length === 0) {
             return;
         }
 
         try {
-            // Get the test cases
             setLoading(true);
             setError(null);
             const testCases = await fetchTestCasesByProjects(selectedProjects);
             setTestCases(testCases);
 
-            // Get the global reports for each test case
             const testCaseIds = testCases.map(testCase => testCase.id);
             if (testCaseIds.length !== 0) {
                 const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
+                setGlobalReports(fetchedReports);
 
-                // Fetch errors based on local data
                 const globalReportIds = fetchedReports.map(report => report.id);
                 let fetchedErrors = [];
                 if (globalReportIds.length !== 0) {
                     fetchedErrors = await fetchTestErrorsByGlobalReports(globalReportIds);
                     setErrors(fetchedErrors);
-                    console.log("Errors");
-                    console.log(fetchedErrors);
                 }
 
-                setGlobalReports(fetchedReports);
-                console.log("Fetched Reports");
-                console.log(fetchedReports);
-
-                // Calculate the error count
                 const updatedErrorCounts = {};
                 fetchedErrors.forEach(error => {
                     if (error.global_report in updatedErrorCounts) {
@@ -190,7 +182,7 @@ function Dashboard() {
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     const handleStop = async (testCaseId, e) => {
         try {
@@ -212,11 +204,12 @@ function Dashboard() {
         try {
             await deleteTestCase(deleteModal.testCaseId);
             // Refresh test cases
-            const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
-            setTestCases(updatedTestCases);
+            //const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
+            //setTestCases(updatedTestCases);
         } catch (error) {
             console.error('Error deleting test case:', error);
         } finally {
+            handleFilterProjects();
             setDeleteModal({ isOpen: false, testCaseId: null });
         }
     };
