@@ -803,6 +803,9 @@ def run_asyn_test_execution(
         test_case.save()
 
         # In the documents there is a global, and then a profile_report for each test_case
+        documents = []
+        with open(os.path.join(report_path, report_file), "r") as file:
+            documents = list(yaml.safe_load_all(file))
 
         # ----------------- #
         # - GLOBAL REPORT - #
