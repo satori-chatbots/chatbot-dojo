@@ -1,4 +1,5 @@
 import shutil
+import signal
 import subprocess
 import time
 import configparser
@@ -7,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 from django.conf import settings
 from .models import (
     ChatbotTechnology,
@@ -17,7 +19,6 @@ from .models import (
     TestError,
     TestFile,
     Project,
-    ProfileReport,
 )
 from .serializers import (
     ChatbotTechnologySerializer,
@@ -741,6 +742,10 @@ def run_asyn_test_execution(
             stderr=subprocess.PIPE,
             cwd=script_cwd,
         )
+        # Save the process ID to be able to terminate it if needed
+        test_case.process_id = process.pid
+        test_case.save()
+
         stdout, stderr = process.communicate()
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
@@ -912,3 +917,25 @@ def run_asyn_test_execution(
         test_case.execution_time = 0
         test_case.status = "ERROR"
         test_case.save()
+
+
+@api_view(["POST"])
+def stop_test_execution(request, test_case_id):
+    try:
+        test_case = TestCase.objects.get(id=test_case_id)
+
+        if test_case.process_id and test_case.status == "RUNNING":
+            try:
+                # Kill process and children
+                os.kill(test_case.process_id, signal.SIGTERM)
+                test_case.status = "STOPPED"
+                test_case.result = "Test execution stopped by user"
+                test_case.save()
+                return Response({"message": "Test execution stopped"}, status=200)
+            except ProcessLookupError:
+                return Response({"error": "Process not found"}, status=404)
+        else:
+            return Response({"error": "No running process found"}, status=400)
+
+    except TestCase.DoesNotExist:
+        return Response({"error": "Test case not found"}, status=404)

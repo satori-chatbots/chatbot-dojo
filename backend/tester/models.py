@@ -139,6 +139,8 @@ class TestCase(models.Model):
     project = models.ForeignKey(
         Project, related_name="test_cases", on_delete=models.CASCADE
     )
+    # Process ID of the test case, used to kill the process if needed
+    process_id = models.IntegerField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Save the test case, if given name is null, set it to TestCase <id>

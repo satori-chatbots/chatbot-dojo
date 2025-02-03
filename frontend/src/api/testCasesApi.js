@@ -61,3 +61,18 @@ export const fetchTestCaseById = (testCaseId) => {
             return response.json();
         });
 }
+
+export const stopTestExecution = (testCaseId) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.STOP_TEST_EXECUTION.replace(':testCaseId', testCaseId)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    });
+}

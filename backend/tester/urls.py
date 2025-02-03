@@ -27,6 +27,12 @@ urlpatterns = [
         api.get_technology_choices,
         name="chatbot-technologies-choices",
     ),
+    path
+    (
+        "test-cases/<int:test_case_id>/stop/",
+        api.stop_test_execution,
+        name="stop-test-execution",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]
