@@ -30,6 +30,9 @@ function TestCase() {
     // Status of the test case
     const [status, setStatus] = useState("");
 
+    // Polling interval for fetching the test case if it is still running
+    const POLLING_INTERVAL = 2500;
+
     // Initial fetch of the test case and global report
     useEffect(() => {
         const fetchData = async () => {
@@ -39,42 +42,36 @@ function TestCase() {
 
                 const status = fetchedTestCase[0].status;
                 setStatus(status);
-                //console.log("Test Case Status: ", status);
 
-                if (status === "RUNNING" || status === "ERROR") {
-                    return;
+                if (status === "RUNNING") {
+                    return; // Exit early if still running
                 }
 
-                else if (status === "COMPLETED") {
-                    // Fetch the global report
+                if (status === "ERROR") {
+                    return; // Exit early if error
+                }
+
+                if (status === "COMPLETED") {
+                    // Fetch additional data only when completed
                     const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
                     setGlobalReport(fetchedGlobalReport);
-                    //console.log("Global Report ID: ", fetchedGlobalReport.id);
 
-                    // Fetch the errors of the global report
                     const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(fetchedGlobalReport.id);
                     setGlobalErrors(fetchedGlobalErrors);
-                    //console.log(fetchedGlobalErrors)
 
-                    // Fetch test reports of the global report
                     const fetchedProfileReports = await fetchProfileReportByGlobalReportId(fetchedGlobalReport.id);
-                    // console.log(fetchedTestReports);
 
-                    // Fetch the errors of each test report and add them to the test report object
+                    // Fetch errors and conversations for each report
                     for (const report of fetchedProfileReports) {
-                        const fetchedErrors = await fetchTestErrorByProfileReport(report.id);
+                        const [fetchedErrors, fetchedConversations] = await Promise.all([
+                            fetchTestErrorByProfileReport(report.id),
+                            fetchConversationsByProfileReport(report.id)
+                        ]);
                         report.errors = fetchedErrors;
-                    }
-
-                    // Fetch the conversations of each test report and add them to the test report object
-                    for (const report of fetchedProfileReports) {
-                        const fetchedConversations = await fetchConversationsByProfileReport(report.id);
                         report.conversations = fetchedConversations;
                     }
 
                     setProfileReports(fetchedProfileReports);
-                    console.log("Test Reports: ", fetchedProfileReports);
-
                 }
             } catch (error) {
                 console.error(error);
@@ -83,8 +80,22 @@ function TestCase() {
             }
         };
 
+        // Initial fetch
         fetchData();
-    }, [id]);
+
+        // Set up polling if status is RUNNING
+        let pollInterval;
+        if (status === "RUNNING") {
+            pollInterval = setInterval(fetchData, POLLING_INTERVAL);
+        }
+
+        // Cleanup polling on unmount or status change
+        return () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        };
+    }, [id, status]);
 
     // Function to format the execution time
     const formatExecutionTime = (time) => {
