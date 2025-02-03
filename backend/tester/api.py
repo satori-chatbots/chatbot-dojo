@@ -692,12 +692,15 @@ def process_profile_report_from_conversation(conversation_file_path):
 
 def process_conversation(conversation_file_path):
     """Process individual conversation file"""
+
+    name = os.path.basename(conversation_file_path)
     with open(conversation_file_path, "r") as file:
         docs = list(yaml.safe_load_all(file))
         main_doc = docs[0]
 
         # Split the document at the separator lines
         conversation_data = {
+            "name": name,
             "ask_about": main_doc.get("ask_about", {}),
             "data_output": main_doc.get("data_output", {}),
             "errors": main_doc.get("errors", {}),

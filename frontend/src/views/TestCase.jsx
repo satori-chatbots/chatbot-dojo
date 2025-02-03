@@ -407,7 +407,7 @@ function TestCase() {
                                             <CardBody>
                                                 <Accordion>
                                                     {report.conversations.map((conversation, convIndex) => (
-                                                        <AccordionItem key={convIndex} title={`Conversation ${convIndex + 1}`}>
+                                                        <AccordionItem key={convIndex} title={conversation.name}>
                                                             {/* ------------------------ */}
                                                             {/* - Conversation Details - */}
                                                             {/* ------------------------ */}

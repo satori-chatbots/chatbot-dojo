@@ -221,6 +221,9 @@ class Conversation(models.Model):
         ProfileReport, related_name="conversations", on_delete=models.CASCADE
     )
 
+    # Basic Info
+    name = models.CharField(max_length=255)
+
     # Test configuration
     ask_about = models.JSONField()
 
