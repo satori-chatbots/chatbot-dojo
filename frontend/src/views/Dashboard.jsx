@@ -170,7 +170,12 @@ function Dashboard() {
     }, [derivedTestCases, sortDescriptor]);
 
 
-    const formatExecutionTime = (seconds) => {
+    const formatExecutionTime = (seconds, status) => {
+        // Check if it was stopped
+        if (status === 'STOPPED') {
+            return 'Stopped';
+        }
+
         // Check if it is still running
         if (seconds === null) {
             return 'Running';
@@ -187,6 +192,13 @@ function Dashboard() {
         } else {
             return `${seconds.toFixed(2)}s`;
         }
+    };
+
+    const formatCost = (cost, status) => {
+        if (status === "STOPPED") {
+            return 'Stopped';
+        }
+        return `$${parseFloat(cost || 0).toFixed(5)}`;
     };
 
     return (
@@ -316,7 +328,7 @@ function Dashboard() {
                                     </ul>
                                 )}
                             </TableCell>
-                            <TableCell>{formatExecutionTime(testCase.execution_time)}</TableCell>
+                            <TableCell>{formatExecutionTime(testCase.execution_time, testCase.status)}</TableCell>
                             <TableCell>
                                 {testCase.num_errors > 0 ? (
                                     <Accordion isCompact>
@@ -337,7 +349,7 @@ function Dashboard() {
                                 )}
                             </TableCell>
                             <TableCell>
-                                ${testCase.total_cost}
+                            {formatCost(testCase.total_cost, testCase.status)}
                             </TableCell>
                             <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
                         </TableRow>
