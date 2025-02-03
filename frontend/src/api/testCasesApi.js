@@ -80,3 +80,18 @@ export const stopTestExecution = async (testCaseId) => {
         throw error;
     }
 };
+
+export const deleteTestCase = async (testCaseId) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}${ENDPOINTS.FETCH_TEST_CASES}${testCaseId}/`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error deleting test case');
+        }
+        return await response.json();
+    } catch (error) {
+        throw error;
+    }
+};

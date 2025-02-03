@@ -205,6 +205,27 @@ function TestCase() {
         );
     }
 
+    // Add early return for stopped state
+    if (status === "STOPPED") {
+        return (
+            <div className="container mx-auto p-4">
+                <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
+                <Card shadow="sm" className="text-center p-4">
+                    <CardHeader>
+                        <h2 className="text-2xl font-bold">Test Case Stopped</h2>
+                    </CardHeader>
+                    <CardBody>
+                        {/* Output of the terminal */}
+                        <p className="text-xl font-bold">Stopped Output:</p>
+                        <pre className="whitespace-pre-wrap text-left p-4">
+                            {testCase[0].result}
+                        </pre>
+                    </CardBody>
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>

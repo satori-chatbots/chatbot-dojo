@@ -11,6 +11,9 @@ import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from '@heroui/react';
 import { useMemo } from 'react';
 import { stopTestExecution } from '../api/testCasesApi';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
+import { deleteTestCase } from '../api/testCasesApi';
+
 
 
 function Dashboard() {
@@ -19,6 +22,10 @@ function Dashboard() {
     const [testCases, setTestCases] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    // Modal for deleting a test case
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, testCaseId: null });
+
 
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
 
@@ -194,6 +201,23 @@ function Dashboard() {
             setTestCases(updatedTestCases);
         } catch (error) {
             console.error('Error stopping test case:', error);
+        }
+    };
+
+    const handleDelete = async (testCaseId, e) => {
+        setDeleteModal({ isOpen: true, testCaseId });
+    };
+
+    const confirmDelete = async () => {
+        try {
+            await deleteTestCase(deleteModal.testCaseId);
+            // Refresh test cases
+            const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
+            setTestCases(updatedTestCases);
+        } catch (error) {
+            console.error('Error deleting test case:', error);
+        } finally {
+            setDeleteModal({ isOpen: false, testCaseId: null });
         }
     };
 
@@ -459,6 +483,14 @@ function Dashboard() {
                                     >
                                         Stop
                                     </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="flat"
+                                        color="danger"
+                                        onPress={(e) => handleDelete(testCase.id, e)}
+                                    >
+                                        Delete
+                                    </Button>
                                 </div>
                             </TableCell>
                         </TableRow>
@@ -466,6 +498,35 @@ function Dashboard() {
                 </TableBody>
 
             </Table>
+
+            {/* Delete Modal */}
+            <Modal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, testCaseId: null })}
+            >
+                <ModalContent>
+                    <ModalHeader>Delete Test Case</ModalHeader>
+                    <ModalBody>
+                        Are you sure you want to delete this test case?
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="danger"
+                            variant="flat"
+                            onPress={confirmDelete}
+                        >
+                            Delete
+                        </Button>
+                        <Button
+                            color="default"
+                            variant="flat"
+                            onPress={() => setDeleteModal({ isOpen: false, testCaseId: null })}
+                        >
+                            Cancel
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
 
         </div >
     );
