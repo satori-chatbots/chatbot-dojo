@@ -10,6 +10,7 @@ import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from '@heroui/react';
 import { useMemo } from 'react';
+import { stopTestExecution } from '../api/testCasesApi';
 
 
 function Dashboard() {
@@ -184,6 +185,19 @@ function Dashboard() {
         }
     }
 
+    const handleStop = async (testCaseId, e) => {
+        try {
+            console.log('Stopping test case:', testCaseId);
+            await stopTestExecution(testCaseId);
+            // Refresh test cases
+            const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
+            setTestCases(updatedTestCases);
+        } catch (error) {
+            console.error('Error stopping test case:', error);
+        }
+    };
+
+
     /* ---------------------------------- */
     /* Conditional Rendering for Projects */
     /* ---------------------------------- */
@@ -201,11 +215,12 @@ function Dashboard() {
         { name: 'Name', key: 'name', sortable: true },
         { name: 'Status', key: 'status', sortable: true },
         { name: 'Executed At', key: 'executed_at', sortable: true },
-        { name: 'Profiles Used', key: 'user_profiles' },
+        { name: 'Profiles Used', key: 'user_profiles', sortable: false },
         { name: 'Execution Time', key: 'execution_time', sortable: true },
         { name: 'Testing Errors', key: 'num_errors', sortable: true },
         { name: 'Total Cost', key: 'total_cost', sortable: true },
         { name: 'Project', key: 'project', sortable: true },
+        { name: 'Actions', key: 'actions', sortable: false },
     ];
 
     const [sortDescriptor, setSortDescriptor] = useState({
@@ -423,6 +438,29 @@ function Dashboard() {
                                 {formatCost(testCase.total_cost, testCase.status)}
                             </TableCell>
                             <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
+                            <TableCell>
+                                <div className="flex gap-2">
+                                    <Button
+                                        as={Link}
+                                        href={`/test-case/${testCase.id}`}
+                                        size="sm"
+                                        variant="flat"
+                                        color="primary"
+                                        onPress={(e) => e.stopPropagation()}
+                                    >
+                                        View
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="flat"
+                                        color="danger"
+                                        isDisabled={testCase.status !== "RUNNING"}
+                                        onPress={(e) => handleStop(testCase.id, e)}
+                                    >
+                                        Stop
+                                    </Button>
+                                </div>
+                            </TableCell>
                         </TableRow>
                     )}
                 </TableBody>
