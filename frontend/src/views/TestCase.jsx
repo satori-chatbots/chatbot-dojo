@@ -10,6 +10,7 @@ import { fetchProfileReportByGlobalReportId } from '../api/profileReportApi';
 import { fetchTestErrorByProfileReport } from '../api/testErrorsApi';
 import { fetchConversationsByProfileReport } from '../api/conversationsApi';
 import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
 
 function TestCase() {
     const { id } = useParams();
@@ -33,6 +34,14 @@ function TestCase() {
     // Polling interval for fetching the test case if it is still running
     const POLLING_INTERVAL = 2500;
 
+    const [startTime, setStartTime] = useState(null);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    const calculateElapsedTime = (startDate) => {
+        const now = new Date();
+        return Math.floor((now - startDate) / 1000);
+    };
+
     // Initial fetch of the test case and global report
     useEffect(() => {
         const fetchData = async () => {
@@ -42,6 +51,12 @@ function TestCase() {
 
                 const status = fetchedTestCase[0].status;
                 setStatus(status);
+
+                if (fetchedTestCase[0].executed_at) {
+                    const executedAt = new Date(fetchedTestCase[0].executed_at);
+                    setStartTime(executedAt);
+                    setElapsedTime(calculateElapsedTime(executedAt));
+                }
 
                 if (status === "RUNNING") {
                     return; // Exit early if still running
@@ -97,6 +112,22 @@ function TestCase() {
         };
     }, [id, status]);
 
+    useEffect(() => {
+        let timerInterval;
+
+        if (status === "RUNNING" && startTime) {
+            timerInterval = setInterval(() => {
+                setElapsedTime(calculateElapsedTime(startTime));
+            }, 1000);
+        }
+
+        return () => {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        };
+    }, [status, startTime]);
+
     // Function to format the execution time
     const formatExecutionTime = (time) => {
         // If < 60s return XX.XXs
@@ -137,6 +168,16 @@ function TestCase() {
                         <Spinner size="lg" className="mb-4" />
                         <h2 className="text-2xl font-bold">Test Case is Running</h2>
                         <p className="text-gray-600 mt-2">Please wait while the test case completes...</p>
+                        {startTime && (
+                            <div className="mt-4 space-y-2">
+                                <p className="text-lg">
+                                    Started at: {format(startTime, 'PPpp')}
+                                </p>
+                                <p className="text-xl font-bold">
+                                    Running time: {formatExecutionTime(elapsedTime)}
+                                </p>
+                            </div>
+                        )}
                     </CardBody>
                 </Card>
             </div>

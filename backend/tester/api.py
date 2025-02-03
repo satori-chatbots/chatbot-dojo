@@ -693,7 +693,8 @@ def process_profile_report_from_conversation(conversation_file_path):
 def process_conversation(conversation_file_path):
     """Process individual conversation file"""
 
-    name = os.path.basename(conversation_file_path)
+    # File name without extension
+    name = os.path.splitext(os.path.basename(conversation_file_path))[0]
     with open(conversation_file_path, "r") as file:
         docs = list(yaml.safe_load_all(file))
         main_doc = docs[0]
