@@ -27,6 +27,9 @@ function Dashboard() {
         RUNNING: 'warning',
     };
 
+    // Interval for refreshing the projects
+    const POLLING_INTERVAL = 2500;
+
 
     // Selected Projects State
     const [selectedProjects, setSelectedProjects] = useState([]);
@@ -42,6 +45,74 @@ function Dashboard() {
 
     // Error count for each Global Report
     const [errorCounts, setErrorCounts] = useState({});
+
+    // Polling for running test cases
+    useEffect(() => {
+        let pollingInterval;
+
+        const pollRunningTestCases = async () => {
+            // Only poll if there are running test cases
+            const runningTestCases = testCases.filter(tc => tc.status === "RUNNING");
+            if (runningTestCases.length > 0) {
+                try {
+                    // Fetch updated data for running test cases
+                    const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
+                    setTestCases(prevTestCases => {
+                        return prevTestCases.map(tc => {
+                            const updated = updatedTestCases.find(utc => utc.id === tc.id);
+                            return updated || tc;
+                        });
+                    });
+
+                    // Update reports and errors if status changed
+                    const completedTestCases = updatedTestCases.filter(tc =>
+                        tc.status === "COMPLETED" || tc.status === "ERROR" || tc.status === "STOPPED"
+                    );
+
+                    // Fetch reports and errors for completed test cases
+                    if (completedTestCases.length > 0) {
+                        const testCaseIds = completedTestCases.map(tc => tc.id);
+                        const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
+
+                        if (fetchedReports.length > 0) {
+                            const globalReportIds = fetchedReports.map(report => report.id);
+                            const fetchedErrors = await fetchTestErrorsByGlobalReports(globalReportIds);
+
+                            setGlobalReports(prev => [...prev, ...fetchedReports]);
+                            setErrors(prev => [...prev, ...fetchedErrors]);
+
+                            // Update error counts
+                            const newErrorCounts = {};
+                            fetchedErrors.forEach(error => {
+                                if (error.global_report in newErrorCounts) {
+                                    newErrorCounts[error.global_report] += error.count;
+                                } else {
+                                    newErrorCounts[error.global_report] = error.count;
+                                }
+                            });
+                            setErrorCounts(prev => ({ ...prev, ...newErrorCounts }));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error polling test cases:', error);
+                }
+            }
+        };
+
+        // Start polling if there are selected projects
+        if (selectedProjects.length > 0) {
+            pollingInterval = setInterval(pollRunningTestCases, POLLING_INTERVAL);
+        }
+
+        // Cleanup
+        return () => {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        };
+
+        // Depends on selectedProjects and testCases
+    }, [selectedProjects, testCases]);
 
 
     /* ----------------------------- */
@@ -349,7 +420,7 @@ function Dashboard() {
                                 )}
                             </TableCell>
                             <TableCell>
-                            {formatCost(testCase.total_cost, testCase.status)}
+                                {formatCost(testCase.total_cost, testCase.status)}
                             </TableCell>
                             <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
                         </TableRow>
