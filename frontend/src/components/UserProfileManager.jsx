@@ -78,6 +78,24 @@ function UserProfileManager() {
     // Errors for the serverside validation of the project
     const [projectValidationErrors, setProjectValidationErrors] = useState({});
 
+    // Success modal
+    const [successModal, setSuccessModal] = useState({ isOpen: false, message: '' });
+
+    // Delete project modal
+    const [deleteProjectModal, setDeleteProjectModal] = useState({
+        isOpen: false,
+        isLoading: false,
+        projectId: null
+    });
+
+
+    // Delete confirm modal
+    const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+        isOpen: false,
+        isLoading: false
+    });
+
+
     // Initialize with the available technologies
     useEffect(() => {
         const loadData = async () => {
@@ -140,25 +158,27 @@ function UserProfileManager() {
     };
 
     // Delete selected files
+    // Replace handleDelete implementation
     const handleDelete = () => {
         if (selectedFiles.length === 0) {
             alert('No files selected for deletion.');
             return;
         }
+        setDeleteConfirmModal({ isOpen: true, isLoading: false });
+    };
 
-        if (!window.confirm('Are you sure you want to delete the selected files?')) {
-            return;
+    const confirmDelete = async () => {
+        setDeleteConfirmModal(prev => ({ ...prev, isLoading: true }));
+        try {
+            await deleteFiles(selectedFiles);
+            setSelectedFiles([]);
+            reloadFiles();
+        } catch (error) {
+            console.error('Error deleting files:', error);
+            alert('Error deleting files.');
+        } finally {
+            setDeleteConfirmModal({ isOpen: false, isLoading: false });
         }
-
-        deleteFiles(selectedFiles)
-            .then(() => {
-                setSelectedFiles([]);
-                reloadFiles();
-            })
-            .catch((error) => {
-                console.error('Error deleting files:', error);
-                alert('Error deleting files.');
-            });
     };
 
     // Open the modal for the execution name
@@ -212,14 +232,14 @@ function UserProfileManager() {
 
     // Execute test on selected files and project
     const handleExecuteTest = () => {
-
         const finalName = executionName.trim();
-
-        console.log('Name:', finalName);
 
         executeTest(selectedFiles, selectedProject.id, finalName)
             .then((data) => {
-                alert(data.message);
+                setSuccessModal({
+                    isOpen: true,
+                    message: data.message
+                });
                 setIsExecuteOpen(false);
                 setExecutionName('');
             })
@@ -228,6 +248,7 @@ function UserProfileManager() {
                 alert(`Error executing test: ${error.message}`);
             });
     };
+
 
 
     /* ------------------------------------------------------ */
@@ -304,19 +325,27 @@ function UserProfileManager() {
         }
     };
 
-    const handleProjectDelete = async (projectId) => {
-        if (!window.confirm('Are you sure you want to delete this project?')) {
-            return;
-        }
+    const handleProjectDelete = (projectId) => {
+        setDeleteProjectModal({
+            isOpen: true,
+            isLoading: false,
+            projectId
+        });
+    };
+
+    const confirmProjectDelete = async () => {
+        setDeleteProjectModal(prev => ({ ...prev, isLoading: true }));
         try {
-            await deleteProject(projectId);
+            await deleteProject(deleteProjectModal.projectId);
             await reloadProjects();
             setSelectedProject(null);
         } catch (error) {
             console.error('Error deleting project:', error);
-            alert('Error deleting project.');
+        } finally {
+            setDeleteProjectModal({ isOpen: false, isLoading: false, projectId: null });
         }
-    }
+    };
+
 
     const handleFormReset = () => {
         setNewProjectName('');
@@ -526,6 +555,83 @@ function UserProfileManager() {
                             </ModalFooter>
                         </Form>
                     </ModalBody>
+                </ModalContent>
+            </Modal>
+
+            {/* Success Modal */}
+            <Modal
+                isOpen={successModal.isOpen}
+                onOpenChange={(isOpen) => setSuccessModal(prev => ({ ...prev, isOpen }))}
+            >
+                <ModalContent>
+                    <ModalHeader>Test Execution Started</ModalHeader>
+                    <ModalBody className="text-gray-600 dark:text-gray-400">
+                        {successModal.message}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="primary"
+                            onPress={() => setSuccessModal(prev => ({ ...prev, isOpen: false }))}
+                        >
+                            Ok
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Delete Confirm Modal */}
+            <Modal
+                isOpen={deleteConfirmModal.isOpen}
+                onOpenChange={(isOpen) => setDeleteConfirmModal(prev => ({ ...prev, isOpen }))}
+            >
+                <ModalContent>
+                    <ModalHeader>Confirm Deletion</ModalHeader>
+                    <ModalBody className="text-gray-600 dark:text-gray-400">
+                        Are you sure you want to delete the selected files?
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="default"
+                            onPress={() => setDeleteConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            color="danger"
+                            isLoading={deleteConfirmModal.isLoading}
+                            onPress={confirmDelete}
+                        >
+                            Delete
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Delete Project Modal */}
+            <Modal
+                isOpen={deleteProjectModal.isOpen}
+                onOpenChange={(isOpen) => setDeleteProjectModal(prev => ({ ...prev, isOpen }))}
+            >
+                <ModalContent>
+                    <ModalHeader>Delete Project</ModalHeader>
+                    <ModalBody className="text-gray-600 dark:text-gray-400">
+                        Are you sure you want to delete this project? This action cannot be undone.
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="default"
+                            onPress={() => setDeleteProjectModal(prev => ({ ...prev, isOpen: false }))}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            color="danger"
+                            isLoading={deleteProjectModal.isLoading}
+                            onPress={confirmProjectDelete}
+                        >
+                            Delete Project
+                        </Button>
+                    </ModalFooter>
                 </ModalContent>
             </Modal>
         </Card>
