@@ -19,6 +19,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbotTechnologyApi';
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import EditProjectModal from '../components/EditProjectModal';
+import useSelectedProject from '../hooks/useSelectedProject';
 
 
 const ProjectsDashboard = () => {
@@ -61,6 +62,9 @@ const ProjectsDashboard = () => {
 
     // State for the original name
     const [originalName, setOriginalName] = useState('');
+
+    const [selectedProject, setSelectedProject] = useSelectedProject();
+
 
     // Init the available technologies and projects
     useEffect(() => {
@@ -276,6 +280,11 @@ const ProjectsDashboard = () => {
         max-h-[90vh]">
             <h1 className="text-2xl sm:text-3xl font-bold text-center">Projects</h1>
 
+            {/* Selected project */}
+            <div className="flex items-center justify-center gap-2">
+                <span className="font-semibold">Selected Project:</span>
+                <span>{selectedProject?.name || 'None'}</span>
+            </div>
 
 
             {/* Modal to create new project */}
@@ -374,10 +383,19 @@ const ProjectsDashboard = () => {
                                 {technologies.find(t => t.id === project.chatbot_technology)?.name || 'Loading...'}
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
-                                <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEditClick(project)}>
+                                <Button
+                                    size="sm"
+                                    color="primary"
+                                    variant='ghost'
+                                    onPress={() => setSelectedProject(project)}
+                                    isDisabled={selectedProject?.id === project.id}
+                                >
+                                    {selectedProject?.id === project.id ? 'Selected' : 'Select'}
+                                </Button>
+                                <Button size="sm" color="secondary" variant='ghost' className="w-12" onPress={() => handleEditClick(project)}>
                                     Edit
                                 </Button>
-                                <Button size="sm" color="danger" variant='ghost' onPress={() => handleProjectDelete(project.id)}>
+                                <Button size="sm" color="danger" variant='ghost' className="w-12" onPress={() => handleProjectDelete(project.id)}>
                                     Delete
                                 </Button>
                             </TableCell>
