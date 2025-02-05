@@ -32,6 +32,7 @@ import { checkProjectName } from '../api/projectApi';
 import useSelectedProject from '../hooks/useSelectedProject';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectsList from '../components/ProjectList';
+import { updateProject } from '../api/projectApi';
 
 
 function Home() {
@@ -100,6 +101,7 @@ function Home() {
 
     const handleEditClick = (project) => {
         setEditProjectId(project.id);
+        setOriginalName(project.name);
         setEditFormData({
             name: project.name,
             technology: project.chatbot_technology,
@@ -107,18 +109,70 @@ function Home() {
         setIsEditOpen(true);
     };
 
+    const handleFormValidation = async (event, name, technology, oldName = "") => {
+        event.preventDefault();
+        setLoadingValidation(true);
+
+        if (!name.trim()) {
+            setLoadingValidation(false);
+            return false;
+        }
+
+        if (!technology) {
+            setLoadingValidation(false);
+            return false;
+        }
+
+        if (oldName && name === oldName) {
+            setLoadingValidation(false);
+            return true;
+        }
+
+        const existsResponse = await checkProjectName(name);
+        if (existsResponse.exists) {
+            setValidationErrors({ name: 'Project name already exists' });
+            setLoadingValidation(false);
+            return false;
+        }
+
+        setValidationErrors({});
+        setLoadingValidation(false);
+        return true;
+    };
+
+    const [originalName, setOriginalName] = useState('');
+
+
+
     const handleUpdateProject = async (event) => {
         event.preventDefault();
+
+        // Validation
+        const isValid = await handleFormValidation(event, editFormData.name, editFormData.technology, originalName);
+        if (!isValid) {
+            return;
+        }
+
         try {
             await updateProject(editProjectId, {
                 name: editFormData.name,
                 chatbot_technology: editFormData.technology,
             });
             setIsEditOpen(false);
-            reloadProjects();
+            await reloadProjects();
         } catch (error) {
             console.error('Error updating project:', error);
+            const errorData = JSON.parse(error.message);
+            const errors = Object.entries(errorData).map(([key, value]) => `${key}: ${value}`);
+            alert(`Error updating project: ${errors.join('\n')}`);
         }
+    };
+
+    const handleEditFormReset = () => {
+        setEditFormData({
+            name: '',
+            technology: '',
+        });
     };
 
 
@@ -694,29 +748,51 @@ function Home() {
                 <ModalContent>
                     <ModalHeader>Edit Project</ModalHeader>
                     <ModalBody>
-                        <Form onSubmit={handleUpdateProject}>
+                        <Form
+                            className="w-full flex flex-col gap-4"
+                            onSubmit={handleUpdateProject}
+                            onReset={handleEditFormReset}
+                            validationBehavior="native"
+                            validationErrors={validationErrors}
+                        >
                             <Input
-                                label="Project Name"
+                                placeholder="Enter project name"
+                                name="name"
+                                fullWidth
+                                isRequired
+                                labelPlacement="outside"
                                 value={editFormData.name}
+                                variant="bordered"
+                                label="Project Name"
                                 onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                                maxLength={255}
+                                minLength={3}
                             />
                             <Select
+                                isRequired
                                 label="Technology"
-                                value={editFormData.technology}
+                                labelPlacement="outside"
+                                placeholder="Select Technology"
+                                name="technology"
+                                selectedKeys={[String(editFormData.technology)]}
                                 onChange={(e) => setEditFormData(prev => ({ ...prev, technology: e.target.value }))}
                             >
                                 {availableTechnologies.map((tech) => (
-                                    <SelectItem key={tech.id} value={tech.id}>
+                                    <SelectItem key={String(tech.id)} value={String(tech.id)}>
                                         {tech.name}
                                     </SelectItem>
                                 ))}
                             </Select>
-                            <ModalFooter>
+                            <ModalFooter className="w-full flex justify-center gap-4">
                                 <Button color="danger" variant="light" onPress={() => setIsEditOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button color="primary" type="submit">
-                                    Save Changes
+                                <Button
+                                    color="primary"
+                                    type="submit"
+                                    isDisabled={!editFormData.name.trim() || !editFormData.technology}
+                                >
+                                    Update
                                 </Button>
                             </ModalFooter>
                         </Form>
