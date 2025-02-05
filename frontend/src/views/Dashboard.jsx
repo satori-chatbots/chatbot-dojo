@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { stopTestExecution } from '../api/testCasesApi';
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
 import { deleteTestCase } from '../api/testCasesApi';
+import useSelectedProject from '../hooks/useSelectedProject';
 
 
 
@@ -40,6 +41,7 @@ function Dashboard() {
 
 
     // Selected Projects State
+    const [selectedProject, setSelectedProject] = useSelectedProject();
     const [selectedProjects, setSelectedProjects] = useState([]);
 
     /* IMPORTANT: */
@@ -122,24 +124,38 @@ function Dashboard() {
         // Depends on selectedProjects and testCases
     }, [selectedProjects, testCases]);
 
+    useEffect(() => {
+        if (selectedProject && projects.length > 0) {
+            setSelectedProjects([String(selectedProject.id)]);
+            handleFilterProjects();
+        }
+    }, [selectedProject, projects]);
+
 
     /* ----------------------------- */
     /* Handlers for Project Selector */
     /* ----------------------------- */
 
 
-    const handleProjectChange = (selectedIds) => {
+    const handleProjectChange = async (selectedIds) => {
         if (selectedIds.has('all')) {
-            // console.log(projects)
             if (selectedProjects.length === projects.length) {
                 setSelectedProjects([]);
             } else {
-                setSelectedProjects(projects.map(project => String(project.id)));
+                const allProjectIds = projects.map(project => String(project.id));
+                setSelectedProjects(allProjectIds);
+                await handleFilterProjects();
             }
         } else {
-            setSelectedProjects([...selectedIds].map(id => String(id)));
+            const projectIds = [...selectedIds].map(id => String(id));
+            setSelectedProjects(projectIds);
+            if (projectIds.length === 1) {
+                const project = projects.find(p => p.id === Number(projectIds[0]));
+                setSelectedProject(project);
+            }
+            await handleFilterProjects();
         }
-    }
+    };
 
     const handleFilterProjects = async (e) => {
         if (e) {
