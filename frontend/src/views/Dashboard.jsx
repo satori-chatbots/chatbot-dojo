@@ -44,6 +44,10 @@ function Dashboard() {
     const [selectedProject, setSelectedProject] = useSelectedProject();
     const [selectedProjects, setSelectedProjects] = useState([]);
 
+    // State for initial auto-fetching of test cases
+    const [initialAutoFetchDone, setInitialAutoFetchDone] = useState(false);
+
+
     /* IMPORTANT: */
     /* A Test Case contains a Global Report which itself can contain multiple errors */
 
@@ -133,8 +137,9 @@ function Dashboard() {
 
     // Filter projects when selectedProjects change
     useEffect(() => {
-        if (selectedProjects.length > 0) {
+        if (selectedProjects.length > 0 && !initialAutoFetchDone) {
             handleFilterProjects();
+            setInitialAutoFetchDone(true);
         }
     }, [selectedProjects]);
 
@@ -144,14 +149,13 @@ function Dashboard() {
     /* ----------------------------- */
 
 
-    const handleProjectChange = async (selectedIds) => {
+    const handleProjectChange = (selectedIds) => {
         if (selectedIds.has('all')) {
             if (selectedProjects.length === projects.length) {
                 setSelectedProjects([]);
             } else {
                 const allProjectIds = projects.map(project => String(project.id));
                 setSelectedProjects(allProjectIds);
-                await handleFilterProjects();
             }
         } else {
             const projectIds = [...selectedIds].map(id => String(id));
@@ -160,9 +164,9 @@ function Dashboard() {
                 const project = projects.find(p => p.id === Number(projectIds[0]));
                 setSelectedProject(project);
             }
-            await handleFilterProjects();
         }
     };
+
 
     const handleFilterProjects = async (e) => {
         if (e) {
