@@ -31,6 +31,7 @@ import { checkTestCaseName } from '../api/testCasesApi';
 import { checkProjectName } from '../api/projectApi';
 import useSelectedProject from '../hooks/useSelectedProject';
 import CreateProjectModal from '../components/CreateProjectModal';
+import ProjectsList from '../components/ProjectList';
 
 
 function Home() {
@@ -89,6 +90,37 @@ function Home() {
         isLoading: false,
         projectId: null
     });
+
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editFormData, setEditFormData] = useState({
+        name: '',
+        technology: '',
+    });
+    const [editProjectId, setEditProjectId] = useState(null);
+
+    const handleEditClick = (project) => {
+        setEditProjectId(project.id);
+        setEditFormData({
+            name: project.name,
+            technology: project.chatbot_technology,
+        });
+        setIsEditOpen(true);
+    };
+
+    const handleUpdateProject = async (event) => {
+        event.preventDefault();
+        try {
+            await updateProject(editProjectId, {
+                name: editFormData.name,
+                chatbot_technology: editFormData.technology,
+            });
+            setIsEditOpen(false);
+            reloadProjects();
+        } catch (error) {
+            console.error('Error updating project:', error);
+        }
+    };
+
 
 
     // Delete confirm modal
@@ -369,287 +401,355 @@ function Home() {
         p-6
         w-full
         ">
-            <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full">
-                {/* Header */}
-                <h1 className="text-3xl font-bold text-center">User Profiles</h1>
+            {selectedProject ? (
 
-                {/* Project Dropdown */}
-                <div className="flex flex-col space-y-4">
-                    <Dropdown className="full-width" aria-label="Select Project" >
-                        <DropdownTrigger>
-                            <Button color="secondary" variant="bordered">
-                                {selectedProject ? selectedProject.name : 'Select Project'}
-                            </Button>
-                        </DropdownTrigger>
-                        <DropdownMenu
-                            className="max-h-[50vh] overflow-y-auto max-w-md"
-                        >
-                            <DropdownItem onPress={() => onOpen()} className='text-primary' color='primary'>
-                                Create New Project
-                            </DropdownItem>
-                            {projects && projects.map(project => (
-                                <DropdownItem
-                                    key={project.id}
-                                    onPress={() => handleProjectChange(project.id)}
+                <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full">
+                    {/* Header */}
+                    <h1 className="text-3xl font-bold text-center">User Profiles</h1>
 
-                                    endContent={
-                                        <Button color="danger"
-                                            variant="light"
-                                            className="h-6 w-6 p-1 py-0.5 rounded-md text-tiny"
-                                            onPress={() => handleProjectDelete(project.id)}>
-                                            <HiOutlineTrash
-                                                className="w-4"
-                                                color='red'
-                                            />
 
-                                        </Button>
-                                    }
-                                >
-                                    {project.name}
-                                </DropdownItem>
-                            ))}
-                        </DropdownMenu>
-                    </Dropdown>
-                </div>
-
-                {/* Create Project Modal */}
-                <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-                    <ModalContent>
-                        {() => (
-                            <>
-                                <ModalHeader className="flex flex-col gap-1 items-center">
+                    {/* Project Dropdown */}
+                    <div className="flex flex-col space-y-4">
+                        <Dropdown className="full-width" aria-label="Select Project" >
+                            <DropdownTrigger>
+                                <Button color="secondary" variant="bordered">
+                                    {selectedProject ? selectedProject.name : 'Select Project'}
+                                </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu
+                                className="max-h-[50vh] overflow-y-auto max-w-md"
+                            >
+                                <DropdownItem onPress={() => onOpen()} className='text-primary' color='primary'>
                                     Create New Project
-                                </ModalHeader>
-                                <ModalBody className="flex flex-col gap-4 items-center">
-                                    <Form
-                                        className="w-full flex flex-col gap-4"
-                                        onSubmit={handleCreateProject}
-                                        onReset={handleFormReset}
-                                        validationBehavior="native"
-                                        validationErrors={projectValidationErrors}
-                                    >
-                                        <Input
-                                            placeholder="Enter project name"
-                                            name="name"
-                                            fullWidth
-                                            isRequired
-                                            labelPlacement="outside"
-                                            value={newProjectName}
-                                            variant="bordered"
-                                            label="Project Name"
-                                            onChange={handleProjectNameChange}
-                                            maxLength={255}
-                                            minLength={3}
-                                            isDisabled={loadingValidation}
-                                        />
-                                        <Select
-                                            placeholder="Select chatbot technology"
-                                            fullWidth
-                                            label="Technology"
-                                            labelPlacement="outside"
-                                            onChange={handleTechnologyChange}
-                                            isRequired
-                                            value={technology}
-                                            isDisabled={loadingValidation}
-                                        >
-                                            {availableTechnologies.map(technology => (
-                                                <SelectItem key={technology.id} value={technology.id}>
-                                                    {technology.name}
-                                                </SelectItem>
-                                            ))}
-                                        </Select>
-                                        <ModalFooter className="w-full flex justify-center gap-4">
-                                            <Button type="reset" color="danger" variant="light">
-                                                Reset
-                                            </Button>
-                                            <Button
-                                                type="submit"
-                                                color="primary"
-                                            >
-                                                Create
-                                            </Button>
-                                        </ModalFooter>
-                                    </Form>
-                                </ModalBody>
-                            </>
-                        )}
-                    </ModalContent>
-                </Modal>
+                                </DropdownItem>
+                                {projects && projects.map(project => (
+                                    <DropdownItem
+                                        key={project.id}
+                                        onPress={() => handleProjectChange(project.id)}
 
-                {/* Project Details */}
-                {selectedProject ? (
-                    <div>
-                        {/* Upload Section */}
-                        <div className="flex flex-col space-y-4">
-                            <Input
-                                type="file"
-                                multiple
-                                accept=".yaml,.yml"
-                                onChange={handleFileChange}
-                                ref={fileInputRef}
-                                fullWidth
-                            />
-                            <Button onPress={handleUpload} color="secondary" fullWidth>
-                                Upload
-                            </Button>
-                        </div>
-
-                        {/* List Section */}
-                        <div className="flex-1 overflow-y-auto mt-4">
-                            {files.length > 0 ? (
-                                <ul className="space-y-2">
-                                    {files.map(file => (
-                                        <li key={file.id} className="flex flex-col space-y-1">
-                                            <div className="flex items-start space-x-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFiles.includes(file.id)}
-                                                    onChange={() => selectFile(file.id)}
-                                                    className="form-checkbox h-4 w-4 mt-1"
+                                        endContent={
+                                            <Button color="danger"
+                                                variant="light"
+                                                className="h-6 w-6 p-1 py-0.5 rounded-md text-tiny"
+                                                onPress={() => handleProjectDelete(project.id)}>
+                                                <HiOutlineTrash
+                                                    className="w-4"
+                                                    color='red'
                                                 />
-                                                <a
-                                                    href={`${file.file}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
-                                                >
-                                                    {file.name}
-                                                </a>
-                                            </div>
-                                            <p className="text-gray-600 text-sm ml-6">
-                                                {file.file.split('/').pop()}
-                                            </p>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-gray-500 text-center">No profiles uploaded yet.</p>
-                            )}
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div className="mt-4 flex space-x-4">
-                            <Button color="danger" className="flex-1" onPress={handleDelete}>
-                                Delete Selected
-                            </Button>
-                            <Button color="primary" className="flex-1" onPress={openExecuteModal}>
-                                Execute Test
-                            </Button>
-                        </div>
+                                            </Button>
+                                        }
+                                    >
+                                        {project.name}
+                                    </DropdownItem>
+                                ))}
+                            </DropdownMenu>
+                        </Dropdown>
                     </div>
-                ) : (
-                    <p className="text-gray-500 text-center">Select a project to start working!</p>
-                )}
 
-                {/* Modal execution name */}
-                <Modal isOpen={isExecuteOpen} onOpenChange={setIsExecuteOpen}>
-                    <ModalContent>
-                        <ModalHeader>Execute Test</ModalHeader>
-                        <ModalBody className="flex flex-col gap-4 items-center">
-                            <Form
-                                className='w-full'
-                                onSubmit={handleSubmitPressed}
-                                onReset={() => setIsExecuteOpen(false)}
-                                validationErrors={validationErrors}
-                            >
+
+
+                    {/* Project Details */}
+                    {selectedProject ? (
+                        <div>
+                            {/* Upload Section */}
+                            <div className="flex flex-col space-y-4">
                                 <Input
-                                    name="name"
-                                    label="Execution Name (optional)"
-                                    value={executionName}
-                                    onValueChange={setExecutionName}
-                                    isDisabled={loadingValidation}
+                                    type="file"
+                                    multiple
+                                    accept=".yaml,.yml"
+                                    onChange={handleFileChange}
+                                    ref={fileInputRef}
+                                    fullWidth
                                 />
-                                <ModalFooter className="w-full flex justify-center gap-4">
-                                    <Button type="reset" color="danger" variant="light">
-                                        Cancel
-                                    </Button>
-                                    {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
-                                    <Button type="submit" color="primary">
-                                        Execute
-                                    </Button>
-                                </ModalFooter>
-                            </Form>
-                        </ModalBody>
-                    </ModalContent>
-                </Modal>
+                                <Button onPress={handleUpload} color="secondary" fullWidth>
+                                    Upload
+                                </Button>
+                            </div>
 
-                {/* Success Modal */}
-                <Modal
-                    isOpen={successModal.isOpen}
-                    onOpenChange={(isOpen) => setSuccessModal(prev => ({ ...prev, isOpen }))}
-                >
-                    <ModalContent>
-                        <ModalHeader>Test Execution Started</ModalHeader>
-                        <ModalBody className="text-gray-600 dark:text-gray-400">
-                            {successModal.message}
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button
-                                color="primary"
-                                onPress={() => setSuccessModal(prev => ({ ...prev, isOpen: false }))}
-                            >
-                                Ok
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+                            {/* List Section */}
+                            <div className="flex-1 overflow-y-auto mt-4">
+                                {files.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {files.map(file => (
+                                            <li key={file.id} className="flex flex-col space-y-1">
+                                                <div className="flex items-start space-x-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedFiles.includes(file.id)}
+                                                        onChange={() => selectFile(file.id)}
+                                                        className="form-checkbox h-4 w-4 mt-1"
+                                                    />
+                                                    <a
+                                                        href={`${file.file}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                                    >
+                                                        {file.name}
+                                                    </a>
+                                                </div>
+                                                <p className="text-gray-600 text-sm ml-6">
+                                                    {file.file.split('/').pop()}
+                                                </p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-gray-500 text-center">No profiles uploaded yet.</p>
+                                )}
+                            </div>
 
-                {/* Delete Confirm Modal */}
-                <Modal
-                    isOpen={deleteConfirmModal.isOpen}
-                    onOpenChange={(isOpen) => setDeleteConfirmModal(prev => ({ ...prev, isOpen }))}
-                >
-                    <ModalContent>
-                        <ModalHeader>Confirm Deletion</ModalHeader>
-                        <ModalBody className="text-gray-600 dark:text-gray-400">
-                            Are you sure you want to delete the selected files?
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button
-                                color="default"
-                                onPress={() => setDeleteConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                color="danger"
-                                isLoading={deleteConfirmModal.isLoading}
-                                onPress={confirmDelete}
-                            >
-                                Delete
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+                            {/* Action Buttons */}
+                            <div className="mt-4 flex space-x-4">
+                                <Button color="danger" className="flex-1" onPress={handleDelete}>
+                                    Delete Selected
+                                </Button>
+                                <Button color="primary" className="flex-1" onPress={openExecuteModal}>
+                                    Execute Test
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 text-center">Select a project to start working!</p>
+                    )}
 
-                {/* Delete Project Modal */}
-                <Modal
-                    isOpen={deleteProjectModal.isOpen}
-                    onOpenChange={(isOpen) => setDeleteProjectModal(prev => ({ ...prev, isOpen }))}
-                >
-                    <ModalContent>
-                        <ModalHeader>Delete Project</ModalHeader>
-                        <ModalBody className="text-gray-600 dark:text-gray-400">
-                            Are you sure you want to delete this project? This action cannot be undone.
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button
-                                color="default"
-                                onPress={() => setDeleteProjectModal(prev => ({ ...prev, isOpen: false }))}
+
+                </Card>
+
+            ) : (
+                <div className="flex flex-col space-y-4">
+                    <h2 className="text-xl font-bold text-center">Select a Project</h2>
+                    <ProjectsList
+                        projects={projects}
+                        technologies={availableTechnologies}
+                        loading={loadingProjects}
+                        selectedProject={selectedProject}
+                        onSelectProject={setSelectedProject}
+                        onEditProject={handleEditClick}
+                        onDeleteProject={handleProjectDelete}
+                    />
+                    <Button
+                        color="primary"
+                        className="max-w-[200px] mx-auto"
+                        onPress={() => onOpen()}
+                    >
+                        Create New Project
+                    </Button>
+                </div>
+            )}
+
+            {/* ------------------------------------------------------ */}
+            {/* ------------------ Modals ---------------------------- */}
+            {/* ------------------------------------------------------ */}
+
+            {/* Create Project Modal */}
+            <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+                <ModalContent>
+                    {() => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1 items-center">
+                                Create New Project
+                            </ModalHeader>
+                            <ModalBody className="flex flex-col gap-4 items-center">
+                                <Form
+                                    className="w-full flex flex-col gap-4"
+                                    onSubmit={handleCreateProject}
+                                    onReset={handleFormReset}
+                                    validationBehavior="native"
+                                    validationErrors={projectValidationErrors}
+                                >
+                                    <Input
+                                        placeholder="Enter project name"
+                                        name="name"
+                                        fullWidth
+                                        isRequired
+                                        labelPlacement="outside"
+                                        value={newProjectName}
+                                        variant="bordered"
+                                        label="Project Name"
+                                        onChange={handleProjectNameChange}
+                                        maxLength={255}
+                                        minLength={3}
+                                        isDisabled={loadingValidation}
+                                    />
+                                    <Select
+                                        placeholder="Select chatbot technology"
+                                        fullWidth
+                                        label="Technology"
+                                        labelPlacement="outside"
+                                        onChange={handleTechnologyChange}
+                                        isRequired
+                                        value={technology}
+                                        isDisabled={loadingValidation}
+                                    >
+                                        {availableTechnologies.map(technology => (
+                                            <SelectItem key={technology.id} value={technology.id}>
+                                                {technology.name}
+                                            </SelectItem>
+                                        ))}
+                                    </Select>
+                                    <ModalFooter className="w-full flex justify-center gap-4">
+                                        <Button type="reset" color="danger" variant="light">
+                                            Reset
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            color="primary"
+                                        >
+                                            Create
+                                        </Button>
+                                    </ModalFooter>
+                                </Form>
+                            </ModalBody>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
+            {/* Modal execution name */}
+            <Modal isOpen={isExecuteOpen} onOpenChange={setIsExecuteOpen}>
+                <ModalContent>
+                    <ModalHeader>Execute Test</ModalHeader>
+                    <ModalBody className="flex flex-col gap-4 items-center">
+                        <Form
+                            className='w-full'
+                            onSubmit={handleSubmitPressed}
+                            onReset={() => setIsExecuteOpen(false)}
+                            validationErrors={validationErrors}
+                        >
+                            <Input
+                                name="name"
+                                label="Execution Name (optional)"
+                                value={executionName}
+                                onValueChange={setExecutionName}
+                                isDisabled={loadingValidation}
+                            />
+                            <ModalFooter className="w-full flex justify-center gap-4">
+                                <Button type="reset" color="danger" variant="light">
+                                    Cancel
+                                </Button>
+                                {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
+                                <Button type="submit" color="primary">
+                                    Execute
+                                </Button>
+                            </ModalFooter>
+                        </Form>
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
+
+            {/* Success Modal */}
+            <Modal
+                isOpen={successModal.isOpen}
+                onOpenChange={(isOpen) => setSuccessModal(prev => ({ ...prev, isOpen }))}
+            >
+                <ModalContent>
+                    <ModalHeader>Test Execution Started</ModalHeader>
+                    <ModalBody className="text-gray-600 dark:text-gray-400">
+                        {successModal.message}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="primary"
+                            onPress={() => setSuccessModal(prev => ({ ...prev, isOpen: false }))}
+                        >
+                            Ok
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Delete Confirm Modal */}
+            <Modal
+                isOpen={deleteConfirmModal.isOpen}
+                onOpenChange={(isOpen) => setDeleteConfirmModal(prev => ({ ...prev, isOpen }))}
+            >
+                <ModalContent>
+                    <ModalHeader>Confirm Deletion</ModalHeader>
+                    <ModalBody className="text-gray-600 dark:text-gray-400">
+                        Are you sure you want to delete the selected files?
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="default"
+                            onPress={() => setDeleteConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            color="danger"
+                            isLoading={deleteConfirmModal.isLoading}
+                            onPress={confirmDelete}
+                        >
+                            Delete
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Delete Project Modal */}
+            <Modal
+                isOpen={deleteProjectModal.isOpen}
+                onOpenChange={(isOpen) => setDeleteProjectModal(prev => ({ ...prev, isOpen }))}
+            >
+                <ModalContent>
+                    <ModalHeader>Delete Project</ModalHeader>
+                    <ModalBody className="text-gray-600 dark:text-gray-400">
+                        Are you sure you want to delete this project? This action cannot be undone.
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="default"
+                            onPress={() => setDeleteProjectModal(prev => ({ ...prev, isOpen: false }))}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            color="danger"
+                            isLoading={deleteProjectModal.isLoading}
+                            onPress={confirmProjectDelete}
+                        >
+                            Delete Project
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Edit Project Modal */}
+            <Modal isOpen={isEditOpen} onOpenChange={setIsEditOpen}>
+                <ModalContent>
+                    <ModalHeader>Edit Project</ModalHeader>
+                    <ModalBody>
+                        <Form onSubmit={handleUpdateProject}>
+                            <Input
+                                label="Project Name"
+                                value={editFormData.name}
+                                onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                            <Select
+                                label="Technology"
+                                value={editFormData.technology}
+                                onChange={(e) => setEditFormData(prev => ({ ...prev, technology: e.target.value }))}
                             >
-                                Cancel
-                            </Button>
-                            <Button
-                                color="danger"
-                                isLoading={deleteProjectModal.isLoading}
-                                onPress={confirmProjectDelete}
-                            >
-                                Delete Project
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
-            </Card>
+                                {availableTechnologies.map((tech) => (
+                                    <SelectItem key={tech.id} value={tech.id}>
+                                        {tech.name}
+                                    </SelectItem>
+                                ))}
+                            </Select>
+                            <ModalFooter>
+                                <Button color="danger" variant="light" onPress={() => setIsEditOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button color="primary" type="submit">
+                                    Save Changes
+                                </Button>
+                            </ModalFooter>
+                        </Form>
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
         </div>
     );
 };
