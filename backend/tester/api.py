@@ -553,9 +553,13 @@ class ExecuteSelectedAPIView(APIView):
             # Create TestCase instance first to get its ID
             if test_name:
                 print(f"Test name: {test_name}")
-                test_case = TestCase.objects.create(project=project, name=test_name)
+                test_case = TestCase.objects.create(
+                    project=project, name=test_name, technology=technology
+                )
             else:
-                test_case = TestCase.objects.create(project=project)
+                test_case = TestCase.objects.create(
+                    project=project, technology=technology
+                )
 
             # Set it to RUNNING
             test_case.status = "RUNNING"

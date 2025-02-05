@@ -141,10 +141,11 @@ class TestCase(models.Model):
     )
     # Process ID of the test case, used to kill the process if needed
     process_id = models.IntegerField(blank=True, null=True)
+    # Technology used
+    technology = models.CharField(max_length=255, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Save the test case, if given name is null, set it to TestCase <id>
-        creating = self.pk is None
         super().save(*args, **kwargs)
 
         if not self.name or not self.name.strip():

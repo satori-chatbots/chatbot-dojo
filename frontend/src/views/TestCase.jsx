@@ -11,6 +11,7 @@ import { fetchTestErrorByProfileReport } from '../api/testErrorsApi';
 import { fetchConversationsByProfileReport } from '../api/conversationsApi';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { fetchProject } from '../api/projectApi';
 
 function TestCase() {
     const { id } = useParams();
@@ -30,6 +31,9 @@ function TestCase() {
 
     // Status of the test case
     const [status, setStatus] = useState("");
+
+    // status for the project name
+    const [projectName, setProjectName] = useState("");
 
     // Polling interval for fetching the test case if it is still running
     const POLLING_INTERVAL = 2500;
@@ -87,6 +91,12 @@ function TestCase() {
                     }
 
                     setProfileReports(fetchedProfileReports);
+
+
+                    // Fetch the project to get its name
+                    const fetchedProject = await fetchProject(fetchedTestCase[0].project);
+                    setProjectName(fetchedProject.name);
+
                 }
             } catch (error) {
                 console.error(error);
@@ -296,10 +306,44 @@ function TestCase() {
                         {/* Cost */}
                         <Card shadow="sm">
                             <CardHeader>
-                                <h2 className="text-2xl font-bold">Cost</h2>
+                                <h2 className="text-2xl font-bold">Total Cost and Time</h2>
                             </CardHeader>
                             <CardBody>
-                                <p className="text-2xl font-bold">${globalReport.total_cost}</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm font-medium">Total Cost:</p>
+                                        <p className="text-2xl font-bold">${globalReport.total_cost}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Total Time:</p>
+                                        <p className="text-2xl font-bold">{testCase[0].execution_time.toFixed(2)}s</p>
+                                    </div>
+                                </div>
+
+                            </CardBody>
+                        </Card>
+
+                        {/* Technology and others */}
+                        <Card shadow="sm">
+                            <CardHeader>
+                                <h2 className="text-2xl font-bold">Technology and Others</h2>
+                            </CardHeader>
+                            <CardBody>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-sm font-medium">Technology:</p>
+                                        <p className="text-2xl font-bold">{testCase[0].technology}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Project:</p>
+                                        <p className="text-2xl font-bold">{projectName}</p>
+
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Number of Profiles</p>
+                                        <p className="text-2xl font-bold">{profileReports.length}</p>
+                                    </div>
+                                </div>
                             </CardBody>
                         </Card>
                     </div>
