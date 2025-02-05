@@ -346,6 +346,22 @@ function TestCase() {
                                 </div>
                             </CardBody>
                         </Card>
+
+                        {/* Output of the terminal */}
+                        <Card shadow="sm">
+                            <CardHeader>
+                                <h2 className="text-2xl font-bold">Terminal Output</h2>
+                            </CardHeader>
+                            <CardBody>
+                                <Accordion>
+                                    <AccordionItem title="Show Output">
+                                        <pre className="whitespace-pre-wrap text-left p-4">
+                                            {testCase[0].result}
+                                        </pre>
+                                    </AccordionItem>
+                                </Accordion>
+                            </CardBody>
+                        </Card>
                     </div>
                 </Tab>
                 <Tab key="profiles" title="Profiles">
