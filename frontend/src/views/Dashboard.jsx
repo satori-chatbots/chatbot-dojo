@@ -124,12 +124,19 @@ function Dashboard() {
         // Depends on selectedProjects and testCases
     }, [selectedProjects, testCases]);
 
+    // Initialize selected projects
     useEffect(() => {
         if (selectedProject && projects.length > 0) {
             setSelectedProjects([String(selectedProject.id)]);
-            handleFilterProjects();
         }
     }, [selectedProject, projects]);
+
+    // Filter projects when selectedProjects change
+    useEffect(() => {
+        if (selectedProjects.length > 0) {
+            handleFilterProjects();
+        }
+    }, [selectedProjects]);
 
 
     /* ----------------------------- */
