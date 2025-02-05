@@ -30,6 +30,8 @@ import { deleteFiles } from '../api/fileApi';
 import CreateProjectModal from './CreateProjectModal';
 import { checkTestCaseName } from '../api/testCasesApi';
 import { checkProjectName } from '../api/projectApi';
+import useSelectedProject from '../hooks/useSelectedProject';
+
 
 function UserProfileManager() {
 
@@ -40,7 +42,7 @@ function UserProfileManager() {
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
 
     // Control the selected project
-    const [selectedProject, setSelectedProject] = useState(null);
+    const [selectedProject, setSelectedProject] = useSelectedProject();
 
     // Control the project creation modal
     const [newProjectName, setNewProjectName] = useState('');
@@ -111,6 +113,20 @@ function UserProfileManager() {
 
         loadData();
     }, []);
+
+    // Load
+    useEffect(() => {
+        if (selectedProject && projects.length > 0) {
+            // Verify project still exists
+            const project = projects.find(p => p.id === selectedProject.id);
+            if (project) {
+                setSelectedProject(project);
+                reloadFiles();
+            } else {
+                setSelectedProject(null);
+            }
+        }
+    }, [projects]);
 
 
     /* ------------------------------------------------------ */
@@ -258,14 +274,8 @@ function UserProfileManager() {
     const handleProjectChange = (projectId) => {
         const project = projects.find(project => project.id === projectId);
         setSelectedProject(project);
-
-        // Clear the selected files
         setSelectedFiles([]);
-
-        // Reload the files
         reloadFiles();
-
-
     };
 
     // For the project creation (name)
