@@ -405,47 +405,20 @@ function Home() {
 
                 <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full">
                     {/* Header */}
-                    <h1 className="text-3xl font-bold text-center">User Profiles</h1>
+                    <h1 className="text-3xl font-bold text-center">{selectedProject.name}</h1>
 
 
                     {/* Project Dropdown */}
                     <div className="flex flex-col space-y-4">
-                        <Dropdown className="full-width" aria-label="Select Project" >
-                            <DropdownTrigger>
-                                <Button color="secondary" variant="bordered">
-                                    {selectedProject ? selectedProject.name : 'Select Project'}
-                                </Button>
-                            </DropdownTrigger>
-                            <DropdownMenu
-                                className="max-h-[50vh] overflow-y-auto max-w-md"
-                            >
-                                <DropdownItem onPress={() => onOpen()} className='text-primary' color='primary'>
-                                    Create New Project
-                                </DropdownItem>
-                                {projects && projects.map(project => (
-                                    <DropdownItem
-                                        key={project.id}
-                                        onPress={() => handleProjectChange(project.id)}
-
-                                        endContent={
-                                            <Button color="danger"
-                                                variant="light"
-                                                className="h-6 w-6 p-1 py-0.5 rounded-md text-tiny"
-                                                onPress={() => handleProjectDelete(project.id)}>
-                                                <HiOutlineTrash
-                                                    className="w-4"
-                                                    color='red'
-                                                />
-
-                                            </Button>
-                                        }
-                                    >
-                                        {project.name}
-                                    </DropdownItem>
-                                ))}
-                            </DropdownMenu>
-                        </Dropdown>
+                        <Button
+                            color="secondary"
+                            variant="bordered"
+                            onPress={() => setSelectedProject(null)}
+                        >
+                            Change Project
+                        </Button>
                     </div>
+
 
 
 
