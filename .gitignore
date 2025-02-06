@@ -1,3 +1,6 @@
+# vscode
+.vscode/
+
 # vite
 node_modules/
 .vite/
