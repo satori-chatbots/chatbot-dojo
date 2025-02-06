@@ -8,6 +8,7 @@ import {
 } from "@heroui/react";
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeFilledIcon, EyeSlashFilledIcon } from './LoginView';
+import { submitSignUp } from '../api/authenticationApi';
 
 function SignupView() {
     const navigate = useNavigate();
@@ -34,6 +35,20 @@ function SignupView() {
             return;
         }
         setLoading(true);
+        try {
+            await submitSignUp({
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                email: formData.email,
+                password: formData.password
+            });
+            setLoading(false);
+            navigate('/');
+        }
+        catch (error) {
+            setError(error.message);
+            setLoading(false);
+        }
     };
 
     const handleChange = (e) => {

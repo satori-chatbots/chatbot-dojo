@@ -1,0 +1,26 @@
+import API_BASE_URL, { ENDPOINTS } from './config';
+
+
+export const submitSignUp = async (data) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}${ENDPOINTS.REGISTER}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            // Format error messages from Django response
+            const errorMessage = Object.entries(errorData)
+                .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+                .join('\n');
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error during signup:', error);
+        throw error;
+    }
+};
