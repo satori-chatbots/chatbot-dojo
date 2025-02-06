@@ -18,12 +18,23 @@ User = get_user_model()
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "password"]
+        fields = ["id", "email", "password", "first_name", "last_name"]
+
+        # Make password write only, this makes sure that the password is not returned in the response
         extra_kwargs = {"password": {"write_only": True}}
 
-        def create(self, validated_data):
-            user = User.objects.create_user(**validated_data)
-            return user
+    def create(self, validated_data):
+        # Extract password from validated data
+        password = validated_data.pop("password")
+
+        # Create user instance without password
+        user = User.objects.create(**validated_data)
+
+        # Set password
+        user.set_password(password)
+        user.save()
+
+        return user
 
 
 class ConversationSerializer(serializers.ModelSerializer):

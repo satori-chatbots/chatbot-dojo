@@ -3,7 +3,7 @@ import signal
 import subprocess
 import time
 import configparser
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -29,6 +29,7 @@ from .serializers import (
     ProjectSerializer,
     TestErrorSerializer,
     ProfileReportSerializer,
+    RegisterSerializer,
 )
 from django.http import JsonResponse
 from .models import TECHNOLOGY_CHOICES
@@ -40,6 +41,34 @@ from django.db import transaction
 import threading
 import logging
 import psutil
+from django.contrib.auth import get_user_model
+
+# Get the latest version of the user model
+User = get_user_model()
+
+# ------------- #
+# - USERS API - #
+# ------------- #
+
+
+class RegisterViewSet(viewsets.ModelViewSet):
+    # Any user can register
+    permission_classes = [permissions.AllowAny]
+
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+
+        # Validate the data
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Create the user
+            serializer.save()
+            return Response(serializer.data)
+
 
 # --------------------- #
 # - CONVERSATIONS API - #

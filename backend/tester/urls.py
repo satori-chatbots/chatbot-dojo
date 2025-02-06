@@ -14,6 +14,7 @@ router.register(r"globalreports", api.GlobalReportViewSet)
 router.register(r"testerrors", api.TestErrorViewSet)
 router.register(r"profilereports", api.ProfileReportViewSet)
 router.register(r"conversations", api.ConversationViewSet)
+router.register(r"register", api.RegisterViewSet)
 
 urlpatterns = [
     # Custom Routes First
@@ -27,8 +28,7 @@ urlpatterns = [
         api.get_technology_choices,
         name="chatbot-technologies-choices",
     ),
-    path
-    (
+    path(
         "test-cases-stop/",
         api.stop_test_execution,
         name="stop-test-execution",
