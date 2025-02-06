@@ -7,10 +7,11 @@ import ProjectsDashboard from './views/ProjectsDashboard';
 import TestCase from './views/TestCase';
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Switch } from "@heroui/react";
+import { Button, Switch } from "@heroui/react";
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem } from "@heroui/react";
 import { Card, CardFooter } from "@nextui-org/react";
 import { HeroUIProvider } from "@heroui/react";
+import { useLocation } from 'react-router-dom';
 
 export const MoonIcon = (props) => {
     return (
@@ -55,6 +56,8 @@ function App() {
     const { theme, setTheme } = useTheme()
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -76,33 +79,52 @@ function App() {
 
     return (
         <HeroUIProvider navigate={navigate} useHref={useHref}>
-
             <div className="flex flex-col min-h-screen">
-                {/* Header */}
-                <Navbar
-                    onMenuOpenChange={setIsMenuOpen}
-                    maxWidth='lg'
-                    isMenuOpen={isMenuOpen}
-                >
+                <Navbar onMenuOpenChange={setIsMenuOpen} maxWidth='lg' isMenuOpen={isMenuOpen}>
                     <NavbarMenuToggle
                         aria-label={isMenuOpen ? "Close menu" : "Open menu"}
                         className="sm:hidden"
                     />
 
-                    <NavbarBrand>
-                        <Link to="/" className="text-primary">SENSEI</Link>
-                    </NavbarBrand>
-
-                    <NavbarContent className="hidden sm:flex gap-4" justify='center'>
-                        <Link to="/" className="hover:underline">Home</Link>
-                        <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-                        <Link to="/chatbot-technologies" className="hover:underline">
-                            Chatbot Technologies
-                        </Link>
-                        <Link to="/projects" className="hover:underline">Projects</Link>
+                    {/* Left section */}
+                    <NavbarContent className="hidden sm:flex" justify="start">
+                        <NavbarItem isActive={location.pathname === '/'}>
+                            <Link to="/" className="hover:underline">Home</Link>
+                        </NavbarItem>
+                        <NavbarItem isActive={location.pathname === '/dashboard'}>
+                            <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                        </NavbarItem>
+                        <NavbarItem isActive={location.pathname === '/chatbot-technologies'}>
+                            <Link to="/chatbot-technologies" className="hover:underline">
+                                Chatbot Technologies
+                            </Link>
+                        </NavbarItem>
+                        <NavbarItem isActive={location.pathname === '/projects'}>
+                            <Link to="/projects" className="hover:underline">Projects</Link>
+                        </NavbarItem>
                     </NavbarContent>
 
-                    <NavbarContent justify='end'>
+                    {/* Center section */}
+                    <NavbarContent className="hidden sm:flex gap-4" justify="center">
+
+                    </NavbarContent>
+
+                    {/* Right section */}
+                    <NavbarContent justify="end" className="gap-2">
+                        {!isLoggedIn ? (
+                            <>
+                                <NavbarItem isActive={location.pathname === '/login'}>
+                                    <Button size='sm' color="primary" variant="ghost" onPress={() => navigate('/login')}>Login</Button>
+                                </NavbarItem>
+                                <NavbarItem isActive={location.pathname === '/register'}>
+                                    <Button size='sm' color="default" variant="ghost" onPress={() => navigate('/register')}>Register</Button>
+                                </NavbarItem>
+                            </>
+                        ) : (
+                            <NavbarItem isActive={location.pathname === '/profile'}>
+                                <Link to="/profile" className="hover:underline">Profile</Link>
+                            </NavbarItem>
+                        )}
                         <Switch
                             defaultSelected={theme === 'dark'}
                             color="success"
@@ -112,24 +134,37 @@ function App() {
                             value={mounted}
                             onChange={toggleTheme}
                         />
-
                     </NavbarContent>
 
                     <NavbarMenu >
-                        <NavbarMenuItem>
+                        <NavbarMenuItem isActive={location.pathname === '/'}>
                             <Link to="/" className="hover:underline" onClick={handleLinkClick}>Home</Link>
                         </NavbarMenuItem>
-                        <NavbarMenuItem>
+                        <NavbarMenuItem isActive={location.pathname === '/dashboard'}>
                             <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>Dashboard</Link>
                         </NavbarMenuItem>
-                        <NavbarMenuItem>
+                        <NavbarMenuItem isActive={location.pathname === '/chatbot-technologies'}>
                             <Link to="/chatbot-technologies" className="hover:underline" onClick={handleLinkClick}>
                                 Chatbot Technologies
                             </Link>
                         </NavbarMenuItem>
-                        <NavbarMenuItem>
+                        <NavbarMenuItem isActive={location.pathname === '/projects'}>
                             <Link to="/projects" className="hover:underline" onClick={handleLinkClick}>Projects</Link>
                         </NavbarMenuItem>
+                        {!isLoggedIn ? (
+                            <>
+                                <NavbarMenuItem isActive={location.pathname === '/login'}>
+                                    <Link to="/login" className="hover:underline" onClick={handleLinkClick}>Login</Link>
+                                </NavbarMenuItem>
+                                <NavbarMenuItem isActive={location.pathname === '/register'}>
+                                    <Link to="/register" className="hover:underline" onClick={handleLinkClick}>Register</Link>
+                                </NavbarMenuItem>
+                            </>
+                        ) : (
+                            <NavbarMenuItem isActive={location.pathname === '/profile'}>
+                                <Link to="/profile" className="hover:underline" onClick={handleLinkClick}>Profile</Link>
+                            </NavbarMenuItem>
+                        )}
                     </NavbarMenu>
                 </Navbar>
 
