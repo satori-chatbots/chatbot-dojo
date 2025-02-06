@@ -5,6 +5,7 @@ import Dashboard from './views/Dashboard';
 import ChatbotTechnologies from './views/ChatbotTechnologies';
 import ProjectsDashboard from './views/ProjectsDashboard';
 import TestCase from './views/TestCase';
+import LoginView from './views/LoginView';
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button, Switch } from "@heroui/react";
@@ -12,6 +13,7 @@ import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, Navba
 import { Card, CardFooter } from "@nextui-org/react";
 import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from 'react-router-dom';
+import SignupView from './views/SignupView';
 
 export const MoonIcon = (props) => {
     return (
@@ -114,10 +116,14 @@ function App() {
                         {!isLoggedIn ? (
                             <>
                                 <NavbarItem isActive={location.pathname === '/login'}>
-                                    <Button size='sm' color="primary" variant="ghost" onPress={() => navigate('/login')}>Login</Button>
+                                    <Button size='sm' color="primary"
+                                        variant={location.pathname === '/login' ? 'solid' : 'ghost'}
+                                        onPress={() => navigate('/login')}>Login</Button>
                                 </NavbarItem>
-                                <NavbarItem isActive={location.pathname === '/register'}>
-                                    <Button size='sm' color="default" variant="ghost" onPress={() => navigate('/register')}>Register</Button>
+                                <NavbarItem isActive={location.pathname === '/signup'}>
+                                    <Button size='sm' color="default"
+                                        variant={location.pathname === '/signup' ? 'solid' : 'ghost'}
+                                        onPress={() => navigate('/signup')}>Sign Up</Button>
                                 </NavbarItem>
                             </>
                         ) : (
@@ -156,8 +162,8 @@ function App() {
                                 <NavbarMenuItem isActive={location.pathname === '/login'}>
                                     <Link to="/login" className="hover:underline" onClick={handleLinkClick}>Login</Link>
                                 </NavbarMenuItem>
-                                <NavbarMenuItem isActive={location.pathname === '/register'}>
-                                    <Link to="/register" className="hover:underline" onClick={handleLinkClick}>Register</Link>
+                                <NavbarMenuItem isActive={location.pathname === '/signup'}>
+                                    <Link to="/signup" className="hover:underline" onClick={handleLinkClick}>Sign Up</Link>
                                 </NavbarMenuItem>
                             </>
                         ) : (
@@ -176,6 +182,8 @@ function App() {
                         <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
                         <Route path="/projects" element={<ProjectsDashboard />} />
                         <Route path="/test-case/:id" element={<TestCase />} />
+                        <Route path="/login" element={<LoginView />} />
+                        <Route path="/signup" element={<SignupView />} />
                     </Routes>
                 </main>
 

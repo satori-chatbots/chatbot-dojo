@@ -1,0 +1,168 @@
+import React, { useState } from 'react';
+import {
+    Button,
+    Input,
+    Card,
+    Form,
+    Spinner
+} from "@heroui/react";
+import { Link, useNavigate } from 'react-router-dom';
+import { EyeFilledIcon, EyeSlashFilledIcon } from './LoginView';
+
+function SignupView() {
+    const navigate = useNavigate();
+
+    const [isVisible, setIsVisible] = useState(false);
+    const [isConfirmVisible, setIsConfirmVisible] = useState(false);
+    const toggleVisibility = () => setIsVisible(!isVisible);
+    const toggleConfirmVisibility = () => setIsConfirmVisible(!isConfirmVisible);
+
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (formData.password !== formData.confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+        setLoading(true);
+    };
+
+    const handleChange = (e) => {
+        setFormData(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
+
+    return (
+        <div className="flex flex-col items-center justify-center p-6 w-full">
+            <Card className="p-6 sm:p-8 w-full max-w-md space-y-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-center">
+                    Create Account
+                </h1>
+
+                <Form className="flex flex-col space-y-8" onSubmit={handleSubmit}>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <Input
+                            label="First Name"
+                            name="firstName"
+                            placeholder="Enter your first name"
+                            value={formData.firstName}
+                            onChange={handleChange}
+                            isRequired
+                            fullWidth
+                            autoFocus
+                            labelPlacement="outside"
+                        />
+                        <Input
+                            label="Last Name"
+                            name="lastName"
+                            placeholder="Enter your last name"
+                            value={formData.lastName}
+                            onChange={handleChange}
+                            isRequired
+                            fullWidth
+                            labelPlacement="outside"
+                        />
+                    </div>
+
+                    <Input
+                        label="Email"
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        isRequired
+                        fullWidth
+                        labelPlacement="outside"
+                    />
+
+                    <Input
+                        label="Password"
+                        name="password"
+                        endContent={
+                            <button
+                                className="focus:outline-none"
+                                type="button"
+                                onClick={toggleVisibility}
+                            >
+                                {isVisible ? (
+                                    <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+                                ) : (
+                                    <EyeFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+                                )}
+                            </button>
+                        }
+                        type={isVisible ? "text" : "password"}
+                        placeholder="Create a password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        isRequired
+                        fullWidth
+                        labelPlacement="outside"
+                    />
+
+                    <Input
+                        label="Confirm Password"
+                        name="confirmPassword"
+                        endContent={
+                            <button
+                                className="focus:outline-none"
+                                type="button"
+                                onClick={toggleConfirmVisibility}
+                            >
+                                {isConfirmVisible ? (
+                                    <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+                                ) : (
+                                    <EyeFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+                                )}
+                            </button>
+                        }
+                        type={isConfirmVisible ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        isRequired
+                        fullWidth
+                        labelPlacement="outside"
+                    />
+
+                    {error && (
+                        <p className="text-danger text-sm text-center">
+                            {error}
+                        </p>
+                    )}
+
+                    <Button
+                        type="submit"
+                        color="primary"
+                        fullWidth
+                        size="lg"
+                        isLoading={loading}
+                    >
+                        {loading ? <Spinner size="sm" /> : 'Sign Up'}
+                    </Button>
+                </Form>
+
+                <div className="text-center text-sm text-gray-500">
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-primary-500">
+                        Log in
+                    </Link>
+                </div>
+            </Card>
+        </div>
+    );
+}
+
+export default SignupView;
