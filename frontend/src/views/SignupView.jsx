@@ -50,7 +50,7 @@ function SignupView() {
                     Create Account
                 </h1>
 
-                <Form className="flex flex-col space-y-8" onSubmit={handleSubmit}>
+                <Form className="flex flex-col space-y-8" onSubmit={handleSubmit} validationBehavior='native'>
                     <div className="flex flex-col sm:flex-row gap-4">
                         <Input
                             label="First Name"

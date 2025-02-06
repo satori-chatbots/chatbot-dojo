@@ -112,6 +112,7 @@ function LoginView() {
                 <Form
                     className="flex flex-col space-y-10"
                     onSubmit={handleSubmit}
+                    validationBehavior='native'
                 >
                     <Input
                         label="Email"
