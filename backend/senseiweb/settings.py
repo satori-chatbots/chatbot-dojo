@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "tester",
     "rest_framework",
     "corsheaders",
+    "knox",
 ]
 
 MIDDLEWARE = [
@@ -79,6 +80,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "senseiweb.wsgi.application"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ("knox.auth.TokenAuthentication",),
+}
 
 
 # Database

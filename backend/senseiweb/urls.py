@@ -23,6 +23,7 @@ from senseiweb import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('tester.urls')),
+    path('auth/', include('knox.urls')),
 ]
 
 if settings.DEBUG:
