@@ -1,9 +1,42 @@
 from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_delete, post_save
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.base_user import BaseUserManager
 from django.dispatch import receiver
 import os
 import yaml
+
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("Email is a required field")
+
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        return self.create_user(email, password, **extra_fields)
+
+
+class CustomUser(AbstractUser):
+    # Default model doesnt make it unique
+    email = models.EmailField(max_length=255, unique=True)
+    # Username doesnt really matter for now since we are using email as the main identifier
+    username = models.CharField(max_length=255, blank=True, null=True)
+    # API Key
+    api_key = models.CharField(max_length=255, blank=True, null=True)
+
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
 
 
 def upload_to(instance, filename):
