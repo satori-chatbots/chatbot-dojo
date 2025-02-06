@@ -24,6 +24,7 @@ from .serializers import (
     ChatbotTechnologySerializer,
     ConversationSerializer,
     GlobalReportSerializer,
+    LoginSerializer,
     TestCaseSerializer,
     TestFileSerializer,
     ProjectSerializer,
@@ -42,6 +43,8 @@ import threading
 import logging
 import psutil
 from django.contrib.auth import get_user_model
+from knox.models import AuthToken
+from django.contrib.auth import authenticate
 
 # Get the latest version of the user model
 User = get_user_model()
@@ -49,6 +52,41 @@ User = get_user_model()
 # ------------- #
 # - USERS API - #
 # ------------- #
+
+
+class LoginViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = LoginSerializer
+
+    # Login the user
+    def create(self, request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            password = serializer.validated_data["password"]
+            # Check if the user exists and the password is correct
+            user = authenticate(email=email, password=password)
+
+            # If the user exists, create a token
+            if user:
+                # This creates a token in the database
+                _, token = AuthToken.objects.create(user)
+                return Response(
+                    {
+                        "user": self.serializer_class(user).data,
+                        "token": token,
+                    }
+                )
+            else:
+                # If the user does not exist, return an error
+                return Response(
+                    {"error": "Invalid credentials"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RegisterViewSet(viewsets.ModelViewSet):

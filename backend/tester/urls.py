@@ -6,15 +6,16 @@ from . import api
 
 # urlpatterns = router.urls
 router = routers.DefaultRouter()
-router.register(r"testcases", api.TestCaseViewSet)
-router.register(r"testfiles", api.TestFileViewSet)
-router.register(r"projects", api.ProjectViewSet)
-router.register(r"chatbottechnologies", api.ChatbotTechnologyViewSet)
-router.register(r"globalreports", api.GlobalReportViewSet)
-router.register(r"testerrors", api.TestErrorViewSet)
-router.register(r"profilereports", api.ProfileReportViewSet)
-router.register(r"conversations", api.ConversationViewSet)
-router.register(r"register", api.RegisterViewSet)
+router.register(r"testcases", api.TestCaseViewSet, basename="testcase")
+router.register(r"testfiles", api.TestFileViewSet, basename="testfile")
+router.register(r"projects", api.ProjectViewSet, basename="project")
+router.register(r"chatbottechnologies", api.ChatbotTechnologyViewSet, basename="chatbottechnology")
+router.register(r"globalreports", api.GlobalReportViewSet, basename="globalreport")
+router.register(r"testerrors", api.TestErrorViewSet, basename="testerror")
+router.register(r"profilereports", api.ProfileReportViewSet, basename="profilereport")
+router.register(r"conversations", api.ConversationViewSet, basename="conversation")
+router.register(r"register", api.RegisterViewSet, basename="register")
+router.register(r"login", api.LoginViewSet, basename="login")
 
 urlpatterns = [
     # Custom Routes First

@@ -61,6 +61,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 AUTH_USER_MODEL = "tester.CustomUser"
 
+AUTHETICATION_BACKENDS = [
+    "tester.auth_backend.EmailAuthBackend",
+]
+
 ROOT_URLCONF = "senseiweb.urls"
 
 TEMPLATES = [
