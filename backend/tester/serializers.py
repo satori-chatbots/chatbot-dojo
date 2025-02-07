@@ -85,10 +85,18 @@ class ProjectSerializer(serializers.ModelSerializer):
     chatbot_technology = serializers.PrimaryKeyRelatedField(
         queryset=ChatbotTechnology.objects.all()
     )
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = "__all__"
+        read_only_fields = ["owner"]
+
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            return request.user == obj.owner
+        return False
 
 
 class TestCaseSerializer(serializers.ModelSerializer):

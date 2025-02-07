@@ -1,78 +1,40 @@
 import API_BASE_URL, { ENDPOINTS } from './config';
+import apiClient from './apiClient';
 
-export const fetchProjects = () => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.PROJECTS}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        });
-}
+export const fetchProjects = async () => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}`);
+    return response.json();
+};
 
-export const fetchProject = (id) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        });
-}
+export const fetchProject = async (id) => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`);
+    return response.json();
+};
 
-export const createProject = (project) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.PROJECTS}`, {
+export const createProject = async (project) => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(project),
-    })
-        .then(async response => {
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(JSON.stringify(errorData));
-            }
-            return response.json();
-        });
-}
+        body: JSON.stringify(project)
+    });
+    return response.json();
+};
 
-export const deleteProject = (id) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`, {
-        method: 'DELETE',
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.status;
-        });
-}
-
-export const updateProject = (id, project) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`, {
+export const updateProject = async (id, project) => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`, {
         method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(project),
-    })
-        .then(async response => {
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(JSON.stringify(errorData));
-            }
-            return response.json();
-        });
-}
+        body: JSON.stringify(project)
+    });
+    return response.json();
+};
 
-export const checkProjectName = (name) => {
-    return fetch(`${API_BASE_URL}${ENDPOINTS.CHECK_PROJECT_NAME}?project_name=${name}`)
-        .then(response => {
-            if (!response.ok) {
-                const errorData = response.json();
-                throw new Error(JSON.stringify(errorData));
-            }
-            return response.json();
-        });
-}
+export const deleteProject = async (id) => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}${id}/`, {
+        method: 'DELETE'
+    });
+    return response.status;
+};
+
+export const checkProjectName = async (name) => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.CHECK_PROJECT_NAME}?project_name=${name}`);
+    return response.json();
+};

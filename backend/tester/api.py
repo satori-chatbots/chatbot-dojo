@@ -45,6 +45,8 @@ import psutil
 from django.contrib.auth import get_user_model
 from knox.models import AuthToken
 from django.contrib.auth import authenticate
+from rest_framework.permissions import BasePermission
+from django.db import models
 
 # Get the latest version of the user model
 User = get_user_model()
@@ -347,12 +349,30 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 # ---------- #
 
 
+class ProjectAccessPermission(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        # Allow read if project is public
+        if request.method in ["GET", "HEAD", "OPTIONS"]:
+            return obj.is_public or obj.owner == request.user
+        # Allow write if owner
+        return obj.owner == request.user
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    permission_classes = [ProjectAccessPermission]
+    # queryset = Project.objects.all()
     # For now we dont need pagination since there are not many projects
     # And it makes the frontend not be able to access response.data.length
     pagination_class = None
+
+    def get_queryset(self):
+        return Project.objects.filter(
+            models.Q(public=True) | models.Q(owner=self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="technologies")
     def list_technologies(self, request):

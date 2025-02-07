@@ -114,6 +114,15 @@ class Project(models.Model):
         "ChatbotTechnology", related_name="projects", on_delete=models.CASCADE
     )
 
+    # Owner of the project
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="projects", on_delete=models.CASCADE
+    )
+
+    # Visibility of the project
+    # This makes the project visible, but not editable by other users
+    public = models.BooleanField(default=False)
+
     def __str__(self):
         return self.name
 
