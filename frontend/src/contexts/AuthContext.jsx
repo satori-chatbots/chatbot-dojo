@@ -13,7 +13,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [currentProject, setCurrentProject] = useState(null);
+    const [selectedProject, setSelectedProject] = useState(null);
 
     const checkTokenValidity = async () => {
         const token = localStorage.getItem('token');
@@ -36,9 +36,9 @@ export const AuthProvider = ({ children }) => {
     const clearAllData = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
-        localStorage.removeItem('currentProject');
+        localStorage.removeItem('selectedProject');
         setUser(null);
-        setCurrentProject(null);
+        setSelectedProject(null);
     };
 
     useEffect(() => {
@@ -47,9 +47,9 @@ export const AuthProvider = ({ children }) => {
             if (userData && await checkTokenValidity()) {
                 const parsedUserData = JSON.parse(userData);
                 setUser(parsedUserData.user);
-                const projectData = localStorage.getItem('currentProject');
+                const projectData = localStorage.getItem('selectedProject');
                 if (projectData) {
-                    setCurrentProject(JSON.parse(projectData));
+                    setSelectedProject(JSON.parse(projectData));
                 }
             }
         };
@@ -64,6 +64,8 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         clearAllData();
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
     };
 
     return (
@@ -71,8 +73,8 @@ export const AuthProvider = ({ children }) => {
             user,
             login,
             logout,
-            currentProject,
-            setCurrentProject,
+            selectedProject,
+            setSelectedProject,
             checkTokenValidity
         }}>
             {children}

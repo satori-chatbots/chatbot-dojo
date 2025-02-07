@@ -15,6 +15,7 @@ import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from 'react-router-dom';
 import SignupView from './views/SignupView';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
 
 export const MoonIcon = (props) => {
     return (
@@ -92,9 +93,11 @@ function AppContent() {
 
                     {/* Left section */}
                     <NavbarContent className="hidden sm:flex" justify="start">
-                        <NavbarItem isActive={location.pathname === '/'}>
-                            <Link to="/" className="hover:underline">Home</Link>
-                        </NavbarItem>
+                        {user && (
+                            <NavbarItem isActive={location.pathname === '/'}>
+                                <Link to="/" className="hover:underline">Home</Link>
+                            </NavbarItem>
+                        )}
                         <NavbarItem isActive={location.pathname === '/dashboard'}>
                             <Link to="/dashboard" className="hover:underline">Dashboard</Link>
                         </NavbarItem>
@@ -103,9 +106,11 @@ function AppContent() {
                                 Chatbot Technologies
                             </Link>
                         </NavbarItem>
-                        <NavbarItem isActive={location.pathname === '/projects'}>
-                            <Link to="/projects" className="hover:underline">Projects</Link>
-                        </NavbarItem>
+                        {user && (
+                            <NavbarItem isActive={location.pathname === '/projects'}>
+                                <Link to="/projects" className="hover:underline">My Projects</Link>
+                            </NavbarItem>
+                        )}
                     </NavbarContent>
 
                     {/* Center section */}
@@ -191,10 +196,18 @@ function AppContent() {
                 {/* Main Content */}
                 <main className="flex-1 w-full m-auto flex">
                     <Routes>
-                        <Route path="/" element={<Home />} />
+                        <Route path="/" element={
+                            <PrivateRoute>
+                                <Home />
+                            </PrivateRoute>
+                        } />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/chatbot-technologies" element={<ChatbotTechnologies />} />
-                        <Route path="/projects" element={<ProjectsDashboard />} />
+                        <Route path="/projects" element={
+                            <PrivateRoute>
+                                <ProjectsDashboard />
+                            </PrivateRoute>
+                        } />
                         <Route path="/test-case/:id" element={<TestCase />} />
                         <Route path="/login" element={<LoginView />} />
                         <Route path="/signup" element={<SignupView />} />
@@ -205,8 +218,8 @@ function AppContent() {
                 <footer className="w-full py-3 flex items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
                     <p className="text-primary">MISO</p>
                 </footer>
-            </div>
-        </HeroUIProvider>
+            </div >
+        </HeroUIProvider >
     );
 }
 

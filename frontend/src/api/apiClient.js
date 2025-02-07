@@ -21,7 +21,7 @@ const apiClient = async (url, options = {}) => {
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             localStorage.removeItem('currentProject');
-            window.location.href = '/login';
+            //window.location.href = '/login';
             throw new Error('Session expired. Please login again.');
         }
 
