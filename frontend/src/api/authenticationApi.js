@@ -53,3 +53,21 @@ export const submitLogin = async (data) => {
         throw error;
     }
 }
+
+export const validateToken = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) return false;
+
+        const response = await fetch(`${API_BASE_URL}/validate-token/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Token ${token}`
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        console.error('Token validation failed:', error);
+        return false;
+    }
+};
