@@ -260,15 +260,51 @@ function Dashboard() {
 
     // Columns for the Test Cases Table
     const columns = [
-        { name: 'Name', key: 'name', sortable: true },
-        { name: 'Status', key: 'status', sortable: true },
-        { name: 'Executed At', key: 'executed_at', sortable: true },
-        { name: 'Profiles Used', key: 'user_profiles', sortable: false },
-        { name: 'Execution Time', key: 'execution_time', sortable: true },
-        { name: 'Testing Errors', key: 'num_errors', sortable: true },
-        { name: 'Total Cost', key: 'total_cost', sortable: true },
-        { name: 'Project', key: 'project', sortable: true },
-        { name: 'Actions', key: 'actions', sortable: false },
+        {
+            name: 'Name',
+            key: 'name',
+            sortable: true,
+        },
+        {
+            name: 'Status',
+            key: 'status',
+            sortable: true,
+        },
+        {
+            name: 'Executed At',
+            key: 'executed_at',
+            sortable: true,
+        },
+        {
+            name: 'Profiles Used',
+            key: 'user_profiles',
+            sortable: false,
+        },
+        {
+            name: 'Execution Time',
+            key: 'execution_time',
+            sortable: true,
+        },
+        {
+            name: 'Testing Errors',
+            key: 'num_errors',
+            sortable: true,
+        },
+        {
+            name: 'Total Cost',
+            key: 'total_cost',
+            sortable: true,
+        },
+        {
+            name: 'Project',
+            key: 'project',
+            sortable: true,
+        },
+        {
+            name: 'Actions',
+            key: 'actions',
+            sortable: false,
+        }
     ];
 
     const [sortDescriptor, setSortDescriptor] = useState({
@@ -364,7 +400,7 @@ function Dashboard() {
                 validationBehavior="native"
             >
                 <Select
-                    label="Filter by Project(s):"
+                    label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
                     className="
                         w-full
                         h-10 sm:h-12
@@ -383,7 +419,7 @@ function Dashboard() {
                     {projects.length > 0 ? (
                         projects.map(project => (
                             <SelectItem key={project.id}>
-                                {project.name}
+                                {project.name} {project.public && "(Public)"}
                             </SelectItem>
                         ))
                     ) : (
@@ -414,15 +450,15 @@ function Dashboard() {
                 className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
                 selectionMode='single'
             >
-                <TableHeader columns={columns}>
-                    {(column) => (
+                <TableHeader>
+                    {columns.map((column) => (
                         <TableColumn
                             key={column.key}
                             allowsSorting={column.sortable}
                         >
                             {column.name}
                         </TableColumn>
-                    )}
+                    ))}
                 </TableHeader>
                 <TableBody
                     items={sortedTestCases}
@@ -490,6 +526,8 @@ function Dashboard() {
                                 {formatCost(testCase.total_cost, testCase.status)}
                             </TableCell>
                             <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
+
+
                             <TableCell>
                                 <div className="flex gap-2">
                                     <Button
@@ -498,63 +536,80 @@ function Dashboard() {
                                         size="sm"
                                         variant="flat"
                                         color="primary"
-                                        onPress={(e) => e.stopPropagation()}
                                     >
                                         View
                                     </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="flat"
-                                        color="danger"
-                                        isDisabled={testCase.status !== "RUNNING"}
-                                        onPress={(e) => handleStop(testCase.id, e)}
-                                    >
-                                        Stop
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="flat"
-                                        color="danger"
-                                        onPress={(e) => handleDelete(testCase.id, e)}
-                                    >
-                                        Delete
-                                    </Button>
+                                    {testCase.status === "RUNNING" && (
+                                        <Button
+                                            size="sm"
+                                            variant="flat"
+                                            color="danger"
+                                            onPress={(e) => handleStop(testCase.id, e)}
+                                        >
+                                            Stop
+                                        </Button>
+                                    )}
+                                    {!publicView && (
+                                        <Button
+                                            size="sm"
+                                            variant="flat"
+                                            color="danger"
+                                            onPress={(e) => handleDelete(testCase.id, e)}
+                                        >
+                                            Delete
+                                        </Button>
+                                    )}
                                 </div>
                             </TableCell>
+
                         </TableRow>
                     )}
                 </TableBody>
 
             </Table>
 
-            {/* Delete Modal */}
-            <Modal
-                isOpen={deleteModal.isOpen}
-                onClose={() => setDeleteModal({ isOpen: false, testCaseId: null })}
-            >
-                <ModalContent>
-                    <ModalHeader>Delete Test Case</ModalHeader>
-                    <ModalBody>
-                        Are you sure you want to delete this test case?
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button
-                            color="danger"
-                            variant="flat"
-                            onPress={confirmDelete}
-                        >
-                            Delete
-                        </Button>
-                        <Button
-                            color="default"
-                            variant="flat"
-                            onPress={() => setDeleteModal({ isOpen: false, testCaseId: null })}
-                        >
-                            Cancel
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
+            {/* Only show modal for authenticated users */}
+            {!publicView && (
+                <>
+                    {/* Delete Modal */}
+                    <Modal
+                        isOpen={deleteModal.isOpen}
+                        onOpenChange={(open) => {
+                            if (!open) setDeleteModal({ isOpen: false, testCaseId: null });
+                        }}
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader>Delete Test Case</ModalHeader>
+                                    <ModalBody>
+                                        Are you sure you want to delete this test case?
+                                    </ModalBody>
+                                    <ModalFooter>
+                                        <Button
+                                            color="default"
+                                            variant="flat"
+                                            onPress={onClose}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            color="danger"
+                                            variant="flat"
+                                            onPress={() => {
+                                                confirmDelete();
+                                                onClose();
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </ModalFooter>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+                </>
+            )}
 
         </div >
     );
