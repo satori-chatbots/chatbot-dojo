@@ -367,9 +367,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        return Project.objects.filter(
-            models.Q(public=True) | models.Q(owner=self.request.user)
-        )
+        if self.request.user.is_authenticated:
+            return Project.objects.filter(
+                models.Q(public=True) | models.Q(owner=self.request.user)
+            )
+        return Project.objects.filter(public=True)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

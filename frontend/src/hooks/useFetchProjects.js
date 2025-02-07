@@ -1,33 +1,34 @@
-import { useState, useEffect } from 'react'
-import { fetchProjects } from '../api/projectApi'
+import { useState, useEffect } from 'react';
+import { fetchProjects } from '../api/projectApi';
 
 function useFetchProjects() {
-    const [projects, setProjects] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const loadProjects = () => {
-        setLoading(true)
-        fetchProjects()
-            .then(data => {
-                setProjects(data)
-                setLoading(false)
-            })
-            .catch(err => {
-                setError(err)
-                setLoading(false)
-            })
-    }
+    const loadProjects = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchProjects();
+            setProjects(data);
+            setError(null);
+        } catch (err) {
+            setError(err.message);
+            setProjects([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        loadProjects()
-    }, [])
+        loadProjects();
+    }, []);
 
     const reloadProjects = () => {
         loadProjects();
     };
 
-    return { projects, loading, error, reloadProjects }
+    return { projects, loading, error, reloadProjects };
 }
 
-export default useFetchProjects
+export default useFetchProjects;
