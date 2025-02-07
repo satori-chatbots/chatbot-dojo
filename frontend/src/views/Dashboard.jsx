@@ -401,16 +401,12 @@ function Dashboard() {
             >
                 <Select
                     label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
-                    className="
-                        w-full
-                        h-10 sm:h-12
-                        "
+                    className="w-full h-10 sm:h-12"
                     size="sm"
                     isRequired
                     errorMessage="Please select at least one project."
                     selectionMode="multiple"
-                    selectedKeys={selectedProjects}
-
+                    selectedKeys={new Set(selectedProjects)}
                     onSelectionChange={handleProjectChange}
                 >
                     <SelectItem key="all" className="text-primary">
@@ -418,8 +414,15 @@ function Dashboard() {
                     </SelectItem>
                     {projects.length > 0 ? (
                         projects.map(project => (
-                            <SelectItem key={project.id}>
-                                {project.name} {project.public && "(Public)"}
+                            <SelectItem
+                                key={project.id}
+                                value={String(project.id)}
+                                textValue={project.name} // Add this to help with selection display
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span>{project.name}</span>
+                                    {project.public && <span className="text-default-400">(Public)</span>}
+                                </div>
                             </SelectItem>
                         ))
                     ) : (
