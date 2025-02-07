@@ -14,6 +14,7 @@ import { stopTestExecution } from '../api/testCasesApi';
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
 import { deleteTestCase } from '../api/testCasesApi';
 import useSelectedProject from '../hooks/useSelectedProject';
+import { useAuth } from '../contexts/AuthContext';
 
 
 
@@ -26,6 +27,9 @@ function Dashboard() {
 
     // Modal for deleting a test case
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, testCaseId: null });
+
+    const { user } = useAuth();
+    const [publicView, setPublicView] = useState(!user);
 
 
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
@@ -342,7 +346,11 @@ function Dashboard() {
             max-h-[90vh]
             p-4 sm:p-6 lg:p-8"
         >
-            <h1 className="text-2xl sm:text-3xl font-bold text-center">Dashboard</h1>
+            {publicView ? (
+                <h1 className="text-2xl sm:text-3xl font-bold text-center">Public Projects</h1>
+            ) : (
+                <h1 className="text-2xl sm:text-3xl font-bold text-center">My Projects</h1>
+            )}
 
             {/* Project Selector */}
             <Form

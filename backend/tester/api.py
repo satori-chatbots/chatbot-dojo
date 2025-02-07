@@ -353,7 +353,7 @@ class ProjectAccessPermission(BasePermission):
     def has_object_permission(self, request, view, obj):
         # Allow read if project is public
         if request.method in ["GET", "HEAD", "OPTIONS"]:
-            return obj.is_public or obj.owner == request.user
+            return obj.public or obj.owner == request.user
         # Allow write if owner
         return obj.owner == request.user
 

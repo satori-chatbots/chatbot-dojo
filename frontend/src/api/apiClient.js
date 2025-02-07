@@ -4,8 +4,12 @@ const apiClient = async (url, options = {}) => {
     const token = localStorage.getItem('token');
     const defaultHeaders = {
         'Content-Type': 'application/json',
-        'Authorization': `Token ${token}`
     };
+
+    // Only add Authorization header if token is available
+    if (token) {
+        defaultHeaders.Authorization = `Token ${token}`;
+    }
 
     try {
         const response = await fetch(url, {
@@ -17,12 +21,15 @@ const apiClient = async (url, options = {}) => {
         });
 
         if (response.status === 401) {
-            // Clear storage instead of using useAuth to avoid circular dependency
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             localStorage.removeItem('currentProject');
-            //window.location.href = '/login';
-            throw new Error('Session expired. Please login again.');
+
+            // Redirect to login page if session expired
+            if (token) {
+                window.location.href = '/login';
+                throw new Error('Session expired. Please login again.');
+            }
         }
 
         if (!response.ok) {
