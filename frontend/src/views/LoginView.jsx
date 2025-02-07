@@ -7,6 +7,7 @@ import {
     Spinner
 } from "@heroui/react";
 import { Link, useNavigate } from 'react-router-dom';
+import { submitLogin } from '../api/authenticationApi';
 
 export const EyeSlashFilledIcon = (props) => {
     return (
@@ -84,7 +85,19 @@ function LoginView() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        setLoading(true);
+        try {
+            await submitLogin({
+                email: formData.email,
+                password: formData.password
+            });
+            setLoading(false);
+            navigate('/');
+        }
+        catch (error) {
+            setError(error.message);
+            setLoading(false);
+        }
     };
 
     const handleChange = (e) => {

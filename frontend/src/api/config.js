@@ -19,6 +19,7 @@ export const ENDPOINTS = {
     CONVERSATIONS: '/conversations/',
     STOP_TEST_EXECUTION: '/test-cases-stop/',
     REGISTER: '/register/',
+    LOGIN: '/login/',
 };
 
 export default API_BASE_URL;

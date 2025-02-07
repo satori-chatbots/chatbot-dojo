@@ -24,3 +24,27 @@ export const submitSignUp = async (data) => {
         throw error;
     }
 };
+
+export const submitLogin = async (data) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}${ENDPOINTS.LOGIN}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            // Format error messages from Django response
+            const errorMessage = Object.entries(errorData)
+                .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+                .join('\n');
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error during login:', error);
+        throw error;
+    }
+}
