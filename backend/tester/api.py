@@ -90,22 +90,23 @@ class LoginViewSet(viewsets.ViewSet):
 
 
 class RegisterViewSet(viewsets.ModelViewSet):
-    # Any user can register
     permission_classes = [permissions.AllowAny]
-
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
-
-        # Validate the data
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            # Create the user
-            serializer.save()
-            return Response(serializer.data)
+
+        # Create user
+        user = serializer.save()
+        # Create token
+        _, token = AuthToken.objects.create(user)
+
+        return Response(
+            {"user": serializer.data, "token": token}, status=status.HTTP_201_CREATED
+        )
 
 
 # --------------------- #

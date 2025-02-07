@@ -14,6 +14,7 @@ import { Card, CardFooter } from "@nextui-org/react";
 import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from 'react-router-dom';
 import SignupView from './views/SignupView';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 export const MoonIcon = (props) => {
     return (
@@ -53,13 +54,14 @@ export const SunIcon = (props) => {
     );
 };
 
-function App() {
+function AppContent() {
     const [mounted, setMounted] = useState(false)
     const { theme, setTheme } = useTheme()
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const { user, logout } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -113,7 +115,7 @@ function App() {
 
                     {/* Right section */}
                     <NavbarContent justify="end" className="gap-2">
-                        {!isLoggedIn ? (
+                        {!user ? (
                             <>
                                 <NavbarItem isActive={location.pathname === '/login'}>
                                     <Button size='sm' color="primary"
@@ -127,9 +129,21 @@ function App() {
                                 </NavbarItem>
                             </>
                         ) : (
-                            <NavbarItem isActive={location.pathname === '/profile'}>
-                                <Link to="/profile" className="hover:underline">Profile</Link>
-                            </NavbarItem>
+                            <>
+                                <NavbarItem>
+                                    <span>Welcome, {user.first_name}</span>
+                                </NavbarItem>
+                                <NavbarItem>
+                                    <Button size='sm' color="default"
+                                        variant="ghost"
+                                        onPress={() => {
+                                            logout();
+                                            navigate('/');
+                                        }}>
+                                        Logout
+                                    </Button>
+                                </NavbarItem>
+                            </>
                         )}
                         <Switch
                             defaultSelected={theme === 'dark'}
@@ -193,6 +207,14 @@ function App() {
                 </footer>
             </div>
         </HeroUIProvider>
+    );
+}
+
+function App() {
+    return (
+        <AuthProvider>
+            <AppContent />
+        </AuthProvider>
     );
 }
 

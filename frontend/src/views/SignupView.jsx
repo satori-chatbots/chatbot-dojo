@@ -9,9 +9,11 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeFilledIcon, EyeSlashFilledIcon } from './LoginView';
 import { submitSignUp } from '../api/authenticationApi';
+import { useAuth } from '../contexts/AuthContext';
 
 function SignupView() {
     const navigate = useNavigate();
+    const {login} = useAuth();
 
     const [isVisible, setIsVisible] = useState(false);
     const [isConfirmVisible, setIsConfirmVisible] = useState(false);
@@ -36,12 +38,13 @@ function SignupView() {
         }
         setLoading(true);
         try {
-            await submitSignUp({
+            const response = await submitSignUp({
                 first_name: formData.firstName,
                 last_name: formData.lastName,
                 email: formData.email,
                 password: formData.password
             });
+            login(response);
             setLoading(false);
             navigate('/');
         }

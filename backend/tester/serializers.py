@@ -17,34 +17,31 @@ User = get_user_model()
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    password = serializers.CharField()
+    password = serializers.CharField(write_only=True)
 
     def to_representation(self, instance):
-        # Remove password from response
-        ret = super().to_representation(instance)
-        ret.pop("password", None)
-        return ret
+        if isinstance(instance, get_user_model()):
+            return {
+                "id": instance.id,
+                "email": instance.email,
+                "first_name": instance.first_name,
+                "last_name": instance.last_name,
+                "api_key": instance.api_key,
+            }
+        return super().to_representation(instance)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "password", "first_name", "last_name"]
-
-        # Make password write only, this makes sure that the password is not returned in the response
+        fields = ["id", "email", "password", "first_name", "last_name", "api_key"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
-        # Extract password from validated data
         password = validated_data.pop("password")
-
-        # Create user instance without password
         user = User.objects.create(**validated_data)
-
-        # Set password
         user.set_password(password)
         user.save()
-
         return user
 
 

@@ -8,6 +8,7 @@ import {
 } from "@heroui/react";
 import { Link, useNavigate } from 'react-router-dom';
 import { submitLogin } from '../api/authenticationApi';
+import { useAuth } from '../contexts/AuthContext';
 
 export const EyeSlashFilledIcon = (props) => {
     return (
@@ -75,6 +76,8 @@ function LoginView() {
     const [isVisible, setIsVisible] = useState(false);
     const toggleVisibility = () => setIsVisible(!isVisible);
 
+    const { login } = useAuth();
+
 
     const [formData, setFormData] = useState({
         email: '',
@@ -87,10 +90,11 @@ function LoginView() {
         e.preventDefault();
         setLoading(true);
         try {
-            await submitLogin({
+            const response = await submitLogin({
                 email: formData.email,
                 password: formData.password
             });
+            login(response);
             setLoading(false);
             navigate('/');
         }
