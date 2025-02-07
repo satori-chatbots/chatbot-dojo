@@ -35,14 +35,16 @@ export const submitLogin = async (data) => {
 
         if (!response.ok) {
             const errorData = await response.json();
-            // Format error messages from Django response
             const errorMessage = Object.entries(errorData)
                 .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
                 .join('\n');
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        const responseData = await response.json();
+        // Save token to localStorage
+        localStorage.setItem('token', responseData.token);
+        return responseData;
     } catch (error) {
         console.error('Error during login:', error);
         throw error;
