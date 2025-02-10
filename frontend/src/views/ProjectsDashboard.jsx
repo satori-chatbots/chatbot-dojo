@@ -359,74 +359,13 @@ const ProjectsDashboard = () => {
             </Button>
 
             {/* Modal to edit project */}
-            <Modal isOpen={isEditOpen}
-                onOpenChange={() => {
-                    setIsEditOpen(false);
-                    handleEditFormReset();
-                    setValidationErrors({});
-                }}>
-                <ModalContent>
-                    {(onClose) => (
-                        <>
-                            <ModalHeader className="flex flex-col gap-1 items-center">
-                                Edit Project
-                            </ModalHeader>
-                            <ModalBody className="flex flex-col gap-4 items-center">
-                                <Form
-                                    className="w-full flex flex-col gap-4"
-                                    onSubmit={handleUpdateProject}
-                                    onReset={handleEditFormReset}
-                                    validationBehavior="native"
-                                    validationErrors={validationErrors}
-                                >
-                                    <Input
-                                        placeholder="Enter project name"
-                                        name="name"
-                                        fullWidth
-                                        isRequired
-                                        labelPlacement="outside"
-                                        value={editFormData.name}
-                                        variant="bordered"
-                                        label="Project Name"
-                                        onChange={(e) => { setEditFormData((prev) => ({ ...prev, name: e.target.value })) }}
-                                        maxLength={255}
-                                        minLength={3}
-                                    />
-                                    <Select
-                                        isRequired
-                                        label="Technology"
-                                        labelPlacement="outside"
-                                        placeholder="Select Technology"
-                                        name="technology"
-                                        value={editFormData.technology}
-                                        onChange={(e) => { setEditFormData((prev) => ({ ...prev, technology: e.target.value })) }}
-                                        selectedKeys={[String(editFormData?.technology)]}
-
-                                    >
-                                        {technologies.map((tech) => (
-                                            <SelectItem key={String(tech.id)} value={String(tech.id)}>
-                                                {tech.name}
-                                            </SelectItem>
-                                        ))}
-                                    </Select>
-                                    <ModalFooter className="w-full flex justify-center gap-4">
-                                        <Button type="reset" color="danger" variant="light">
-                                            Reset
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            color="primary"
-                                            isDisabled={editFormData.name.trim() === '' || editFormData.technology === ''}
-                                        >
-                                            Update
-                                        </Button>
-                                    </ModalFooter>
-                                </Form>
-                            </ModalBody>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
+            <EditProjectModal
+                isOpen={isEditOpen}
+                onOpenChange={setIsEditOpen}
+                project={editProjectId ? projects.find(p => p.id === editProjectId) : null}
+                technologies={technologies}
+                onProjectUpdated={reloadProjects}
+            />
         </div>
     );
 }
