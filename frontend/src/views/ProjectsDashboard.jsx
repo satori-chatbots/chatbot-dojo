@@ -288,69 +288,15 @@ const ProjectsDashboard = () => {
 
 
             {/* Modal to create new project */}
-            <Modal isOpen={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <ModalContent>
-                    {() => (
-                        <>
-                            <ModalHeader className="flex flex-col gap-1 items-center">
-                                Create New Project
-                            </ModalHeader>
-                            <ModalBody className="flex flex-col gap-4 items-center">
-                                <Form
-                                    className="w-full flex flex-col gap-4"
-                                    onSubmit={handleCreateProject}
-                                    onReset={handleFormReset}
-                                    validationBehavior="native"
-                                    validationErrors={validationErrors}
-                                >
-                                    <Input
-                                        placeholder="Enter project name"
-                                        name="name"
-                                        fullWidth
-                                        isRequired
-                                        labelPlacement="outside"
-                                        value={createFormData.name}
-                                        variant="bordered"
-                                        label="Project Name"
-                                        onChange={handleProjectNameChange}
-                                        maxLength={255}
-                                        minLength={3}
-                                        isDisabled={loadingValidation}
-                                    />
-                                    <Select
-                                        placeholder="Select chatbot technology"
-                                        fullWidth
-                                        label="Technology"
-                                        labelPlacement="outside"
-                                        onChange={handleTechnologyChange}
-                                        isRequired
-                                        value={createFormData.technology}
-                                        isDisabled={loadingValidation}
-                                    >
-                                        {technologies.map((tech) => (
-                                            <SelectItem key={tech.id} value={tech.name}>
-                                                {tech.name}
-                                            </SelectItem>
-                                        ))}
-                                    </Select>
-                                    <ModalFooter className="w-full flex justify-center gap-4">
-                                        <Button type="reset" color="danger" variant="light">
-                                            Reset
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            color="primary"
-                                            isDisabled={createFormData.name.trim() === '' || createFormData.technology === ''}
-                                        >
-                                            Create
-                                        </Button>
-                                    </ModalFooter>
-                                </Form>
-                            </ModalBody>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
+            <CreateProjectModal
+                isOpen={isCreateOpen}
+                onOpenChange={setIsCreateOpen}
+                technologies={technologies}
+                onProjectCreated={async (newProject) => {
+                    await reloadProjects();
+                    setSelectedProject(newProject);
+                }}
+            />
 
             <h2 className='text-xl sm:text-2xl font-bold text-center'>My Projects:</h2>
             {/* Table of projects */}

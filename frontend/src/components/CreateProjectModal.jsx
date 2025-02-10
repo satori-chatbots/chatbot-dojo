@@ -1,32 +1,98 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Modal,
     ModalContent,
-    ModalFooter,
-    ModalBody,
     ModalHeader,
+    ModalBody,
+    ModalFooter,
     Button,
-    Form,
     Input,
     Select,
     SelectItem,
+    Form
 } from "@heroui/react";
+import { createProject, checkProjectName } from '../api/projectApi';
 
 const CreateProjectModal = ({
     isOpen,
     onOpenChange,
-    handleCreateProject,
-    handleFormReset,
-    newProjectName,
-    handleProjectNameChange,
-    availableTechnologies,
-    technology,
-    handleTechnologyChange,
+    technologies,
+    onProjectCreated,
 }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        technology: ''
+    });
+    const [loadingValidation, setLoadingValidation] = useState(false);
+    const [validationErrors, setValidationErrors] = useState({});
+
+    const handleProjectNameChange = (event) => {
+        setFormData(prev => ({ ...prev, name: event.target.value }));
+    };
+
+    const handleTechnologyChange = (event) => {
+        setFormData(prev => ({ ...prev, technology: event.target.value }));
+    };
+
+    const handleFormReset = () => {
+        setFormData({
+            name: '',
+            technology: ''
+        });
+        setValidationErrors({});
+    };
+
+    const handleFormValidation = async (event) => {
+        event.preventDefault();
+        setLoadingValidation(true);
+
+        if (!formData.name.trim() || !formData.technology) {
+            setLoadingValidation(false);
+            return false;
+        }
+
+        const existsResponse = await checkProjectName(formData.name.trim());
+        if (existsResponse.exists) {
+            setValidationErrors({ name: 'This name is already taken, choose another one.' });
+            setLoadingValidation(false);
+            return false;
+        }
+
+        setValidationErrors({});
+        setLoadingValidation(false);
+        return true;
+    };
+
+    const handleCreateProject = async (event) => {
+        event.preventDefault();
+
+        const isValid = await handleFormValidation(event);
+        if (!isValid) {
+            return;
+        }
+
+        try {
+            const newProject = await createProject({
+                name: formData.name,
+                chatbot_technology: formData.technology,
+            });
+            handleFormReset();
+            onOpenChange(false);
+            if (onProjectCreated) {
+                onProjectCreated(newProject);
+            }
+        } catch (error) {
+            console.error('Error creating project:', error);
+            const errorData = JSON.parse(error.message);
+            const errors = Object.entries(errorData).map(([key, value]) => `${key}: ${value}`);
+            alert(`Error creating project: ${errors.join('\n')}`);
+        }
+    };
+
     return (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 items-center">
                             Create New Project
@@ -37,19 +103,21 @@ const CreateProjectModal = ({
                                 onSubmit={handleCreateProject}
                                 onReset={handleFormReset}
                                 validationBehavior="native"
+                                validationErrors={validationErrors}
                             >
                                 <Input
                                     placeholder="Enter project name"
+                                    name="name"
                                     fullWidth
                                     isRequired
                                     labelPlacement="outside"
-                                    value={newProjectName}
+                                    value={formData.name}
                                     variant="bordered"
                                     label="Project Name"
                                     onChange={handleProjectNameChange}
-                                    errorMessage="Please enter a project name"
                                     maxLength={255}
                                     minLength={3}
+                                    isDisabled={loadingValidation}
                                 />
                                 <Select
                                     placeholder="Select chatbot technology"
@@ -58,10 +126,11 @@ const CreateProjectModal = ({
                                     labelPlacement="outside"
                                     onChange={handleTechnologyChange}
                                     isRequired
-                                    value={technology}
+                                    value={formData.technology}
+                                    isDisabled={loadingValidation}
                                 >
-                                    {availableTechnologies.map((tech) => (
-                                        <SelectItem key={tech.id} value={tech.name}>
+                                    {technologies.map(tech => (
+                                        <SelectItem key={tech.id} value={tech.id}>
                                             {tech.name}
                                         </SelectItem>
                                     ))}
@@ -73,7 +142,7 @@ const CreateProjectModal = ({
                                     <Button
                                         type="submit"
                                         color="primary"
-                                        isDisabled={newProjectName.trim() === '' || technology === ''}
+                                        isDisabled={!formData.name.trim() || !formData.technology}
                                     >
                                         Create
                                     </Button>
