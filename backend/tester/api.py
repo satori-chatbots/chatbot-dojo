@@ -308,60 +308,56 @@ class ChatbotTechnologyViewSet(viewsets.ModelViewSet):
 # ----------------- #
 
 
+class TestCaseAccessPermission(BasePermission):
+    """Permission class for TestCase access"""
+
+    def has_object_permission(self, request, view, obj):
+        # Allow access if project is public or user is the owner
+        return obj.project.public or (
+            request.user.is_authenticated and request.user == obj.project.owner
+        )
+
+
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
+    permission_classes = [TestCaseAccessPermission]
 
-    def list(self, request, *args, **kwargs):
-        project_ids = request.query_params.get("project_ids", None)
-        testcase_id = request.query_params.get("testcase_id", None)
+    def get_queryset(self):
+        """Filter queryset based on query params and permissions"""
+        project_ids = self.request.query_params.get("project_ids", None)
+        testcase_id = self.request.query_params.get("testcase_id", None)
 
-        if project_ids is not None:
-            projects = Project.objects.filter(id__in=project_ids.split(","))
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                project__in=projects
+        # Start with base queryset
+        queryset = TestCase.objects.all()
+
+        # Filter by project IDs if provided
+        if project_ids:
+            queryset = queryset.filter(project__in=project_ids.split(","))
+
+        # Filter by test case ID if provided
+        if testcase_id:
+            queryset = queryset.filter(id=testcase_id)
+
+        # Filter based on permissions
+        if self.request.user.is_authenticated:
+            return queryset.filter(
+                models.Q(project__public=True)
+                | models.Q(project__owner=self.request.user)
             )
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
-        elif testcase_id is not None:
-            # Get the test case
-            test_case = get_object_or_404(TestCase, id=testcase_id)
+        return queryset.filter(project__public=True)
 
-            # Debug logging
-            print(f"Project public: {test_case.project.public}")
-            print(f"User authenticated: {request.user.is_authenticated}")
-            print(f"Request user: {request.user}")
-            print(f"Project owner: {test_case.project.owner}")
-
-            # Check if project is public or user is the owner
-            has_permission = (
-                test_case.project.public or
-                (request.user.is_authenticated and
-                request.user.id == test_case.project.owner.id)
-            )
-
-            if not has_permission:
-                raise PermissionDenied(
-                    "You don't have permission to access this test case"
-                )
-
-            queryset = self.filter_queryset(self.get_queryset()).filter(id=testcase_id)
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
-        else:
-            queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
+    def get_object(self):
+        """Override get_object to handle permissions"""
+        obj = get_object_or_404(TestCase, pk=self.kwargs["pk"])
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request, *args, **kwargs):
-        """Check if a test name is already used in the project.
-
-        In the request query params, provide the `project_id` and `test_name`."""
+        """Check if a test name is already used in the project"""
         project_id = request.query_params.get("project_id", None)
         test_name = request.query_params.get("test_name", None)
-
-        print(f"Test name: {test_name}")
 
         if project_id is None:
             return Response(
