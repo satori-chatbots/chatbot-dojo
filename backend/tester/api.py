@@ -395,11 +395,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
+        """Filter queryset based on query params"""
+        show_type = self.request.query_params.get("show", "all")
+
+        if not self.request.user.is_authenticated:
+            return Project.objects.filter(public=True)
+
+        if show_type == "owned":
+            return Project.objects.filter(owner=self.request.user)
+        else:  # show_type == "all"
             return Project.objects.filter(
-                models.Q(public=True) | models.Q(owner=self.request.user)
+                models.Q(public=True) |
+                models.Q(owner=self.request.user)
             )
-        return Project.objects.filter(public=True)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

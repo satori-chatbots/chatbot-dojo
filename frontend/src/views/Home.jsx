@@ -41,7 +41,7 @@ function Home() {
     const [availableTechnologies, setAvailableTechnologies] = useState([]);
 
     // Fetch the list of projects
-    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
+    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects('owned');
 
     // Control the selected project
     const [selectedProject, setSelectedProject] = useSelectedProject();

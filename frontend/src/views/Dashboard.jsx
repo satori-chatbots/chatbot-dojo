@@ -32,7 +32,7 @@ function Dashboard() {
     const [publicView, setPublicView] = useState(!user);
 
 
-    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
+    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects('all');
 
     const statusColorMap = {
         COMPLETED: 'success',

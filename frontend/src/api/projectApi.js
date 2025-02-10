@@ -1,10 +1,10 @@
 import API_BASE_URL, { ENDPOINTS } from './config';
 import apiClient from './apiClient';
 
-export const fetchProjects = async () => {
-    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}`, {
-        method: 'GET'
-    });
+export const fetchProjects = async (showType = 'all') => {
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.PROJECTS}?show=${showType}`,
+        { method: 'GET' }
+    );
     return response.json();
 };
 

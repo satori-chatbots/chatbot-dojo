@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchProjects } from '../api/projectApi';
 
-function useFetchProjects() {
+function useFetchProjects(showType = 'all') {
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -9,7 +9,7 @@ function useFetchProjects() {
     const loadProjects = async () => {
         setLoading(true);
         try {
-            const data = await fetchProjects();
+            const data = await fetchProjects(showType);
             setProjects(data);
             setError(null);
         } catch (err) {
@@ -22,7 +22,7 @@ function useFetchProjects() {
 
     useEffect(() => {
         loadProjects();
-    }, []);
+    }, [showType]);
 
     const reloadProjects = () => {
         loadProjects();

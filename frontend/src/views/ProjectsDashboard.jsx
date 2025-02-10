@@ -47,7 +47,7 @@ const ProjectsDashboard = () => {
 
 
     // Projects state
-    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects();
+    const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects('owned');
 
     const [technologies, setTechnologies] = useState([]);
 
