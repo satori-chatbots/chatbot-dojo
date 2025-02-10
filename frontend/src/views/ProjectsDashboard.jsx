@@ -279,13 +279,6 @@ const ProjectsDashboard = () => {
         mx-auto
         my-auto
         max-h-[90vh]">
-            <h1 className="text-2xl sm:text-3xl font-bold text-center">Projects</h1>
-
-            {/* Selected project */}
-            <div className="flex items-center justify-center gap-2">
-                <span className="font-semibold">Selected Project:</span>
-                <span>{selectedProject?.name || 'None'}</span>
-            </div>
 
             {/* Modal to create new project */}
             <CreateProjectModal
@@ -299,6 +292,13 @@ const ProjectsDashboard = () => {
             />
 
             <h2 className='text-xl sm:text-2xl font-bold text-center'>My Projects:</h2>
+
+            {/* Selected project */}
+            <div className="flex items-center justify-center gap-2">
+                <span className="font-semibold">Selected Project:</span>
+                <span>{selectedProject?.name || 'None'}</span>
+            </div>
+
 
             {/* Replace the Table with ProjectsList */}
             <ProjectsList
