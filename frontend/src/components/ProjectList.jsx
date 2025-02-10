@@ -62,7 +62,7 @@ const ProjectsList = ({
                 loadingContent={<Spinner label='Loading Projects...' />}
                 items={sortedProjects}
             >
-                {(project) => (
+                {sortedProjects.map((project) => (
                     <TableRow key={project.id}>
                         <TableCell>{project.name}</TableCell>
                         <TableCell>
@@ -96,7 +96,7 @@ const ProjectsList = ({
                             </Button>
                         </TableCell>
                     </TableRow>
-                )}
+                ))}
             </TableBody>
         </Table>
     );
