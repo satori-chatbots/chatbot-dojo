@@ -13,6 +13,9 @@ const ProjectsList = ({
     onEditProject,
     onDeleteProject
 }) => {
+
+    const isLoading = loading || !technologies?.length;
+
     const columns = [
         { name: 'Name', key: 'name', sortable: true },
         { name: 'Technology', key: 'technology', sortable: true },
@@ -54,7 +57,7 @@ const ProjectsList = ({
             </TableHeader>
             <TableBody
                 emptyState="Create a new project to get started."
-                isLoading={loading}
+                isLoading={isLoading}
                 loadingContent={<Spinner label='Loading Projects...' />}
                 items={sortedProjects}
             >
@@ -62,7 +65,7 @@ const ProjectsList = ({
                     <TableRow key={project.id}>
                         <TableCell>{project.name}</TableCell>
                         <TableCell>
-                            {technologies.find(t => t.id === project.chatbot_technology)?.name || 'Loading...'}
+                            {technologies.find(t => t.id === project.chatbot_technology)?.name}
                         </TableCell>
                         <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
                             <Button

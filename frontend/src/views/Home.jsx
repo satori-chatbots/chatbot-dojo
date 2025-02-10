@@ -40,6 +40,7 @@ function Home() {
 
     // List of available chatbot technologies (eg Taskyto, Rasa, etc.)
     const [availableTechnologies, setAvailableTechnologies] = useState([]);
+    const [loadingTechnologies, setLoadingTechnologies] = useState(true);
 
     // Fetch the list of projects
     const { projects, loadingProjects, errorProjects, reloadProjects } = useFetchProjects('owned');
@@ -188,6 +189,7 @@ function Home() {
     // Initialize with the available technologies
     useEffect(() => {
         const loadData = async () => {
+            setLoadingTechnologies(true);
             try {
                 const technologies = await fetchChatbotTechnologies();
                 //console.log(technologies);
@@ -195,6 +197,8 @@ function Home() {
 
             } catch (error) {
                 console.error('Error loading data:', error);
+            } finally {
+                setLoadingTechnologies(false);
             }
         };
 
@@ -551,7 +555,7 @@ function Home() {
                     <ProjectsList
                         projects={projects}
                         technologies={availableTechnologies}
-                        loading={loadingProjects}
+                        loading={loadingProjects || loadingTechnologies}
                         selectedProject={selectedProject}
                         onSelectProject={setSelectedProject}
                         onEditProject={handleEditClick}
@@ -693,12 +697,12 @@ function Home() {
 
             {/* Edit Project Modal */}
             <EditProjectModal
-    isOpen={isEditOpen}
-    onOpenChange={setIsEditOpen}
-    project={editProjectId ? projects.find(p => p.id === editProjectId) : null}
-    technologies={availableTechnologies}
-    onProjectUpdated={reloadProjects}
-/>
+                isOpen={isEditOpen}
+                onOpenChange={setIsEditOpen}
+                project={editProjectId ? projects.find(p => p.id === editProjectId) : null}
+                technologies={availableTechnologies}
+                onProjectUpdated={reloadProjects}
+            />
         </div>
     );
 };

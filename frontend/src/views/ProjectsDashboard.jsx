@@ -20,6 +20,7 @@ import { fetchChatbotTechnologies, fetchTechnologyChoices } from '../api/chatbot
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import EditProjectModal from '../components/EditProjectModal';
 import useSelectedProject from '../hooks/useSelectedProject';
+import ProjectsList from '../components/ProjectList';
 
 
 const ProjectsDashboard = () => {
@@ -286,7 +287,6 @@ const ProjectsDashboard = () => {
                 <span>{selectedProject?.name || 'None'}</span>
             </div>
 
-
             {/* Modal to create new project */}
             <CreateProjectModal
                 isOpen={isCreateOpen}
@@ -299,56 +299,17 @@ const ProjectsDashboard = () => {
             />
 
             <h2 className='text-xl sm:text-2xl font-bold text-center'>My Projects:</h2>
-            {/* Table of projects */}
-            <Table
-                aria-label="Projects Table"
-                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
-                sortDescriptor={sortDescriptor}
-                onSortChange={setSortDescriptor}
-            >
-                <TableHeader columns={columns}>
-                    {(column) => (
-                        <TableColumn
-                            key={column.key}
-                            allowsSorting={column.sortable}
-                        >
-                            {column.name}
-                        </TableColumn>
-                    )}
-                </TableHeader>
-                <TableBody
-                    emptyState="Create a new project to get started."
-                    isLoading={loading}
-                    loadingContent={<Spinner label='Loading Test Cases...' />}
-                    items={sortedProjects}
-                >
-                    {sortedProjects.map((project) => (
-                        <TableRow key={project.id}>
-                            <TableCell>{project.name}</TableCell>
-                            <TableCell>
-                                {technologies.find(t => t.id === project.chatbot_technology)?.name || 'Loading...'}
-                            </TableCell>
-                            <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
-                                <Button
-                                    size="sm"
-                                    color="primary"
-                                    variant='ghost'
-                                    onPress={() => setSelectedProject(project)}
-                                    isDisabled={selectedProject?.id === project.id}
-                                >
-                                    {selectedProject?.id === project.id ? 'Selected' : 'Select'}
-                                </Button>
-                                <Button size="sm" color="secondary" variant='ghost' className="w-12" onPress={() => handleEditClick(project)}>
-                                    Edit
-                                </Button>
-                                <Button size="sm" color="danger" variant='ghost' className="w-12" onPress={() => handleProjectDelete(project.id)}>
-                                    Delete
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+
+            {/* Replace the Table with ProjectsList */}
+            <ProjectsList
+                projects={projects}
+                technologies={technologies}
+                loading={loading || loadingProjects}
+                selectedProject={selectedProject}
+                onSelectProject={setSelectedProject}
+                onEditProject={handleEditClick}
+                onDeleteProject={handleProjectDelete}
+            />
 
             {/* Button to open modal */}
             <Button color="primary"
@@ -358,7 +319,7 @@ const ProjectsDashboard = () => {
                 Create New Project
             </Button>
 
-            {/* Modal to edit project */}
+            {/* Edit Project Modal */}
             <EditProjectModal
                 isOpen={isEditOpen}
                 onOpenChange={setIsEditOpen}
@@ -368,6 +329,7 @@ const ProjectsDashboard = () => {
             />
         </div>
     );
+
 }
 
 
