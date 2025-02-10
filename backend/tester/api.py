@@ -48,6 +48,8 @@ from django.contrib.auth import authenticate
 from rest_framework.permissions import BasePermission
 from django.core.exceptions import PermissionDenied
 from django.db import models
+from django.shortcuts import get_object_or_404
+from django.core.exceptions import PermissionDenied
 
 # Get the latest version of the user model
 User = get_user_model()
@@ -322,6 +324,27 @@ class TestCaseViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         elif testcase_id is not None:
+            # Get the test case
+            test_case = get_object_or_404(TestCase, id=testcase_id)
+
+            # Debug logging
+            print(f"Project public: {test_case.project.public}")
+            print(f"User authenticated: {request.user.is_authenticated}")
+            print(f"Request user: {request.user}")
+            print(f"Project owner: {test_case.project.owner}")
+
+            # Check if project is public or user is the owner
+            has_permission = (
+                test_case.project.public or
+                (request.user.is_authenticated and
+                request.user.id == test_case.project.owner.id)
+            )
+
+            if not has_permission:
+                raise PermissionDenied(
+                    "You don't have permission to access this test case"
+                )
+
             queryset = self.filter_queryset(self.get_queryset()).filter(id=testcase_id)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
