@@ -14,6 +14,16 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [selectedProject, setSelectedProject] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    const clearAllData = () => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('selectedProject');
+        setUser(null);
+        setSelectedProject(null);
+    };
 
     const checkTokenValidity = async () => {
         const token = localStorage.getItem('token');
@@ -33,24 +43,25 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const clearAllData = () => {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('selectedProject');
-        setUser(null);
-        setSelectedProject(null);
-    };
-
     useEffect(() => {
         const initAuth = async () => {
-            const userData = localStorage.getItem('user');
-            if (userData && await checkTokenValidity()) {
-                const parsedUserData = JSON.parse(userData);
-                setUser(parsedUserData.user);
-                const projectData = localStorage.getItem('selectedProject');
-                if (projectData) {
-                    setSelectedProject(JSON.parse(projectData));
+            setIsLoading(true);
+            try {
+                const userData = localStorage.getItem('user');
+                if (userData && await checkTokenValidity()) {
+                    const parsedUserData = JSON.parse(userData);
+                    setUser(parsedUserData.user);
+                    const projectData = localStorage.getItem('selectedProject');
+                    if (projectData) {
+                        setSelectedProject(JSON.parse(projectData));
+                    }
                 }
+            } catch (error) {
+                console.error('Auth initialization error:', error);
+                clearAllData();
+            } finally {
+                setIsLoading(false);
+                setIsInitialized(true);
             }
         };
         initAuth();
@@ -64,9 +75,13 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         clearAllData();
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
+        window.location.href = '/login';
     };
+
+
+    if (!isInitialized) {
+        return null;
+    }
 
     return (
         <AuthContext.Provider value={{
@@ -75,7 +90,8 @@ export const AuthProvider = ({ children }) => {
             logout,
             selectedProject,
             setSelectedProject,
-            checkTokenValidity
+            checkTokenValidity,
+            isLoading
         }}>
             {children}
         </AuthContext.Provider>
