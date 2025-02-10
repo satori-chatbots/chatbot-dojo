@@ -92,6 +92,14 @@ class LoginViewSet(viewsets.ViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(["POST"])
+def validate_token(request):
+    """Validate if the provided token is valid and not expired"""
+    if request.user.is_authenticated:
+        return Response({"valid": True}, status=status.HTTP_200_OK)
+    return Response({"valid": False}, status=status.HTTP_401_UNAUTHORIZED)
+
+
 class RegisterViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
     queryset = User.objects.all()

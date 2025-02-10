@@ -62,12 +62,22 @@ export const validateToken = async () => {
         const response = await fetch(`${API_BASE_URL}/validate-token/`, {
             method: 'POST',
             headers: {
-                'Authorization': `Token ${token}`
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json'
             }
         });
-        return response.ok;
+
+        if (!response.ok) {
+            // If token is invalid, remove it from localStorage
+            localStorage.removeItem('token');
+            return false;
+        }
+
+        const data = await response.json();
+        return data.valid;
     } catch (error) {
         console.error('Token validation failed:', error);
+        localStorage.removeItem('token');
         return false;
     }
 };
