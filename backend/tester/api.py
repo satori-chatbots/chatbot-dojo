@@ -626,6 +626,13 @@ class ExecuteSelectedAPIView(APIView):
         Execute selected test files in the user-yaml directory using Taskyto.
         Create a TestCase instance and associate executed TestFiles with it.
         """
+        # Check if user is authenticated
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required to execute tests."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         selected_ids = request.data.get("test_file_ids", [])
         project_id = request.data.get("project_id")
         test_name = request.data.get("test_name")
@@ -645,6 +652,12 @@ class ExecuteSelectedAPIView(APIView):
         # Check if the project exists
         try:
             project = Project.objects.get(id=project_id)
+            # Check if the project owner is the same as the user
+            if project.owner != request.user:
+                return Response(
+                    {"error": "You do not own project."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
         except Project.DoesNotExist:
             return Response(
                 {"error": "Project not found, make sure to create a project first."},
