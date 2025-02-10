@@ -46,6 +46,7 @@ from django.contrib.auth import get_user_model
 from knox.models import AuthToken
 from django.contrib.auth import authenticate
 from rest_framework.permissions import BasePermission
+from django.core.exceptions import PermissionDenied
 from django.db import models
 
 # Get the latest version of the user model
@@ -375,6 +376,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def get_object(self):
+        """Override get_object to return 403 instead of 404 when object exists but user has no access"""
+        # Get object by primary key
+        obj = get_object_or_404(Project, pk=self.kwargs["pk"])
+
+        # Check permissions
+        if not self.get_permissions()[0].has_object_permission(self.request, self, obj):
+            raise PermissionDenied("You do not have permission to access this project")
+
+        return obj
 
     @action(detail=False, methods=["get"], url_path="technologies")
     def list_technologies(self, request):
