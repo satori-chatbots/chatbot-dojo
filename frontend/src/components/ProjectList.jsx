@@ -43,6 +43,7 @@ const ProjectsList = ({
 
     return (
         <Table
+            key={selectedProject?.id}
             aria-label="Projects Table"
             className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
             sortDescriptor={sortDescriptor}
