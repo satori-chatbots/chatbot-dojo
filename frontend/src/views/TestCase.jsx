@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, Tab } from "@heroui/tabs";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
 import { Accordion, AccordionItem, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
@@ -15,7 +15,7 @@ import { fetchProject } from '../api/projectApi';
 
 function TestCase() {
     const { id } = useParams();
-
+    const navigate = useNavigate();
     // State for the test case
     const [testCase, setTestCase] = useState({});
     // State for the global report
@@ -51,6 +51,12 @@ function TestCase() {
         const fetchData = async () => {
             try {
                 const fetchedTestCase = await fetchTestCaseById(id);
+
+                if (!fetchedTestCase || fetchedTestCase.length === 0) {
+                    navigate('/dashboard');
+                    return;
+                }
+
                 setTestCase(fetchedTestCase);
 
                 const status = fetchedTestCase[0].status;
@@ -99,6 +105,9 @@ function TestCase() {
 
                 }
             } catch (error) {
+                if (error.message === '403') {
+                    navigate('/dashboard');
+                }
                 console.error(error);
             } finally {
                 setGlobalLoading(false);
