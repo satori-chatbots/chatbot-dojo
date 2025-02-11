@@ -16,6 +16,7 @@ import { useLocation } from 'react-router-dom';
 import SignupView from './views/SignupView';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import UserProfileView from './views/UserProfileView';
 
 export const MoonIcon = (props) => {
     return (
@@ -136,7 +137,10 @@ function AppContent() {
                         ) : (
                             <>
                                 <NavbarItem>
-                                    <span>Welcome, {user.first_name}</span>
+                                    <span>Welcome, </span>
+                                </NavbarItem>
+                                <NavbarItem isActive={location.pathname === '/profile'}>
+                                    <Link to="/profile" className="hover:underline">{user.first_name}</Link>
                                 </NavbarItem>
                                 <NavbarItem>
                                     <Button size='sm' color="default"
@@ -211,6 +215,11 @@ function AppContent() {
                         <Route path="/test-case/:id" element={<TestCase />} />
                         <Route path="/login" element={<LoginView />} />
                         <Route path="/signup" element={<SignupView />} />
+                        <Route path="/profile" element={
+                            <PrivateRoute>
+                                <UserProfileView />
+                            </PrivateRoute>
+                        } />
                     </Routes>
                 </main>
 
