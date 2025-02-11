@@ -8,6 +8,7 @@ from .models import (
     Project,
     ProfileReport,
     Conversation,
+    UserAPIKey,
 )
 from django.contrib.auth import get_user_model
 
@@ -120,3 +121,32 @@ class TestErrorSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestError
         fields = "__all__"
+
+
+class UserAPIKeySerializer(serializers.ModelSerializer):
+    api_key = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = UserAPIKey
+        fields = ["id", "name", "api_key", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def create(self, validated_data):
+        # Get the plain text API key
+        api_key_plain = validated_data.pop("api_key")
+        # Create the UserAPIKey instance
+        user_api_key = UserAPIKey(**validated_data)
+        user_api_key.user = self.context["request"].user
+        user_api_key.set_api_key(api_key_plain)
+        return user_api_key
+
+    def update(self, instance, validated_data):
+        # Get the plain text API key
+        api_key_plain = validated_data.pop('api_key', None)
+        # Update the API key if it is provided
+        if api_key_plain is not None:
+            instance.set_api_key(api_key_plain)
+        # Update the name
+        instance.name = validated_data.get('name', instance.name)
+        instance.save()
+        return instance

@@ -18,6 +18,7 @@ router.register(r"profilereports", api.ProfileReportViewSet, basename="profilere
 router.register(r"conversations", api.ConversationViewSet, basename="conversation")
 router.register(r"register", api.RegisterViewSet, basename="register")
 router.register(r"login", api.LoginViewSet, basename="login")
+router.register(r"api-keys", api.UserAPIKeyViewSet, basename="api-key")
 
 urlpatterns = [
     # Custom Routes First

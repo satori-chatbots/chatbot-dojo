@@ -6,6 +6,15 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.dispatch import receiver
 import os
 import yaml
+from cryptography.fernet import Fernet
+
+# Load FERNET SECRET KEY (it was loaded in the settings.py before)
+FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
+if not FERNET_KEY:
+    raise ValueError("FERNET_SECRET_KEY is not set in the environment!")
+
+# Create cipher suite
+cipher_suite = Fernet(FERNET_KEY)
 
 
 class CustomUserManager(BaseUserManager):
@@ -30,13 +39,63 @@ class CustomUser(AbstractUser):
     email = models.EmailField(max_length=255, unique=True)
     # Username doesnt really matter for now since we are using email as the main identifier
     username = models.CharField(max_length=255, blank=True, null=True)
-    # API Key
-    api_key = models.CharField(max_length=255, blank=True, null=True)
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
+
+    def set_api_key(self):
+        """
+        Encrypt and store the API Key
+        """
+
+        encrypted_key = cipher_suite.encrypt(self.api_key.encode())
+        self.api_key = encrypted_key.decode()
+        self.save()
+
+    def get_api_key(self):
+        """
+        Decrypt and return the API Key
+        """
+
+        if self.api_key_encrypted:
+            return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
+        return None
+
+
+class UserAPIKey(models.Model):
+    """
+    Model to store the API keys for the users
+
+    It has a name, the encrypted API key and the user it belongs to
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys"
+    )
+    name = models.CharField(max_length=255)
+    api_key_encrypted = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def set_api_key(self, api_key):
+        """
+        Encrypt and store the provided API key.
+        """
+        encrypted_key = cipher_suite.encrypt(api_key.encode())
+        self.api_key_encrypted = encrypted_key.decode()
+        self.save()
+
+    def get_api_key(self):
+        """
+        Decrypt and return the stored API key.
+        """
+        if self.api_key_encrypted:
+            return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
+        return None
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
 
 
 def upload_to(instance, filename):

@@ -19,6 +19,7 @@ from .models import (
     TestError,
     TestFile,
     Project,
+    UserAPIKey,
 )
 from .serializers import (
     ChatbotTechnologySerializer,
@@ -31,6 +32,7 @@ from .serializers import (
     TestErrorSerializer,
     ProfileReportSerializer,
     RegisterSerializer,
+    UserAPIKeySerializer,
 )
 from django.http import JsonResponse
 from .models import TECHNOLOGY_CHOICES
@@ -120,6 +122,15 @@ class RegisterViewSet(viewsets.ModelViewSet):
         return Response(
             {"user": serializer.data, "token": token}, status=status.HTTP_201_CREATED
         )
+
+
+class UserAPIKeyViewSet(viewsets.ModelViewSet):
+    serializer_class = UserAPIKeySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Return API keys only for the current authenticated user.
+        return UserAPIKey.objects.filter(user=self.request.user)
 
 
 # --------------------- #
@@ -405,8 +416,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Project.objects.filter(owner=self.request.user)
         else:  # show_type == "all"
             return Project.objects.filter(
-                models.Q(public=True) |
-                models.Q(owner=self.request.user)
+                models.Q(public=True) | models.Q(owner=self.request.user)
             )
 
     def perform_create(self, serializer):
