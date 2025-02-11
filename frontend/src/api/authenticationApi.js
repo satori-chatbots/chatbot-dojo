@@ -1,4 +1,5 @@
 import API_BASE_URL, { ENDPOINTS } from './config';
+import apiClient from './apiClient';
 
 
 export const submitSignUp = async (data) => {
@@ -79,5 +80,59 @@ export const validateToken = async () => {
         console.error('Token validation failed:', error);
         localStorage.removeItem('token');
         return false;
+    }
+};
+
+// Get all API keys for the current user
+export const getUserApiKeys = async () => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.APIKEYS}`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching API keys:', error);
+        throw error;
+    }
+};
+
+// Create a new API key
+export const createApiKey = async (data) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.APIKEYS}`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        const responseData = await response.json();
+        return responseData;
+    } catch (error) {
+        console.error('Error creating API key:', error);
+        throw error;
+    }
+};
+
+// Update an existing API key
+export const updateApiKey = async (id, data) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.APIKEYS}${id}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        const responseData = await response.json();
+        return responseData;
+    } catch (error) {
+        console.error('Error updating API key:', error);
+        throw error;
+    }
+};
+
+// Delete an API key
+export const deleteApiKey = async (id) => {
+    try {
+        await apiClient(`${API_BASE_URL}${ENDPOINTS.APIKEYS}${id}/`, {
+            method: 'DELETE',
+        });
+    } catch (error) {
+        console.error('Error deleting API key:', error);
+        throw error;
     }
 };

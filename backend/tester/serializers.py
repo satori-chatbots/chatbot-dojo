@@ -27,7 +27,6 @@ class LoginSerializer(serializers.Serializer):
                 "email": instance.email,
                 "first_name": instance.first_name,
                 "last_name": instance.last_name,
-                "api_key": instance.api_key,
             }
         return super().to_representation(instance)
 
@@ -35,7 +34,7 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "password", "first_name", "last_name", "api_key"]
+        fields = ["id", "email", "password", "first_name", "last_name"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):

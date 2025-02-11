@@ -20,6 +20,7 @@ export const ENDPOINTS = {
     STOP_TEST_EXECUTION: '/test-cases-stop/',
     REGISTER: '/register/',
     LOGIN: '/login/',
+    APIKEYS: '/api-keys/',
 };
 
 export default API_BASE_URL;

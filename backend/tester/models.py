@@ -17,6 +17,39 @@ if not FERNET_KEY:
 cipher_suite = Fernet(FERNET_KEY)
 
 
+class UserAPIKey(models.Model):
+    """
+    Model to store the API keys for the users
+
+    It has a name, the encrypted API key and the user it belongs to
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys"
+    )
+    name = models.CharField(max_length=255)
+    api_key_encrypted = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def set_api_key(self, api_key):
+        """
+        Encrypt and store the provided API key.
+        """
+        encrypted_key = cipher_suite.encrypt(api_key.encode())
+        self.api_key_encrypted = encrypted_key.decode()
+        self.save()
+
+    def get_api_key(self):
+        """
+        Decrypt and return the stored API key.
+        """
+        if self.api_key_encrypted:
+            return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
+        return None
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -63,39 +96,6 @@ class CustomUser(AbstractUser):
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
 
-
-class UserAPIKey(models.Model):
-    """
-    Model to store the API keys for the users
-
-    It has a name, the encrypted API key and the user it belongs to
-    """
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys"
-    )
-    name = models.CharField(max_length=255)
-    api_key_encrypted = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def set_api_key(self, api_key):
-        """
-        Encrypt and store the provided API key.
-        """
-        encrypted_key = cipher_suite.encrypt(api_key.encode())
-        self.api_key_encrypted = encrypted_key.decode()
-        self.save()
-
-    def get_api_key(self):
-        """
-        Decrypt and return the stored API key.
-        """
-        if self.api_key_encrypted:
-            return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
-        return None
-
-    def __str__(self):
-        return f"{self.name} ({self.user.email})"
 
 
 def upload_to(instance, filename):
