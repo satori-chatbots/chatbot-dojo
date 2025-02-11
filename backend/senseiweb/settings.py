@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,12 @@ SECRET_KEY = "django-insecure-h&6u3017am1x3a86&jo0ptvx82p^fh&$6+mhqt(z^kw63c6+jd
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Read the .env file
+load_dotenv()
+
+# Get the FERNET SECRET KEY used to encrypt and decrypt the api
+FERNET_SECRET_KEY = os.getenv("FERNET_SECRET_KEY")
 
 
 # Application definition
