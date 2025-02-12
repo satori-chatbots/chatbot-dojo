@@ -3,37 +3,33 @@ import {
     Button,
     Input,
     Card,
-    Dropdown,
     Modal,
     ModalContent,
     ModalFooter,
     ModalBody,
-    DropdownItem,
-    DropdownTrigger,
-    DropdownMenu,
     ModalHeader,
+    Form,
     useDisclosure,
-    Select,
-    SelectItem,
-    Form
 } from "@heroui/react";
-import useFileHandlers from '../hooks/userFileHandlers';
-import { uploadFiles } from '../api/fileApi';
-import { MEDIA_URL } from '../api/config';
-import { createProject, deleteProject } from '../api/projectApi';
-import { HiOutlineTrash } from "react-icons/hi";
+import {
+    Upload,
+    File,
+    Edit,
+    Trash,
+    Play,
+    Plus,
+    X
+} from 'lucide-react';
+import { uploadFiles, deleteFiles } from '../api/fileApi';
+import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';
 import useFetchProjects from '../hooks/useFetchProjects';
 import useFetchFiles from '../hooks/useFetchFiles';
-import { executeTest } from '../api/testCasesApi';
-import { deleteFiles } from '../api/fileApi';
-import { checkTestCaseName } from '../api/testCasesApi';
-import { checkProjectName } from '../api/projectApi';
+import { executeTest, checkTestCaseName } from '../api/testCasesApi';
 import useSelectedProject from '../hooks/useSelectedProject';
 import CreateProjectModal from '../components/CreateProjectModal';
 import EditProjectModal from '../components/EditProjectModal';
 import ProjectsList from '../components/ProjectList';
-import { updateProject } from '../api/projectApi';
 
 
 function Home() {
@@ -473,6 +469,7 @@ function Home() {
                             color="secondary"
                             variant="bordered"
                             onPress={() => setSelectedProject(null)}
+                            startContent={<X className="w-4 h-4" />}
                         >
                             Change Project
                         </Button>
@@ -494,7 +491,7 @@ function Home() {
                                     ref={fileInputRef}
                                     fullWidth
                                 />
-                                <Button onPress={handleUpload} color="secondary" fullWidth>
+                                <Button onPress={handleUpload} color="secondary" fullWidth startContent={<Upload className="w-4 h-4" />}>
                                     Upload
                                 </Button>
                             </div>
@@ -534,10 +531,10 @@ function Home() {
 
                             {/* Action Buttons */}
                             <div className="mt-4 flex space-x-4">
-                                <Button color="danger" className="flex-1" onPress={handleDelete}>
+                                <Button color="danger" className="flex-1" onPress={handleDelete} startContent={<Trash className="w-4 h-4" />}>
                                     Delete Selected
                                 </Button>
-                                <Button color="primary" className="flex-1" onPress={openExecuteModal}>
+                                <Button color="primary" className="flex-1" onPress={openExecuteModal} startContent={<Play className="w-4 h-4" />}>
                                     Execute Test
                                 </Button>
                             </div>
@@ -565,6 +562,7 @@ function Home() {
                         color="primary"
                         className="max-w-[200px] mx-auto"
                         onPress={() => onOpen()}
+                        startContent={<Plus className="w-4 h-4" />}
                     >
                         Create New Project
                     </Button>
