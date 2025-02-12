@@ -42,6 +42,11 @@ urlpatterns = [
         api.validate_token,
         name="validate-token",
     ),
+    path(
+        "update-profile/",
+        api.UpdateProfileView.as_view(),
+        name="update-profile",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

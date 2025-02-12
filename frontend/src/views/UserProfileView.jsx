@@ -12,7 +12,8 @@ import {
     ModalHeader,
     ModalBody,
     ModalFooter,
-    Spinner
+    Spinner,
+    Form
 } from '@heroui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiKeyItem } from '../components/ApiKeyItem';
@@ -166,36 +167,38 @@ const UserProfileView = () => {
                     </CardHeader>
                     <Divider />
                     <CardBody className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
+                        <Form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input
+                                    label="First Name"
+                                    name="first_name"
+                                    value={formData.first_name}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                                    variant="bordered"
+                                />
+                                <Input
+                                    label="Last Name"
+                                    name="last_name"
+                                    value={formData.last_name}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                                    variant="bordered"
+                                />
+                            </div>
                             <Input
-                                label="First Name"
-                                name="first_name"
-                                value={formData.first_name}
-                                onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                                label="Email"
+                                value={user?.email || ''}
+                                isDisabled
                                 variant="bordered"
                             />
-                            <Input
-                                label="Last Name"
-                                name="last_name"
-                                value={formData.last_name}
-                                onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
-                                variant="bordered"
-                            />
-                        </div>
-                        <Input
-                            label="Email"
-                            value={user?.email || ''}
-                            isDisabled
-                            variant="bordered"
-                        />
-                        <Button
-                            color="primary"
-                            fullWidth
-                            onPress={handleSubmit}
-                            isLoading={loading}
-                        >
-                            Save Changes
-                        </Button>
+                            <Button
+                                color="primary"
+                                fullWidth
+                                type="submit"
+                                isLoading={loading}
+                            >
+                                Save Changes
+                            </Button>
+                        </Form>
                     </CardBody>
                 </Card>
 

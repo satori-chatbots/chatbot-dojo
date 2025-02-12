@@ -21,6 +21,7 @@ export const ENDPOINTS = {
     REGISTER: '/register/',
     LOGIN: '/login/',
     APIKEYS: '/api-keys/',
+    UPDATE_PROFILE: '/update-profile/',
 };
 
 export default API_BASE_URL;

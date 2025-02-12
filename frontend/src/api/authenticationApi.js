@@ -56,8 +56,18 @@ export const submitLogin = async (data) => {
 }
 
 export const updateUserProfile = async (data) => {
-    // pass for now
-    return true;
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.UPDATE_PROFILE}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+
+        const responseData = await response.json();
+        return responseData;
+    } catch (error) {
+        console.error('Error during profile update:', error);
+        throw error;
+    }
 };
 
 export const validateToken = async () => {
