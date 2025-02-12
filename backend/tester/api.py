@@ -947,7 +947,7 @@ def run_asyn_test_execution(
             if test_case.status == "STOPPED":
                 return
             test_case.status = "ERROR"
-            test_case.result = "Report directory not found"
+            test_case.result += "\nError accessing report directory"
             test_case.save()
             return
 
@@ -962,7 +962,7 @@ def run_asyn_test_execution(
             if test_case.status == "STOPPED":
                 return
             test_case.status = "ERROR"
-            test_case.result = "Error accessing report directory"
+            test_case.result += "\nError accessing report directory"
             test_case.save()
             return
 
@@ -970,7 +970,7 @@ def run_asyn_test_execution(
             if test_case.status == "STOPPED":
                 return
             test_case.status = "ERROR"
-            test_case.result = "No report file found"
+            test_case.result += "\nReport file not found"
             test_case.save()
             return
 
