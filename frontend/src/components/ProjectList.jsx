@@ -3,6 +3,7 @@ import {
     Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
     Button, Spinner
 } from "@heroui/react";
+import { Edit, Trash, Check } from 'lucide-react';
 
 const ProjectsList = ({
     projects,
@@ -75,6 +76,8 @@ const ProjectsList = ({
                                 variant='ghost'
                                 onPress={() => onSelectProject(project)}
                                 isDisabled={selectedProject?.id === project.id}
+                                className="w-[100px]"
+                                endContent={selectedProject?.id === project.id ? <Check className="w-3 h-3" /> : null}
                             >
                                 {selectedProject?.id === project.id ? 'Selected' : 'Select'}
                             </Button>
@@ -83,6 +86,7 @@ const ProjectsList = ({
                                 color="secondary"
                                 variant='ghost'
                                 onPress={() => onEditProject(project)}
+                                endContent={<Edit className="w-3 h-3" />}
                             >
                                 Edit
                             </Button>
@@ -91,6 +95,7 @@ const ProjectsList = ({
                                 color="danger"
                                 variant='ghost'
                                 onPress={() => onDeleteProject(project.id)}
+                                endContent={<Trash className="w-3 h-3" />}
                             >
                                 Delete
                             </Button>
