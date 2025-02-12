@@ -168,27 +168,31 @@ const UserProfileView = () => {
         my-auto
         max-h-[90vh]">
             <div className="max-w-4xl mx-auto space-y-6">
-                <Card className="shadow-md">
+                <Card>
                     <CardHeader>
                         <h1 className="text-2xl font-bold">Profile Settings</h1>
                     </CardHeader>
                     <Divider />
                     <CardBody className="space-y-6">
                         <Form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="flex gap-4 items-center">
                                 <Input
+                                    className="flex-1 w-full"
                                     label="First Name"
                                     name="first_name"
                                     value={formData.first_name}
                                     onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
                                     variant="bordered"
+                                    fullWidth
                                 />
                                 <Input
+                                    className="flex-1 w-full"
                                     label="Last Name"
                                     name="last_name"
                                     value={formData.last_name}
                                     onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
                                     variant="bordered"
+                                    fullWidth
                                 />
                             </div>
                             <Input
@@ -196,6 +200,7 @@ const UserProfileView = () => {
                                 value={user?.email || ''}
                                 isDisabled
                                 variant="bordered"
+                                fullWidth
                             />
                             <Button
                                 color="primary"
@@ -206,10 +211,11 @@ const UserProfileView = () => {
                                 Save Changes
                             </Button>
                         </Form>
+
                     </CardBody>
                 </Card>
 
-                <Card className="shadow-md">
+                <Card>
                     <CardHeader className="flex justify-between">
                         <h2 className="text-xl font-bold">API Keys</h2>
                         <Button

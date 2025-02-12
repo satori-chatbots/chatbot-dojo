@@ -28,7 +28,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
     return (
         <Card className="shadow-sm">
             <CardBody className="flex flex-row items-center gap-4">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 max-w-[50%]">
                     {isEditing ? (
                         <>
                             <Input
@@ -45,6 +45,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                                     onChange={(e) => setNewApiKey(e.target.value)}
                                     variant="bordered"
                                     type={showKey ? "text" : "password"}
+                                    className="break-all"
                                 />
                                 <Button
                                     isIconOnly
@@ -61,7 +62,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                     ) : (
                         <>
                             <h3 className="font-medium">{apiKey.name}</h3>
-                            <code className="text-sm text-gray-500">
+                            <code className="text-sm text-gray-500 break-all">
                                 {showKey ? apiKey.decrypted_api_key : '•'.repeat(20)}
                             </code>
                         </>
