@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Eye, EyeOff } from 'lucide-react';
 import {
     Card,
     CardBody,
@@ -32,6 +32,8 @@ const UserProfileView = () => {
     const [apiKeys, setApiKeys] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newApiKey, setNewApiKey] = useState({ name: '', api_key: '' });
+    const [showKey, setShowKey] = useState(false);
+
 
     const [formData, setFormData] = useState({
         first_name: '',
@@ -47,6 +49,10 @@ const UserProfileView = () => {
             loadApiKeys();
         }
     }, [user]);
+
+    const toggleShowKey = () => {
+        setShowKey(!showKey);
+    };
 
     const loadApiKeys = async () => {
         try {
@@ -247,14 +253,26 @@ const UserProfileView = () => {
                             onChange={(e) => setNewApiKey(prev => ({ ...prev, name: e.target.value }))}
                             variant="bordered"
                         />
-                        <Input
-                            label="API Key Value"
-                            placeholder="Enter your API key"
-                            value={newApiKey.api_key}
-                            onChange={(e) => setNewApiKey(prev => ({ ...prev, api_key: e.target.value }))}
-                            variant="bordered"
-                            type="password"
-                        />
+                        <div className="relative">
+                            <Input
+                                label="API Key Value"
+                                placeholder="Enter your API key"
+                                value={newApiKey.api_key}
+                                onChange={(e) => setNewApiKey(prev => ({ ...prev, api_key: e.target.value }))}
+                                variant="bordered"
+                                type={showKey ? "text" : "password"}
+                            />
+                            <Button
+                                isIconOnly
+                                color="default"
+                                variant="light"
+                                onPress={toggleShowKey}
+                                aria-label="Show/Hide API Key"
+                                className="absolute top-6 right-2 transform -translate-y-1/2"
+                            >
+                                {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </Button>
+                        </div>
                     </ModalBody>
                     <ModalFooter>
                         <Button color="danger" variant="light" onPress={() => setIsModalOpen(false)}>

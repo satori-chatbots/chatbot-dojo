@@ -5,11 +5,11 @@ import { Card, CardBody, Button, Input } from '@heroui/react';
 export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
     const [isEditing, setIsEditing] = useState(false);
     const [newName, setNewName] = useState(apiKey.name);
-    const [newApiKey, setNewApiKey] = useState(apiKey.decrypted_api_key); // new state for API key
+    const [newApiKey, setNewApiKey] = useState(apiKey.decrypted_api_key);
+    const [showKey, setShowKey] = useState(false);
 
     const handleSave = () => {
         if (newName.trim()) {
-            // call onUpdate with both id, newName and newApiKey
             onUpdate(apiKey.id, newName, newApiKey);
             setIsEditing(false);
         }
@@ -17,8 +17,12 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
 
     const handleCancel = () => {
         setNewName(apiKey.name);
-        setNewApiKey(apiKey.decrypted_api_key); // reset API key
+        setNewApiKey(apiKey.decrypted_api_key);
         setIsEditing(false);
+    };
+
+    const toggleShowKey = () => {
+        setShowKey(!showKey);
     };
 
     return (
@@ -34,19 +38,31 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                                 variant="bordered"
                                 autoFocus
                             />
-                            <Input
-                                label="API Key"
-                                value={newApiKey}
-                                onChange={(e) => setNewApiKey(e.target.value)}
-                                variant="bordered"
-                                type="text" // or "password"
-                            />
+                            <div className="relative">
+                                <Input
+                                    label="API Key"
+                                    value={newApiKey}
+                                    onChange={(e) => setNewApiKey(e.target.value)}
+                                    variant="bordered"
+                                    type={showKey ? "text" : "password"}
+                                />
+                                <Button
+                                    isIconOnly
+                                    color="default"
+                                    variant="light"
+                                    onPress={toggleShowKey}
+                                    aria-label="Show/Hide API Key"
+                                    className="absolute top-6 right-2 transform -translate-y-1/2"
+                                >
+                                    {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </Button>
+                            </div>
                         </>
                     ) : (
                         <>
                             <h3 className="font-medium">{apiKey.name}</h3>
                             <code className="text-sm text-gray-500">
-                                {apiKey.decrypted_api_key}
+                                {showKey ? apiKey.decrypted_api_key : '•'.repeat(20)}
                             </code>
                         </>
                     )}
@@ -76,6 +92,15 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                         </>
                     ) : (
                         <>
+                            <Button
+                                isIconOnly
+                                color="default"
+                                variant="light"
+                                onPress={toggleShowKey}
+                                aria-label="Show/Hide API Key"
+                            >
+                                {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </Button>
                             <Button
                                 isIconOnly
                                 color="primary"
