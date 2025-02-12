@@ -73,7 +73,14 @@ const UserProfileView = () => {
         setMessage({ type: '', content: '' });
 
         try {
-            await updateUserProfile(formData);
+            const updatedUser = await updateUserProfile(formData);
+            // Check if backend returned an error
+            if (!updatedUser || updatedUser.error) {
+                throw new Error(updatedUser?.error || 'Server returned an error');
+            }
+
+            // Only update local storage if successful
+            localStorage.setItem('user', JSON.stringify({ user: updatedUser }));
             await refreshUser();
             setMessage({
                 type: 'success',
