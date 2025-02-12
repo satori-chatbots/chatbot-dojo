@@ -105,10 +105,10 @@ const UserProfileView = () => {
         }
     };
 
-    const handleUpdateApiKey = async (id, newName) => {
+    const handleUpdateApiKey = async (id, newName, newApiKey) => {
         setLoading(true);
         try {
-            await updateApiKey(id, { name: newName });
+            await updateApiKey(id, { name: newName, api_key: newApiKey });
             await loadApiKeys();
             setMessage({
                 type: 'success',

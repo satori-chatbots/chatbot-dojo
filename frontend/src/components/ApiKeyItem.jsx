@@ -5,16 +5,19 @@ import { Card, CardBody, Button, Input } from '@heroui/react';
 export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
     const [isEditing, setIsEditing] = useState(false);
     const [newName, setNewName] = useState(apiKey.name);
+    const [newApiKey, setNewApiKey] = useState(apiKey.decrypted_api_key); // new state for API key
 
     const handleSave = () => {
         if (newName.trim()) {
-            onUpdate(apiKey.id, newName);
+            // call onUpdate with both id, newName and newApiKey
+            onUpdate(apiKey.id, newName, newApiKey);
             setIsEditing(false);
         }
     };
 
     const handleCancel = () => {
         setNewName(apiKey.name);
+        setNewApiKey(apiKey.decrypted_api_key); // reset API key
         setIsEditing(false);
     };
 
@@ -23,12 +26,22 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
             <CardBody className="flex flex-row items-center gap-4">
                 <div className="flex-1">
                     {isEditing ? (
-                        <Input
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            variant="bordered"
-                            autoFocus
-                        />
+                        <>
+                            <Input
+                                label="Name"
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                variant="bordered"
+                                autoFocus
+                            />
+                            <Input
+                                label="API Key"
+                                value={newApiKey}
+                                onChange={(e) => setNewApiKey(e.target.value)}
+                                variant="bordered"
+                                type="text" // or "password"
+                            />
+                        </>
                     ) : (
                         <>
                             <h3 className="font-medium">{apiKey.name}</h3>
