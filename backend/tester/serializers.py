@@ -123,12 +123,13 @@ class TestErrorSerializer(serializers.ModelSerializer):
 
 
 class UserAPIKeySerializer(serializers.ModelSerializer):
-    api_key = serializers.CharField(write_only=True)
+    api_key = serializers.CharField(write_only=True, required=False)
+    decrypted_api_key = serializers.SerializerMethodField()
 
     class Meta:
         model = UserAPIKey
-        fields = ["id", "name", "api_key", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ["id", "name", "api_key", "created_at", "decrypted_api_key"]
+        read_only_fields = ["id", "created_at", "decrypted_api_key"]
 
     def create(self, validated_data):
         # Get the plain text API key
@@ -141,11 +142,14 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         # Get the plain text API key
-        api_key_plain = validated_data.pop('api_key', None)
+        api_key_plain = validated_data.pop("api_key", None)
         # Update the API key if it is provided
         if api_key_plain is not None:
             instance.set_api_key(api_key_plain)
         # Update the name
-        instance.name = validated_data.get('name', instance.name)
+        instance.name = validated_data.get("name", instance.name)
         instance.save()
         return instance
+
+    def get_decrypted_api_key(self, obj):
+        return obj.get_api_key()

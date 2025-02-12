@@ -14,7 +14,7 @@ const ProjectsList = ({
     onDeleteProject
 }) => {
 
-    const isLoading = loading || !technologies?.length;
+    const isLoading = loading;
 
     const columns = [
         { name: 'Name', key: 'name', sortable: true },
@@ -57,7 +57,7 @@ const ProjectsList = ({
                 )}
             </TableHeader>
             <TableBody
-                emptyState="Create a new project to get started."
+                emptyContent="Create a new project to get started."
                 isLoading={isLoading}
                 loadingContent={<Spinner label='Loading Projects...' />}
                 items={sortedProjects}

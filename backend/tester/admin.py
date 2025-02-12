@@ -9,6 +9,7 @@ from .models import (
     ProfileReport,
     Conversation,
     TestError,
+    UserAPIKey
 )
 
 
@@ -80,3 +81,9 @@ class ConversationAdmin(admin.ModelAdmin):
 class TestErrorAdmin(admin.ModelAdmin):
     list_display = ("code", "count")
     search_fields = ("code",)
+
+@admin.register(UserAPIKey)
+class UserAPIKeyAdmin(admin.ModelAdmin):
+    list_display = ("user", "api_key_encrypted", "created_at")
+    search_fields = ("user", "api_key_encrypted")
+    list_filter = ("created_at",)

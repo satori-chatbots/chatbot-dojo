@@ -55,6 +55,11 @@ export const submitLogin = async (data) => {
     }
 }
 
+export const updateUserProfile = async (data) => {
+    // pass for now
+    return true;
+};
+
 export const validateToken = async () => {
     try {
         const token = localStorage.getItem('token');
