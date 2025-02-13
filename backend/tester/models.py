@@ -164,8 +164,8 @@ class Project(models.Model):
     A Project is a collection of test cases, it uses one chatbot technology
     """
 
-    # Name of the project, must be unique
-    name = models.CharField(max_length=255, unique=True)
+    # Name of the project, must be unique for the user
+    name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # A project can only have one chatbot technology, but a technology can be used in multiple projects

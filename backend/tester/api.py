@@ -3,7 +3,7 @@ import signal
 import subprocess
 import time
 import configparser
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -432,6 +432,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer):
+        name = serializer.validated_data['name']
+        if Project.objects.filter(owner=self.request.user, name=name).exists():
+            raise serializers.ValidationError({"name": "Project name already exists for this user."})
         serializer.save(owner=self.request.user)
 
     def get_object(self):
@@ -452,7 +455,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ChatbotTechnologySerializer(technologies, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # Check if the project name is already used
+    # Check if the project name is already used by the user
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request):
         """Check if a project name is already used. It cant be none or empty."""
@@ -463,7 +466,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        exists = Project.objects.filter(name=name).exists()
+        exists = Project.objects.filter(owner=request.user, name=name).exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
 
