@@ -73,7 +73,7 @@ const ProjectsList = ({
                             <Button
                                 size="sm"
                                 color="primary"
-                                variant='ghost'
+                                variant='flat'
                                 onPress={() => onSelectProject(project)}
                                 isDisabled={selectedProject?.id === project.id}
                                 className="w-[100px]"
@@ -84,7 +84,7 @@ const ProjectsList = ({
                             <Button
                                 size="sm"
                                 color="secondary"
-                                variant='ghost'
+                                variant='flat'
                                 onPress={() => onEditProject(project)}
                                 endContent={<Edit className="w-3 h-3" />}
                             >
@@ -93,7 +93,7 @@ const ProjectsList = ({
                             <Button
                                 size="sm"
                                 color="danger"
-                                variant='ghost'
+                                variant="flat"
                                 onPress={() => onDeleteProject(project.id)}
                                 endContent={<Trash className="w-3 h-3" />}
                             >
