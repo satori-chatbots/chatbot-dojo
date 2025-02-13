@@ -50,6 +50,7 @@ class UserAPIKey(models.Model):
     def __str__(self):
         return f"{self.name} ({self.user.email})"
 
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -95,7 +96,6 @@ class CustomUser(AbstractUser):
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
-
 
 
 def upload_to(instance, filename):
@@ -181,6 +181,17 @@ class Project(models.Model):
     # Visibility of the project
     # This makes the project visible, but not editable by other users
     public = models.BooleanField(default=False)
+
+    # API Key for the project
+    # A user has multiple API keys and he can assign one to a project
+    # If the user deletes the API key, the project will be assigned to None
+    api_key = models.ForeignKey(
+        UserAPIKey,
+        related_name="projects",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
 
     def __str__(self):
         return self.name

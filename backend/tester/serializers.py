@@ -86,6 +86,10 @@ class ProjectSerializer(serializers.ModelSerializer):
         queryset=ChatbotTechnology.objects.all()
     )
     is_owner = serializers.SerializerMethodField()
+    # Add the API key field to the serializer
+    api_key = serializers.PrimaryKeyRelatedField(
+        queryset=UserAPIKey.objects.all(), required=False, allow_null=True
+    )
 
     class Meta:
         model = Project
@@ -142,12 +146,12 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         # Get the plain text API key
-        api_key_plain = validated_data.pop('api_key', None)
+        api_key_plain = validated_data.pop("api_key", None)
         # Update the API key if it is provided
         if api_key_plain is not None:
             instance.set_api_key(api_key_plain)
         # Update the name
-        instance.name = validated_data.get('name', instance.name)
+        instance.name = validated_data.get("name", instance.name)
         instance.save()
         return instance
 

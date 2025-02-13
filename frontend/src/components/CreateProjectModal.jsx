@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Modal,
     ModalContent,
@@ -9,10 +9,12 @@ import {
     Input,
     Select,
     SelectItem,
-    Form
+    Form,
+    Switch
 } from "@heroui/react";
 import { createProject, checkProjectName } from '../api/projectApi';
 import { RotateCcw, Plus } from 'lucide-react';
+import { fetchUserApiKeys } from '../api/apiKeysApi';
 
 const CreateProjectModal = ({
     isOpen,
@@ -22,10 +24,30 @@ const CreateProjectModal = ({
 }) => {
     const [formData, setFormData] = useState({
         name: '',
-        technology: ''
+        technology: '',
+        apiKey: null,
+        public: false,
     });
     const [loadingValidation, setLoadingValidation] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
+    const [apiKeys, setApiKeys] = useState([]);
+    const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+
+    useEffect(() => {
+        const loadApiKeys = async () => {
+            setLoadingApiKeys(true);
+            try {
+                const keys = await fetchUserApiKeys();
+                setApiKeys(keys);
+            } catch (error) {
+                console.error('Error fetching API keys:', error);
+            } finally {
+                setLoadingApiKeys(false);
+            }
+        };
+
+        loadApiKeys();
+    }, []);
 
     const handleProjectNameChange = (event) => {
         setFormData(prev => ({ ...prev, name: event.target.value }));
@@ -35,10 +57,20 @@ const CreateProjectModal = ({
         setFormData(prev => ({ ...prev, technology: event.target.value }));
     };
 
+    const handleApiKeyChange = (event) => {
+        setFormData(prev => ({ ...prev, apiKey: event.target.value }));
+    };
+
+    const handlePublicChange = (value) => {
+        setFormData(prev => ({ ...prev, public: value }));
+    };
+
     const handleFormReset = () => {
         setFormData({
             name: '',
-            technology: ''
+            technology: '',
+            apiKey: null,
+            public: false,
         });
         setValidationErrors({});
     };
@@ -76,6 +108,8 @@ const CreateProjectModal = ({
             const newProject = await createProject({
                 name: formData.name,
                 chatbot_technology: formData.technology,
+                api_key: formData.apiKey,
+                public: formData.public,
             });
             handleFormReset();
             onOpenChange(false);
@@ -84,9 +118,13 @@ const CreateProjectModal = ({
             }
         } catch (error) {
             console.error('Error creating project:', error);
-            const errorData = JSON.parse(error.message);
-            const errors = Object.entries(errorData).map(([key, value]) => `${key}: ${value}`);
-            alert(`Error creating project: ${errors.join('\n')}`);
+            try {
+                const errorData = JSON.parse(error.message);
+                const errors = Object.entries(errorData).map(([key, value]) => `${key}: ${value}`);
+                alert(`Error creating project: ${errors.join('\n')}`);
+            } catch (parseError) {
+                alert(`Error creating project: ${error.message}`);
+            }
         }
     };
 
@@ -136,6 +174,36 @@ const CreateProjectModal = ({
                                         </SelectItem>
                                     ))}
                                 </Select>
+
+                                <Select
+                                    placeholder="Select API Key (Optional)"
+                                    fullWidth
+                                    label="API Key"
+                                    labelPlacement="outside"
+                                    onChange={handleApiKeyChange}
+                                    value={formData.apiKey || ''}
+                                    isDisabled={loadingValidation || loadingApiKeys}
+                                >
+                                    {apiKeys.map(key => (
+                                        <SelectItem key={key.id} value={key.id}>
+                                            {key.name}
+                                        </SelectItem>
+                                    ))}
+                                </Select>
+
+                                <p>
+                                    Public Project?
+                                </p>
+                                <Switch
+                                    label="Public Project"
+                                    isSelected={formData.public}
+                                    onValueChange={handlePublicChange}
+                                    isDisabled={loadingValidation}
+                                >
+                                    {formData.public ? 'Public' : 'Private'}
+                                </Switch>
+
+
                                 <ModalFooter className="w-full flex justify-center gap-4">
                                     <Button type="reset" color="danger" variant="light" startContent={<RotateCcw className="w-4 h-4 mr-1" />}>
                                         Reset
