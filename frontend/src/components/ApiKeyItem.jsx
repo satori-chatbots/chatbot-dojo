@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pencil, Trash2, Eye, EyeOff, Check, X } from 'lucide-react';
-import { Card, CardBody, Button, Input } from '@heroui/react';
+import { Card, CardBody, Button, Input, Form } from '@heroui/react';
 
 export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -8,7 +8,8 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
     const [newApiKey, setNewApiKey] = useState(apiKey.decrypted_api_key);
     const [showKey, setShowKey] = useState(false);
 
-    const handleSave = () => {
+    const handleSave = (e) => {
+        e.preventDefault();
         if (newName.trim()) {
             onUpdate(apiKey.id, newName, newApiKey);
             setIsEditing(false);
@@ -27,10 +28,10 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
 
     return (
         <Card className="shadow-sm">
-            <CardBody className="flex flex-row items-center gap-4">
-                <div className="flex-1 min-w-0 max-w-[50%]">
-                    {isEditing ? (
-                        <>
+            <CardBody className={`flex ${isEditing ? 'flex-col' : 'flex-row'} gap-4`}>
+                {isEditing ? (
+                    <Form onSubmit={handleSave} className="flex flex-col gap-4 w-full">
+                        <div className="w-full">
                             <Input
                                 label="Name"
                                 value={newName}
@@ -53,34 +54,14 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                                     variant="light"
                                     onPress={toggleShowKey}
                                     aria-label="Show/Hide API Key"
-                                    className="absolute top-6 right-2 transform -translate-y-1/2"
+                                    className="absolute top-7 right-2 transform -translate-y-1/2"
                                 >
                                     {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </Button>
                             </div>
-                        </>
-                    ) : (
-                        <>
-                            <h3 className="font-medium">{apiKey.name}</h3>
-                            <code className="text-sm text-gray-500 break-all">
-                                {showKey ? apiKey.decrypted_api_key : '•'.repeat(20)}
-                            </code>
-                        </>
-                    )}
-                </div>
+                        </div>
+                        <div className="flex justify-center items-center gap-2 w-full">
 
-                <div className="flex items-center gap-2">
-                    {isEditing ? (
-                        <>
-                            <Button
-                                isIconOnly
-                                color="success"
-                                variant="light"
-                                onPress={handleSave}
-                                aria-label="Save"
-                            >
-                                <Check size={18} />
-                            </Button>
                             <Button
                                 isIconOnly
                                 color="danger"
@@ -90,9 +71,26 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                             >
                                 <X size={18} />
                             </Button>
-                        </>
-                    ) : (
-                        <>
+                            <Button
+                                isIconOnly
+                                color="success"
+                                variant="light"
+                                type="submit"
+                                aria-label="Save"
+                            >
+                                <Check size={18} />
+                            </Button>
+                        </div>
+                    </Form>
+                ) : (
+                    <>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-medium">{apiKey.name}</h3>
+                            <code className="text-sm text-gray-500 break-all">
+                                {showKey ? apiKey.decrypted_api_key : '•'.repeat(20)}
+                            </code>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
                             <Button
                                 isIconOnly
                                 color="default"
@@ -120,9 +118,9 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                             >
                                 <Trash2 size={18} />
                             </Button>
-                        </>
-                    )}
-                </div>
+                        </div>
+                    </>
+                )}
             </CardBody>
         </Card>
     );
