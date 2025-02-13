@@ -549,7 +549,7 @@ function Dashboard() {
                                         size="sm"
                                         variant="flat"
                                         color="primary"
-                                        startContent={<Eye className="w-4 h-4 mr-1" />}
+                                        endContent={<Eye className="w-3 h-3" />}
                                     >
                                         View
                                     </Button>
@@ -559,7 +559,7 @@ function Dashboard() {
                                             variant="flat"
                                             color="danger"
                                             onPress={(e) => handleStop(testCase.id, e)}
-                                            startContent={<XCircle className="w-4 h-4 mr-1" />}
+                                            endContent={<XCircle className="w-3 h-3" />}
                                         >
                                             Stop
                                         </Button>
@@ -570,7 +570,7 @@ function Dashboard() {
                                             variant="flat"
                                             color="danger"
                                             onPress={(e) => handleDelete(testCase.id, e)}
-                                            startContent={<Trash className="w-4 h-4 mr-1" />}
+                                            endContent={<Trash className="w-3 h-3" />}
                                         >
                                             Delete
                                         </Button>

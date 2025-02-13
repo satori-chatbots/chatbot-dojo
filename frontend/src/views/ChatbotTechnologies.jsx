@@ -355,10 +355,10 @@ const ChatbotTechnologies = () => {
                                 </a>
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
-                                <Button size="sm" color="secondary" variant='flat' startContent={<Edit className="w-4 h-4 mr-1" />} onPress={() => handleEdit(tech)}>
+                                <Button size="sm" color="secondary" variant='flat' endContent={<Edit className="w-3 h-3" />} onPress={() => handleEdit(tech)}>
                                     Edit
                                 </Button>
-                                <Button size="sm" color="danger" variant='flat' startContent={<Trash className="w-4 h-4 mr-1" />} onPress={() => handleDelete(tech.id)}>
+                                <Button size="sm" color="danger" variant='flat' endContent={<Trash className="w-3 h-3" />} onPress={() => handleDelete(tech.id)}>
                                     Delete
                                 </Button>
                             </TableCell>
