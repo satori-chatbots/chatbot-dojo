@@ -43,6 +43,7 @@ const EditProjectModal = ({
                 apiKey: project.api_key || null,
                 public: project.public || false,
             });
+            console.log('Project:', project);
         }
     }, [project]);
 
@@ -53,6 +54,7 @@ const EditProjectModal = ({
                 try {
                     const keys = await getUserApiKeys();
                     setApiKeys(keys);
+                    console.log('API Keys:', keys);
                 } catch (error) {
                     console.error('Error fetching API keys:', error);
                 } finally {
@@ -198,6 +200,7 @@ const EditProjectModal = ({
                             onChange={handleApiKeyChange}
                             value={formData.apiKey || ''}
                             isDisabled={loadingValidation || loadingApiKeys}
+                            selectedKeys={[String(formData.apiKey)]}
                         >
                             {apiKeys.map(key => (
                                 <SelectItem key={key.id} value={key.id}>
