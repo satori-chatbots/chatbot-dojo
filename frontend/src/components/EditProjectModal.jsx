@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Modal,
     ModalContent,
@@ -9,10 +9,12 @@ import {
     Input,
     Select,
     SelectItem,
-    Form
+    Form,
+    Switch
 } from "@heroui/react";
 import { updateProject, checkProjectName } from '../api/projectApi';
 import { RotateCcw, Save } from 'lucide-react';
+import { getUserApiKeys } from '../api/authenticationApi';
 
 const EditProjectModal = ({
     isOpen,
@@ -23,20 +25,44 @@ const EditProjectModal = ({
 }) => {
     const [formData, setFormData] = useState({
         name: project?.name || '',
-        technology: project?.chatbot_technology || ''
+        technology: project?.chatbot_technology || '',
+        apiKey: project?.api_key || null,
+        public: project?.public || false,
     });
     const [loadingValidation, setLoadingValidation] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
+    const [apiKeys, setApiKeys] = useState([]);
+    const [loadingApiKeys, setLoadingApiKeys] = useState(true);
 
     // Update form data when project changes
-    React.useEffect(() => {
+    useEffect(() => {
         if (project) {
             setFormData({
                 name: project.name,
-                technology: project.chatbot_technology
+                technology: project.chatbot_technology,
+                apiKey: project.api_key || null,
+                public: project.public || false,
             });
         }
     }, [project]);
+
+    useEffect(() => {
+        if (isOpen) {
+            const loadApiKeys = async () => {
+                setLoadingApiKeys(true);
+                try {
+                    const keys = await getUserApiKeys();
+                    setApiKeys(keys);
+                } catch (error) {
+                    console.error('Error fetching API keys:', error);
+                } finally {
+                    setLoadingApiKeys(false);
+                }
+            };
+
+            loadApiKeys();
+        }
+    }, [isOpen]);
 
     const handleFormValidation = async (event, name, technology) => {
         event.preventDefault();
@@ -75,6 +101,8 @@ const EditProjectModal = ({
             await updateProject(project.id, {
                 name: formData.name,
                 chatbot_technology: formData.technology,
+                api_key: formData.apiKey,
+                public: formData.public,
             });
             onOpenChange(false);
             if (onProjectUpdated) {
@@ -90,10 +118,28 @@ const EditProjectModal = ({
 
     const handleReset = () => {
         setFormData({
-            name: '',
-            technology: ''
+            name: project.name,
+            technology: project.chatbot_technology,
+            apiKey: project.api_key || null,
+            public: project.public || false,
         });
         setValidationErrors({});
+    };
+
+    const handleProjectNameChange = (event) => {
+        setFormData(prev => ({ ...prev, name: event.target.value }));
+    };
+
+    const handleTechnologyChange = (event) => {
+        setFormData(prev => ({ ...prev, technology: event.target.value }));
+    };
+
+    const handleApiKeyChange = (event) => {
+        setFormData(prev => ({ ...prev, apiKey: event.target.value }));
+    };
+
+    const handlePublicChange = (value) => {
+        setFormData(prev => ({ ...prev, public: value }));
     };
 
     return (
@@ -123,7 +169,7 @@ const EditProjectModal = ({
                             value={formData.name}
                             variant="bordered"
                             label="Project Name"
-                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                            onChange={handleProjectNameChange}
                             maxLength={255}
                             minLength={3}
                             isDisabled={loadingValidation}
@@ -143,6 +189,32 @@ const EditProjectModal = ({
                                 </SelectItem>
                             ))}
                         </Select>
+
+                        <Select
+                            placeholder="Select API Key (Optional)"
+                            fullWidth
+                            label="API Key"
+                            labelPlacement="outside"
+                            onChange={handleApiKeyChange}
+                            value={formData.apiKey || ''}
+                            isDisabled={loadingValidation || loadingApiKeys}
+                        >
+                            {apiKeys.map(key => (
+                                <SelectItem key={key.id} value={key.id}>
+                                    {key.name}
+                                </SelectItem>
+                            ))}
+                        </Select>
+
+                        <div className="flex w-full justify-between items-center">
+                            <label className="text-sm">Make Project Public</label>
+                            <Switch
+                                isSelected={formData.public}
+                                onValueChange={handlePublicChange}
+                                isDisabled={loadingValidation}
+                            />
+                        </div>
+
                         <ModalFooter className="w-full flex justify-center gap-4">
                             <Button color="danger" variant="light" type="reset" startContent={<RotateCcw className="w-4 h-4 mr-1" />}>
                                 Reset
