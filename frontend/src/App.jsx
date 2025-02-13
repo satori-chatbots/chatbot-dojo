@@ -140,7 +140,7 @@ function AppContent() {
                                 <NavbarItem>
                                     <span>Welcome, </span>
                                 </NavbarItem>
-                                <NavbarItem isActive={location.pathname === '/profile'}>
+                                <NavbarItem isActive={location.pathname === '/profile'} className='text-primary'>
                                     <Link to="/profile" className="hover:underline">{user.first_name}</Link>
                                 </NavbarItem>
                                 <NavbarItem>
@@ -157,6 +157,7 @@ function AppContent() {
                         )}
                         <Switch
                             defaultSelected={theme === 'dark'}
+                            className='ml-4'
                             color="success"
                             endContent={<span aria-hidden="true"><MoonIcon /></span>}
                             size="md"
