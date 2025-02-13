@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Eye, EyeOff } from 'lucide-react';
 import {
     Card,
@@ -24,6 +24,7 @@ import {
     updateApiKey,
     deleteApiKey
 } from '../api/authenticationApi';
+import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 
 
 const UserProfileView = () => {
@@ -74,23 +75,14 @@ const UserProfileView = () => {
 
         try {
             const updatedUser = await updateUserProfile(formData);
-            // Check if backend returned an error
             if (!updatedUser || updatedUser.error) {
                 throw new Error(updatedUser?.error || 'Server returned an error');
             }
-
-            // Only update local storage if successful
             localStorage.setItem('user', JSON.stringify({ user: updatedUser }));
             await refreshUser();
-            setMessage({
-                type: 'success',
-                content: 'Profile updated successfully'
-            });
+            showTemporaryMessage('success', 'Profile updated successfully');
         } catch (error) {
-            setMessage({
-                type: 'error',
-                content: error.message || 'Failed to update profile'
-            });
+            showTemporaryMessage('error', error.message || 'Failed to update profile');
         } finally {
             setLoading(false);
         }
@@ -104,15 +96,9 @@ const UserProfileView = () => {
                 await loadApiKeys();
                 setNewApiKey({ name: '', api_key: '' });
                 setIsModalOpen(false);
-                setMessage({
-                    type: 'success',
-                    content: 'API Key created successfully'
-                });
+                showTemporaryMessage('success', 'API Key created successfully');
             } catch (error) {
-                setMessage({
-                    type: 'error',
-                    content: error.message || 'Failed to create API Key'
-                });
+                showTemporaryMessage('error', error.message || 'Failed to create API Key');
             } finally {
                 setLoading(false);
             }
@@ -124,15 +110,9 @@ const UserProfileView = () => {
         try {
             await updateApiKey(id, { name: newName, api_key: newApiKey });
             await loadApiKeys();
-            setMessage({
-                type: 'success',
-                content: 'API Key updated successfully'
-            });
+            showTemporaryMessage('success', 'API Key updated successfully');
         } catch (error) {
-            setMessage({
-                type: 'error',
-                content: error.message || 'Failed to update API Key'
-            });
+            showTemporaryMessage('error', error.message || 'Failed to update API Key');
         } finally {
             setLoading(false);
         }
@@ -145,19 +125,24 @@ const UserProfileView = () => {
         try {
             await deleteApiKey(id);
             await loadApiKeys();
-            setMessage({
-                type: 'success',
-                content: 'API Key deleted successfully'
-            });
+            showTemporaryMessage('success', 'API Key deleted successfully');
         } catch (error) {
-            setMessage({
-                type: 'error',
-                content: error.message || 'Failed to delete API Key'
-            });
+            showTemporaryMessage('error', error.message || 'Failed to delete API Key');
         } finally {
             setLoading(false);
         }
     };
+
+    const clearMessage = useCallback(() => {
+        setMessage({ type: '', content: '' });
+    }, []);
+
+    const showTemporaryMessage = useCallback((type, content) => {
+        setMessage({ type, content });
+        // Appears for 3 seconds
+        const timer = setTimeout(clearMessage, 3000);
+        return () => clearTimeout(timer);
+    }, [clearMessage]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8
@@ -243,14 +228,22 @@ const UserProfileView = () => {
                         )}
                     </CardBody>
                 </Card>
-
-                {message.content && (
-                    <div className={`text-sm text-center ${message.type === 'error' ? 'text-danger' : 'text-success'
-                        }`}>
-                        {message.content}
-                    </div>
-                )}
             </div>
+
+            {message.content && (
+                <div className={`
+                    fixed left-1/2 transform -translate-x-1/2
+                    px-6 py-3 rounded-lg shadow-lg
+                    text-sm text-center z-50
+                    ${message.type === 'error' ? 'bg-danger-50 text-danger' : 'bg-success-50 text-success'}
+                `}
+                    style={{
+                        top: 'calc(50% + 280px)'
+                    }}
+                >
+                    {message.content}
+                </div>
+            )}
 
             <Modal
                 isOpen={isModalOpen}
