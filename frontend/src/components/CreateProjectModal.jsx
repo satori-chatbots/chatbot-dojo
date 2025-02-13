@@ -193,17 +193,15 @@ const CreateProjectModal = ({
                                     ))}
                                 </Select>
 
-                                <p>
-                                    Public Project?
-                                </p>
-                                <Switch
-                                    label="Public Project"
-                                    isSelected={formData.public}
-                                    onValueChange={handlePublicChange}
-                                    isDisabled={loadingValidation}
-                                >
-                                    {formData.public ? 'Public' : 'Private'}
-                                </Switch>
+                                <div className="flex w-full justify-between items-center">
+                                    <label className="text-sm">Make Project Public</label>
+                                    <Switch
+                                        isSelected={formData.public}
+                                        onValueChange={handlePublicChange}
+                                        isDisabled={loadingValidation}
+                                    />
+                                </div>
+
 
 
                                 <ModalFooter className="w-full flex justify-center gap-4">
