@@ -17,6 +17,7 @@ import SignupView from './views/SignupView';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import UserProfileView from './views/UserProfileView';
+import { MyCustomToastProvider } from './contexts/MyCustomToastContext';
 
 export const MoonIcon = (props) => {
     return (
@@ -235,7 +236,9 @@ function AppContent() {
 function App() {
     return (
         <AuthProvider>
-            <AppContent />
+            <MyCustomToastProvider>
+                <AppContent />
+            </MyCustomToastProvider>
         </AuthProvider>
     );
 }

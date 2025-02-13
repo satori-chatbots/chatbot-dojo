@@ -30,11 +30,11 @@ import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 const UserProfileView = () => {
     const { user, refreshUser } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState({ type: '', content: '' });
     const [apiKeys, setApiKeys] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newApiKey, setNewApiKey] = useState({ name: '', api_key: '' });
     const [showKey, setShowKey] = useState(false);
+    const { showToast } = useMyCustomToast();
 
 
     const [formData, setFormData] = useState({
@@ -61,17 +61,13 @@ const UserProfileView = () => {
             const keys = await getUserApiKeys();
             setApiKeys(keys);
         } catch (error) {
-            setMessage({
-                type: 'error',
-                content: 'Failed to load API keys'
-            });
+            showToast('error', 'Failed to load API keys');
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setMessage({ type: '', content: '' });
 
         try {
             const updatedUser = await updateUserProfile(formData);
@@ -80,9 +76,9 @@ const UserProfileView = () => {
             }
             localStorage.setItem('user', JSON.stringify({ user: updatedUser }));
             await refreshUser();
-            showTemporaryMessage('success', 'Profile updated successfully');
+            showToast('success', 'Profile updated successfully');
         } catch (error) {
-            showTemporaryMessage('error', error.message || 'Failed to update profile');
+            showToast('error', error.message || 'Failed to update profile');
         } finally {
             setLoading(false);
         }
@@ -96,9 +92,9 @@ const UserProfileView = () => {
                 await loadApiKeys();
                 setNewApiKey({ name: '', api_key: '' });
                 setIsModalOpen(false);
-                showTemporaryMessage('success', 'API Key created successfully');
+                showToast('success', 'API Key created successfully');
             } catch (error) {
-                showTemporaryMessage('error', error.message || 'Failed to create API Key');
+                showToast('error', error.message || 'Failed to create API Key');
             } finally {
                 setLoading(false);
             }
@@ -110,9 +106,9 @@ const UserProfileView = () => {
         try {
             await updateApiKey(id, { name: newName, api_key: newApiKey });
             await loadApiKeys();
-            showTemporaryMessage('success', 'API Key updated successfully');
+            showToast('success', 'API Key updated successfully');
         } catch (error) {
-            showTemporaryMessage('error', error.message || 'Failed to update API Key');
+            showToast('error', error.message || 'Failed to update API Key');
         } finally {
             setLoading(false);
         }
@@ -125,24 +121,13 @@ const UserProfileView = () => {
         try {
             await deleteApiKey(id);
             await loadApiKeys();
-            showTemporaryMessage('success', 'API Key deleted successfully');
+            showToast('success', 'API Key deleted successfully');
         } catch (error) {
-            showTemporaryMessage('error', error.message || 'Failed to delete API Key');
+            showToast('error', error.message || 'Failed to delete API Key');
         } finally {
             setLoading(false);
         }
     };
-
-    const clearMessage = useCallback(() => {
-        setMessage({ type: '', content: '' });
-    }, []);
-
-    const showTemporaryMessage = useCallback((type, content) => {
-        setMessage({ type, content });
-        // Appears for 3 seconds
-        const timer = setTimeout(clearMessage, 3000);
-        return () => clearTimeout(timer);
-    }, [clearMessage]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8
@@ -230,20 +215,6 @@ const UserProfileView = () => {
                 </Card>
             </div>
 
-            {message.content && (
-                <div className={`
-                    fixed left-1/2 transform -translate-x-1/2
-                    px-6 py-3 rounded-lg shadow-lg
-                    text-sm text-center z-50
-                    ${message.type === 'error' ? 'bg-danger-50 text-danger' : 'bg-success-50 text-success'}
-                `}
-                    style={{
-                        top: 'calc(50% + 280px)'
-                    }}
-                >
-                    {message.content}
-                </div>
-            )}
 
             <Modal
                 isOpen={isModalOpen}
