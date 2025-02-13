@@ -21,6 +21,7 @@ import { createProject, deleteProject, updateProject, checkProjectName } from '.
 import EditProjectModal from '../components/EditProjectModal';
 import useSelectedProject from '../hooks/useSelectedProject';
 import ProjectsList from '../components/ProjectList';
+import { Plus } from 'lucide-react';
 
 
 const ProjectsDashboard = () => {
@@ -273,12 +274,12 @@ const ProjectsDashboard = () => {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8
-        flex flex-col
-        space-y-4 sm:space-y-6
-        max-w-full sm:max-w-4xl
-        mx-auto
-        my-auto
-        max-h-[90vh]">
+            flex flex-col
+            space-y-4 sm:space-y-6
+            max-w-full sm:max-w-4xl
+            mx-auto
+            my-auto
+            max-h-[90vh]">
 
             {/* Modal to create new project */}
             <CreateProjectModal
@@ -299,8 +300,7 @@ const ProjectsDashboard = () => {
                 <span>{selectedProject?.name || 'None'}</span>
             </div>
 
-
-            {/* Replace the Table with ProjectsList */}
+            {/* ProjectsList */}
             <ProjectsList
                 projects={projects}
                 technologies={technologies}
@@ -312,9 +312,11 @@ const ProjectsDashboard = () => {
             />
 
             {/* Button to open modal */}
-            <Button color="primary"
+            <Button
+                color="primary"
                 className="max-w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
                 onPress={() => setIsCreateOpen(true)}
+                startContent={<Plus className="w-4 h-4 mr-1" />}
             >
                 Create New Project
             </Button>
@@ -329,7 +331,6 @@ const ProjectsDashboard = () => {
             />
         </div>
     );
-
 }
 
 

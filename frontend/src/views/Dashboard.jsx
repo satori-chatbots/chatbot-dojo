@@ -15,10 +15,13 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@herou
 import { deleteTestCase } from '../api/testCasesApi';
 import useSelectedProject from '../hooks/useSelectedProject';
 import { useAuth } from '../contexts/AuthContext';
+import { useMyCustomToast } from '../contexts/MyCustomToastContext';
+import { Eye, Trash, XCircle } from 'lucide-react';
 
 
 
 function Dashboard() {
+    const { showToast } = useMyCustomToast();
 
     // Initialize testCases state as empty
     const [testCases, setTestCases] = useState([]);
@@ -210,6 +213,7 @@ function Dashboard() {
             }
         } catch (err) {
             console.log(err);
+            showToast('error', 'Failed to filter projects');
         } finally {
             setLoading(false);
         }
@@ -222,8 +226,10 @@ function Dashboard() {
             // Refresh test cases
             const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
             setTestCases(updatedTestCases);
+            showToast('success', 'Test case stopped successfully');
         } catch (error) {
             console.error('Error stopping test case:', error);
+            showToast('error', 'Failed to stop test case');
         }
     };
 
@@ -237,8 +243,12 @@ function Dashboard() {
             // Refresh test cases
             //const updatedTestCases = await fetchTestCasesByProjects(selectedProjects);
             //setTestCases(updatedTestCases);
+            showToast('success', 'Test case deleted successfully');
+
         } catch (error) {
             console.error('Error deleting test case:', error);
+            showToast('error', 'Failed to delete test case');
+
         } finally {
             handleFilterProjects();
             setDeleteModal({ isOpen: false, testCaseId: null });
@@ -539,6 +549,7 @@ function Dashboard() {
                                         size="sm"
                                         variant="flat"
                                         color="primary"
+                                        startContent={<Eye className="w-4 h-4 mr-1" />}
                                     >
                                         View
                                     </Button>
@@ -548,6 +559,7 @@ function Dashboard() {
                                             variant="flat"
                                             color="danger"
                                             onPress={(e) => handleStop(testCase.id, e)}
+                                            startContent={<XCircle className="w-4 h-4 mr-1" />}
                                         >
                                             Stop
                                         </Button>
@@ -558,6 +570,7 @@ function Dashboard() {
                                             variant="flat"
                                             color="danger"
                                             onPress={(e) => handleDelete(testCase.id, e)}
+                                            startContent={<Trash className="w-4 h-4 mr-1" />}
                                         >
                                             Delete
                                         </Button>

@@ -12,6 +12,7 @@ import {
     Form
 } from "@heroui/react";
 import { updateProject, checkProjectName } from '../api/projectApi';
+import { RotateCcw, Save } from 'lucide-react';
 
 const EditProjectModal = ({
     isOpen,
@@ -143,13 +144,14 @@ const EditProjectModal = ({
                             ))}
                         </Select>
                         <ModalFooter className="w-full flex justify-center gap-4">
-                            <Button color="danger" variant="light" type="reset">
+                            <Button color="danger" variant="light" type="reset" startContent={<RotateCcw className="w-4 h-4 mr-1" />}>
                                 Cancel
                             </Button>
                             <Button
                                 color="primary"
                                 type="submit"
                                 isDisabled={!formData.name.trim() || !formData.technology}
+                                startContent={<Save className="w-4 h-4 mr-1" />}
                             >
                                 Update
                             </Button>

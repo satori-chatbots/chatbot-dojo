@@ -15,6 +15,7 @@ import {
 } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchChatbotTechnologies, createChatbotTechnology, fetchTechnologyChoices, updateChatbotTechnology, deleteChatbotTechnology, checkChatbotTechnologyName } from '../api/chatbotTechnologyApi';
+import { Plus, RotateCcw, Edit, Trash, Save } from 'lucide-react';
 
 const ChatbotTechnologies = () => {
     const [editData, setEditData] = useState({
@@ -306,12 +307,10 @@ const ChatbotTechnologies = () => {
                                     />
 
                                     <ModalFooter className="w-full flex justify-center gap-4">
-                                        <Button type="reset" color="danger">
+                                        <Button type="reset" color="danger" variant="light" startContent={<RotateCcw className="w-4 h-4 mr-1" />}>
                                             Reset
                                         </Button>
-                                        {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
-
-                                        <Button type="submit" color="primary">
+                                        <Button type="submit" color="primary" startContent={<Plus className="w-4 h-4 mr-1" />}>
                                             Create
                                         </Button>
                                     </ModalFooter>
@@ -356,10 +355,10 @@ const ChatbotTechnologies = () => {
                                 </a>
                             </TableCell>
                             <TableCell className='flex space-x-1 sm:space-x-2 px-2 sm:px-4'>
-                                <Button size="sm" color="secondary" variant='ghost' onPress={() => handleEdit(tech)}>
+                                <Button size="sm" color="secondary" variant='flat' startContent={<Edit className="w-4 h-4 mr-1" />} onPress={() => handleEdit(tech)}>
                                     Edit
                                 </Button>
-                                <Button size="sm" color="danger" variant='ghost' onPress={() => handleDelete(tech.id)}>
+                                <Button size="sm" color="danger" variant='flat' startContent={<Trash className="w-4 h-4 mr-1" />} onPress={() => handleDelete(tech.id)}>
                                     Delete
                                 </Button>
                             </TableCell>
@@ -370,7 +369,7 @@ const ChatbotTechnologies = () => {
 
             {/* Button to open modal */}
             <Button color="primary" onPress={onOpen}
-                className="w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
+                className="w-full sm:max-w-[200px] mx-auto h-10 sm:h-12" startContent={<Plus className="w-4 h-4 mr-1" />}
             >
                 Create New Technology
             </Button>
@@ -438,10 +437,10 @@ const ChatbotTechnologies = () => {
                                         type="url"
                                     />
                                     <ModalFooter className="w-full flex justify-center gap-4">
-                                        <Button type="reset" color="danger">
+                                        <Button type="reset" color="danger" variant="light" startContent={<RotateCcw className="w-4 h-4 mr-1" />}>
                                             Reset
                                         </Button>
-                                        <Button type="submit" color="primary">
+                                        <Button type="submit" color="primary" startContent={<Save className="w-4 h-4 mr-1" />}>
                                             Save
                                         </Button>
                                     </ModalFooter>

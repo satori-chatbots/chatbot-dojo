@@ -50,7 +50,18 @@ export const deleteTestCase = async (testCaseId) => {
         const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.FETCH_TEST_CASES}${testCaseId}/`, {
             method: 'DELETE',
         });
-        return await response.json();
+
+        if (response.status === 204 || response.status === 200) {
+            return true;
+        } else {
+            try {
+                const data = await response.json();
+                return data;
+            } catch (jsonError) {
+                console.error("Error parsing JSON:", jsonError);
+                throw new Error("Failed to parse JSON response");
+            }
+        }
     } catch (error) {
         throw error;
     }

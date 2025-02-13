@@ -22,7 +22,7 @@ export function MyCustomToast({ message, type, onClose }) {
             ${type === 'error' ? 'bg-danger-50 text-danger' : 'bg-success-50 text-success'}
         `}
             style={{
-                top: 'calc(50% + 280px)'
+                top: 'calc(85%)'
             }}
         >
             {message}

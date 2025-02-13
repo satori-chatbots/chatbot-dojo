@@ -30,9 +30,12 @@ import useSelectedProject from '../hooks/useSelectedProject';
 import CreateProjectModal from '../components/CreateProjectModal';
 import EditProjectModal from '../components/EditProjectModal';
 import ProjectsList from '../components/ProjectList';
+import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 
 
 function Home() {
+
+    const { showToast } = useMyCustomToast();
 
     // List of available chatbot technologies (eg Taskyto, Rasa, etc.)
     const [availableTechnologies, setAvailableTechnologies] = useState([]);
@@ -193,6 +196,7 @@ function Home() {
 
             } catch (error) {
                 console.error('Error loading data:', error);
+                showToast('error', 'Error loading technologies.');
             } finally {
                 setLoadingTechnologies(false);
             }
@@ -253,10 +257,11 @@ function Home() {
                 if (fileInputRef.current) {
                     fileInputRef.current.value = null; // Clear the file input
                 }
+                showToast('success', 'Files uploaded successfully!');
             })
             .catch(error => {
                 console.error('Error uploading files:', error);
-                alert('Error uploading files:\n' + error.message);
+                showToast('error', 'Error uploading files:\n' + error.message);
             });
     };
 
@@ -276,9 +281,10 @@ function Home() {
             await deleteFiles(selectedFiles);
             setSelectedFiles([]);
             reloadFiles();
+            showToast('success', 'Files deleted successfully!');
         } catch (error) {
             console.error('Error deleting files:', error);
-            alert('Error deleting files.');
+            showToast('error', 'Error deleting files.');
         } finally {
             setDeleteConfirmModal({ isOpen: false, isLoading: false });
         }
@@ -339,16 +345,13 @@ function Home() {
 
         executeTest(selectedFiles, selectedProject.id, finalName)
             .then((data) => {
-                setSuccessModal({
-                    isOpen: true,
-                    message: data.message
-                });
+                showToast('success', data.message);
                 setIsExecuteOpen(false);
                 setExecutionName('');
             })
             .catch((error) => {
                 console.error('Error executing test:', error);
-                alert(`Error executing test: ${error.message}`);
+                showToast('error', `Error executing test: ${error.message}`);
             });
     };
 
@@ -416,9 +419,10 @@ function Home() {
             setSelectedProject(newProject);
             handleFormReset();
             onOpenChange(false);
+            showToast('success', 'Project created successfully!');
         } catch (error) {
             console.error('Error creating project:', error);
-            alert(`Error creating project: ${error.message}`);
+            showToast('error', `Error creating project: ${error.message}`);
         }
     };
 
@@ -436,8 +440,10 @@ function Home() {
             await deleteProject(deleteProjectModal.projectId);
             await reloadProjects();
             setSelectedProject(null);
+            showToast('success', 'Project deleted successfully!');
         } catch (error) {
             console.error('Error deleting project:', error);
+            showToast('error', 'Error deleting project.');
         } finally {
             setDeleteProjectModal({ isOpen: false, isLoading: false, projectId: null });
         }
