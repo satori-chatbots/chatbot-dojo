@@ -14,7 +14,7 @@ import {
 } from "@heroui/react";
 import { createProject, checkProjectName } from '../api/projectApi';
 import { RotateCcw, Plus } from 'lucide-react';
-import { fetchUserApiKeys } from '../api/apiKeysApi';
+import { getUserApiKeys } from '../api/authenticationApi'; // Changed import
 
 const CreateProjectModal = ({
     isOpen,
@@ -34,20 +34,22 @@ const CreateProjectModal = ({
     const [loadingApiKeys, setLoadingApiKeys] = useState(true);
 
     useEffect(() => {
-        const loadApiKeys = async () => {
-            setLoadingApiKeys(true);
-            try {
-                const keys = await fetchUserApiKeys();
-                setApiKeys(keys);
-            } catch (error) {
-                console.error('Error fetching API keys:', error);
-            } finally {
-                setLoadingApiKeys(false);
-            }
-        };
+        if (isOpen) { // Only load API keys when the modal is open
+            const loadApiKeys = async () => {
+                setLoadingApiKeys(true);
+                try {
+                    const keys = await getUserApiKeys(); // Changed function call
+                    setApiKeys(keys);
+                } catch (error) {
+                    console.error('Error fetching API keys:', error);
+                } finally {
+                    setLoadingApiKeys(false);
+                }
+            };
 
-        loadApiKeys();
-    }, []);
+            loadApiKeys();
+        }
+    }, [isOpen]); // Depend on isOpen
 
     const handleProjectNameChange = (event) => {
         setFormData(prev => ({ ...prev, name: event.target.value }));
