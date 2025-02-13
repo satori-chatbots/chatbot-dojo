@@ -52,6 +52,8 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
+# We need this one since it already has the fernet key
+from .models import cipher_suite
 
 # Get the latest version of the user model
 User = get_user_model()
@@ -716,7 +718,21 @@ class ExecuteSelectedAPIView(APIView):
         script_path = os.path.join(base_dir, "user-simulator", "src", "autotest.py")
 
         # Load OPENAI_API_KEY from keys.properties
-        check_keys(["OPENAI_API_KEY"])
+        # check_keys(["OPENAI_API_KEY"])
+
+        # Load api key from the project and decipher it
+        try:
+            api_key_instance = project.api_key
+            if api_key_instance is not None:
+                openai_api_key = cipher_suite.decrypt(api_key_instance.api_key_encrypted).decode()
+                os.environ["OPENAI_API_KEY"] = openai_api_key
+                print(f"API key successfully loaded for project {project.name}")
+            else:
+                print(f"No API key found for project {project.name}")
+        except Exception as e:
+            print(f"Error loading/decrypting API key for project {project.name}: {e}")
+
+
 
         # Set executed dir to MEDIA / executed_yaml
         executed_dir_base = os.path.join(settings.MEDIA_ROOT, "executed_yaml")
