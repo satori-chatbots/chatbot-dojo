@@ -90,8 +90,8 @@ const EditProjectModal = ({
 
     const handleReset = () => {
         setFormData({
-            name: project?.name || '',
-            technology: project?.chatbot_technology || ''
+            name: '',
+            technology: ''
         });
         setValidationErrors({});
     };
@@ -145,7 +145,7 @@ const EditProjectModal = ({
                         </Select>
                         <ModalFooter className="w-full flex justify-center gap-4">
                             <Button color="danger" variant="light" type="reset" startContent={<RotateCcw className="w-4 h-4 mr-1" />}>
-                                Cancel
+                                Reset
                             </Button>
                             <Button
                                 color="primary"
