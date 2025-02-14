@@ -3,6 +3,7 @@ import signal
 import subprocess
 import time
 import configparser
+import traceback
 from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.views import APIView
 from rest_framework.decorators import action
@@ -52,6 +53,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
+
 # We need this one since it already has the fernet key
 from .models import cipher_suite
 
@@ -96,6 +98,7 @@ class LoginViewSet(viewsets.ViewSet):
 
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class UpdateProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -434,9 +437,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer):
-        name = serializer.validated_data['name']
+        name = serializer.validated_data["name"]
         if Project.objects.filter(owner=self.request.user, name=name).exists():
-            raise serializers.ValidationError({"name": "Project name already exists for this user."})
+            raise serializers.ValidationError(
+                {"name": "Project name already exists for this user."}
+            )
         serializer.save(owner=self.request.user)
 
     def get_object(self):
@@ -724,15 +729,15 @@ class ExecuteSelectedAPIView(APIView):
         try:
             api_key_instance = project.api_key
             if api_key_instance is not None:
-                openai_api_key = cipher_suite.decrypt(api_key_instance.api_key_encrypted).decode()
+                openai_api_key = cipher_suite.decrypt(
+                    api_key_instance.api_key_encrypted
+                ).decode()
                 os.environ["OPENAI_API_KEY"] = openai_api_key
                 print(f"API key successfully loaded for project {project.name}")
             else:
                 print(f"No API key found for project {project.name}")
         except Exception as e:
             print(f"Error loading/decrypting API key for project {project.name}: {e}")
-
-
 
         # Set executed dir to MEDIA / executed_yaml
         executed_dir_base = os.path.join(settings.MEDIA_ROOT, "executed_yaml")
@@ -794,6 +799,38 @@ class ExecuteSelectedAPIView(APIView):
 
             test_case.status = "RUNNING"
             test_case.save()
+
+        # Get the total number of profiles
+        # And from each copied user profile, read the number of conversations
+        total_profiles = 0
+        total_conversations = 0
+
+        for copied_file in copied_files:
+            file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
+            try:
+                with open(file_path, "r") as file:
+                    data = yaml.safe_load(file)
+                    total_profiles += 1
+                    # Extract the number of conversations from the 'conversation' section
+                    conv_data = data.get("conversation")
+
+                    if isinstance(conv_data, list):
+                        num_conversations = sum(
+                            item.get("number", 0)
+                            for item in conv_data
+                            if isinstance(item, dict)
+                        )
+                    elif isinstance(conv_data, dict):
+                        num_conversations = conv_data.get("number", 0)
+                    else:
+                        num_conversations = 0
+
+                    total_conversations += num_conversations
+            except yaml.YAMLError as e:
+                print(f"Error loading YAML file: {e}")
+
+        test_case.total_profiles = total_profiles
+        test_case.total_conversations = total_conversations
 
         # Set CWD to the script dir (avoid using os.chdir)
         script_cwd = os.path.dirname(os.path.dirname(script_path))
@@ -1145,7 +1182,7 @@ def run_asyn_test_execution(
         if test_case.status == "STOPPED":
             return
         print("SETUP ERROR")
-        test_case.result = f"Error: {e}"
+        test_case.result = f"Error: {e}\n{traceback.format_exc()}"
         test_case.execution_time = 0
         test_case.status = "ERROR"
         test_case.save()
@@ -1180,7 +1217,7 @@ def stop_test_execution(request):
                     p.kill()
 
                 test_case.status = "STOPPED"
-                test_case.result = "Test execution stopped by user"
+                test_case.result += "Test execution stopped by user"
                 test_case.save()
 
                 logger.info(f"Test case {test_case_id} stopped successfully")

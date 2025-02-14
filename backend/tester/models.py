@@ -48,8 +48,7 @@ class UserAPIKey(models.Model):
         return None
 
     def __str__(self):
-        return f"{self.name} ({self.user.email})"
-
+        return self.name
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -255,6 +254,10 @@ class TestCase(models.Model):
     process_id = models.IntegerField(blank=True, null=True)
     # Technology used
     technology = models.CharField(max_length=255, blank=True, null=True)
+    # Number of user profiles
+    total_profiles = models.IntegerField(blank=True, null=True)
+    # Number of total conversations
+    total_conversations = models.IntegerField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Save the test case, if given name is null, set it to TestCase <id>
