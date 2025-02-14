@@ -989,7 +989,31 @@ def run_asyn_test_execution(
             while True:
                 try:
                     # The directory is the {project_id}/{profile_report_name}/{a date + hour}
-                    pass
+                    total_conversations = 0
+                    for profile in test_case.profiles_names:
+                        profile_dir = os.path.join(conversations_dir, profile)
+                        # Get the directory with the conversations
+                        if os.path.exists(profile_dir):
+                            conversations_dir = os.path.join(
+                                conversations_dir, os.listdir(conversations_dir)[0]
+                            )
+                            print(f"Conversations dir: {conversations_dir}")
+                            # Get the number of conversations
+                            total_conversations += len(os.listdir(conversations_dir))
+                            print(f"Total conversations: {total_conversations}")
+                            test_case.total_conversations = total_conversations
+                            test_case.save()
+                            # If the number of conversations is the same as the expected, stop the function
+
+                        else:
+                            print(
+                                f"Conversation not generated yet for profile {profile}"
+                            )
+
+                    percentage = (
+                        total_conversations / test_case.total_conversations
+                    ) * 100
+                    print(f"Found: {percentage}%")
 
                 except Exception as e:
                     print(f"Error in monitor_conversations: {e}")
@@ -998,7 +1022,6 @@ def run_asyn_test_execution(
                 time.sleep(3)  # Check every 3 seconds
 
         # Start the monitoring thread
-        # TODO: We need the profile_report_name to monitor the correct directory
         # conversations_dir = os.path.join(extract_dir, profile_report_name)
         conversations_dir = extract_dir
         monitoring_thread = threading.Thread(
