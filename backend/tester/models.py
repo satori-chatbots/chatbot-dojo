@@ -261,8 +261,6 @@ class TestCase(models.Model):
     profiles_names = models.JSONField(blank=True, null=True)
     # Number of total conversations
     total_conversations = models.IntegerField(blank=True, null=True)
-    # Number of profiles that have already been executed
-    executed_profiles = models.IntegerField(blank=True, null=True)
     # Number of conversations that have already been
     executed_conversations = models.IntegerField(blank=True, null=True)
 

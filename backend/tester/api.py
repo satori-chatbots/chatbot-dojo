@@ -41,7 +41,7 @@ import os
 from .utils import check_keys
 import yaml
 from django.shortcuts import get_object_or_404
-from django.db import transaction
+from django.db import close_old_connections, transaction
 import threading
 import logging
 import psutil
@@ -1002,21 +1002,17 @@ def run_asyn_test_execution(
                     for profile in test_case.profiles_names:
                         profile_dir = os.path.join(conversations_dir, profile)
                         if os.path.exists(profile_dir):
-                            # Get the subdirectory (date-hour)
                             subdirs = os.listdir(profile_dir)
                             if subdirs:
                                 date_hour_dir = os.path.join(profile_dir, subdirs[0])
                                 executed_conversations += len(os.listdir(date_hour_dir))
                                 print(f"Profile dir: {date_hour_dir}")
                         else:
-                            print(
-                                f"Conversation not generated yet for profile {profile}"
-                            )
+                            print(f"Conversation not generated yet for profile {profile}")
 
                     test_case.executed_conversations = executed_conversations
                     test_case.save()
 
-                    # Stop if all conversations are found
                     if executed_conversations >= total_conversations:
                         print("All conversations found. Exiting monitoring.")
                         break
