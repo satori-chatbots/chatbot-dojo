@@ -50,6 +50,7 @@ class UserAPIKey(models.Model):
     def __str__(self):
         return self.name
 
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -254,10 +255,16 @@ class TestCase(models.Model):
     process_id = models.IntegerField(blank=True, null=True)
     # Technology used
     technology = models.CharField(max_length=255, blank=True, null=True)
-    # Number of user profiles
-    total_profiles = models.IntegerField(blank=True, null=True)
+
+    # To be able to track the progress of the execution
+    # Name of the profiles so we can access the directories
+    profiles_names = models.JSONField(blank=True, null=True)
     # Number of total conversations
     total_conversations = models.IntegerField(blank=True, null=True)
+    # Number of profiles that have already been executed
+    executed_profiles = models.IntegerField(blank=True, null=True)
+    # Number of conversations that have already been
+    executed_conversations = models.IntegerField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Save the test case, if given name is null, set it to TestCase <id>

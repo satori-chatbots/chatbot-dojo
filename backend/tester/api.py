@@ -800,19 +800,20 @@ class ExecuteSelectedAPIView(APIView):
             test_case.status = "RUNNING"
             test_case.save()
 
-        # Get the total number of profiles
-        # And from each copied user profile, read the number of conversations
-        total_profiles = 0
+        # Get the number of conversations
+        # And the list of names
         total_conversations = 0
+        names = []
 
         for copied_file in copied_files:
             file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
             try:
                 with open(file_path, "r") as file:
                     data = yaml.safe_load(file)
-                    total_profiles += 1
                     # Extract the number of conversations from the 'conversation' section
                     conv_data = data.get("conversation")
+                    # Get the test_name
+                    test_name = data.get("test_name")
 
                     if isinstance(conv_data, list):
                         num_conversations = sum(
@@ -826,11 +827,12 @@ class ExecuteSelectedAPIView(APIView):
                         num_conversations = 0
 
                     total_conversations += num_conversations
+                    names.append(test_name)
             except yaml.YAMLError as e:
                 print(f"Error loading YAML file: {e}")
 
-        test_case.total_profiles = total_profiles
         test_case.total_conversations = total_conversations
+        test_case.profiles_names = names
 
         # Set CWD to the script dir (avoid using os.chdir)
         script_cwd = os.path.dirname(os.path.dirname(script_path))
@@ -980,7 +982,36 @@ def run_asyn_test_execution(
         test_case.process_id = process.pid
         test_case.save()
 
+        print("BEFORE")
+
+        # Function to monitor the creation of conversation directories and files
+        def monitor_conversations(conversations_dir, test_case_id):
+            while True:
+                try:
+                    # The directory is the {project_id}/{profile_report_name}/{a date + hour}
+                    pass
+
+                except Exception as e:
+                    print(f"Error in monitor_conversations: {e}")
+                    break  # Exit the loop on error
+
+                time.sleep(3)  # Check every 3 seconds
+
+        # Start the monitoring thread
+        # TODO: We need the profile_report_name to monitor the correct directory
+        # conversations_dir = os.path.join(extract_dir, profile_report_name)
+        conversations_dir = extract_dir
+        monitoring_thread = threading.Thread(
+            target=monitor_conversations, args=(conversations_dir, test_case.id)
+        )
+        monitoring_thread.daemon = True
+        monitoring_thread.start()
+
+        # What is after the communicate waits for the process to finish
         stdout, stderr = process.communicate()
+
+        print("AFTER")
+
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
 
