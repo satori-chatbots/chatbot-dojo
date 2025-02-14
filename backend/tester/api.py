@@ -800,39 +800,41 @@ class ExecuteSelectedAPIView(APIView):
             test_case.status = "RUNNING"
             test_case.save()
 
-        # Get the number of conversations
-        # And the list of names
-        total_conversations = 0
-        names = []
+            # Get the number of conversations
+            # And the list of names
+            total_conversations = 0
+            names = []
 
-        for copied_file in copied_files:
-            file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
-            try:
-                with open(file_path, "r") as file:
-                    data = yaml.safe_load(file)
-                    # Extract the number of conversations from the 'conversation' section
-                    conv_data = data.get("conversation")
-                    # Get the test_name
-                    test_name = data.get("test_name")
+            for copied_file in copied_files:
+                file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
+                try:
+                    with open(file_path, "r") as file:
+                        data = yaml.safe_load(file)
+                        # Extract the number of conversations from the 'conversation' section
+                        conv_data = data.get("conversation")
+                        # Get the test_name
+                        test_name = data.get("test_name")
 
-                    if isinstance(conv_data, list):
-                        num_conversations = sum(
-                            item.get("number", 0)
-                            for item in conv_data
-                            if isinstance(item, dict)
-                        )
-                    elif isinstance(conv_data, dict):
-                        num_conversations = conv_data.get("number", 0)
-                    else:
-                        num_conversations = 0
+                        if isinstance(conv_data, list):
+                            num_conversations = sum(
+                                item.get("number", 0)
+                                for item in conv_data
+                                if isinstance(item, dict)
+                            )
+                        elif isinstance(conv_data, dict):
+                            num_conversations = conv_data.get("number", 0)
+                        else:
+                            num_conversations = 0
 
-                    total_conversations += num_conversations
-                    names.append(test_name)
-            except yaml.YAMLError as e:
-                print(f"Error loading YAML file: {e}")
+                        total_conversations += num_conversations
+                        names.append(test_name)
+                except yaml.YAMLError as e:
+                    print(f"Error loading YAML file: {e}")
 
-        test_case.total_conversations = total_conversations
-        test_case.profiles_names = names
+            test_case.total_conversations = total_conversations
+            test_case.profiles_names = names
+
+        print(f"Total conversations: {total_conversations}")
 
         # Set CWD to the script dir (avoid using os.chdir)
         script_cwd = os.path.dirname(os.path.dirname(script_path))
@@ -985,47 +987,60 @@ def run_asyn_test_execution(
         print("BEFORE")
 
         # Function to monitor the creation of conversation directories and files
-        def monitor_conversations(conversations_dir, test_case_id):
+        def monitor_conversations(conversations_dir, total_conversations, test_case_id):
+            test_case = TestCase.objects.get(id=test_case_id)
+
             while True:
+                # Refresh status to stop if the test is no longer running
+                test_case.refresh_from_db()
+                if test_case.status != "RUNNING":
+                    print("Monitoring stopped because status changed.")
+                    break
+
                 try:
-                    # The directory is the {project_id}/{profile_report_name}/{a date + hour}
-                    total_conversations = 0
+                    executed_conversations = 0
                     for profile in test_case.profiles_names:
                         profile_dir = os.path.join(conversations_dir, profile)
-                        # Get the directory with the conversations
                         if os.path.exists(profile_dir):
-                            conversations_dir = os.path.join(
-                                conversations_dir, os.listdir(conversations_dir)[0]
-                            )
-                            print(f"Conversations dir: {conversations_dir}")
-                            # Get the number of conversations
-                            total_conversations += len(os.listdir(conversations_dir))
-                            print(f"Total conversations: {total_conversations}")
-                            test_case.total_conversations = total_conversations
-                            test_case.save()
-                            # If the number of conversations is the same as the expected, stop the function
-
+                            # Get the subdirectory (date-hour)
+                            subdirs = os.listdir(profile_dir)
+                            if subdirs:
+                                date_hour_dir = os.path.join(profile_dir, subdirs[0])
+                                executed_conversations += len(os.listdir(date_hour_dir))
+                                print(f"Profile dir: {date_hour_dir}")
                         else:
                             print(
                                 f"Conversation not generated yet for profile {profile}"
                             )
 
+                    test_case.executed_conversations = executed_conversations
+                    test_case.save()
+
+                    # Stop if all conversations are found
+                    if executed_conversations >= total_conversations:
+                        print("All conversations found. Exiting monitoring.")
+                        break
+
                     percentage = (
-                        total_conversations / test_case.total_conversations
-                    ) * 100
+                        100 * executed_conversations / total_conversations
+                        if total_conversations
+                        else 0
+                    )
                     print(f"Found: {percentage}%")
 
                 except Exception as e:
                     print(f"Error in monitor_conversations: {e}")
-                    break  # Exit the loop on error
+                    break
 
-                time.sleep(3)  # Check every 3 seconds
+                time.sleep(3)
 
         # Start the monitoring thread
         # conversations_dir = os.path.join(extract_dir, profile_report_name)
         conversations_dir = extract_dir
+        total_conversations = test_case.total_conversations
         monitoring_thread = threading.Thread(
-            target=monitor_conversations, args=(conversations_dir, test_case.id)
+            target=monitor_conversations,
+            args=(conversations_dir, total_conversations, test_case.id),
         )
         monitoring_thread.daemon = True
         monitoring_thread.start()
