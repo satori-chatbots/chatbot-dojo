@@ -346,7 +346,7 @@ function TestCase() {
                                 <h2 className="text-2xl font-bold">Total Cost and Time</h2>
                             </CardHeader>
                             <CardBody>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div>
                                         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cost:</p>
                                         <p className="text-2xl font-bold">${globalReport.total_cost}</p>
@@ -642,7 +642,7 @@ function TestCase() {
                                                                         <h3 className="text-xl font-bold">Answer</h3>
                                                                     </CardHeader>
                                                                     <CardBody>
-                                                                        <Table removeWrapper hideHeader>
+                                                                        <Table removeWrapper hideHeader className="pl-4">
                                                                             <TableHeader>
                                                                                 <TableColumn>Key</TableColumn>
                                                                                 <TableColumn>Value</TableColumn>
@@ -650,7 +650,7 @@ function TestCase() {
                                                                             <TableBody>
                                                                                 {conversation.data_output.map((item, index) => (
                                                                                     <TableRow key={index}>
-                                                                                        <TableCell className="font-medium">{Object.keys(item)[0]}</TableCell>
+                                                                                        <TableCell className="font-medium w-1/3">{Object.keys(item)[0]}</TableCell>
                                                                                         <TableCell>{Object.values(item)[0] ?? 'None'}</TableCell>
                                                                                     </TableRow>
                                                                                 ))}
@@ -666,7 +666,7 @@ function TestCase() {
                                                                         <h3 className="text-xl font-bold">Errors</h3>
                                                                     </CardHeader>
                                                                     <CardBody>
-                                                                        <Table removeWrapper hideHeader>
+                                                                        <Table removeWrapper hideHeader className="pl-4">
                                                                             <TableHeader>
                                                                                 <TableColumn>Error Code</TableColumn>
                                                                                 <TableColumn>Error Message</TableColumn>
@@ -676,7 +676,7 @@ function TestCase() {
                                                                             >
                                                                                 {conversation.errors.map((error, index) => (
                                                                                     <TableRow key={index}>
-                                                                                        <TableCell className="font-medium">{Object.keys(error)[0]}</TableCell>
+                                                                                        <TableCell className="font-medium w-1/3">{Object.keys(error)[0]}</TableCell>
                                                                                         <TableCell>{Object.values(error)[0]}</TableCell>
                                                                                     </TableRow>
                                                                                 ))}
@@ -691,18 +691,18 @@ function TestCase() {
                                                                         <h3 className="text-xl font-bold">Total Time and Cost</h3>
                                                                     </CardHeader>
                                                                     <CardBody>
-                                                                        <Table removeWrapper hideHeader>
+                                                                        <Table removeWrapper hideHeader className="pl-4">
                                                                             <TableHeader>
                                                                                 <TableColumn>Key</TableColumn>
                                                                                 <TableColumn>Value</TableColumn>
                                                                             </TableHeader>
                                                                             <TableBody>
                                                                                 <TableRow>
-                                                                                    <TableCell className="font-medium">Total Time</TableCell>
+                                                                                    <TableCell className="font-medium w-1/3">Total Time</TableCell>
                                                                                     <TableCell>{conversation.conversation_time.toFixed(2)}s</TableCell>
                                                                                 </TableRow>
                                                                                 <TableRow>
-                                                                                    <TableCell className="font-medium">Total Cost</TableCell>
+                                                                                    <TableCell className="font-medium w-1/3">Total Cost</TableCell>
                                                                                     <TableCell>${conversation.total_cost.toFixed(6)}</TableCell>
                                                                                 </TableRow>
                                                                             </TableBody>
@@ -716,22 +716,22 @@ function TestCase() {
                                                                         <h3 className="text-xl font-bold">Response Time Report</h3>
                                                                     </CardHeader>
                                                                     <CardBody>
-                                                                        <Table removeWrapper hideHeader>
+                                                                        <Table removeWrapper hideHeader className="pl-4">
                                                                             <TableHeader>
                                                                                 <TableColumn>Key</TableColumn>
                                                                                 <TableColumn>Value</TableColumn>
                                                                             </TableHeader>
                                                                             <TableBody>
                                                                                 <TableRow>
-                                                                                    <TableCell className="font-medium">Average</TableCell>
+                                                                                    <TableCell className="font-medium w-1/3">Average</TableCell>
                                                                                     <TableCell>{conversation.response_time_avg.toFixed(2)}s</TableCell>
                                                                                 </TableRow>
                                                                                 <TableRow>
-                                                                                    <TableCell className="font-medium">Maximum</TableCell>
+                                                                                    <TableCell className="font-medium w-1/3">Maximum</TableCell>
                                                                                     <TableCell>{conversation.response_time_max.toFixed(2)}s</TableCell>
                                                                                 </TableRow>
                                                                                 <TableRow>
-                                                                                    <TableCell className="font-medium">Minimum</TableCell>
+                                                                                    <TableCell className="font-medium w-1/3">Minimum</TableCell>
                                                                                     <TableCell>{conversation.response_time_min.toFixed(2)}s</TableCell>
                                                                                 </TableRow>
                                                                             </TableBody>
@@ -744,7 +744,7 @@ function TestCase() {
                                                                     <CardHeader>
                                                                         <h3 className="text-xl font-bold">Interaction</h3>
                                                                     </CardHeader>
-                                                                    <CardBody>
+                                                                    <CardBody className="pl-4">
                                                                         {conversation.interaction.map((message, index) => (
                                                                             <div key={index}
                                                                                 className={`mb-4 ${Object.keys(message)[0] === 'User'
