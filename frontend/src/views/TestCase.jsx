@@ -324,9 +324,9 @@ function TestCase() {
                                     >
                                         {globalErrors.map((error) => (
                                             <TableRow key={error.id}>
-                                                <TableCell>{error.code}</TableCell>
-                                                <TableCell>{error.count}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="w-1/3">{error.code}</TableCell>
+                                                <TableCell className="w-1/3">{error.count}</TableCell>
+                                                <TableCell className="w-1/3">
                                                     <ul>
                                                         {error.conversations.map((conv, index) => (
                                                             <li key={index}>{conv}</li>
