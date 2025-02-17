@@ -960,9 +960,9 @@ def process_conversation(conversation_file_path):
 def run_asyn_test_execution(
     script_path, script_cwd, test_case_dir, extract_dir, test_case, technology, link
 ):
-    """ """
     try:
         start_time = time.time()
+        # Start the subprocess
         process = subprocess.Popen(
             [
                 "python",
@@ -980,37 +980,37 @@ def run_asyn_test_execution(
             stderr=subprocess.PIPE,
             cwd=script_cwd,
         )
-        # Save the process ID to be able to terminate it if needed
+        # Save the process id and mark the test as RUNNING
         test_case.process_id = process.pid
+        test_case.status = "RUNNING"
         test_case.save()
 
-        # Store the final conversation count
+        # To store final conversation count (using a mutable container so inner function can update it)
         final_conversation_count = [0]
 
         def monitor_conversations(conversations_dir, total_conversations, test_case_id):
-            test_case = TestCase.objects.get(id=test_case_id)
-
+            # Get a local copy of the test case object
+            local_test_case = TestCase.objects.get(id=test_case_id)
             while True:
-                test_case.refresh_from_db()
-                if test_case.status != "RUNNING":
+                local_test_case.refresh_from_db()
+                if local_test_case.status != "RUNNING":
                     print("Monitoring stopped because status changed.")
                     break
 
                 try:
                     executed_conversations = 0
-                    for profile in test_case.profiles_names:
+                    for profile in local_test_case.profiles_names:
                         profile_dir = os.path.join(conversations_dir, profile)
                         if os.path.exists(profile_dir):
                             subdirs = os.listdir(profile_dir)
                             if subdirs:
+                                # Assume the first subdirectory is the one we need
                                 date_hour_dir = os.path.join(profile_dir, subdirs[0])
                                 executed_conversations += len(os.listdir(date_hour_dir))
 
-                    test_case.executed_conversations = executed_conversations
-                    test_case.save()
-                    final_conversation_count[0] = (
-                        executed_conversations  # Store the final count
-                    )
+                    local_test_case.executed_conversations = executed_conversations
+                    local_test_case.save()
+                    final_conversation_count[0] = executed_conversations
 
                     if executed_conversations >= total_conversations:
                         print("All conversations found. Exiting monitoring.")
@@ -1022,7 +1022,7 @@ def run_asyn_test_execution(
 
                 time.sleep(3)
 
-        # Start monitoring thread
+        # Start the monitoring thread
         conversations_dir = extract_dir
         total_conversations = test_case.total_conversations
         monitoring_thread = threading.Thread(
@@ -1032,15 +1032,36 @@ def run_asyn_test_execution(
         monitoring_thread.daemon = True
         monitoring_thread.start()
 
-        # Wait for process to finish
-        stdout, stderr = process.communicate()
+        # Instead of blocking communicate, poll the process with a timeout.
+        stdout, stderr = b"", b""
+        timeout_seconds = 3
+        while True:
+            try:
+                stdout, stderr = process.communicate(timeout=timeout_seconds)
+                break  # Process has finished
+            except subprocess.TimeoutExpired:
+                test_case.refresh_from_db()
+                if test_case.status == "STOPPED":
+                    print("Stop flag detected. Terminating subprocess.")
+                    try:
+                        proc = psutil.Process(test_case.process_id)
+                        for child in proc.children(recursive=True):
+                            child.terminate()
+                        proc.terminate()
+                        psutil.wait_procs([proc], timeout=timeout_seconds)
+                    except Exception as ex:
+                        print(f"Error while terminating process: {ex}")
+                    # Continue polling until process exits
+                    continue
 
-        # Wait for monitoring thread to complete
+        # Wait for the monitoring thread to finish
         monitoring_thread.join(timeout=10)
 
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
 
+        # Check immediately if the test was stopped.
+        test_case.refresh_from_db()
         if test_case.status == "STOPPED":
             print("Test execution was stopped by the user.")
             test_case.result = "Test execution was stopped by the user."
@@ -1048,8 +1069,7 @@ def run_asyn_test_execution(
             test_case.save()
             return
 
-        # Refresh test case and update with final values
-        test_case.refresh_from_db()
+        # Otherwise, update test_case with results (marking as COMPLETED)
         test_case.execution_time = elapsed_time
         test_case.result = stdout.decode().strip() or stderr.decode().strip()
         test_case.executed_conversations = final_conversation_count[0]
@@ -1057,17 +1077,14 @@ def run_asyn_test_execution(
         test_case.save()
         print("COMPLETED")
 
-        # Report saved in extract_dir / __report__ / report_*.yml
+        # Continue with report processing only if we’re not stopped
         report_path = os.path.join(extract_dir, "__report__")
         if not os.path.exists(report_path):
-            if test_case.status == "STOPPED":
-                return
             test_case.status = "ERROR"
             test_case.result += "\nError accessing report directory"
             test_case.save()
             return
 
-        # Try to find report file
         report_file = None
         try:
             for file in os.listdir(report_path):
@@ -1075,22 +1092,18 @@ def run_asyn_test_execution(
                     report_file = file
                     break
         except OSError:
-            if test_case.status == "STOPPED":
-                return
             test_case.status = "ERROR"
             test_case.result += "\nError accessing report directory"
             test_case.save()
             return
 
         if report_file is None:
-            if test_case.status == "STOPPED":
-                return
             test_case.status = "ERROR"
             test_case.result += "\nReport file not found"
             test_case.save()
             return
 
-        # Only proceed with report processing if not stopped
+        # Set status to COMPLETED if we reached here, then proceed with report processing.
         test_case.status = "COMPLETED"
         test_case.save()
 
@@ -1257,26 +1270,20 @@ def stop_test_execution(request):
 
     try:
         test_case = TestCase.objects.get(id=test_case_id)
+        if test_case.result is None:
+            test_case.result = ""
 
         if test_case.process_id and test_case.status == "RUNNING":
             try:
-                # Check if process exists
+                # Use psutil to terminate process and its children
                 process = psutil.Process(test_case.process_id)
-
-                # Kill process and children
                 for child in process.children(recursive=True):
                     child.terminate()
                 process.terminate()
-
-                # Wait for processes to terminate
-                gone, alive = psutil.wait_procs([process], timeout=3)
-
-                # Force kill if still alive
-                for p in alive:
-                    p.kill()
+                psutil.wait_procs([process], timeout=3)
 
                 test_case.status = "STOPPED"
-                test_case.result += "Test execution stopped by user"
+                test_case.result += " Test execution stopped by user."
                 test_case.save()
 
                 logger.info(f"Test case {test_case_id} stopped successfully")
@@ -1284,7 +1291,6 @@ def stop_test_execution(request):
 
             except psutil.NoSuchProcess:
                 logger.warning(f"Process {test_case.process_id} not found")
-                # Still mark as stopped if process not found
                 test_case.status = "STOPPED"
                 test_case.result = "Test execution stopped (process not found)"
                 test_case.save()
