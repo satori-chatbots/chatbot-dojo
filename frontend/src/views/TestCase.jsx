@@ -476,9 +476,9 @@ function TestCase() {
                                                     >
                                                         {report.errors && report.errors.map((error) => (
                                                             <TableRow key={error.id}>
-                                                                <TableCell>{error.code}</TableCell>
-                                                                <TableCell>{error.count}</TableCell>
-                                                                <TableCell>
+                                                                <TableCell className="w-1/3">{error.code}</TableCell>
+                                                                <TableCell className="w-1/3">{error.count}</TableCell>
+                                                                <TableCell className="w-1/3">
                                                                     <ul>
                                                                         {error.conversations?.map((conv, index) => (
                                                                             <li key={index}>{conv}</li>
@@ -498,7 +498,7 @@ function TestCase() {
                                                 <h2 className="text-2xl font-bold">Profile Details</h2>
                                             </CardHeader>
                                             <CardBody>
-                                                <Table removeWrapper hideHeader className="pl-4">
+                                                <Table removeWrapper hideHeader>
                                                     <TableHeader>
                                                         <TableColumn>Key</TableColumn>
                                                         <TableColumn>Value</TableColumn>
