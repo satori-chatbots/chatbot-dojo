@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, Tab } from "@heroui/tabs";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
-import { Accordion, AccordionItem, Progress, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
+import { Accordion, AccordionItem, Progress, Snippet, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
 import { fetchTestCaseById } from '../api/testCasesApi';
 import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
 import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
@@ -290,15 +290,15 @@ function TestCase() {
                             <CardBody>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
-                                        <p className="text-sm font-medium">Average:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Average:</p>
                                         <p className="text-2xl font-bold">{formatExecutionTime(globalReport.avg_execution_time)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Max:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Max:</p>
                                         <p className="text-2xl font-bold">{formatExecutionTime(globalReport.max_execution_time)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Min:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Min:</p>
                                         <p className="text-2xl font-bold">{formatExecutionTime(globalReport.min_execution_time)}</p>
                                     </div>
                                 </div>
@@ -348,11 +348,11 @@ function TestCase() {
                             <CardBody>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm font-medium">Total Cost:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cost:</p>
                                         <p className="text-2xl font-bold">${globalReport.total_cost}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Total Time:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Time:</p>
                                         <p className="text-2xl font-bold">{testCase[0].execution_time.toFixed(2)}s</p>
                                     </div>
                                 </div>
@@ -368,16 +368,16 @@ function TestCase() {
                             <CardBody>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
-                                        <p className="text-sm font-medium">Technology:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Technology:</p>
                                         <p className="text-2xl font-bold">{testCase[0].technology}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Project:</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Project:</p>
                                         <p className="text-2xl font-bold">{projectName}</p>
 
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium">Number of Profiles</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Number of Profiles</p>
                                         <p className="text-2xl font-bold">{profileReports.length}</p>
                                     </div>
                                 </div>
@@ -391,8 +391,8 @@ function TestCase() {
                             </CardHeader>
                             <CardBody>
                                 <Accordion>
-                                    <AccordionItem title="Show Output">
-                                        <pre className="whitespace-pre-wrap text-left p-4">
+                                    <AccordionItem title="Show Output" className="text-sm font-medium">
+                                        <pre className="bg-gray-50 dark:bg-default-100 p-4 rounded-lg whitespace-pre-wrap text-left">
                                             {testCase[0].result}
                                         </pre>
                                     </AccordionItem>
@@ -417,15 +417,15 @@ function TestCase() {
                                         <CardBody>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div>
-                                                    <p className="text-sm font-medium">Avg Execution Time:</p>
+                                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Execution Time:</p>
                                                     <p className="text-2xl font-bold">{formatExecutionTime(report.avg_execution_time)}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-medium">Total Cost:</p>
+                                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cost:</p>
                                                     <p className="text-2xl font-bold">${report.total_cost}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-medium">Total Errors:</p>
+                                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Errors:</p>
                                                     <p className="text-2xl font-bold">{report.errors.reduce((sum, error) => sum + error.count, 0)}</p>
                                                 </div>
                                             </div>
@@ -442,15 +442,15 @@ function TestCase() {
                                             <CardBody>
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div>
-                                                        <p className="text-sm font-medium">Average:</p>
+                                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Average:</p>
                                                         <p className="text-2xl font-bold">{formatExecutionTime(report.avg_execution_time)}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-medium">Max:</p>
+                                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Max:</p>
                                                         <p className="text-2xl font-bold">{formatExecutionTime(report.max_execution_time)}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-medium">Min:</p>
+                                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Min:</p>
                                                         <p className="text-2xl font-bold">{formatExecutionTime(report.min_execution_time)}</p>
                                                     </div>
                                                 </div>
