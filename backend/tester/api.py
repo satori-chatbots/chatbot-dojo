@@ -984,14 +984,13 @@ def run_asyn_test_execution(
         test_case.process_id = process.pid
         test_case.save()
 
-        print("BEFORE")
+        # Store the final conversation count
+        final_conversation_count = [0]
 
-        # Function to monitor the creation of conversation directories and files
         def monitor_conversations(conversations_dir, total_conversations, test_case_id):
             test_case = TestCase.objects.get(id=test_case_id)
 
             while True:
-                # Refresh status to stop if the test is no longer running
                 test_case.refresh_from_db()
                 if test_case.status != "RUNNING":
                     print("Monitoring stopped because status changed.")
@@ -1006,23 +1005,16 @@ def run_asyn_test_execution(
                             if subdirs:
                                 date_hour_dir = os.path.join(profile_dir, subdirs[0])
                                 executed_conversations += len(os.listdir(date_hour_dir))
-                                print(f"Profile dir: {date_hour_dir}")
-                        else:
-                            print(f"Conversation not generated yet for profile {profile}")
 
                     test_case.executed_conversations = executed_conversations
                     test_case.save()
+                    final_conversation_count[0] = (
+                        executed_conversations  # Store the final count
+                    )
 
                     if executed_conversations >= total_conversations:
                         print("All conversations found. Exiting monitoring.")
                         break
-
-                    percentage = (
-                        100 * executed_conversations / total_conversations
-                        if total_conversations
-                        else 0
-                    )
-                    print(f"Found: {percentage}%")
 
                 except Exception as e:
                     print(f"Error in monitor_conversations: {e}")
@@ -1030,8 +1022,7 @@ def run_asyn_test_execution(
 
                 time.sleep(3)
 
-        # Start the monitoring thread
-        # conversations_dir = os.path.join(extract_dir, profile_report_name)
+        # Start monitoring thread
         conversations_dir = extract_dir
         total_conversations = test_case.total_conversations
         monitoring_thread = threading.Thread(
@@ -1041,10 +1032,11 @@ def run_asyn_test_execution(
         monitoring_thread.daemon = True
         monitoring_thread.start()
 
-        # What is after the communicate waits for the process to finish
+        # Wait for process to finish
         stdout, stderr = process.communicate()
 
-        print("AFTER")
+        # Wait for monitoring thread to complete
+        monitoring_thread.join(timeout=10)
 
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
@@ -1056,10 +1048,13 @@ def run_asyn_test_execution(
             test_case.save()
             return
 
+        # Refresh test case and update with final values
+        test_case.refresh_from_db()
         test_case.execution_time = elapsed_time
         test_case.result = stdout.decode().strip() or stderr.decode().strip()
-
+        test_case.executed_conversations = final_conversation_count[0]
         test_case.status = "COMPLETED"
+        test_case.save()
         print("COMPLETED")
 
         # Report saved in extract_dir / __report__ / report_*.yml
@@ -1240,7 +1235,6 @@ def run_asyn_test_execution(
                 test_error.save()
 
             profile_report_instance.save()
-
         test_case.save()
 
     except Exception as e:

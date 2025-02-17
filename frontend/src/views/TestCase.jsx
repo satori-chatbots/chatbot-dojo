@@ -103,6 +103,8 @@ function TestCase() {
                     const fetchedProject = await fetchProject(fetchedTestCase[0].project);
                     setProjectName(fetchedProject.name);
 
+                    console.log(fetchedProject);
+
                 }
             } catch (error) {
                 if (error.message === '403') {
