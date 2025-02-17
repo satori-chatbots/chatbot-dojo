@@ -498,26 +498,26 @@ function TestCase() {
                                                 <h2 className="text-2xl font-bold">Profile Details</h2>
                                             </CardHeader>
                                             <CardBody>
-                                                <Table removeWrapper hideHeader>
+                                                <Table removeWrapper hideHeader className="pl-4">
                                                     <TableHeader>
                                                         <TableColumn>Key</TableColumn>
                                                         <TableColumn>Value</TableColumn>
                                                     </TableHeader>
                                                     <TableBody>
                                                         <TableRow>
-                                                            <TableCell className="font-medium">Serial</TableCell>
+                                                            <TableCell className="font-medium w-1/3">Serial</TableCell>
                                                             <TableCell>{report.serial}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell className="font-medium">Language</TableCell>
+                                                            <TableCell className="font-medium w-1/3">Language</TableCell>
                                                             <TableCell>{report.language}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell className="font-medium">Personality</TableCell>
+                                                            <TableCell className="font-medium w-1/3">Personality</TableCell>
                                                             <TableCell>{report.personality}</TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell className="font-medium">Context</TableCell>
+                                                            <TableCell className="font-medium w-1/3">Context</TableCell>
                                                             <TableCell>
                                                                 <ul>
                                                                     {report.context_details?.map((context, index) => (
@@ -527,7 +527,7 @@ function TestCase() {
                                                             </TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell className="font-medium">Interaction Style</TableCell>
+                                                            <TableCell className="font-medium w-1/3">Interaction Style</TableCell>
                                                             <TableCell>
                                                                 <ul>
                                                                     {report.interaction_style?.map((style, index) => (
@@ -537,20 +537,20 @@ function TestCase() {
                                                             </TableCell>
                                                         </TableRow>
                                                         <TableRow>
-                                                            <TableCell className="font-medium">Number of Conversations</TableCell>
+                                                            <TableCell className="font-medium w-1/3">Number of Conversations</TableCell>
                                                             <TableCell>{report.number_conversations}</TableCell>
                                                         </TableRow>
                                                         {/* If steps exist, display the int*/}
                                                         {report.steps && (
                                                             <TableRow>
-                                                                <TableCell className="font-medium">Steps</TableCell>
+                                                                <TableCell className="font-medium w-1/3">Steps</TableCell>
                                                                 <TableCell>{report.steps}</TableCell>
                                                             </TableRow>
                                                         )}
                                                         {/* If all_answered exists, display in a more readable format */}
                                                         {report.all_answered && (
                                                             <TableRow>
-                                                                <TableCell className="font-medium">All Answered</TableCell>
+                                                                <TableCell className="font-medium w-1/3">All Answered</TableCell>
                                                                 <TableCell>
                                                                     {Object.entries(report.all_answered).map(([key, value]) => (
                                                                         <div key={key} className="flex gap-2">
