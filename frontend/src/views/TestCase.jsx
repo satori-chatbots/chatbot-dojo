@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, Tab } from "@heroui/tabs";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
-import { Accordion, AccordionItem, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
+import { Accordion, AccordionItem, Progress, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
 import { fetchTestCaseById } from '../api/testCasesApi';
 import { fetchGlobalReportsByTestCase } from '../api/reportsApi';
 import { fetchTestErrorByGlobalReport } from '../api/testErrorsApi';
@@ -170,6 +170,14 @@ function TestCase() {
         return `${hours}h ${minutes}m ${seconds.toFixed(2)}s`;
     };
 
+    // Function to format the execution time for running time
+    const formatTime = (seconds) => {
+        const hours = Math.floor(seconds / 3600)
+        const minutes = Math.floor((seconds % 3600) / 60)
+        const remainingSeconds = seconds % 60
+        return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`
+    }
+
     if (globalLoading) {
         return (
             <div className="container mx-auto p-4 flex flex-col items-center justify-center">
@@ -181,24 +189,42 @@ function TestCase() {
 
     // Add early return for running state
     if (status === "RUNNING") {
+        const progress = testCase[0].total_conversations > 0
+            ? Math.round((testCase[0].executed_conversations / testCase[0].total_conversations) * 100)
+            : 0;
+
         return (
             <div className="container mx-auto p-4">
                 <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
                 <Card shadow="sm" className="text-center p-4">
-                    <CardBody>
-                        <Spinner size="lg" className="mb-4" />
+                    <CardHeader className='flex items-center justify-between'>
                         <h2 className="text-2xl font-bold">Test Case is Running</h2>
-                        <p className="text-gray-600 mt-2">Please wait while the test case completes...</p>
-                        {startTime && (
-                            <div className="mt-4 space-y-2">
-                                <p className="text-lg">
-                                    Started at: {format(startTime, 'PPpp')}
-                                </p>
-                                <p className="text-xl font-bold">
-                                    Running time: {formatExecutionTime(elapsedTime)}
-                                </p>
+                        <Spinner size="sm" className="mb-4" />
+                    </CardHeader>
+                    <CardBody className='space-y-4'>
+                        <p className="text-gray-600 dark:text-gray-300 mt-2">
+                            Please wait while the test case completes...
+                        </p>
+
+                        {/* Progress section */}
+                        <div className="mt-6">
+                            <h3 className="text-sm font-medium mb-2">Progress</h3>
+                            <Progress value={progress} />
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                {progress.toFixed(0)}% - {testCase[0].executed_conversations} of {testCase[0].total_conversations} conversations completed
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 className="text-sm font-medium mb-1">Started at</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{format(startTime, 'PPpp')}</p>
                             </div>
-                        )}
+                            <div>
+                                <h3 className="text-sm font-medium mb-1">Running time</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{formatTime(elapsedTime)}</p>
+                            </div>
+                        </div>
                     </CardBody>
                 </Card>
             </div>
