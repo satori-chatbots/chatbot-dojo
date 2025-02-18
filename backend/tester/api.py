@@ -1032,14 +1032,16 @@ def run_asyn_test_execution(
         monitoring_thread.daemon = True
         monitoring_thread.start()
 
-        # Instead of blocking communicate, poll the process with a timeout.
+        # Poll the process every few seconds to check if it has finished
         stdout, stderr = b"", b""
         timeout_seconds = 3
         while True:
             try:
+                # This will check if the process is still running
                 stdout, stderr = process.communicate(timeout=timeout_seconds)
-                break  # Process has finished
+                break
             except subprocess.TimeoutExpired:
+                # If the process is still running, check if the test was stopped
                 test_case.refresh_from_db()
                 if test_case.status == "STOPPED":
                     print("Stop flag detected. Terminating subprocess.")
