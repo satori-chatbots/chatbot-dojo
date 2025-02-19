@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import CodeMirror from '@uiw/react-codemirror';
+import { yaml } from '@codemirror/lang-yaml';
+
 
 
 function YamlEditor() {
     const { fileId } = useParams();
     const [content, setContent] = useState('');
+    const [value, setValue] = React.useState("test_name: \"pizza_order_test_custom\"");
+
 
     useEffect(() => {
         if (fileId) {
@@ -27,7 +31,7 @@ function YamlEditor() {
     return (
         <div>
             <h1>{fileId ? 'Edit YAML File' : 'Create New YAML'}</h1>
-            <CodeMirror height="200px" />
+            <CodeMirror height="80vh" value={value} onChange={setValue} extensions={[yaml()]} />
             <button onClick={handleSave}>
                 {fileId ? 'Update' : 'Create'} YAML
             </button>
