@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
 import { fetchFile, updateFile } from '../api/fileApi';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ZoomInIcon, ZoomOutIcon } from 'lucide-react';
 import { Button, Tabs, Tab } from '@heroui/react';
 import { load as yamlLoad } from "js-yaml"
 import { materialDark, materialLight } from '@uiw/codemirror-theme-material';
@@ -16,9 +16,12 @@ function YamlEditor() {
     const { fileId } = useParams();
     const [editorContent, setEditorContent] = useState(initialYaml)
     const [isValid, setIsValid] = useState(true);
+    const [fontSize, setFontSize] = useState(14);
     const [errorInfo, setErrorInfo] = useState(null);
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
+    const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
 
     useEffect(() => {
@@ -87,25 +90,47 @@ function YamlEditor() {
                             <span className="mr-2">YAML Validity:</span>
                             {isValid ? <CheckCircle2 className="text-green-500" /> : <AlertCircle className="text-red-500" />}
                         </div>
-                        <Button onPress={
+                        <Button className="text-sm" onPress={
                             () => handleSave()
                         } disabled={!isValid}>
                             {fileId ? "Update" : "Save"} YAML
                         </Button>
                     </div>
-                    <CodeMirror
-                        value={editorContent}
-                        height="70vh"
-                        extensions={[yaml()]}
-                        onChange={handleEditorChange}
-                        theme={isDark ? materialDark : tomorrow}
-                        basicSetup={{
-                            lineNumbers: true,
-                            foldGutter: true,
-                            highlightActiveLineGutter: true,
-                            highlightActiveLine: true,
-                        }}
-                    />
+                    <div className="relative">
+
+                        <CodeMirror
+                            value={editorContent}
+                            height="70vh"
+                            extensions={[yaml()]}
+                            onChange={handleEditorChange}
+                            theme={isDark ? materialDark : tomorrow}
+                            basicSetup={{
+                                lineNumbers: true,
+                                foldGutter: true,
+                                highlightActiveLineGutter: true,
+                                highlightActiveLine: true,
+                            }}
+                            style={{ fontSize: `${fontSize}px` }}
+                        />
+                        <div className="absolute bottom-2 right-6 flex space-x-2">
+                            <Button
+                                variant="outline"
+                                onPress={zoomOut}
+                                aria-label="Zoom out"
+                                className="bg-background/80 backdrop-blur-sm text-sm"
+                            >
+                                <ZoomOutIcon className="w-5 h-5" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onPress={zoomIn}
+                                aria-label="Zoom in"
+                                className="bg-background/80 backdrop-blur-sm text-sm"
+                            >
+                                <ZoomInIcon className="w-5 h-5" />
+                            </Button>
+                        </div>
+                    </div>
                 </div>
                 <div className="w-full md:w-1/3">
                     <Tabs defaultValue="profile" className="space-y-4">
@@ -149,7 +174,7 @@ function YamlEditor() {
                     </Tabs>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 
