@@ -11,6 +11,11 @@ const apiClient = async (url, options = {}) => {
         defaultHeaders.Authorization = `Token ${token}`;
     }
 
+    // Remove Content-Type header if body is FormData (fixes upload file issue)
+    if (options.body instanceof FormData) {
+        delete defaultHeaders['Content-Type'];
+    }
+
     try {
         const response = await fetch(url, {
             ...options,
