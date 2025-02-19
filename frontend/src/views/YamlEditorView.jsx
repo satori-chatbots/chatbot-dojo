@@ -92,7 +92,7 @@ function YamlEditor() {
                         </div>
                         <Button className="text-sm" onPress={
                             () => handleSave()
-                        } disabled={!isValid}>
+                        } isDisabled={!isValid}>
                             {fileId ? "Update" : "Save"} YAML
                         </Button>
                     </div>
