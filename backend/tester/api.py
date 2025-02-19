@@ -534,10 +534,54 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 {"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        with open(test_file.file.path, "w") as file:
-            file.write(content)
+        try:
+            data = yaml.safe_load(content)
+        except yaml.YAMLError as e:
+            return Response(
+                {"error": f"Invalid YAML: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
+        new_test_name = data.get("test_name", None)
+        if not new_test_name:
+            return Response(
+                {"error": "No test_name found in YAML"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        project = test_file.project
+        if not project:
+            return Response(
+                {"error": "No project associated with this file"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check if the new name is already used in the project
+        conflict = (
+            TestFile.objects.filter(project=project, name=new_test_name)
+            .exclude(pk=test_file.pk)
+            .first()
+        )
+        # If so, we dont allow the update
+        if conflict:
+            return Response(
+                {
+                    "error": f"A file named '{new_test_name}' already exists in this project."
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Update file on disk
+        with open(test_file.file.path, "w") as f:
+            f.write(content)
+
+        # Update the database fields
+        test_file.name = new_test_name
         test_file.save()
+
+        return Response(
+            {"message": "File updated successfully"}, status=status.HTTP_200_OK
+        )
+
         return Response(
             {"message": "File updated successfully"}, status=status.HTTP_200_OK
         )
