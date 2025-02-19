@@ -15,22 +15,22 @@ export const fetchFiles = async (project_id) => {
     }
 };
 
-export const uploadFiles = async (formData) => {
-    try {
-        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.UPLOAD_FILES}`, {
-            method: 'POST',
-            headers: {
-                // Remove Content-Type to let browser set it with boundary for FormData
-                'Content-Type': undefined
-            },
-            body: formData,
+export const uploadFiles = (formData) => {
+    return fetch(`${API_BASE_URL}${ENDPOINTS.UPLOAD_FILES}`, {
+        method: 'POST',
+        body: formData,
+    })
+        .then(async (response) => {
+            const data = await response.json();
+            if (!response.ok) {
+                const errorMessage =
+                    data.error ||
+                    (data.errors && data.errors.map(e => e.error).join(', ')) ||
+                    `HTTP error! Status: ${response.status}`;
+                throw new Error(errorMessage);
+            }
+            return data;
         });
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error uploading files:', error);
-        throw error;
-    }
 };
 
 export const deleteFiles = async (ids) => {
