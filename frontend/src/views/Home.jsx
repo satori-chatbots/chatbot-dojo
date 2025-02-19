@@ -10,6 +10,7 @@ import {
     ModalHeader,
     Form,
     useDisclosure,
+    Link,
 } from "@heroui/react";
 import {
     Upload,
@@ -535,14 +536,13 @@ function Home() {
                                                         onChange={() => selectFile(file.id)}
                                                         className="form-checkbox h-4 w-4 mt-1"
                                                     />
-                                                    <a
-                                                        href={`${file.file}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                                                    <Link
+                                                        variant="light"
+                                                        onPress={() => navigate(`/yaml-editor/${file.id}`)}
+                                                        className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
                                                     >
                                                         {file.name}
-                                                    </a>
+                                                    </Link>
                                                 </div>
                                                 <p className="text-gray-600 text-sm ml-6">
                                                     {file.file.split('/').pop()}
