@@ -18,6 +18,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import UserProfileView from './views/UserProfileView';
 import { MyCustomToastProvider } from './contexts/MyCustomToastContext';
+import YamlEditor from './views/YamlEditorView';
 
 export const MoonIcon = (props) => {
     return (
@@ -222,6 +223,18 @@ function AppContent() {
                                 <UserProfileView />
                             </PrivateRoute>
                         } />
+                        <Route path="/yaml-editor" element={
+                            <PrivateRoute>
+                                <YamlEditor />
+                            </PrivateRoute>
+                        }
+                        />
+                        <Route path="/yaml-editor/:fileId" element={
+                            <PrivateRoute>
+                                <YamlEditor />
+                            </PrivateRoute>
+                        }
+                        />
                     </Routes>
                 </main>
 

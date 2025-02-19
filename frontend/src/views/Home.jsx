@@ -31,6 +31,7 @@ import CreateProjectModal from '../components/CreateProjectModal';
 import EditProjectModal from '../components/EditProjectModal';
 import ProjectsList from '../components/ProjectList';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
+import { useNavigate } from 'react-router-dom';
 
 
 function Home() {
@@ -85,6 +86,9 @@ function Home() {
 
     // Success modal
     const [successModal, setSuccessModal] = useState({ isOpen: false, message: '' });
+
+    // Navigation
+    const navigate = useNavigate();
 
     // Delete project modal
     const [deleteProjectModal, setDeleteProjectModal] = useState({
@@ -489,18 +493,34 @@ function Home() {
                         <div>
                             {/* Upload Section */}
                             <div className="flex flex-col space-y-4">
-                                <Input
-                                    type="file"
-                                    multiple
-                                    accept=".yaml,.yml"
-                                    onChange={handleFileChange}
-                                    ref={fileInputRef}
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="file"
+                                        multiple
+                                        accept=".yaml,.yml"
+                                        onChange={handleFileChange}
+                                        ref={fileInputRef}
+                                        className="flex-1"
+                                    />
+                                    <Button
+                                        onPress={handleUpload}
+                                        startContent={<Upload className="w-4 h-4" />}
+                                    >
+                                        Upload
+                                    </Button>
+                                </div>
+                                <Button
+                                    onPress={() => navigate('/yaml-editor')}
                                     fullWidth
-                                />
-                                <Button onPress={handleUpload} color="secondary" fullWidth startContent={<Upload className="w-4 h-4" />}>
-                                    Upload
+                                    color='secondary'
+                                    startContent={<File className="w-4 h-4" />}
+                                >
+                                    Create New YAML
                                 </Button>
                             </div>
+
+                            {/* Create new Profile */}
+
 
                             {/* List Section */}
                             <div className="flex-1 overflow-y-auto mt-4">
