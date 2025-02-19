@@ -49,7 +49,7 @@ export const deleteFiles = async (ids) => {
 
 export const fetchFile = async (fileId) => {
     try {
-        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}/${fileId}`);
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}${fileId}/fetch/`);
         const data = await response.json();
         return data;
     } catch (error) {

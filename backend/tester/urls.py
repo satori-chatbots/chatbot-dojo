@@ -47,6 +47,11 @@ urlpatterns = [
         api.UpdateProfileView.as_view(),
         name="update-profile",
     ),
+    path(
+        "testfiles/<int:file_id>/fetch/",
+        api.fetch_file_content,
+        name="fetch-file-content",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

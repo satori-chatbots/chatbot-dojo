@@ -150,6 +150,49 @@ class UserAPIKeyViewSet(viewsets.ModelViewSet):
         return UserAPIKey.objects.filter(user=self.request.user)
 
 
+####################
+# - PROFILES API - #
+####################
+
+
+@api_view(["GET"])
+def fetch_file_content(request, file_id):
+    """
+    Fetch the content of a specific YAML file
+    """
+    try:
+        test_file = get_object_or_404(TestFile, id=file_id)
+
+        # Check permissions - user should have access to the project
+        if not test_file.project.public and test_file.project.owner != request.user:
+            return Response(
+                {"error": "You don't have permission to access this file"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Check if file exists
+        if not os.path.exists(test_file.file.path):
+            return Response(
+                {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Read the file content
+        with open(test_file.file.path, "r") as file:
+            content = file.read()
+
+        return Response(
+            {"id": test_file.id, "name": test_file.name, "yamlContent": content}
+        )
+
+    except TestFile.DoesNotExist:
+        return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response(
+            {"error": f"Error reading file: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 # --------------------- #
 # - CONVERSATIONS API - #
 # --------------------- #
