@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import CodeMirror from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
-import { fetchFile } from '../api/fileApi';
+import { fetchFile, updateFile } from '../api/fileApi';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button, Tabs, Tab } from '@heroui/react';
 import { load as yamlLoad } from "js-yaml"
@@ -37,12 +37,19 @@ function YamlEditor() {
     }, [fileId]);
 
     const handleSave = async () => {
+        console.log("Button pressed");
         if (fileId) {
-            // Update existing file
-            // e.g. updateFile(fileId, { content });
+            // Update the existing file
+            try {
+                await updateFile(fileId, editorContent);
+                alert('File updated successfully');
+            } catch (err) {
+                console.error('Error updating file:', err);
+                alert('Failed to update file');
+            }
         } else {
-            // Create a new file
-            // e.g. createFile({ content });
+            // Create a new file (not yet implemented)
+            alert('Creating a new file is not implemented yet');
         }
     };
 
@@ -80,7 +87,9 @@ function YamlEditor() {
                             <span className="mr-2">YAML Validity:</span>
                             {isValid ? <CheckCircle2 className="text-green-500" /> : <AlertCircle className="text-red-500" />}
                         </div>
-                        <Button onPress={handleSave} disabled={!isValid}>
+                        <Button onPress={
+                            () => handleSave()
+                        } disabled={!isValid}>
                             {fileId ? "Update" : "Save"} YAML
                         </Button>
                     </div>

@@ -57,3 +57,19 @@ export const fetchFile = async (fileId) => {
         throw error;
     }
 };
+
+export const updateFile = async (fileId, content) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}${fileId}/update-file/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content }),
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating file:', error);
+        throw error;
+    }
+};
