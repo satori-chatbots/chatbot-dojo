@@ -520,10 +520,21 @@ def fetch_file_content(request, file_id):
         )
 
 
+class TestFilePermission(BasePermission):
+    """Permission class for TestFile access"""
+
+    def has_object_permission(self, request, view, obj):
+        # Allow access if project is public or user is the owner
+        return obj.project.public or (
+            request.user.is_authenticated and request.user == obj.project.owner
+        )
+
+
 class TestFileViewSet(viewsets.ModelViewSet):
     queryset = TestFile.objects.all()
     serializer_class = TestFileSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [permissions.IsAuthenticated, TestFilePermission]
 
     @action(detail=True, methods=["put"], url_path="update-file")
     def update_file(self, request, pk=None):
@@ -577,10 +588,6 @@ class TestFileViewSet(viewsets.ModelViewSet):
         # Update the database fields
         test_file.name = new_test_name
         test_file.save()
-
-        return Response(
-            {"message": "File updated successfully"}, status=status.HTTP_200_OK
-        )
 
         return Response(
             {"message": "File updated successfully"}, status=status.HTTP_200_OK
