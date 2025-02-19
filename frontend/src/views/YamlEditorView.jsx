@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import CodeMirror from '@uiw/react-codemirror';
+import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { yaml } from '@codemirror/lang-yaml';
 import { fetchFile, updateFile } from '../api/fileApi';
 import { AlertCircle, CheckCircle2, ZoomInIcon, ZoomOutIcon } from 'lucide-react';
@@ -97,11 +97,11 @@ function YamlEditor() {
                         </Button>
                     </div>
                     <div className="relative">
-
                         <CodeMirror
                             value={editorContent}
                             height="70vh"
-                            extensions={[yaml()]}
+                            width="100%"
+                            extensions={[yaml(), EditorView.lineWrapping]}
                             onChange={handleEditorChange}
                             theme={isDark ? materialDark : tomorrow}
                             basicSetup={{
@@ -109,6 +109,7 @@ function YamlEditor() {
                                 foldGutter: true,
                                 highlightActiveLineGutter: true,
                                 highlightActiveLine: true,
+                                lineWrapping: true,
                             }}
                             style={{ fontSize: `${fontSize}px` }}
                         />
