@@ -266,7 +266,19 @@ function Home() {
             })
             .catch(error => {
                 console.error('Error uploading files:', error);
-                showToast('error', 'Error uploading files:\n' + error.message);
+                try {
+                    const errorObj = JSON.parse(error.message);
+                    if (errorObj.errors) {
+                        const errorMessages = errorObj.errors.map(err =>
+                            `Error: ${err.error}`
+                        ).join('\n');
+                        showToast('error', errorMessages);
+                    } else {
+                        showToast('error', 'Error uploading files');
+                    }
+                } catch (e) {
+                    showToast('error', 'Error uploading files');
+                }
             });
     };
 
