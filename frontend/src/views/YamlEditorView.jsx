@@ -6,13 +6,20 @@ import { fetchFile } from '../api/fileApi';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button, Tabs, Tab } from '@heroui/react';
 import { load as yamlLoad } from "js-yaml"
+import { materialDark, materialLight } from '@uiw/codemirror-theme-material';
+import { tomorrow } from 'thememirror';
+import { useTheme } from 'next-themes';
 
-const initialYaml = `test_name "pizza_order_test_custom"`
+const initialYaml = `test_name: "pizza_order_test_custom"`
 
 function YamlEditor() {
     const { fileId } = useParams();
     const [editorContent, setEditorContent] = useState(initialYaml)
     const [isValid, setIsValid] = useState(true);
+    const [errorInfo, setErrorInfo] = useState(null);
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
 
     useEffect(() => {
         validateYaml(editorContent);
@@ -48,11 +55,17 @@ function YamlEditor() {
     // Validates the YAML content
     const validateYaml = (value) => {
         try {
-            yamlLoad(value)
-            setIsValid(true)
+            yamlLoad(value);
+            setIsValid(true);
+            setErrorInfo(null);
         } catch (e) {
-            setIsValid(false)
-            console.error('Invalid YAML:', e)
+            setIsValid(false);
+            setErrorInfo({
+                message: e.message,
+                line: e.mark ? e.mark.line + 1 : null,
+                column: e.mark ? e.mark.column + 1 : null
+            });
+            console.error('Invalid YAML:', e);
         }
     }
 
@@ -60,7 +73,7 @@ function YamlEditor() {
         <div className="container mx-auto p-4">
 
             <h1 className="text-2xl font-bold mb-4">{fileId ? 'Edit YAML File' : 'Create New YAML'}</h1>
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
                     <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center">
@@ -76,6 +89,7 @@ function YamlEditor() {
                         height="70vh"
                         extensions={[yaml()]}
                         onChange={handleEditorChange}
+                        theme={isDark ? materialDark : tomorrow}
                         basicSetup={{
                             lineNumbers: true,
                             foldGutter: true,
