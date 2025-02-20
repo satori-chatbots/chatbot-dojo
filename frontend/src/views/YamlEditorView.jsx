@@ -182,6 +182,7 @@ function YamlEditor() {
                                 highlightActiveLineGutter: true,
                                 highlightActiveLine: true,
                                 lineWrapping: true,
+                                autocompletion: true,
                             }}
                             style={{ fontSize: `${fontSize}px` }}
                         />
@@ -205,7 +206,7 @@ function YamlEditor() {
                         </div>
                     </div>
                 </div>
-                <div className="w-full md:w-1/3">
+                <div className="w-full lg:w-1/3">
                     <Tabs defaultValue="profile" className="space-y-4">
                         <Tab key="profile" title="User Profile Help">
                             <div className="bg-default-50 p-4 rounded-lg">
