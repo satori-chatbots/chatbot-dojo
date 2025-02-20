@@ -556,9 +556,6 @@ function Home() {
                                                         {file.name}
                                                     </Link>
                                                 </div>
-                                                <p className="text-gray-600 text-sm ml-6">
-                                                    {file.file.split('/').pop()}
-                                                </p>
                                             </li>
                                         ))}
                                     </ul>
