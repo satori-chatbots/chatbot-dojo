@@ -3,7 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { yaml } from '@codemirror/lang-yaml';
 import { fetchFile, updateFile, createFile } from '../api/fileApi';
-import { AlertCircle, CheckCircle2, ZoomInIcon, ZoomOutIcon } from 'lucide-react';
+import {
+    AlertCircle,
+    CheckCircle2,
+    ZoomInIcon,
+    ZoomOutIcon,
+    Save,
+    Edit,
+} from 'lucide-react';
 import { Button, Tabs, Tab } from '@heroui/react';
 import { load as yamlLoad } from "js-yaml"
 import { materialDark, materialLight } from '@uiw/codemirror-theme-material';
@@ -127,10 +134,23 @@ function YamlEditor() {
                             <span className="mr-2">YAML Validity:</span>
                             {isValid ? <CheckCircle2 className="text-green-500" /> : <AlertCircle className="text-red-500" />}
                         </div>
-                        <Button className="text-sm" onPress={
-                            () => handleSave()
-                        } isDisabled={!isValid}>
-                            {fileId ? "Update" : "Save"} YAML
+                        <Button
+                            className="text-sm"
+                            color="primary"
+                            onPress={() => handleSave()}
+                            isDisabled={!isValid}
+                        >
+                            {fileId ? (
+                                <>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Update YAML
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Save YAML
+                                </>
+                            )}
                         </Button>
                     </div>
                     <div className="relative">
