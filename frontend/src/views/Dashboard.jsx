@@ -421,7 +421,7 @@ function Dashboard() {
             w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl
             mx-auto
             my-auto
-            max-h-[90vh]
+            max-h-[88vh]
             p-4 sm:p-6 lg:p-8"
         >
             {publicView ? (
@@ -486,148 +486,148 @@ function Dashboard() {
                 </Button>
             </Form>
 
+            <div className="flex-1 min-h-0 overflow-auto">
+                <Table
+                    aria-label="Test Cases Table"
+                    isStriped
+                    sortDescriptor={sortDescriptor}
+                    onSortChange={(descriptor) => {
+                        setSortDescriptor(descriptor);
+                        fetchPaginatedTestCases(page, descriptor.column, descriptor.direction);
+                    }}
 
-            <Table
-                aria-label="Test Cases Table"
-                isStriped
-                sortDescriptor={sortDescriptor}
-                onSortChange={(descriptor) => {
-                    setSortDescriptor(descriptor);
-                    fetchPaginatedTestCases(page, descriptor.column, descriptor.direction);
-                }}
-                bottomContent={
-                    <div className="flex w-full justify-center">
-                        <Pagination
-                            total={totalPages}
-                            page={page}
-                            onChange={(newPage) => {
-                                setPage(newPage);
-                                fetchPaginatedTestCases(newPage);
-                            }}
-                        />
-                    </div>
-                }
-            >
-                <TableHeader>
-                    {columns.map((column) => (
-                        <TableColumn
-                            key={column.key}
-                            allowsSorting={column.sortable}
-                        >
-                            {column.name}
-                        </TableColumn>
-                    ))}
-                </TableHeader>
-                <TableBody
-                    items={sortedTestCases}
-                    isLoading={loading}
-                    loadingContent={<Spinner label='Loading Test Cases...' />}
-                    emptyContent={"No Test Cases to display."}
                 >
-                    {(testCase) => (
-                        <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
-                            <TableCell>{testCase.displayName}</TableCell>
-                            <TableCell>
-                                <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
-                                    {testCase.status}
-                                </Chip>
-                            </TableCell>
-                            <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
-                            <TableCell>
-                                {testCase.copied_files.length > 3 ? (
-                                    <Accordion
-                                        isCompact={true}
-                                    >
-                                        <AccordionItem
-                                            title={`View ${testCase.copied_files.length} files`}
+                    <TableHeader>
+                        {columns.map((column) => (
+                            <TableColumn
+                                key={column.key}
+                                allowsSorting={column.sortable}
+                            >
+                                {column.name}
+                            </TableColumn>
+                        ))}
+                    </TableHeader>
+                    <TableBody
+                        items={sortedTestCases}
+                        isLoading={loading}
+                        loadingContent={<Spinner label='Loading Test Cases...' />}
+                        emptyContent={"No Test Cases to display."}
+                    >
+                        {(testCase) => (
+                            <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
+                                <TableCell>{testCase.displayName}</TableCell>
+                                <TableCell>
+                                    <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
+                                        {testCase.status}
+                                    </Chip>
+                                </TableCell>
+                                <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
+                                <TableCell>
+                                    {testCase.copied_files.length > 3 ? (
+                                        <Accordion
                                             isCompact={true}
-                                            classNames={{ title: "text-sm mx-0" }}
                                         >
-                                            <ul>
-                                                {testCase.copied_files.map(file => (
-                                                    <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
-                                                ))}
-                                            </ul>
-                                        </AccordionItem>
-                                    </Accordion>
-                                ) : (
-                                    <ul>
-                                        {testCase.copied_files.map(file => (
-                                            <li key={`${testCase.id}-${file.name}`}>
-                                                <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </TableCell>
-                            <TableCell>{formatExecutionTime(testCase.execution_time, testCase.status)}</TableCell>
-                            <TableCell>
-                                {testCase.num_errors > 0 ? (
-                                    <Accordion isCompact>
-                                        <AccordionItem title={<span className="text-sm">{`${testCase.num_errors} errors`}</span>}>
-                                            <ul>
-                                                {testCase.testCaseErrors.map(err => (
-                                                    <li key={err.id}>
-                                                        Error {err.code}: {err.count}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </AccordionItem>
-                                    </Accordion>
-                                ) : (
-                                    <Accordion isCompact>
-                                        <AccordionItem title={<span className="text-sm">No errors</span>} />
-                                    </Accordion>
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                {formatCost(testCase.total_cost, testCase.status)}
-                            </TableCell>
-                            <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
+                                            <AccordionItem
+                                                title={`View ${testCase.copied_files.length} files`}
+                                                isCompact={true}
+                                                classNames={{ title: "text-sm mx-0" }}
+                                            >
+                                                <ul>
+                                                    {testCase.copied_files.map(file => (
+                                                        <li key={`${testCase.id}-${file.name}`}>{file.name}</li>
+                                                    ))}
+                                                </ul>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    ) : (
+                                        <ul>
+                                            {testCase.copied_files.map(file => (
+                                                <li key={`${testCase.id}-${file.name}`}>
+                                                    <Link color="foreground" href={`${MEDIA_URL}${file.path}`} className="text-sm">{file.name}</Link>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </TableCell>
+                                <TableCell>{formatExecutionTime(testCase.execution_time, testCase.status)}</TableCell>
+                                <TableCell>
+                                    {testCase.num_errors > 0 ? (
+                                        <Accordion isCompact>
+                                            <AccordionItem title={<span className="text-sm">{`${testCase.num_errors} errors`}</span>}>
+                                                <ul>
+                                                    {testCase.testCaseErrors.map(err => (
+                                                        <li key={err.id}>
+                                                            Error {err.code}: {err.count}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    ) : (
+                                        <Accordion isCompact>
+                                            <AccordionItem title={<span className="text-sm">No errors</span>} />
+                                        </Accordion>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    {formatCost(testCase.total_cost, testCase.status)}
+                                </TableCell>
+                                <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
 
 
-                            <TableCell>
-                                <div className="flex gap-2">
-                                    <Button
-                                        as={Link}
-                                        href={`/test-case/${testCase.id}`}
-                                        size="sm"
-                                        variant="flat"
-                                        color="primary"
-                                        endContent={<Eye className="w-3 h-3" />}
-                                    >
-                                        View
-                                    </Button>
-                                    {testCase.status === "RUNNING" && (
+                                <TableCell>
+                                    <div className="flex gap-2">
                                         <Button
+                                            as={Link}
+                                            href={`/test-case/${testCase.id}`}
                                             size="sm"
                                             variant="flat"
-                                            color="danger"
-                                            onPress={(e) => handleStop(testCase.id, e)}
-                                            endContent={<XCircle className="w-3 h-3" />}
+                                            color="primary"
+                                            endContent={<Eye className="w-3 h-3" />}
                                         >
-                                            Stop
+                                            View
                                         </Button>
-                                    )}
-                                    {!publicView && (
-                                        <Button
-                                            size="sm"
-                                            variant="flat"
-                                            color="danger"
-                                            onPress={(e) => handleDelete(testCase.id, e)}
-                                            endContent={<Trash className="w-3 h-3" />}
-                                        >
-                                            Delete
-                                        </Button>
-                                    )}
-                                </div>
-                            </TableCell>
+                                        {testCase.status === "RUNNING" && (
+                                            <Button
+                                                size="sm"
+                                                variant="flat"
+                                                color="danger"
+                                                onPress={(e) => handleStop(testCase.id, e)}
+                                                endContent={<XCircle className="w-3 h-3" />}
+                                            >
+                                                Stop
+                                            </Button>
+                                        )}
+                                        {!publicView && (
+                                            <Button
+                                                size="sm"
+                                                variant="flat"
+                                                color="danger"
+                                                onPress={(e) => handleDelete(testCase.id, e)}
+                                                endContent={<Trash className="w-3 h-3" />}
+                                            >
+                                                Delete
+                                            </Button>
+                                        )}
+                                    </div>
+                                </TableCell>
 
-                        </TableRow>
-                    )}
-                </TableBody>
+                            </TableRow>
+                        )}
+                    </TableBody>
 
-            </Table>
+                </Table>
+            </div>
+            <div className="flex w-full justify-center">
+                <Pagination
+                    total={totalPages}
+                    page={page}
+                    onChange={(newPage) => {
+                        setPage(newPage);
+                        fetchPaginatedTestCases(newPage);
+                    }}
+                />
+            </div>
 
             {/* Only show modal for authenticated users */}
             {!publicView && (
