@@ -118,7 +118,7 @@ function YamlEditor() {
                                 variant="outline"
                                 onPress={zoomOut}
                                 aria-label="Zoom out"
-                                className="bg-background/80 backdrop-blur-sm text-sm"
+                                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm text-sm"
                             >
                                 <ZoomOutIcon className="w-5 h-5" />
                             </Button>
@@ -126,7 +126,7 @@ function YamlEditor() {
                                 variant="outline"
                                 onPress={zoomIn}
                                 aria-label="Zoom in"
-                                className="bg-background/80 backdrop-blur-sm text-sm"
+                                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm text-sm"
                             >
                                 <ZoomInIcon className="w-5 h-5" />
                             </Button>
