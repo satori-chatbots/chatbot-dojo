@@ -316,6 +316,13 @@ class TestCase(models.Model):
     def __str__(self):
         return f"TestCase {self.id}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["executed_at"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["project"]),
+        ]
+
 
 class GlobalReport(models.Model):
     """

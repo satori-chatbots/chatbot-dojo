@@ -399,6 +399,44 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         exists = TestCase.objects.filter(project=project_id, name=test_name).exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=["get"], url_path="paginated")
+    def get_paginated(self, request):
+        page = int(request.query_params.get("page", 1))
+        per_page = int(request.query_params.get("per_page", 10))
+        sort_column = request.query_params.get("sort_column", "executed_at")
+        sort_direction = request.query_params.get("sort_direction", "descending")
+        project_ids = request.query_params.get("project_ids", "").split(",")
+
+        # Start with all test cases
+        queryset = self.get_queryset()
+
+        # Filter by project IDs if provided
+        if project_ids and project_ids[0]:
+            queryset = queryset.filter(project__in=project_ids)
+
+        # Handle sorting
+        if sort_direction == "descending":
+            sort_column = f"-{sort_column}"
+        queryset = queryset.order_by(sort_column)
+
+        # Calculate pagination
+        total = queryset.count()
+        start = (page - 1) * per_page
+        end = start + per_page
+
+        # Slice the queryset for pagination
+        items = queryset[start:end]
+        serializer = self.get_serializer(items, many=True)
+
+        return Response(
+            {
+                "items": serializer.data,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+            }
+        )
+
 
 # ---------- #
 # - PROJECTS #
@@ -760,20 +798,18 @@ class TestFileViewSet(viewsets.ModelViewSet):
             {"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED
         )
 
-    @action(detail=False, methods=['get'], url_path='template')
+    @action(detail=False, methods=["get"], url_path="template")
     def get_template(self, request):
         template_path = os.path.join(
-            settings.BASE_DIR,
-            'tester/templates/yaml/default.yaml'
+            settings.BASE_DIR, "tester/templates/yaml/default.yaml"
         )
         try:
-            with open(template_path, 'r') as f:
+            with open(template_path, "r") as f:
                 template_content = f.read()
-            return Response({'template': template_content})
+            return Response({"template": template_content})
         except FileNotFoundError:
             return Response(
-                {'error': 'Template file not found'},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Template file not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
 

@@ -4,7 +4,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchTestErrorsByGlobalReports } from '../api/testErrorsApi';
 import { fetchGlobalReportsByTestCases } from '../api/reportsApi';
 import { MEDIA_URL } from '../api/config';
-import { Button, Chip, Form, Select, SelectItem, Spinner } from "@heroui/react";
+import { Button, Chip, Form, Select, SelectItem, Spinner, Pagination } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
@@ -17,7 +17,8 @@ import useSelectedProject from '../hooks/useSelectedProject';
 import { useAuth } from '../contexts/AuthContext';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 import { Eye, Trash, XCircle } from 'lucide-react';
-
+import apiClient from '../api/apiClient';
+import API_BASE_URL from '../api/config';
 
 
 function Dashboard() {
@@ -27,6 +28,63 @@ function Dashboard() {
     const [testCases, setTestCases] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    const fetchPaginatedTestCases = async (pageNumber, sortColumn, sortDirection) => {
+        try {
+            setLoading(true);
+            const queryParams = new URLSearchParams({
+                page: pageNumber,
+                per_page: rowsPerPage,
+                sort_column: sortColumn || sortDescriptor.column,
+                sort_direction: sortDirection || sortDescriptor.direction,
+                project_ids: selectedProjects.join(',')
+            });
+
+            const response = await apiClient(
+                `${API_BASE_URL}/testcases/paginated/?${queryParams}`,
+                {
+                    method: 'GET'
+                }
+            );
+
+            const data = await response.json();
+            setTestCases(data.items);
+            setTotalPages(Math.ceil(data.total / rowsPerPage));
+
+            // Fetch associated reports and errors only for the current page
+            const testCaseIds = testCases.map(testCase => testCase.id);
+            if (testCaseIds.length > 0) {
+                const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
+                setGlobalReports(fetchedReports);
+
+                const globalReportIds = fetchedReports.map(report => report.id);
+                if (globalReportIds.length > 0) {
+                    const fetchedErrors = await fetchTestErrorsByGlobalReports(globalReportIds);
+                    setErrors(fetchedErrors);
+
+                    const updatedErrorCounts = {};
+                    fetchedErrors.forEach(error => {
+                        if (error.global_report in updatedErrorCounts) {
+                            updatedErrorCounts[error.global_report] += error.count;
+                        } else {
+                            updatedErrorCounts[error.global_report] = error.count;
+                        }
+                    });
+                    setErrorCounts(updatedErrorCounts);
+                }
+            }
+
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching test cases:', error);
+            setError(error);
+            setLoading(false);
+        }
+    };
 
     // Modal for deleting a test case
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, testCaseId: null });
@@ -186,33 +244,13 @@ function Dashboard() {
         try {
             setLoading(true);
             setError(null);
-            const testCases = await fetchTestCasesByProjects(selectedProjects);
-            setTestCases(testCases);
 
-            const testCaseIds = testCases.map(testCase => testCase.id);
-            if (testCaseIds.length !== 0) {
-                const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
-                setGlobalReports(fetchedReports);
+            // Use the paginated endpoint
+            await fetchPaginatedTestCases(1); // Reset to first page when filtering
+            setPage(1); // Reset page number
 
-                const globalReportIds = fetchedReports.map(report => report.id);
-                let fetchedErrors = [];
-                if (globalReportIds.length !== 0) {
-                    fetchedErrors = await fetchTestErrorsByGlobalReports(globalReportIds);
-                    setErrors(fetchedErrors);
-                }
-
-                const updatedErrorCounts = {};
-                fetchedErrors.forEach(error => {
-                    if (error.global_report in updatedErrorCounts) {
-                        updatedErrorCounts[error.global_report] += error.count;
-                    } else {
-                        updatedErrorCounts[error.global_report] = error.count;
-                    }
-                });
-                setErrorCounts(updatedErrorCounts);
-            }
         } catch (err) {
-            console.log(err);
+            console.error('Error filtering projects:', err);
             showToast('error', 'Failed to filter projects');
         } finally {
             setLoading(false);
@@ -340,14 +378,8 @@ function Dashboard() {
     }, [testCases, globalReports, errorCounts, errors]);
 
     const sortedTestCases = useMemo(() => {
-        const { column, direction } = sortDescriptor;
-        return [...derivedTestCases].sort((a, b) => {
-            const first = column === 'name' ? a.displayName : a[column];
-            const second = column === 'name' ? b.displayName : b[column];
-            const cmp = first < second ? -1 : first > second ? 1 : 0;
-            return direction === 'descending' ? -cmp : cmp;
-        });
-    }, [derivedTestCases, sortDescriptor]);
+        return derivedTestCases;
+    }, [derivedTestCases]);
 
 
     const formatExecutionTime = (seconds, status) => {
@@ -459,9 +491,22 @@ function Dashboard() {
                 aria-label="Test Cases Table"
                 isStriped
                 sortDescriptor={sortDescriptor}
-                onSortChange={setSortDescriptor}
-                className='max-h-[60vh] sm:max-h-[50vh] overflow-y-auto'
-                selectionMode='single'
+                onSortChange={(descriptor) => {
+                    setSortDescriptor(descriptor);
+                    fetchPaginatedTestCases(page, descriptor.column, descriptor.direction);
+                }}
+                bottomContent={
+                    <div className="flex w-full justify-center">
+                        <Pagination
+                            total={totalPages}
+                            page={page}
+                            onChange={(newPage) => {
+                                setPage(newPage);
+                                fetchPaginatedTestCases(newPage);
+                            }}
+                        />
+                    </div>
+                }
             >
                 <TableHeader>
                     {columns.map((column) => (
@@ -630,5 +675,6 @@ function Dashboard() {
         </div >
     );
 }
+
 
 export default Dashboard;

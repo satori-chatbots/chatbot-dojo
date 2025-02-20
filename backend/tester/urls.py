@@ -20,6 +20,7 @@ router.register(r"register", api.RegisterViewSet, basename="register")
 router.register(r"login", api.LoginViewSet, basename="login")
 router.register(r"api-keys", api.UserAPIKeyViewSet, basename="api-key")
 
+
 urlpatterns = [
     # Custom Routes First
     path(
