@@ -17,6 +17,7 @@ import { materialDark, materialLight } from '@uiw/codemirror-theme-material';
 import { tomorrow } from 'thememirror';
 import { useTheme } from 'next-themes';
 import useSelectedProject from '../hooks/useSelectedProject';
+import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 
 
 const initialYaml = `test_name: "pizza_order_test_custom"`
@@ -31,6 +32,7 @@ function YamlEditor() {
     const isDark = theme === 'dark';
     const navigate = useNavigate();
     const [selectedProject] = useSelectedProject();
+    const { showToast } = useMyCustomToast();
 
 
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
@@ -57,18 +59,21 @@ function YamlEditor() {
             if (fileId) {
                 // Update existing file
                 const response = await updateFile(fileId, editorContent);
-                alert(response.message || 'File updated successfully');
+                //alert(response.message || 'File updated successfully');
+                showToast('success', response.message || 'File updated successfully');
             } else {
                 // Create new file
                 if (!selectedProject) {
-                    alert('Please select a project first');
+                    //alert('Please select a project first');
+                    showToast('error', 'Please select a project first');
                     return;
                 }
                 const response = await createFile(editorContent, selectedProject.id);
                 if (response.uploaded_file_ids && response.uploaded_file_ids.length > 0) {
                     // Get the first file ID since we are only uploading one
                     const newFileId = response.uploaded_file_ids[0];
-                    alert('File created successfully');
+                    //alert('File created successfully');
+                    showToast('success', 'File created successfully');
                     // Navigate to the edit view of the new file
                     navigate(`/yaml-editor/${newFileId}`);
                     return;
@@ -77,7 +82,8 @@ function YamlEditor() {
                     const errorMessage = response.errors && response.errors.length > 0
                         ? response.errors[0].error
                         : 'Failed to create file';
-                    alert(errorMessage);
+                    //alert(errorMessage);
+                    showToast('error', errorMessage);
                 }
             }
         } catch (err) {
@@ -90,12 +96,21 @@ function YamlEditor() {
                     const errorMessages = errorObj.errors.map(err =>
                         `Error: ${err.error}`
                     ).join('\n');
-                    alert(errorMessages);
-                } else {
-                    alert('Error saving file');
+                    //alert(errorMessages);
+                    showToast('error', errorMessages);
+                } else if (errorObj.error) {
+                    // Display the error message
+                    //alert(`Error: ${errorObj.error}`);
+                    showToast('error', `Error: ${errorObj.error}`);
+                }
+
+                else {
+                    //alert('Error saving file');
+                    showToast('error', 'Error saving file');
                 }
             } catch (e) {
-                alert('Error saving file');
+                //alert('Error saving file');
+                showToast('error', 'Error saving file');
             }
         }
     };
