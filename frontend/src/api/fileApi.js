@@ -69,3 +69,21 @@ export const updateFile = async (fileId, content) => {
         throw error;
     }
 };
+
+export const createFile = async (content, projectId) => {
+    try {
+        const formData = new FormData();
+        const blob = new Blob([content], { type: 'application/x-yaml' });
+        formData.append('file', blob, 'newfile.yaml');
+        formData.append('project', projectId);
+
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.UPLOAD_FILES}`, {
+            method: 'POST',
+            body: formData
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating file:', error);
+        throw error;
+    }
+};

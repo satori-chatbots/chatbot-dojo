@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { yaml } from '@codemirror/lang-yaml';
-import { fetchFile, updateFile } from '../api/fileApi';
+import { fetchFile, updateFile, createFile } from '../api/fileApi';
 import { AlertCircle, CheckCircle2, ZoomInIcon, ZoomOutIcon } from 'lucide-react';
 import { Button, Tabs, Tab } from '@heroui/react';
 import { load as yamlLoad } from "js-yaml"
 import { materialDark, materialLight } from '@uiw/codemirror-theme-material';
 import { tomorrow } from 'thememirror';
 import { useTheme } from 'next-themes';
+import useSelectedProject from '../hooks/useSelectedProject';
+
 
 const initialYaml = `test_name: "pizza_order_test_custom"`
 
@@ -20,6 +22,10 @@ function YamlEditor() {
     const [errorInfo, setErrorInfo] = useState(null);
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const navigate = useNavigate();
+    const [selectedProject] = useSelectedProject();
+
+
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
@@ -40,19 +46,50 @@ function YamlEditor() {
     }, [fileId]);
 
     const handleSave = async () => {
-        console.log("Button pressed");
-        if (fileId) {
-            // Update the existing file
-            try {
-                await updateFile(fileId, editorContent);
-                alert('File updated successfully');
-            } catch (err) {
-                console.error('Error updating file:', err);
-                alert('Failed to update file');
+        try {
+            if (fileId) {
+                // Update existing file
+                const response = await updateFile(fileId, editorContent);
+                alert(response.message || 'File updated successfully');
+            } else {
+                // Create new file
+                if (!selectedProject) {
+                    alert('Please select a project first');
+                    return;
+                }
+                const response = await createFile(editorContent, selectedProject.id);
+                if (response.uploaded_file_ids && response.uploaded_file_ids.length > 0) {
+                    // Get the first file ID since we are only uploading one
+                    const newFileId = response.uploaded_file_ids[0];
+                    alert('File created successfully');
+                    // Navigate to the edit view of the new file
+                    navigate(`/yaml-editor/${newFileId}`);
+                    return;
+                } else {
+                    // Extract error message from the response
+                    const errorMessage = response.errors && response.errors.length > 0
+                        ? response.errors[0].error
+                        : 'Failed to create file';
+                    alert(errorMessage);
+                }
             }
-        } else {
-            // Create a new file (not yet implemented)
-            alert('Creating a new file is not implemented yet');
+        } catch (err) {
+            // The error is already being displayed by fileApi.js
+            //console.error('Error saving file:', err);
+            try {
+                const errorObj = JSON.parse(err.message);
+                if (errorObj.errors) {
+                    // Display all error messages
+                    const errorMessages = errorObj.errors.map(err =>
+                        `Error: ${err.error}`
+                    ).join('\n');
+                    alert(errorMessages);
+                } else {
+                    alert('Error saving file');
+                }
+            } catch (e) {
+                alert('Error saving file');
+            }
         }
     };
 
