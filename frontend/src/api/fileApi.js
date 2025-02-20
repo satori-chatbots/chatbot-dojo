@@ -87,3 +87,13 @@ export const createFile = async (content, projectId) => {
         throw error;
     }
 };
+
+export const fetchTemplate = async () => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}template/`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching template:', error);
+        throw error;
+    }
+};

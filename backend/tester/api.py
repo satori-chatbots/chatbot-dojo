@@ -760,6 +760,22 @@ class TestFileViewSet(viewsets.ModelViewSet):
             {"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED
         )
 
+    @action(detail=False, methods=['get'], url_path='template')
+    def get_template(self, request):
+        template_path = os.path.join(
+            settings.BASE_DIR,
+            'tester/templates/yaml/default.yaml'
+        )
+        try:
+            with open(template_path, 'r') as f:
+                template_content = f.read()
+            return Response({'template': template_content})
+        except FileNotFoundError:
+            return Response(
+                {'error': 'Template file not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 # ----------------------------- #
 # - EXECUTE AUTOTEST ON FILES - #

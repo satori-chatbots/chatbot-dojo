@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { yaml } from '@codemirror/lang-yaml';
-import { fetchFile, updateFile, createFile } from '../api/fileApi';
+import { fetchFile, updateFile, createFile, fetchTemplate } from '../api/fileApi';
 import {
     AlertCircle,
     CheckCircle2,
@@ -19,12 +19,9 @@ import { useTheme } from 'next-themes';
 import useSelectedProject from '../hooks/useSelectedProject';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 
-
-const initialYaml = `test_name: "pizza_order_test_custom"`
-
 function YamlEditor() {
     const { fileId } = useParams();
-    const [editorContent, setEditorContent] = useState(initialYaml)
+    const [editorContent, setEditorContent] = useState('')
     const [isValid, setIsValid] = useState(true);
     const [fontSize, setFontSize] = useState(14);
     const [errorInfo, setErrorInfo] = useState(null);
@@ -40,6 +37,21 @@ function YamlEditor() {
 
 
     useEffect(() => {
+        // Fetch the template for new files
+        if (!fileId) {
+            fetchTemplate()
+                .then(response => {
+                    if (response.template) {
+                        setEditorContent(response.template);
+                        validateYaml(response.template);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching template:', err);
+                    showToast('error', 'Failed to load template');
+                });
+        }
+
         validateYaml(editorContent);
     }, []);
 
