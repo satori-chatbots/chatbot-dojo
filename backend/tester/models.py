@@ -7,6 +7,7 @@ from django.dispatch import receiver
 import os
 import yaml
 from cryptography.fernet import Fernet
+from django.core.exceptions import ValidationError
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -100,9 +101,10 @@ class CustomUser(AbstractUser):
 
 def upload_to(instance, filename):
     """
-    Returns the path where the Test Files are stored (MEDIA_DIR/user-profiles/<project_id>/<filename>)
+    Returns the path where the Test Files are stored (MEDIA_DIR/user-profiles/<project_id>/<test_name>.yaml)
     """
-    return os.path.join("user-profiles", str(instance.project.id), filename)
+    # The test_name should have been set by the model's clean method
+    return f"user-profiles/{instance.project.id}/{filename}"
 
 
 class TestFile(models.Model):
@@ -124,6 +126,44 @@ class TestFile(models.Model):
     # Anyway, I leave it as a comment in case we need to go back to it in the future
     # relative_path = models.CharField(max_length=255, blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        # After saving, try to read and process the file
+        if self.file and hasattr(self.file, "path") and os.path.exists(self.file.path):
+            try:
+                with open(self.file.path, "r") as file:
+                    data = yaml.safe_load(file)
+                    test_name = data.get("test_name")
+
+                    if test_name:
+                        # Get the file extension
+                        _, ext = os.path.splitext(self.file.name)
+                        # Create new filename and change the extension to yaml
+                        # To avoid having yaml and yml files with the same name
+                        new_filename = f"{test_name}.yaml"
+                        new_path = f"user-profiles/{self.project.id}/{new_filename}"
+
+                        # Rename the file
+                        old_path = self.file.path
+                        new_full_path = os.path.join(settings.MEDIA_ROOT, new_path)
+                        os.rename(old_path, new_full_path)
+
+                        # Update the model
+                        self.file.name = new_path
+                        self.name = test_name
+                        TestFile.objects.filter(pk=self.pk).update(
+                            file=self.file.name, name=test_name
+                        )
+                    else:
+                        raise ValidationError(
+                            "YAML file must contain a test_name field"
+                        )
+            except yaml.YAMLError as e:
+                raise ValidationError(f"Invalid YAML file: {str(e)}")
+            except Exception as e:
+                raise ValidationError(f"Error processing file: {str(e)}")
+
     def __str__(self):
         return os.path.basename(self.file.name)
 
@@ -143,20 +183,21 @@ def set_name(sender, instance, created, **kwargs):
     """
     Set the name of the TestFile to the "test_name" field in the YAML file
     """
-    if created:
-        # Extract 'test_name' from the YAML file
-        try:
-            with open(instance.file.path, "r") as file:
-                data = yaml.safe_load(file)
-                instance.name = data.get(
-                    "test_name", os.path.basename(instance.file.name)
-                )
-        except yaml.YAMLError as e:
-            print(f"Error loading YAML file: {e}")
-            instance.name = os.path.basename(instance.file.name)
+    pass
+    # if created:
+    #     # Extract 'test_name' from the YAML file
+    #     try:
+    #         with open(instance.file.path, "r") as file:
+    #             data = yaml.safe_load(file)
+    #             instance.name = data.get(
+    #                 "test_name", os.path.basename(instance.file.name)
+    #             )
+    #     except yaml.YAMLError as e:
+    #         print(f"Error loading YAML file: {e}")
+    #         instance.name = os.path.basename(instance.file.name)
 
-        # Save the updated instance without triggering another save signal
-        sender.objects.filter(pk=instance.pk).update(name=instance.name)
+    #     # Save the updated instance without triggering another save signal
+    #     sender.objects.filter(pk=instance.pk).update(name=instance.name)
 
 
 class Project(models.Model):
