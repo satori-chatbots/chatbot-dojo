@@ -446,114 +446,124 @@ function Dashboard() {
             {/* Project Selector */}
             <Form
                 className="
-                flex col sm:flex-row
-                space-y-6 sm:space-x-4 sm:space-y-0
-                w-full sm:w-xl sm:max-w-xl lg:max-w-2xl
-                mb-4
+                    flex flex-col lg:flex-row
+                    gap-4
+                    w-full
+                    max-w-[1200px]
+                    mb-4
                 "
                 onSubmit={handleFilterProjects}
                 validationBehavior="native"
             >
-                <Input
-                    type="search"
-                    label="Search test cases:"
-                    placeholder="Type to search..."
-                    className="w-full h-10 sm:h-12"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    startContent={
-                        <Search className="text-default-400" size={18} />
-                    }
-                    isClearable
-                    onClear={() => setSearchTerm("")}
-                />
+                {/* Search input */}
+                <div className="w-full lg:w-1/4">
+                    <Input
+                        type="search"
+                        label="Search test cases:"
+                        placeholder="Type to search..."
+                        className="w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        startContent={
+                            <Search className="text-default-400" size={18} />
+                        }
+                        isClearable
+                        onClear={() => setSearchTerm("")}
+                    />
+                </div>
 
-                <Select
-                    label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
-                    className="w-full h-10 sm:h-12"
-                    size="sm"
-                    isRequired
-                    errorMessage="Please select at least one project."
-                    selectionMode="multiple"
-                    selectedKeys={new Set(selectedProjects)}
-                    onSelectionChange={handleProjectChange}
-                >
-                    <SelectItem key="all" className="text-primary">
-                        All Projects
-                    </SelectItem>
-                    {projects.length > 0 ? (
-                        projects.map(project => (
-                            <SelectItem
-                                key={project.id}
-                                value={String(project.id)}
-                                textValue={project.name} // Add this to help with selection display
-                            >
-                                <div className="flex justify-between items-center">
-                                    <span>{project.name}</span>
-                                    {project.public && <span className="text-default-400">(Public)</span>}
+                {/* Projects selector */}
+                <div className="w-full lg:w-1/3">
+                    <Select
+                        label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
+                        className="w-full"
+                        size="sm"
+                        isRequired
+                        errorMessage="Please select at least one project."
+                        selectionMode="multiple"
+                        selectedKeys={new Set(selectedProjects)}
+                        onSelectionChange={handleProjectChange}
+                    >
+                        <SelectItem key="all" className="text-primary">
+                            All Projects
+                        </SelectItem>
+                        {projects.length > 0 ? (
+                            projects.map(project => (
+                                <SelectItem
+                                    key={project.id}
+                                    value={String(project.id)}
+                                    textValue={project.name} // Add this to help with selection display
+                                >
+                                    <div className="flex justify-between items-center">
+                                        <span>{project.name}</span>
+                                        {project.public && <span className="text-default-400">(Public)</span>}
+                                    </div>
+                                </SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem key="no-projects" disabled>
+                                No Projects Available
+                            </SelectItem>
+                        )}
+                    </Select>
+                </div>
+
+                {/* Status selector */}
+                <div className="w-full lg:w-1/4">
+                    <Select
+                        label="Filter by Status:"
+                        className="w-full"
+                        size="sm"
+                        selectedKeys={new Set([selectedStatus])}
+                        selectionMode="single"
+                        onSelectionChange={(keys) => {
+                            const val = [...keys][0];
+                            setSelectedStatus(val);
+                        }}
+                        renderValue={(items) => {
+                            const selectedItem = statusOptions.find(opt => opt.value === selectedStatus);
+                            return (
+                                <div className="flex items-center gap-2">
+                                    {selectedStatus !== "ALL" ? (
+                                        <span className={`text-${statusColorMap[selectedStatus]}`}>
+                                            {selectedStatus}
+                                        </span>
+                                    ) : (
+                                        "All Statuses"
+                                    )}
+                                </div>
+                            );
+                        }}
+                    >
+                        <SelectItem key="ALL" className="text-primary">
+                            All Statuses
+                        </SelectItem>
+                        {statusOptions.filter(opt => opt.value !== "ALL").map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                    <Chip
+                                        color={statusColorMap[opt.value]}
+                                        size="sm"
+                                        variant="flat"
+                                    >
+                                        {opt.value}
+                                    </Chip>
                                 </div>
                             </SelectItem>
-                        ))
-                    ) : (
-                        <SelectItem key="no-projects" disabled>
-                            No Projects Available
-                        </SelectItem>
-                    )}
-                </Select>
+                        ))}
+                    </Select>
+                </div>
 
-                <Select
-                    label="Filter by Status:"
-                    className="w-full h-10 sm:h-12"
-                    size="sm"
-                    selectedKeys={new Set([selectedStatus])}
-                    selectionMode="single"
-                    onSelectionChange={(keys) => {
-                        const val = [...keys][0];
-                        setSelectedStatus(val);
-                    }}
-                    renderValue={(items) => {
-                        const selectedItem = statusOptions.find(opt => opt.value === selectedStatus);
-                        return (
-                            <div className="flex items-center gap-2">
-                                {selectedStatus !== "ALL" ? (
-                                    <span className={`text-${statusColorMap[selectedStatus]}`}>
-                                        {selectedStatus}
-                                    </span>
-                                ) : (
-                                    "All Statuses"
-                                )}
-                            </div>
-                        );
-                    }}
-                >
-                    <SelectItem key="ALL" className="text-primary">
-                        All Statuses
-                    </SelectItem>
-                    {statusOptions.filter(opt => opt.value !== "ALL").map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                            <div className="flex items-center gap-2">
-                                <Chip
-                                    color={statusColorMap[opt.value]}
-                                    size="sm"
-                                    variant="flat"
-                                >
-                                    {opt.value}
-                                </Chip>
-                            </div>
-                        </SelectItem>
-                    ))}
-                </Select>
-
-                {/* Filter Button */}
-                <Button
-                    color="primary"
-                    className="w-full
-                    h-10 sm:h-12
-                    sm:basis-1/4"
-                    type="submit"
-                >
-                    Filter
-                </Button>
+                {/* Filter button */}
+                <div className="w-full lg:w-auto flex items-end">
+                    <Button
+                        color="primary"
+                        className="w-full h-12"
+                        type="submit"
+                    >
+                        Filter
+                    </Button>
+                </div>
             </Form>
 
             <div className="flex-1 min-h-0 overflow-auto">
