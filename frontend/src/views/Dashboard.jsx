@@ -481,10 +481,35 @@ function Dashboard() {
                         const val = [...keys][0];
                         setSelectedStatus(val);
                     }}
+                    renderValue={(items) => {
+                        const selectedItem = statusOptions.find(opt => opt.value === selectedStatus);
+                        return (
+                            <div className="flex items-center gap-2">
+                                {selectedStatus !== "ALL" ? (
+                                    <span className={`text-${statusColorMap[selectedStatus]}`}>
+                                        {selectedStatus}
+                                    </span>
+                                ) : (
+                                    "All Statuses"
+                                )}
+                            </div>
+                        );
+                    }}
                 >
-                    {statusOptions.map((opt) => (
+                    <SelectItem key="ALL" className="text-primary">
+                        All Statuses
+                    </SelectItem>
+                    {statusOptions.filter(opt => opt.value !== "ALL").map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
+                            <div className="flex items-center gap-2">
+                                <Chip
+                                    color={statusColorMap[opt.value]}
+                                    size="sm"
+                                    variant="flat"
+                                >
+                                    {opt.value}
+                                </Chip>
+                            </div>
                         </SelectItem>
                     ))}
                 </Select>
