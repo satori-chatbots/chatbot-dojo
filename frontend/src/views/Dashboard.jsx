@@ -41,34 +41,35 @@ function Dashboard() {
                 per_page: rowsPerPage,
                 sort_column: sortColumn || sortDescriptor.column,
                 sort_direction: sortDirection || sortDescriptor.direction,
-                project_ids: selectedProjects.join(',')
+                project_ids: selectedProjects.join(','),
             });
 
             const response = await apiClient(
                 `${API_BASE_URL}/testcases/paginated/?${queryParams}`,
-                {
-                    method: 'GET'
-                }
+                { method: 'GET' }
             );
 
             const data = await response.json();
-            setTestCases(data.items);
+
+            // Use a temporary const instead of the old state
+            const newTestCases = data.items;
+            setTestCases(newTestCases);
             setTotalPages(Math.ceil(data.total / rowsPerPage));
 
-            // Fetch associated reports and errors only for the current page
-            const testCaseIds = testCases.map(testCase => testCase.id);
+            // Now derive IDs from newTestCases
+            const testCaseIds = newTestCases.map(tc => tc.id);
             if (testCaseIds.length > 0) {
                 const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
                 setGlobalReports(fetchedReports);
 
-                const globalReportIds = fetchedReports.map(report => report.id);
+                const globalReportIds = fetchedReports.map(r => r.id);
                 if (globalReportIds.length > 0) {
                     const fetchedErrors = await fetchTestErrorsByGlobalReports(globalReportIds);
                     setErrors(fetchedErrors);
 
                     const updatedErrorCounts = {};
                     fetchedErrors.forEach(error => {
-                        if (error.global_report in updatedErrorCounts) {
+                        if (updatedErrorCounts[error.global_report]) {
                             updatedErrorCounts[error.global_report] += error.count;
                         } else {
                             updatedErrorCounts[error.global_report] = error.count;
@@ -77,7 +78,6 @@ function Dashboard() {
                     setErrorCounts(updatedErrorCounts);
                 }
             }
-
             setLoading(false);
         } catch (error) {
             console.error('Error fetching test cases:', error);
