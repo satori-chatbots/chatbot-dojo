@@ -400,30 +400,29 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         exists = TestCase.objects.filter(project=project_id, name=test_name).exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='paginated')
+    @action(detail=False, methods=["get"], url_path="paginated")
     def get_paginated(self, request):
-        page = int(request.query_params.get('page', 1))
-        per_page = int(request.query_params.get('per_page', 10))
-        sort_column = request.query_params.get('sort_column', 'executed_at')
-        sort_direction = request.query_params.get('sort_direction', 'descending')
-        project_ids = request.query_params.get('project_ids', '').split(',')
+        page = int(request.query_params.get("page", 1))
+        per_page = int(request.query_params.get("per_page", 10))
+        sort_column = request.query_params.get("sort_column", "executed_at")
+        sort_direction = request.query_params.get("sort_direction", "descending")
+        project_ids = request.query_params.get("project_ids", "").split(",")
 
         # Annotate each TestCase with total_cost and num_errors
         # total_cost comes from the first GlobalReport found for the TestCase
         # num_errors is the sum of all errors for that test case
         queryset = TestCase.objects.annotate(
             total_cost=Subquery(
-                GlobalReport.objects
-                    .filter(test_case=OuterRef('pk'))
-                    .values('total_cost')[:1]
+                GlobalReport.objects.filter(test_case=OuterRef("pk")).values(
+                    "total_cost"
+                )[:1]
             ),
             num_errors=Subquery(
-                TestError.objects
-                    .filter(global_report__test_case=OuterRef('pk'))
-                    .values('global_report__test_case')
-                    .annotate(errors_count=Sum('count'))
-                    .values('errors_count')[:1]
-            )
+                TestError.objects.filter(global_report__test_case=OuterRef("pk"))
+                .values("global_report__test_case")
+                .annotate(errors_count=Sum("count"))
+                .values("errors_count")[:1]
+            ),
         )
 
         # Filter by projects if any selected
@@ -432,11 +431,19 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 
         # Handle sorting (executed_at, total_cost, num_errors, etc.)
         # Make sure these match possible columns from the frontend
-        valid_sort_fields = {'executed_at', 'status', 'total_cost', 'num_errors', 'name', 'project'}
+        valid_sort_fields = {
+            "executed_at",
+            "status",
+            "execution_time",
+            "total_cost",
+            "num_errors",
+            "name",
+            "project",
+        }
         if sort_column not in valid_sort_fields:
-            sort_column = 'executed_at'
+            sort_column = "executed_at"
 
-        sort_prefix = '-' if sort_direction == 'descending' else ''
+        sort_prefix = "-" if sort_direction == "descending" else ""
         queryset = queryset.order_by(f"{sort_prefix}{sort_column}")
 
         # Pagination
@@ -446,12 +453,14 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         items = queryset[start:end]
 
         serializer = TestCaseSerializer(items, many=True)
-        return Response({
-            'items': serializer.data,
-            'total': total,
-            'page': page,
-            'per_page': per_page,
-        })
+        return Response(
+            {
+                "items": serializer.data,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+            }
+        )
 
 
 # ---------- #
