@@ -447,16 +447,19 @@ function Dashboard() {
             <Form
                 className="
                     flex flex-col lg:flex-row
+                    items-center
+                    justify-center
                     gap-4
                     w-full
                     max-w-[1200px]
+                    mx-auto
                     mb-4
                 "
                 onSubmit={handleFilterProjects}
                 validationBehavior="native"
             >
                 {/* Search input */}
-                <div className="w-full lg:w-1/4">
+                <div className="w-full lg:w-1/4 flex justify-center">
                     <Input
                         type="search"
                         label="Search test cases:"
@@ -473,7 +476,7 @@ function Dashboard() {
                 </div>
 
                 {/* Projects selector */}
-                <div className="w-full lg:w-1/3">
+                <div className="w-full lg:w-1/3 flex justify-center">
                     <Select
                         label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
                         className="w-full"
@@ -509,7 +512,7 @@ function Dashboard() {
                 </div>
 
                 {/* Status selector */}
-                <div className="w-full lg:w-1/4">
+                <div className="w-full lg:w-1/4 flex justify-center">
                     <Select
                         label="Filter by Status:"
                         className="w-full"
@@ -555,7 +558,7 @@ function Dashboard() {
                 </div>
 
                 {/* Filter button */}
-                <div className="w-full lg:w-auto flex items-end">
+                <div className="w-full lg:w-auto flex justify-center">
                     <Button
                         color="primary"
                         className="w-full h-12"
@@ -566,7 +569,14 @@ function Dashboard() {
                 </div>
             </Form>
 
-            <div className="flex-1 min-h-0 overflow-auto">
+            <div className="
+                    flex-1
+                    min-h-0
+                    overflow-auto
+                    w-full
+                    max-w-[1200px]
+                    mx-auto
+            ">
                 <Table
                     aria-label="Test Cases Table"
                     isStriped
@@ -698,7 +708,7 @@ function Dashboard() {
 
                 </Table>
             </div>
-            <div className="flex w-full justify-center">
+            <div className="flex w-full max-w-[1200px] mx-auto justify-center">
                 <Pagination
                     showControls
                     total={totalPages}
@@ -756,6 +766,5 @@ function Dashboard() {
         </div >
     );
 }
-
 
 export default Dashboard;
