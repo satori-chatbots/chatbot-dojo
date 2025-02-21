@@ -461,7 +461,7 @@ function Dashboard() {
                         type="search"
                         label="Search test cases:"
                         placeholder="Type to search..."
-                        className="w-full"
+                        className="w-full h-12"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         startContent={
