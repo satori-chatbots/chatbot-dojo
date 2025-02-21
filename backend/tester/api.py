@@ -408,15 +408,16 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         sort_direction = request.query_params.get("sort_direction", "descending")
         project_ids = request.query_params.get("project_ids", "").split(",")
 
+        # Since total_cost and num_errors are not fields in the TestCase model
         # Annotate each TestCase with total_cost and num_errors
-        # total_cost comes from the first GlobalReport found for the TestCase
-        # num_errors is the sum of all errors for that test case
         queryset = TestCase.objects.annotate(
+            # total_cost comes from the first GlobalReport found for the TestCase
             total_cost=Subquery(
                 GlobalReport.objects.filter(test_case=OuterRef("pk")).values(
                     "total_cost"
                 )[:1]
             ),
+            # num_errors is the sum of all errors for that test case
             num_errors=Subquery(
                 TestError.objects.filter(global_report__test_case=OuterRef("pk"))
                 .values("global_report__test_case")
@@ -463,9 +464,9 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         )
 
 
-# ---------- #
-# - PROJECTS #
-# ---------- #
+# ------------ #
+# - PROJECTS - #
+# ------------ #
 
 
 class ProjectAccessPermission(BasePermission):

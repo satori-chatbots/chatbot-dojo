@@ -620,6 +620,7 @@ function Dashboard() {
             </div>
             <div className="flex w-full justify-center">
                 <Pagination
+                    showControls
                     total={totalPages}
                     page={page}
                     onChange={(newPage) => {
