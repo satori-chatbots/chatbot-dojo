@@ -428,14 +428,14 @@ function Dashboard() {
 
     return (
         <div className="
-            flex flex-col
-            items-center
-            space-y-4 sm:space-y-6 lg:space-y-8
-            w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl
-            mx-auto
-            my-auto
-            max-h-[88vh]
-            p-4 sm:p-6 lg:p-8"
+                flex flex-col
+                items-center
+                space-y-4 sm:space-y-6 lg:space-y-8
+                w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl
+                mx-auto
+                my-auto
+                max-h-[88vh]
+                p-4 sm:p-6 lg:p-8"
         >
             {publicView ? (
                 <h1 className="text-2xl sm:text-3xl font-bold text-center">Public Projects</h1>
@@ -446,15 +446,15 @@ function Dashboard() {
             {/* Project Selector */}
             <Form
                 className="
-                    flex flex-col lg:flex-row
-                    items-center
-                    justify-center
-                    gap-4
-                    w-full
-                    max-w-[1200px]
-                    mx-auto
-                    mb-4
-                "
+                        flex flex-col lg:flex-row
+                        items-center
+                        justify-center
+                        gap-4
+                        w-full
+                        max-w-[1200px]
+                        mx-auto
+                        mb-4
+                    "
                 onSubmit={handleFilterProjects}
                 validationBehavior="native"
             >
@@ -471,6 +471,8 @@ function Dashboard() {
                             <Search className="text-default-400" size={18} />
                         }
                         isClearable
+                        // So that it looks like the selectors
+                        radius="sm"
                         onClear={() => setSearchTerm("")}
                     />
                 </div>
@@ -569,16 +571,14 @@ function Dashboard() {
                 </div>
             </Form>
 
-            {/* Table Container with Horizontal Scroll */}
             <div className="
-                    flex-1
-                    min-h-0
-                    overflow-auto
-                    w-full
-                    max-w-[1200px]
-                    mx-auto
-                    overflow-x-auto" // Enable horizontal scrolling
-            >
+                        flex-1
+                        min-h-0
+                        overflow-auto
+                        w-full
+                        max-w-[1200px]
+                        mx-auto
+                ">
                 <Table
                     aria-label="Test Cases Table"
                     isStriped
@@ -587,14 +587,13 @@ function Dashboard() {
                         setSortDescriptor(descriptor);
                         fetchPagedTestCases(page, descriptor.column, descriptor.direction);
                     }}
-                    className="min-w-[800px]" // Set a minimum width for the table
+
                 >
                     <TableHeader>
                         {columns.map((column) => (
                             <TableColumn
                                 key={column.key}
                                 allowsSorting={column.sortable}
-                                className={column.responsiveClass} // Add responsive classes to columns
                             >
                                 {column.name}
                             </TableColumn>
@@ -608,14 +607,14 @@ function Dashboard() {
                     >
                         {(testCase) => (
                             <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
-                                <TableCell className="whitespace-nowrap">{testCase.displayName}</TableCell>
-                                <TableCell className="whitespace-nowrap">
+                                <TableCell>{testCase.displayName}</TableCell>
+                                <TableCell>
                                     <Chip color={statusColorMap[testCase.status]} size="sm" variant="flat">
                                         {testCase.status}
                                     </Chip>
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap">{new Date(testCase.executed_at).toLocaleString()}</TableCell>
-                                <TableCell className="whitespace-nowrap">
+                                <TableCell>{new Date(testCase.executed_at).toLocaleString()}</TableCell>
+                                <TableCell>
                                     {testCase.copied_files.length > 3 ? (
                                         <Accordion
                                             isCompact={true}
@@ -642,8 +641,8 @@ function Dashboard() {
                                         </ul>
                                     )}
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap">{formatExecutionTime(testCase.execution_time, testCase.status)}</TableCell>
-                                <TableCell className="whitespace-nowrap">
+                                <TableCell>{formatExecutionTime(testCase.execution_time, testCase.status)}</TableCell>
+                                <TableCell>
                                     {testCase.num_errors > 0 ? (
                                         <Accordion isCompact>
                                             <AccordionItem title={<span className="text-sm">{`${testCase.num_errors} errors`}</span>}>
@@ -662,11 +661,13 @@ function Dashboard() {
                                         </Accordion>
                                     )}
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap">
+                                <TableCell>
                                     {formatCost(testCase.total_cost, testCase.status)}
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap">{projects.find(project => project.id === testCase.project)?.name}</TableCell>
-                                <TableCell className="whitespace-nowrap">
+                                <TableCell>{projects.find(project => project.id === testCase.project)?.name}</TableCell>
+
+
+                                <TableCell>
                                     <div className="flex gap-2">
                                         <Button
                                             as={Link}
@@ -702,13 +703,13 @@ function Dashboard() {
                                         )}
                                     </div>
                                 </TableCell>
+
                             </TableRow>
                         )}
                     </TableBody>
+
                 </Table>
             </div>
-
-            {/* Pagination */}
             <div className="flex w-full max-w-[1200px] mx-auto justify-center">
                 <Pagination
                     showControls
@@ -763,7 +764,8 @@ function Dashboard() {
                     </Modal>
                 </>
             )}
-        </div>
+
+        </div >
     );
 }
 
