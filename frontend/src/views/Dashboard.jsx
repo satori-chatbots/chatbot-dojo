@@ -19,6 +19,7 @@ import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 import { Eye, Trash, XCircle } from 'lucide-react';
 import apiClient from '../api/apiClient';
 import API_BASE_URL from '../api/config';
+import { fetchPaginatedTestCases } from '../api/testCasesApi';
 
 
 function Dashboard() {
@@ -33,23 +34,16 @@ function Dashboard() {
     const [totalPages, setTotalPages] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    const fetchPaginatedTestCases = async (pageNumber, sortColumn, sortDirection) => {
+    const fetchPagedTestCases = async (pageNumber, sortColumn, sortDirection) => {
         try {
             setLoading(true);
-            const queryParams = new URLSearchParams({
+            const data = await fetchPaginatedTestCases({
                 page: pageNumber,
                 per_page: rowsPerPage,
                 sort_column: sortColumn || sortDescriptor.column,
                 sort_direction: sortDirection || sortDescriptor.direction,
                 project_ids: selectedProjects.join(','),
             });
-
-            const response = await apiClient(
-                `${API_BASE_URL}/testcases/paginated/?${queryParams}`,
-                { method: 'GET' }
-            );
-
-            const data = await response.json();
 
             // Use a temporary const instead of the old state
             const newTestCases = data.items;
@@ -244,11 +238,8 @@ function Dashboard() {
         try {
             setLoading(true);
             setError(null);
-
-            // Use the paginated endpoint
-            await fetchPaginatedTestCases(1); // Reset to first page when filtering
-            setPage(1); // Reset page number
-
+            await fetchPagedTestCases(1); // Reset to first page when filtering
+            setPage(1);
         } catch (err) {
             console.error('Error filtering projects:', err);
             showToast('error', 'Failed to filter projects');
@@ -493,7 +484,7 @@ function Dashboard() {
                     sortDescriptor={sortDescriptor}
                     onSortChange={(descriptor) => {
                         setSortDescriptor(descriptor);
-                        fetchPaginatedTestCases(page, descriptor.column, descriptor.direction);
+                        fetchPagedTestCases(page, descriptor.column, descriptor.direction);
                     }}
 
                 >
@@ -625,7 +616,7 @@ function Dashboard() {
                     page={page}
                     onChange={(newPage) => {
                         setPage(newPage);
-                        fetchPaginatedTestCases(newPage);
+                        fetchPagedTestCases(newPage);
                     }}
                 />
             </div>

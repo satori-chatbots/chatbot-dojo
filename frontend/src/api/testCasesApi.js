@@ -66,3 +66,19 @@ export const deleteTestCase = async (testCaseId) => {
         throw error;
     }
 };
+
+export const fetchPaginatedTestCases = async (params) => {
+    const queryParams = new URLSearchParams({
+        page: params.page,
+        per_page: params.per_page,
+        sort_column: params.sort_column,
+        sort_direction: params.sort_direction,
+        project_ids: params.project_ids,
+    });
+
+    const response = await apiClient(
+        `${API_BASE_URL}${ENDPOINTS.FETCH_TEST_CASES}paginated/?${queryParams}`,
+        { method: 'GET' }
+    );
+    return response.json();
+};
