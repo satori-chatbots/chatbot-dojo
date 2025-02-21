@@ -74,6 +74,7 @@ export const fetchPaginatedTestCases = async (params) => {
         sort_column: params.sort_column,
         sort_direction: params.sort_direction,
         project_ids: params.project_ids,
+        status: params.status,
     });
 
     const response = await apiClient(

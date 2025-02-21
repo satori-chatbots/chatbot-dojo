@@ -407,6 +407,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         sort_column = request.query_params.get("sort_column", "executed_at")
         sort_direction = request.query_params.get("sort_direction", "descending")
         project_ids = request.query_params.get("project_ids", "").split(",")
+        status = request.query_params.get("status", "")
 
         # Since total_cost and num_errors are not fields in the TestCase model
         # Annotate each TestCase with total_cost and num_errors
@@ -429,6 +430,10 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         # Filter by projects if any selected
         if project_ids and project_ids[0]:
             queryset = queryset.filter(project__in=project_ids)
+
+        # Add status filter
+        if status and status != "ALL":
+            queryset = queryset.filter(status=status)
 
         # Handle sorting (executed_at, total_cost, num_errors, etc.)
         # Make sure these match possible columns from the frontend

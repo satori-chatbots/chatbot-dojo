@@ -21,12 +21,20 @@ import apiClient from '../api/apiClient';
 import API_BASE_URL from '../api/config';
 import { fetchPaginatedTestCases } from '../api/testCasesApi';
 
+const statusOptions = [
+    { label: "All", value: "ALL" },
+    { label: "Completed", value: "COMPLETED" },
+    { label: "Running", value: "RUNNING" },
+    { label: "Error", value: "ERROR" },
+    { label: "Stopped", value: "STOPPED" },
+];
 
 function Dashboard() {
     const { showToast } = useMyCustomToast();
 
     // Initialize testCases state as empty
     const [testCases, setTestCases] = useState([]);
+    const [selectedStatus, setSelectedStatus] = useState("ALL");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -43,8 +51,8 @@ function Dashboard() {
                 sort_column: sortColumn || sortDescriptor.column,
                 sort_direction: sortDirection || sortDescriptor.direction,
                 project_ids: selectedProjects.join(','),
+                status: selectedStatus === 'ALL' ? '' : selectedStatus,
             });
-
             // Use a temporary const instead of the old state
             const newTestCases = data.items;
             setTestCases(newTestCases);
@@ -368,9 +376,7 @@ function Dashboard() {
         });
     }, [testCases, globalReports, errorCounts, errors]);
 
-    const sortedTestCases = useMemo(() => {
-        return derivedTestCases;
-    }, [derivedTestCases]);
+    const sortedTestCases = useMemo(() => derivedTestCases, [derivedTestCases]);
 
 
     const formatExecutionTime = (seconds, status) => {
@@ -463,6 +469,24 @@ function Dashboard() {
                             No Projects Available
                         </SelectItem>
                     )}
+                </Select>
+
+                <Select
+                    label="Filter by Status:"
+                    className="w-full h-10 sm:h-12"
+                    size="sm"
+                    selectedKeys={new Set([selectedStatus])}
+                    selectionMode="single"
+                    onSelectionChange={(keys) => {
+                        const val = [...keys][0];
+                        setSelectedStatus(val);
+                    }}
+                >
+                    {statusOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </SelectItem>
+                    ))}
                 </Select>
 
                 {/* Filter Button */}
