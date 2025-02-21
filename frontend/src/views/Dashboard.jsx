@@ -4,7 +4,7 @@ import useFetchProjects from '../hooks/useFetchProjects';
 import { fetchTestErrorsByGlobalReports } from '../api/testErrorsApi';
 import { fetchGlobalReportsByTestCases } from '../api/reportsApi';
 import { MEDIA_URL } from '../api/config';
-import { Button, Chip, Form, Select, SelectItem, Spinner, Pagination } from "@heroui/react";
+import { Button, Chip, Form, Select, SelectItem, Spinner, Pagination, Input } from "@heroui/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 import { fetchTestCasesByProjects } from '../api/testCasesApi';
 import { Accordion, AccordionItem } from "@heroui/react";
@@ -16,7 +16,7 @@ import { deleteTestCase } from '../api/testCasesApi';
 import useSelectedProject from '../hooks/useSelectedProject';
 import { useAuth } from '../contexts/AuthContext';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
-import { Eye, Trash, XCircle } from 'lucide-react';
+import { Eye, Search, Trash, XCircle } from 'lucide-react';
 import apiClient from '../api/apiClient';
 import API_BASE_URL from '../api/config';
 import { fetchPaginatedTestCases } from '../api/testCasesApi';
@@ -42,6 +42,9 @@ function Dashboard() {
     const [totalPages, setTotalPages] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
+    const [searchTerm, setSearchTerm] = useState("");
+
+
     const fetchPagedTestCases = async (pageNumber, sortColumn, sortDirection) => {
         try {
             setLoading(true);
@@ -52,6 +55,7 @@ function Dashboard() {
                 sort_direction: sortDirection || sortDescriptor.direction,
                 project_ids: selectedProjects.join(','),
                 status: selectedStatus === 'ALL' ? '' : selectedStatus,
+                search: searchTerm,
             });
             // Use a temporary const instead of the old state
             const newTestCases = data.items;
@@ -87,6 +91,18 @@ function Dashboard() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            if (selectedProjects.length > 0) {
+                // When searching go back to the first page
+                fetchPagedTestCases(1);
+                setPage(1);
+            }
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
     // Modal for deleting a test case
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, testCaseId: null });
@@ -438,6 +454,20 @@ function Dashboard() {
                 onSubmit={handleFilterProjects}
                 validationBehavior="native"
             >
+                <Input
+                    type="search"
+                    label="Search test cases:"
+                    placeholder="Type to search..."
+                    className="w-full h-10 sm:h-12"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    startContent={
+                        <Search className="text-default-400" size={18} />
+                    }
+                    isClearable
+                    onClear={() => setSearchTerm("")}
+                />
+
                 <Select
                     label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
                     className="w-full h-10 sm:h-12"

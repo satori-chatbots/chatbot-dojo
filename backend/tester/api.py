@@ -53,7 +53,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
-from django.db.models import OuterRef, Subquery, Sum
+from django.db.models import OuterRef, Subquery, Sum, Q
 
 # We need this one since it already has the fernet key
 from .models import cipher_suite
@@ -234,9 +234,9 @@ class TestErrorViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
 
-# -------------------- #
+# ----------------------- #
 # - PROFILE REPORTS API - #
-# -------------------- #
+# ----------------------- #
 
 
 class ProfileReportViewSet(viewsets.ModelViewSet):
@@ -408,6 +408,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         sort_direction = request.query_params.get("sort_direction", "descending")
         project_ids = request.query_params.get("project_ids", "").split(",")
         status = request.query_params.get("status", "")
+        search = request.query_params.get("search", "").strip()
 
         # Since total_cost and num_errors are not fields in the TestCase model
         # Annotate each TestCase with total_cost and num_errors
@@ -434,6 +435,12 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         # Add status filter
         if status and status != "ALL":
             queryset = queryset.filter(status=status)
+
+        # Add search filter
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | Q(id__icontains=search)
+            )
 
         # Handle sorting (executed_at, total_cost, num_errors, etc.)
         # Make sure these match possible columns from the frontend
