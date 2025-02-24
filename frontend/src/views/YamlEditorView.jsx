@@ -11,7 +11,7 @@ import {
     Save,
     Edit,
 } from 'lucide-react';
-import { Button, Tabs, Tab } from '@heroui/react';
+import { Button, Tabs, Tab, Accordion, AccordionItem } from '@heroui/react';
 import { load as yamlLoad } from "js-yaml"
 import { materialDark, materialLight } from '@uiw/codemirror-theme-material';
 import { tomorrow } from 'thememirror';
@@ -35,6 +35,154 @@ function YamlEditor() {
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
+    const documentationSections = {
+        'Basic Configuration': {
+            items: [
+                {
+                    code: 'test_name: "sample_name"',
+                    description: 'Unique name for the test suite (avoid duplicates).'
+                }
+            ]
+        },
+        'LLM Configuration': {
+            items: [
+                {
+                    code: 'temperature: 0.8',
+                    description: '0.0 (deterministic) to 1.0 (creative). Controls response randomness.'
+                },
+                {
+                    code: 'model: gpt-4o-mini',
+                    description: 'Choose from OpenAI models available in LangChain.'
+                },
+                {
+                    code: 'format: { type: text }',
+                    description: 'Choose between text or speech mode. For speech, provide config file path.'
+                }
+            ]
+        },
+        'User Configuration': {
+            items: [
+                {
+                    code: 'language: English',
+                    description: 'Set the primary conversation language (defaults to English).'
+                },
+                {
+                    code: 'role: "Define role here"',
+                    description: 'Define the user\'s role or behavior (e.g., customer ordering food).'
+                },
+                {
+                    code: 'context: ["personality: path/to/file.yml", "additional context"]',
+                    description: 'Add personality files and additional context prompts.'
+                },
+                {
+                    code: `goals:
+      - "goal with {{variable_name}}"
+      - variable_name:
+          function: /* see variable functions */
+          type: string|int|float
+          data: [value1, value2] | { min: 1, max: 6, step: 2 }`,
+                    description: 'Define goals with variables. Variables require function, type, and data.'
+                }
+            ]
+        },
+        'Variable Structure': {
+            items: [
+                {
+                    code: `type: string|int|float`,
+                    description: 'Specify the variable type (string, integer, or float).'
+                },
+                {
+                    code: `data:
+      - value1
+      - value2
+      - any(prompt)`,
+                    description: 'Manual list of values. Use any() for LLM-generated values.'
+                },
+                {
+                    code: `data:
+      min: 1
+      max: 6
+      step: 2`,
+                    description: 'For numeric types: define range with min, max, and step.'
+                },
+                {
+                    code: `data:
+      file: path/to/function.py
+      function_name: function_name
+      args: [arg1, arg2]`,
+                    description: 'Use custom functions to generate data lists.'
+                }
+            ]
+        },
+        'Variable Functions': {
+            items: [
+                {
+                    code: `function: default()`,
+                    description: 'Use all values in the data list.'
+                },
+                {
+                    code: `function: forward()
+function: forward(other_var)`,
+                    description: 'Iterate through values. Can be nested with other variables.'
+                },
+                {
+                    code: `function: random()
+function: random(5)
+function: random(rand)`,
+                    description: 'Pick random value(s). Specify count or use random count.'
+                },
+                {
+                    code: 'function: another()',
+                    description: 'Pick different values each time until list is exhausted.'
+                }
+            ]
+        },
+        'Chatbot Settings': {
+            items: [
+                {
+                    code: 'is_starter: False',
+                    description: 'Set to True if chatbot initiates conversations.'
+                },
+                {
+                    code: 'fallback: "I\'m sorry..."',
+                    description: 'Define chatbot\'s error message to avoid loops.'
+                },
+                {
+                    code: `output:
+    - variable_name:
+        type: string|int|float|money|time|date
+        description: "Description for extraction"`,
+                description: 'Define variables to extract from conversations.'
+                }
+            ]
+        },
+        'Conversation Control': {
+            items: [
+                {
+                    code: `number: 5 | all_combinations | sample(0.2)`,
+                    description: 'Control test volume (specific number, all combinations, or sample percentage).'
+                },
+                {
+                    code: 'max_cost: 1',
+                    description: 'Set maximum cost in dollars for entire test execution.'
+                },
+                {
+                    code: `goal_style:
+      steps: 5 | random_steps: 35 | all_answered: { limit: 10 }
+      max_cost: 0.1`,
+                    description: 'Define conversation endpoints with optional per-conversation cost limit.'
+                },
+                {
+                    code: `interaction_style:
+      - random:
+          - make spelling mistakes
+          - all questions
+          - change language: [italian, portuguese]`,
+                    description: 'Set conversation behaviors. Use random to combine multiple styles.'
+                }
+            ]
+        }
+    };
 
     useEffect(() => {
         // Fetch the template for new files
@@ -222,13 +370,23 @@ function YamlEditor() {
                     <Tabs defaultValue="profile" className="space-y-4">
                         <Tab key="profile" title="User Profile Help">
                             <div className="bg-default-50 p-4 rounded-lg">
-
-                                <h2 className="text-lg font-semibold mb-2">YAML Syntax Help</h2>
-                                <ul className="list-disc pl-5 space-y-2">
-                                    <li>
-                                        Use <code className="bg-default-200 p-1 rounded">test_name: name</code> to name your profile
-                                    </li>
-                                </ul>
+                                <h2 className="text-lg font-semibold mb-2">User Profile Documentation</h2>
+                                <Accordion>
+                                    {Object.entries(documentationSections).map(([sectionTitle, section]) => (
+                                        <AccordionItem key={sectionTitle} title={sectionTitle}>
+                                            <div className="space-y-4 pt-2">
+                                                {section.items.map((item, index) => (
+                                                    <div key={index} className="space-y-1.5">
+                                                        <pre className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap">
+                                                            {item.code}
+                                                        </pre>
+                                                        <p className="text-sm text-default-foreground/70">{item.description}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </AccordionItem>
+                                    ))}
+                                </Accordion>
                             </div>
                         </Tab>
                         <Tab key="yaml" title="YAML Help">
