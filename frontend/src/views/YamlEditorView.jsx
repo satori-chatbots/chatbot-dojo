@@ -76,11 +76,11 @@ function YamlEditor() {
                 },
                 {
                     code: `goals:
-      - "goal with {{variable_name}}"
-      - variable_name:
-          function: /* see variable functions */
-          type: string|int|float
-          data: [value1, value2] | { min: 1, max: 6, step: 2 }`,
+  - "goal with {{variable_name}}"
+  - variable_name:
+      function: /* see variable functions */
+      type: string|int|float
+      data: [value1, value2] | { min: 1, max: 6, step: 2 }`,
                     description: 'Define goals with variables. Variables require function, type, and data.'
                 }
             ]
@@ -93,23 +93,23 @@ function YamlEditor() {
                 },
                 {
                     code: `data:
-      - value1
-      - value2
-      - any(prompt)`,
+  - value1
+  - value2
+  - any(prompt)`,
                     description: 'Manual list of values. Use any() for LLM-generated values.'
                 },
                 {
                     code: `data:
-      min: 1
-      max: 6
-      step: 2`,
+  min: 1
+  max: 6
+  step: 2`,
                     description: 'For numeric types: define range with min, max, and step.'
                 },
                 {
                     code: `data:
-      file: path/to/function.py
-      function_name: function_name
-      args: [arg1, arg2]`,
+  file: path/to/function.py
+  function_name: function_name
+  args: [arg1, arg2]`,
                     description: 'Use custom functions to generate data lists.'
                 }
             ]
@@ -149,10 +149,10 @@ function: random(rand)`,
                 },
                 {
                     code: `output:
-    - variable_name:
-        type: string|int|float|money|time|date
-        description: "Description for extraction"`,
-                description: 'Define variables to extract from conversations.'
+  - variable_name:
+      type: string|int|float|money|time|date
+      description: "Description for extraction"`,
+                    description: 'Define variables to extract from conversations.'
                 }
             ]
         },
@@ -168,20 +168,113 @@ function: random(rand)`,
                 },
                 {
                     code: `goal_style:
-      steps: 5 | random_steps: 35 | all_answered: { limit: 10 }
-      max_cost: 0.1`,
+  steps: 5 | random_steps: 35 | all_answered: { limit: 10 }
+  max_cost: 0.1`,
                     description: 'Define conversation endpoints with optional per-conversation cost limit.'
                 },
                 {
                     code: `interaction_style:
-      - random:
-          - make spelling mistakes
-          - all questions
-          - change language: [italian, portuguese]`,
+  - random:
+      - make spelling mistakes
+      - all questions
+      - change language: [italian, portuguese]`,
                     description: 'Set conversation behaviors. Use random to combine multiple styles.'
                 }
             ]
         }
+    };
+
+    const yamlBasicsSections = {
+        'Basic Syntax': {
+            items: [
+                {
+                    code: `key: value`,
+                    description: 'Simple key-value pairs are defined with a colon and space.'
+                },
+                {
+                    code: `quoted: "This is a string"
+unquoted: This is also a string`,
+                    description: 'Strings can be quoted or unquoted. Use quotes for strings with special characters.'
+                },
+                {
+                    code: `number: 42
+boolean: true
+float: 3.14`,
+                    description: 'Numbers, booleans, and floats are automatically typed.'
+                }
+            ]
+        },
+        'Lists': {
+            items: [
+                {
+                    code: `simple_list:
+  - item1
+  - item2
+  - item3`,
+                    description: 'Lists are created using hyphens with proper indentation.'
+                },
+                {
+                    code: `nested_list:
+  - item1
+  - sublist:
+    - subitem1
+    - subitem2`,
+                    description: 'Lists can contain nested elements. Maintain consistent indentation.'
+                }
+            ]
+        },
+        'Objects/Maps': {
+            items: [
+                {
+                    code: `person:
+  name: John
+  age: 30
+  city: New York`,
+                    description: 'Objects are created using indented key-value pairs.'
+                },
+                {
+                    code: `nested_object:
+  person:
+  name: John
+  address:
+    street: 123 Main St
+    city: New York`,
+                    description: 'Objects can be nested using increased indentation for each level.'
+                }
+            ]
+        },
+        'Common Practices': {
+            items: [
+                {
+                    code: `# This is a comment
+key: value # Inline comment`,
+                    description: 'Comments start with # and can be on their own line or inline.'
+                },
+                {
+                    code: `spaces: 2  # Standard indentation
+  not-tabs: true`,
+                    description: 'Use spaces for indentation (typically 2 spaces). Do not use tabs.'
+                },
+                {
+                    code: `empty: null
+  blank_string: ""
+  space_string: " "`,
+                    description: 'Different ways to represent empty or null values.'
+                }
+            ]
+        },
+        'Multiple Documents': {
+            items: [
+                {
+                    code: `---
+document: 1
+---
+document: 2`,
+                    description: 'Use three dashes (---) to separate multiple documents in a single file.'
+                }
+            ]
+        }
+
     };
 
     useEffect(() => {
@@ -391,28 +484,23 @@ function: random(rand)`,
                         </Tab>
                         <Tab key="yaml" title="YAML Help">
                             <div className="bg-default-50 p-4 rounded-lg">
-                                <h2 className="text-lg font-semibold mb-2">YAML Syntax Help</h2>
-                                <ul className="list-disc pl-5 space-y-2">
-                                    <li>
-                                        Use <code className="bg-default-200 p-1 rounded">key: value</code> for simple key-value
-                                        pairs
-                                    </li>
-                                    <li>Use indentation (2 spaces) for nesting</li>
-                                    <li>
-                                        Start lists with <code className="bg-default-200 p-1 rounded">-</code>
-                                    </li>
-                                    <li>
-                                        Use <code className="bg-default-200 p-1 rounded">#</code> for comments
-                                    </li>
-                                    <li>Strings don't usually need quotes</li>
-                                    <li>
-                                        Use <code className="bg-default-200 p-1 rounded">true</code> or{" "}
-                                        <code className="bg-default-200 p-1 rounded">false</code> for booleans
-                                    </li>
-                                    <li>
-                                        Use <code className="bg-default-200 p-1 rounded">null</code> for null values
-                                    </li>
-                                </ul>
+                                <h2 className="text-lg font-semibold mb-2">YAML Tutorial</h2>
+                                <Accordion>
+                                    {Object.entries(yamlBasicsSections).map(([sectionTitle, section]) => (
+                                        <AccordionItem key={sectionTitle} title={sectionTitle}>
+                                            <div className="space-y-4 pt-2">
+                                                {section.items.map((item, index) => (
+                                                    <div key={index} className="space-y-1.5">
+                                                        <pre className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap">
+                                                            {item.code}
+                                                        </pre>
+                                                        <p className="text-sm text-default-foreground/70">{item.description}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </AccordionItem>
+                                    ))}
+                                </Accordion>
                             </div>
                         </Tab>
                     </Tabs>
