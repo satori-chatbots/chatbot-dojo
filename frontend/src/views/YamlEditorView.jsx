@@ -84,7 +84,7 @@ function YamlEditor() {
 
     // Insert the keyword, semicolon, space and brackets for functions
     function addColonAndBrackets(view, completion, from, to) {
-        const insertText = `${completion.label}: ""`;
+        const insertText = `${completion.label}()`;
         // Insert the text and place cursor between brackets
         view.dispatch({
             changes: { from, to, insert: insertText },
@@ -138,8 +138,16 @@ function YamlEditor() {
             { label: "data", type: "keyword", info: "Data can be a list of values or a range", apply: addColonAndIndent },
         ],
         "user.goals.function": [
-            { label: "default()", type: "function" },
-            { label: "random()", type: "function" }
+            { label: "default", type: "function", apply: addColonAndBrackets, info: "Use all values in the data list" },
+            { label: "random", type: "function", apply: addColonAndBrackets, info: "Pick random value(s). Specify count or use random count"},
+            { label: "another", type: "function", apply: addColonAndBrackets, info: "Pick different values each time until list is exhausted" },
+            { label: "forward", type: "function", apply: addColonAndBrackets, info: "Iterate through values. Can be nested with other variables" },
+
+        ],
+        "user.goals.type": [
+            { label: "string", type: "value", info: "String type" },
+            { label: "float", type: "value", info: "Floating point number type" },
+            { label: "int", type: "value", info: "Integer number type" },
         ],
         "user.goals.data": [
             { label: "step", type: "keyword", info: "Step value for numeric ranges", apply: addColonAndSpace },
