@@ -571,10 +571,20 @@ function YamlEditor() {
             }
         } catch (e) {
             setIsValid(false);
+
+            // Parse error message to extract useful information
+            const errorLines = e.message.split('\n');
+            const errorMessage = errorLines[0]; // The first line usually contains the main error message
+
+            // Get code context if available
+            const codeContext = errorLines.slice(1).join('\n');
+
             setErrorInfo({
-                message: e.message,
+                message: errorMessage,
                 line: e.mark ? e.mark.line + 1 : null,
-                column: e.mark ? e.mark.column + 1 : null
+                column: e.mark ? e.mark.column + 1 : null,
+                codeContext: codeContext,
+                isSchemaError: false
             });
             console.error('Invalid YAML:', e);
         }
