@@ -137,7 +137,7 @@ function YamlEditor() {
             { label: "type", type: "keyword", info: "Variable type (string, int, float)", apply: addColonAndSpace },
             { label: "data", type: "keyword", info: "Data can be a list of values or a range", apply: addColonAndIndent },
         ],
-        "users.goals.function": [
+        "user.goals.function": [
             { label: "default()", type: "function" },
             { label: "random()", type: "function" }
         ],
@@ -205,7 +205,7 @@ function YamlEditor() {
         ],
     };
 
-    // Function to determine cursor context in YAML
+    // Improved function to determine cursor context in YAML
     function getCursorContext(doc, pos) {
         // Get all text up to cursor position
         const textUpToCursor = doc.sliceString(0, pos);
@@ -220,9 +220,9 @@ function YamlEditor() {
         // Build a hierarchy of parent keys
         let contextPath = [];
         let currentIndent = currentLineIndent;
-        let listContext = isListItem ? currentLine.trim().substring(2) : null;
-        let inList = isListItem;
-        let listIndentLevel = isListItem ? currentLineIndent : -1;
+        let inList = false;
+        let listIndentLevel = -1;
+        let listParentKey = "";
 
         // Track the current indentation level for list context
         for (let i = lines.length - 2; i >= 0; i--) {
@@ -239,7 +239,7 @@ function YamlEditor() {
             const isLineListItem = lineContent.startsWith('- ');
 
             // If we're in a list and found an item with less indentation, we exit the list
-            if (inList && lineIndent <= listIndentLevel && !isLineListItem) {
+            if (inList && lineIndent < listIndentLevel) {
                 inList = false;
             }
 
@@ -253,10 +253,12 @@ function YamlEditor() {
                 // If this is part of the same list and has a key-value structure
                 const listItemMatch = lineContent.substring(2).match(/^([^:]+):/);
                 if (listItemMatch && lineIndent === listIndentLevel) {
-                    // This is a list item with a key, add it to context
+                    // Extract the key from the list item
                     const key = listItemMatch[1].trim();
-                    if (contextPath.length > 0) {
-                        contextPath[0] = `${contextPath[0]}.${key}`;
+                    // If we're inside a list item examining properties
+                    if (isListItem && currentLineIndent > listIndentLevel) {
+                        // Add the list item key to build the path
+                        contextPath.unshift(key);
                     }
                 }
                 continue;
@@ -264,18 +266,25 @@ function YamlEditor() {
 
             // Process regular key-value pairs
             const keyMatch = lineContent.match(/^([^:]+):/);
-            if (keyMatch && lineIndent < currentIndent) {
+            if (keyMatch) {
                 const key = keyMatch[1].trim();
 
-                // If this is at root level (indentation 0), it's a top-level key
-                if (lineIndent === 0) {
-                    contextPath.unshift(key);
-                    currentIndent = 0;
-                    break; // We've reached a top-level key, no need to go further
-                } else {
-                    // This is a nested key
+                // If this is a parent of our current list
+                if (inList && lineIndent < listIndentLevel) {
+                    listParentKey = key;
+                    inList = false;  // Exit list context
+                }
+
+                // If this is at a lower indentation than our current context
+                if (lineIndent < currentIndent) {
+                    // Add to the context path
                     contextPath.unshift(key);
                     currentIndent = lineIndent;
+
+                    // If this is at root level, we've reached the top
+                    if (lineIndent === 0) {
+                        break;
+                    }
                 }
             }
         }
@@ -283,17 +292,36 @@ function YamlEditor() {
         // Build the final context string
         let contextString = contextPath.join('.');
 
-        // If we're in a list item that's defining a value (not a key-value pair)
-        if (isListItem && !currentLineContent.includes(':')) {
-            contextString = `${contextString}.${listContext || ""}`;
+        // If we identified a list parent key and we're in a list item context
+        if (listParentKey && isListItem) {
+            // Add the parent key at the beginning
+            if (contextString) {
+                contextString = `${listParentKey}.${contextString}`;
+            } else {
+                contextString = listParentKey;
+            }
+        }
+
+        // If we're dealing with a list item key-value pair
+        if (isListItem) {
+            const listKeyMatch = currentLineContent.substring(2).match(/^([^:]+):/);
+            if (listKeyMatch) {
+                const listKey = listKeyMatch[1].trim();
+                // If we already have context, append the list key
+                if (contextString) {
+                    contextString = `${contextString}.${listKey}`;
+                } else {
+                    contextString = listKey;
+                }
+            }
         }
 
         return contextString;
     }
 
-    // Enhanced autocompletion function
+    // Your existing myCompletions function remains the same
     function myCompletions(context) {
-        let word = context.matchBefore(/\w*/)
+        let word = context.matchBefore(/\w*/);
         if (word.from == word.to && !context.explicit) {
             return null;
         }
@@ -304,6 +332,7 @@ function YamlEditor() {
 
         // Determine which context we're in
         const contextPath = getCursorContext(state.doc, pos);
+        console.log("Current context:", contextPath); // Add this for debugging
 
         // Choose appropriate completions based on context
         let options = completionsSchema[""] || []; // Default to top level
