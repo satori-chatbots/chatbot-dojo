@@ -38,9 +38,11 @@ function YamlEditor() {
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
     const completions = [
-        { label: "match", type: "keyword" },
-        { label: "hello", type: "variable", info: "(World)" },
-        { label: "magic", type: "text", apply: "⠁⭒*.✩.*⭒⠁", detail: "macro" }
+        { label: "test_name", type: "keyword", info: "Unique name to identify this profile, make sure it has not been used in the project already" },
+        { label: "llm", type: "keyword", info: "LLM Configuration" },
+        { label: "user", type: "keyword", info: "User Configuration" },
+        { label: "chatbot", type: "keyword", info: "Chatbot Configuration" },
+        { label: "conversation", type: "keyword", info: "Conversation Configuration" },
     ]
 
     function myCompletions(context) {
