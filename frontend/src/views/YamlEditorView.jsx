@@ -23,6 +23,7 @@ import { autocompletion } from '@codemirror/autocomplete';
 import { keymap } from '@codemirror/view';
 import { defaultKeymap, insertNewlineAndIndent } from '@codemirror/commands';
 import { linter } from '@codemirror/lint';
+import { isEqual } from 'lodash';
 
 
 
@@ -306,6 +307,18 @@ function YamlEditor() {
         ],
     };
 
+    const requiredSchema = {
+        // Define required fields
+        required: ["test_name", "llm", "user", "conversation"],
+        // Define nested required fields
+        nested: {
+            "llm": ["model", "temperature", "format"],
+            "user": ["language", "role", "context", "goals"],
+            "chatbot": ["is_starter", "fallback", "output"],
+            "conversation": ["number", "max_cost", "goal_style", "interaction_style"],
+        }
+    };
+
     // Function to get the current context of the cursor
     function getCursorContext(doc, pos) {
         // Get all text up to cursor position
@@ -498,12 +511,64 @@ function YamlEditor() {
         validateYaml(value);
     }
 
+
+    const validateYamlSchema = (yamlData) => {
+        const errors = [];
+
+        // Check top-level required fields
+        requiredSchema.required.forEach(field => {
+            if (!yamlData || yamlData[field] === undefined) {
+                errors.push(`Required field "${field}" is missing`);
+            }
+        });
+
+        // Check nested required fields
+        Object.keys(requiredSchema.nested).forEach(parentField => {
+            const pathParts = parentField.split('.');
+            let currentObj = yamlData;
+
+            // Navigate to the nested object
+            for (const part of pathParts) {
+                if (!currentObj || currentObj[part] === undefined) {
+                    errors.push(`Required section "${parentField}" is missing`);
+                    return; // Skip checking children if parent doesn't exist
+                }
+                currentObj = currentObj[part];
+            }
+
+            // Check required children
+            requiredSchema.nested[parentField].forEach(childField => {
+                if (currentObj[childField] === undefined) {
+                    errors.push(`Required field "${childField}" is missing in "${parentField}"`);
+                }
+            });
+        });
+
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    };
+
     // Validates the YAML content
     const validateYaml = (value) => {
         try {
-            yamlLoad(value);
-            setIsValid(true);
-            setErrorInfo(null);
+            const parsedYaml = yamlLoad(value);
+
+            // Syntax is valid, now check schema
+            const schemaValidation = validateYamlSchema(parsedYaml);
+
+            if (schemaValidation.valid) {
+                setIsValid(true);
+                setErrorInfo(null);
+            } else {
+                setIsValid(false);
+                setErrorInfo({
+                    message: 'Schema validation failed',
+                    errors: schemaValidation.errors,
+                    isSchemaError: true
+                });
+            }
         } catch (e) {
             setIsValid(false);
             setErrorInfo({
@@ -513,7 +578,7 @@ function YamlEditor() {
             });
             console.error('Invalid YAML:', e);
         }
-    }
+    };
 
     return (
         <div className="container mx-auto p-4">
@@ -525,6 +590,28 @@ function YamlEditor() {
                         <div className="flex items-center">
                             <span className="mr-2">YAML Validity:</span>
                             {isValid ? <CheckCircle2 className="text-green-500" /> : <AlertCircle className="text-red-500" />}
+
+                            {/* Display schema errors if any */}
+                            {!isValid && errorInfo && errorInfo.isSchemaError && (
+                                <div className="ml-2 text-red-500 text-sm">
+                                    <details>
+                                        <summary>Schema Validation Errors ({errorInfo.errors.length})</summary>
+                                        <ul className="list-disc pl-5 mt-1">
+                                            {errorInfo.errors.map((err, idx) => (
+                                                <li key={idx}>{err}</li>
+                                            ))}
+                                        </ul>
+                                    </details>
+                                </div>
+                            )}
+
+                            {/* Display syntax error if any */}
+                            {!isValid && errorInfo && !errorInfo.isSchemaError && (
+                                <div className="ml-2 text-red-500 text-sm">
+                                    {errorInfo.message}
+                                    {errorInfo.line && ` at line ${errorInfo.line}`}
+                                </div>
+                            )}
                         </div>
                         <Button
                             className="text-sm"
