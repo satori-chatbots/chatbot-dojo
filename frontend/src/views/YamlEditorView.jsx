@@ -20,6 +20,11 @@ import useSelectedProject from '../hooks/useSelectedProject';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 import { documentationSections, yamlBasicsSections } from '../data/yamlDocumentation';
 import { autocompletion } from '@codemirror/autocomplete';
+import { keymap } from '@codemirror/view';
+import { defaultKeymap, insertNewlineAndIndent } from '@codemirror/commands';
+import { linter } from '@codemirror/lint';
+
+
 
 function YamlEditor() {
     const { fileId } = useParams();
@@ -35,6 +40,90 @@ function YamlEditor() {
 
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
+
+    function levenshteinDistance(a, b) {
+        if (a.length === 0) return b.length;
+        if (b.length === 0) return a.length;
+
+        const matrix = Array(a.length + 1).fill().map(() => Array(b.length + 1).fill(0));
+
+        for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+        for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+        for (let i = 1; i <= a.length; i++) {
+            for (let j = 1; j <= b.length; j++) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j] + 1,     // deletion
+                    matrix[i][j - 1] + 1,     // insertion
+                    matrix[i][j - 1][i - 1] + cost  // substitution
+                );
+            }
+        }
+
+        return matrix[a.length][b.length];
+    }
+
+    // Function to get similar valid keywords
+    function findSimilarKeywords(word) {
+        // Collect all keywords from the schema
+        const allKeywords = Object.values(completionsSchema)
+            .flat()
+            .map(item => item.label);
+
+        // Find similar keywords (with distance ≤ 2)
+        const similarKeywords = allKeywords.filter(keyword => {
+            const distance = levenshteinDistance(word, keyword);
+            return distance > 0 && distance <= 2;  // Allow up to 2 character differences
+        });
+
+        return similarKeywords;
+    }
+
+    // Create a YAML linter for typo detection
+    const yamlTypoLinter = linter((view) => {
+        const diagnostics = [];
+        const text = view.state.doc.toString();
+        const lines = text.split('\n');
+
+        lines.forEach((line, lineIndex) => {
+            // Match keys in YAML (words before colons)
+            const keyMatch = line.match(/^\s*([a-zA-Z_]+[a-zA-Z0-9_]*):/);
+            if (keyMatch) {
+                const key = keyMatch[1];
+                const startPos = line.indexOf(key);
+                const from = view.state.doc.line(lineIndex + 1).from + startPos;
+                const to = from + key.length;
+
+                // Check if this is a potentially mistyped keyword
+                const similarKeywords = findSimilarKeywords(key);
+
+                if (similarKeywords.length > 0) {
+                    diagnostics.push({
+                        from,
+                        to,
+                        severity: "warning", // Use string value instead of enum
+                        message: `Possible typo: did you mean ${similarKeywords.join(' or ')}?`,
+                        actions: similarKeywords.map(keyword => ({
+                            name: `Change to '${keyword}'`,
+                            apply(view, from, to) {
+                                view.dispatch({
+                                    changes: { from, to, insert: keyword }
+                                });
+                            }
+                        }))
+                    });
+                }
+            }
+        });
+
+        return diagnostics;
+    });
+
+    const customKeymap = keymap.of([{
+        key: "Enter",
+        run: insertNewlineAndIndent
+    }]);
 
     // Utility function to insert colon, newline, and extra indent
     function addColonAndIndent(view, completion, from, to) {
@@ -123,7 +212,7 @@ function YamlEditor() {
             { label: "config", type: "keyword", info: "Path to speech configuration file (if type is speech)", apply: addColonAndSpace },
         ],
         "llm.format.type": [
-            { label: "text", type: "value", info: "Text output format"},
+            { label: "text", type: "value", info: "Text output format" },
             { label: "speech", type: "value", info: "Speech output format" },
         ],
         // User section
@@ -143,7 +232,7 @@ function YamlEditor() {
         ],
         "user.goals.function": [
             { label: "default", type: "function", apply: addColonAndBrackets, info: "Use all values in the data list" },
-            { label: "random", type: "function", apply: addColonAndBrackets, info: "Pick random value(s). Specify count or use random count"},
+            { label: "random", type: "function", apply: addColonAndBrackets, info: "Pick random value(s). Specify count or use random count" },
             { label: "another", type: "function", apply: addColonAndBrackets, info: "Pick different values each time until list is exhausted" },
             { label: "forward", type: "function", apply: addColonAndBrackets, info: "Iterate through values. Can be nested with other variables" },
 
@@ -461,7 +550,13 @@ function YamlEditor() {
                             value={editorContent}
                             height="70vh"
                             width="100%"
-                            extensions={[yaml(), EditorView.lineWrapping, autocompletion({ override: [myCompletions] })]}
+                            extensions={[
+                                yaml(),
+                                EditorView.lineWrapping,
+                                autocompletion({ override: [myCompletions] }),
+                                yamlTypoLinter,
+                                customKeymap  // Add this
+                            ]}
                             onChange={handleEditorChange}
                             theme={isDark ? materialDark : tomorrow}
                             basicSetup={{
