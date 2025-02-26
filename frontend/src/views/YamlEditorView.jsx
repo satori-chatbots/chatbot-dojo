@@ -205,121 +205,74 @@ function YamlEditor() {
         ],
     };
 
-    // Improved function to determine cursor context in YAML
+    // Function to get the current context of the cursor
     function getCursorContext(doc, pos) {
         // Get all text up to cursor position
         const textUpToCursor = doc.sliceString(0, pos);
         const lines = textUpToCursor.split('\n');
 
-        // Check the current line for indentation and content
+        // Get current line details
         const currentLine = lines[lines.length - 1];
         const currentLineIndent = currentLine.match(/^\s*/)[0].length;
         const currentLineContent = currentLine.trim();
-        const isListItem = currentLineContent.startsWith('- ');
 
-        // Build a hierarchy of parent keys
+        // Check if we're typing after a colon on the current line
+        const colonMatch = currentLineContent.match(/^([^:]+):\s*$/);
+        if (colonMatch) {
+            // We're right after a colon, use this as part of the context
+            const currentKey = colonMatch[1].trim();
+            const parentContext = getParentContext(lines.slice(0, -1), currentLineIndent);
+            return parentContext ? `${parentContext}.${currentKey}` : currentKey;
+        }
+
+        // Support both '-' and '*' as list markers
+        const isListItem = /^[-*]\s/.test(currentLineContent);
+
+        // Build a hierarchy of parent keys from previous lines
+        let contextPath = getParentContext(lines.slice(0, -1), currentLineIndent);
+
+        // If we're in a list item, process the current line
+        if (isListItem) {
+            const inlineMatch = currentLineContent.match(/^[-*]\s*([^:]+):\s*$/);
+            if (inlineMatch) {
+                const inlineKey = inlineMatch[1].trim();
+                contextPath = contextPath ? `${contextPath}.${inlineKey}` : inlineKey;
+            }
+        }
+
+        return contextPath;
+    }
+
+    // Helper function to get the parent context
+    function getParentContext(lines, currentIndent) {
         let contextPath = [];
-        let currentIndent = currentLineIndent;
-        let inList = false;
-        let listIndentLevel = -1;
-        let listParentKey = "";
+        let currentIndentLevel = currentIndent;
 
-        // Track the current indentation level for list context
-        for (let i = lines.length - 2; i >= 0; i--) {
+        for (let i = lines.length - 1; i >= 0; i--) {
             const line = lines[i];
-            if (line.trim() === '') continue;
-
+            if (line.trim() === "") continue;
             const lineIndent = line.match(/^\s*/)[0].length;
             const lineContent = line.trim();
-
-            // Skip comments
             if (lineContent.startsWith('#')) continue;
 
-            // Check if this is a list item
-            const isLineListItem = lineContent.startsWith('- ');
-
-            // If we're in a list and found an item with less indentation, we exit the list
-            if (inList && lineIndent < listIndentLevel) {
-                inList = false;
-            }
-
-            // Process list items
-            if (isLineListItem) {
-                if (!inList) {
-                    inList = true;
-                    listIndentLevel = lineIndent;
-                }
-
-                // If this is part of the same list and has a key-value structure
-                const listItemMatch = lineContent.substring(2).match(/^([^:]+):/);
-                if (listItemMatch && lineIndent === listIndentLevel) {
-                    // Extract the key from the list item
-                    const key = listItemMatch[1].trim();
-                    // If we're inside a list item examining properties
-                    if (isListItem && currentLineIndent > listIndentLevel) {
-                        // Add the list item key to build the path
-                        contextPath.unshift(key);
-                    }
-                }
-                continue;
-            }
+            // Check for list items
+            const isLineListItem = /^[-*]\s/.test(lineContent);
+            if (isLineListItem && lineIndent <= currentIndentLevel) continue;
 
             // Process regular key-value pairs
             const keyMatch = lineContent.match(/^([^:]+):/);
-            if (keyMatch) {
+            if (keyMatch && lineIndent < currentIndentLevel) {
                 const key = keyMatch[1].trim();
-
-                // If this is a parent of our current list
-                if (inList && lineIndent < listIndentLevel) {
-                    listParentKey = key;
-                    inList = false;  // Exit list context
-                }
-
-                // If this is at a lower indentation than our current context
-                if (lineIndent < currentIndent) {
-                    // Add to the context path
-                    contextPath.unshift(key);
-                    currentIndent = lineIndent;
-
-                    // If this is at root level, we've reached the top
-                    if (lineIndent === 0) {
-                        break;
-                    }
-                }
+                contextPath.unshift(key);
+                currentIndentLevel = lineIndent;
             }
         }
 
-        // Build the final context string
-        let contextString = contextPath.join('.');
-
-        // If we identified a list parent key and we're in a list item context
-        if (listParentKey && isListItem) {
-            // Add the parent key at the beginning
-            if (contextString) {
-                contextString = `${listParentKey}.${contextString}`;
-            } else {
-                contextString = listParentKey;
-            }
-        }
-
-        // If we're dealing with a list item key-value pair
-        if (isListItem) {
-            const listKeyMatch = currentLineContent.substring(2).match(/^([^:]+):/);
-            if (listKeyMatch) {
-                const listKey = listKeyMatch[1].trim();
-                // If we already have context, append the list key
-                if (contextString) {
-                    contextString = `${contextString}.${listKey}`;
-                } else {
-                    contextString = listKey;
-                }
-            }
-        }
-
-        return contextString;
+        return contextPath.join('.');
     }
 
-    // Your existing myCompletions function remains the same
+
+
     function myCompletions(context) {
         let word = context.matchBefore(/\w*/);
         if (word.from == word.to && !context.explicit) {
