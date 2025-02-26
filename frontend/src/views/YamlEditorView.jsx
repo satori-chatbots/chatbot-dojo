@@ -19,6 +19,7 @@ import { useTheme } from 'next-themes';
 import useSelectedProject from '../hooks/useSelectedProject';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 import { documentationSections, yamlBasicsSections } from '../data/yamlDocumentation';
+import { autocompletion } from '@codemirror/autocomplete';
 
 function YamlEditor() {
     const { fileId } = useParams();
@@ -35,6 +36,22 @@ function YamlEditor() {
 
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
+
+    const completions = [
+        { label: "match", type: "keyword" },
+        { label: "hello", type: "variable", info: "(World)" },
+        { label: "magic", type: "text", apply: "⠁⭒*.✩.*⭒⠁", detail: "macro" }
+    ]
+
+    function myCompletions(context) {
+        let word = context.matchBefore(/\w*/)
+        if (word.from == word.to && !context.explicit)
+            return null
+        return {
+            from: word.from,
+            options: completions
+        }
+    }
 
 
     useEffect(() => {
@@ -186,7 +203,7 @@ function YamlEditor() {
                             value={editorContent}
                             height="70vh"
                             width="100%"
-                            extensions={[yaml(), EditorView.lineWrapping]}
+                            extensions={[yaml(), EditorView.lineWrapping, autocompletion({ override: [myCompletions] })]}
                             onChange={handleEditorChange}
                             theme={isDark ? materialDark : tomorrow}
                             basicSetup={{
