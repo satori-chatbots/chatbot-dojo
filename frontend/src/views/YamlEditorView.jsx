@@ -72,13 +72,41 @@ function YamlEditor() {
         })
     }
 
+    // Insert the keyword, semicolon, space and double quotes and places the cursor between
+    function addColonAndQuotes(view, completion, from, to) {
+        const insertText = `${completion.label}: ""`;
+        // Insert the text and place cursor between quotes
+        view.dispatch({
+            changes: { from, to, insert: insertText },
+            selection: { anchor: from + insertText.length - 1 }
+        });
+    }
+
+    // Insert the keyword, semicolon, space and brackets for functions
+    function addColonAndBrackets(view, completion, from, to) {
+        const insertText = `${completion.label}: ""`;
+        // Insert the text and place cursor between brackets
+        view.dispatch({
+            changes: { from, to, insert: insertText },
+            selection: { anchor: from + insertText.length - 1 }
+        });
+    }
+
+    // Insert the keyword, semicolon and space inline
+    function addColonAndSpace(view, completion, from, to) {
+        const insertText = `${completion.label}: `;
+        view.dispatch({
+            changes: { from, to, insert: insertText }
+        });
+    }
+
 
 
     // Define the complete schema for autocompletion
     const completionsSchema = {
         // Top level
         "": [
-            { label: "test_name", type: "keyword", info: "Unique name to identify this profile" },
+            { label: "test_name", type: "keyword", info: "Unique name to identify this profile", apply: addColonAndQuotes },
             { label: "llm", type: "keyword", info: "LLM Configuration", apply: addColonAndIndent },
             { label: "user", type: "keyword", info: "User Configuration", apply: addColonAndIndent },
             { label: "chatbot", type: "keyword", info: "Chatbot Configuration", apply: addColonAndIndent },
@@ -86,18 +114,18 @@ function YamlEditor() {
         ],
         // LLM section
         "llm": [
-            { label: "temperature", type: "keyword", info: "Controls randomness (0.0 to 1.0)" },
-            { label: "model", type: "keyword", info: "Model to use (e.g., 'gpt-4o-mini')" },
+            { label: "temperature", type: "keyword", info: "Controls randomness (0.0 to 1.0)", apply: addColonAndSpace },
+            { label: "model", type: "keyword", info: "Model to use (e.g., 'gpt-4o-mini')", apply: addColonAndSpace },
             { label: "format", type: "keyword", info: "Output format configuration", apply: addColonAndIndent },
         ],
         "llm.format": [
-            { label: "type", type: "keyword", info: "Format type (text or speech)" },
-            { label: "config", type: "keyword", info: "Path to speech configuration file (if type is speech)" },
+            { label: "type", type: "keyword", info: "Format type (text or speech)", apply: addColonAndSpace },
+            { label: "config", type: "keyword", info: "Path to speech configuration file (if type is speech)", apply: addColonAndSpace },
         ],
         // User section
         "user": [
-            { label: "language", type: "keyword", info: "The language of the user" },
-            { label: "role", type: "keyword", info: "Define the user's role/behavior" },
+            { label: "language", type: "keyword", info: "The language of the user", apply: addColonAndSpace },
+            { label: "role", type: "keyword", info: "Define the user's role/behavior", apply: addColonAndSpace },
             { label: "context", type: "keyword", info: "List of additional background information", apply: addColonIndentAndList },
             { label: "goals", type: "keyword", info: "Define the user's goals and variables", apply: addColonIndentAndList },
         ],
@@ -105,8 +133,8 @@ function YamlEditor() {
             { label: "personality", type: "keyword", info: "Path to the personality file" },
         ],
         "user.goals": [
-            { label: "function", type: "keyword", info: "Function types: default(), random(), random(n), random(rand), another(), forward()" },
-            { label: "type", type: "keyword", info: "Variable type (string, int, float)" },
+            { label: "function", type: "keyword", info: "Function types: default(), random(), random(n), random(rand), another(), forward()", apply: addColonAndSpace },
+            { label: "type", type: "keyword", info: "Variable type (string, int, float)", apply: addColonAndSpace },
             { label: "data", type: "keyword", info: "Data can be a list of values or a range", apply: addColonAndIndent },
         ],
         "users.goals.function": [
@@ -114,52 +142,52 @@ function YamlEditor() {
             { label: "random()", type: "function" }
         ],
         "user.goals.data": [
-            { label: "step", type: "keyword", info: "Step value for numeric ranges" },
-            { label: "min", type: "keyword", info: "Minimum value for numeric ranges" },
-            { label: "max", type: "keyword", info: "Maximum value for numeric ranges" },
-            { label: "any", type: "function", info: "Create a variable with the LLM: any(\"prompt\")" },
+            { label: "step", type: "keyword", info: "Step value for numeric ranges", apply: addColonAndSpace },
+            { label: "min", type: "keyword", info: "Minimum value for numeric ranges", apply: addColonAndSpace },
+            { label: "max", type: "keyword", info: "Maximum value for numeric ranges", apply: addColonAndSpace },
+            { label: "any", type: "function", info: "Create a variable with the LLM: any(\"prompt\")", apply: addColonAndBrackets },
         ],
         // Chatbot section
         "chatbot": [
-            { label: "is_starter", type: "keyword", info: "Set to True if the chatbot starts the conversation" },
-            { label: "fallback", type: "keyword", info: "Fallback when the input was not understood" },
+            { label: "is_starter", type: "keyword", info: "Set to True if the chatbot starts the conversation", apply: addColonAndSpace },
+            { label: "fallback", type: "keyword", info: "Fallback when the input was not understood", apply: addColonAndSpace },
             { label: "output", type: "keyword", info: "Variables to extract from the conversation", apply: addColonIndentAndList },
         ],
         "chatbot.output": [
-            { label: "type", type: "keyword", info: "Types: int, float, money, str, time, date" },
-            { label: "description", type: "keyword", info: "Description of the variable for LLM extraction" },
+            { label: "type", type: "keyword", info: "Types: int, float, money, str, time, date", apply: addColonAndSpace },
+            { label: "description", type: "keyword", info: "Description of the variable for LLM extraction", apply: addColonAndSpace },
         ],
         // Conversation section
         "conversation": [
-            { label: "number", type: "keyword", info: "Can be: number, sample(0.0 to 1.0), or all_combinations" },
-            { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the total execution" },
+            { label: "number", type: "keyword", info: "Can be: number, sample(0.0 to 1.0), or all_combinations", apply: addColonAndSpace },
+            { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the total execution", apply: addColonAndSpace },
             { label: "goal_style", type: "keyword", info: "Defines how to decide when a conversation is finished", apply: addColonAndIndent },
             { label: "interaction_style", type: "keyword", info: "Conversation behavior modifiers", apply: addColonIndentAndList },
         ],
         "conversation.goal_style": [
-            { label: "steps", type: "keyword", info: "Number of steps before conversation ends" },
-            { label: "random_steps", type: "keyword", info: "Random number of steps between 1 and specified number" },
+            { label: "steps", type: "keyword", info: "Number of steps before conversation ends", apply: addColonAndSpace },
+            { label: "random_steps", type: "keyword", info: "Random number of steps between 1 and specified number", apply: addColonAndSpace },
             { label: "all_answered", type: "keyword", info: "Continue until all user goals are met", apply: addColonAndIndent },
             { label: "default", type: "keyword", info: "Default conversation style" },
-            { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the conversation" },
+            { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the conversation", apply: addColonAndSpace },
         ],
         "conversation.goal_style.all_answered": [
-            { label: "limit", type: "keyword", info: "Maximum number of steps before the conversation ends" },
+            { label: "limit", type: "keyword", info: "Maximum number of steps before the conversation ends", apply: addColonAndSpace },
         ],
         "conversation.interaction_style": [
             { label: "long phrase", type: "value", info: "Use longer phrases" },
             { label: "change your mind", type: "value", info: "Change opinions during conversation" },
-            { label: "change language", type: "value", info: "Change language during conversation (provide list)" },
+            { label: "change language", type: "value", info: "Change language during conversation (provide list)", apply: addColonIndentAndList },
             { label: "make spelling mistakes", type: "value", info: "Introduce spelling errors" },
             { label: "single question", type: "value", info: "Ask only one question at a time" },
             { label: "all questions", type: "value", info: "Ask all questions at once" },
             { label: "default", type: "value", info: "Default conversation style without modifications" },
-            { label: "random", type: "keyword", info: "Select a random interaction style from a list" },
+            { label: "random", type: "keyword", info: "Select a random interaction style from a list", apply: addColonIndentAndList },
         ],
         "conversation.interaction_style.random": [
             { label: "long phrase", type: "value", info: "Use longer phrases" },
             { label: "change your mind", type: "value", info: "Change opinions during conversation" },
-            { label: "change language", type: "value", info: "Change language during conversation (provide list)" },
+            { label: "change language", type: "value", info: "Change language during conversation (provide list)", apply: addColonIndentAndList },
             { label: "make spelling mistakes", type: "value", info: "Introduce spelling errors" },
             { label: "single question", type: "value", info: "Ask only one question at a time" },
             { label: "all questions", type: "value", info: "Ask all questions at once" },
