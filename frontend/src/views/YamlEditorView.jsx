@@ -45,14 +45,12 @@ function YamlEditor() {
         // Define extra indent (adjust as needed, e.g., two spaces)
         const extraIndent = "  ";
         const newIndent = currentIndent + extraIndent;
-        // Construct the text to insert:
-        // - The completion label followed by a colon
-        // - A newline
-        // - The new indentation for the next line
+        // Construct the text to insert
         const insertText = `${completion.label}: \n${newIndent}`;
         // Dispatch the change to the editor
         view.dispatch({
-            changes: { from, to, insert: insertText }
+            changes: { from, to, insert: insertText },
+            selection: { anchor: from + insertText.length }
         });
     }
 
@@ -68,7 +66,8 @@ function YamlEditor() {
         const insertText = `${completion.label}: \n${newIndent} `;
         // Dispatch the change to the editor
         view.dispatch({
-            changes: { from, to, insert: insertText }
+            changes: { from, to, insert: insertText },
+            selection: { anchor: from + insertText.length }
         })
     }
 
@@ -96,7 +95,8 @@ function YamlEditor() {
     function addColonAndSpace(view, completion, from, to) {
         const insertText = `${completion.label}: `;
         view.dispatch({
-            changes: { from, to, insert: insertText }
+            changes: { from, to, insert: insertText },
+            selection: { anchor: from + insertText.length }
         });
     }
 
