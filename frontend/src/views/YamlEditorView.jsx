@@ -122,6 +122,10 @@ function YamlEditor() {
             { label: "type", type: "keyword", info: "Format type (text or speech)", apply: addColonAndSpace },
             { label: "config", type: "keyword", info: "Path to speech configuration file (if type is speech)", apply: addColonAndSpace },
         ],
+        "llm.format.type": [
+            { label: "text", type: "value", info: "Text output format"},
+            { label: "speech", type: "value", info: "Speech output format" },
+        ],
         // User section
         "user": [
             { label: "language", type: "keyword", info: "The language of the user", apply: addColonAndSpace },
@@ -130,7 +134,7 @@ function YamlEditor() {
             { label: "goals", type: "keyword", info: "Define the user's goals and variables", apply: addColonIndentAndList },
         ],
         "user.context": [
-            { label: "personality", type: "keyword", info: "Path to the personality file" },
+            { label: "personality", type: "keyword", info: "Path to the personality file", apply: addColonAndSpace },
         ],
         "user.goals": [
             { label: "function", type: "keyword", info: "Function types: default(), random(), random(n), random(rand), another(), forward()", apply: addColonAndSpace },
