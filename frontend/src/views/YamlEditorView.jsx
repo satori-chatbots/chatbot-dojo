@@ -36,21 +36,59 @@ function YamlEditor() {
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
+    // Utility function to insert colon, newline, and extra indent
+    function addColonAndIndent(view, completion, from, to) {
+        // Get the current line at the insertion point
+        const line = view.state.doc.lineAt(from);
+        // Get the current line's indentation (spaces/tabs at the beginning)
+        const currentIndent = line.text.match(/^\s*/)[0];
+        // Define extra indent (adjust as needed, e.g., two spaces)
+        const extraIndent = "  ";
+        const newIndent = currentIndent + extraIndent;
+        // Construct the text to insert:
+        // - The completion label followed by a colon
+        // - A newline
+        // - The new indentation for the next line
+        const insertText = `${completion.label}: \n${newIndent}`;
+        // Dispatch the change to the editor
+        view.dispatch({
+            changes: { from, to, insert: insertText }
+        });
+    }
+
+    // Inserts the keywords, make a new line with the proper indentation and starts a new list inside the keyword
+    function addColonIndentAndList(view, completion, from, to) {
+        // Get the current line at the insertion point
+        const line = view.state.doc.lineAt(from);
+        // Get the current line's indentation (spaces/tabs at the beginning)
+        const currentIndent = line.text.match(/^\s*/)[0];
+        // Define extra indent and start the list
+        const extraIndent = "  -";
+        const newIndent = currentIndent + extraIndent;
+        const insertText = `${completion.label}: \n${newIndent} `;
+        // Dispatch the change to the editor
+        view.dispatch({
+            changes: { from, to, insert: insertText }
+        })
+    }
+
+
+
     // Define the complete schema for autocompletion
     const completionsSchema = {
         // Top level
         "": [
             { label: "test_name", type: "keyword", info: "Unique name to identify this profile" },
-            { label: "llm", type: "keyword", info: "LLM Configuration" },
-            { label: "user", type: "keyword", info: "User Configuration" },
-            { label: "chatbot", type: "keyword", info: "Chatbot Configuration" },
-            { label: "conversation", type: "keyword", info: "Conversation Configuration" },
+            { label: "llm", type: "keyword", info: "LLM Configuration", apply: addColonAndIndent },
+            { label: "user", type: "keyword", info: "User Configuration", apply: addColonAndIndent },
+            { label: "chatbot", type: "keyword", info: "Chatbot Configuration", apply: addColonAndIndent },
+            { label: "conversation", type: "keyword", info: "Conversation Configuration", apply: addColonAndIndent },
         ],
         // LLM section
         "llm": [
             { label: "temperature", type: "keyword", info: "Controls randomness (0.0 to 1.0)" },
             { label: "model", type: "keyword", info: "Model to use (e.g., 'gpt-4o-mini')" },
-            { label: "format", type: "keyword", info: "Output format configuration" },
+            { label: "format", type: "keyword", info: "Output format configuration", apply: addColonAndIndent },
         ],
         "llm.format": [
             { label: "type", type: "keyword", info: "Format type (text or speech)" },
@@ -60,8 +98,8 @@ function YamlEditor() {
         "user": [
             { label: "language", type: "keyword", info: "The language of the user" },
             { label: "role", type: "keyword", info: "Define the user's role/behavior" },
-            { label: "context", type: "keyword", info: "List of additional background information" },
-            { label: "goals", type: "keyword", info: "Define the user's goals and variables" },
+            { label: "context", type: "keyword", info: "List of additional background information", apply: addColonIndentAndList },
+            { label: "goals", type: "keyword", info: "Define the user's goals and variables", apply: addColonIndentAndList },
         ],
         "user.context": [
             { label: "personality", type: "keyword", info: "Path to the personality file" },
@@ -69,11 +107,11 @@ function YamlEditor() {
         "user.goals": [
             { label: "function", type: "keyword", info: "Function types: default(), random(), random(n), random(rand), another(), forward()" },
             { label: "type", type: "keyword", info: "Variable type (string, int, float)" },
-            { label: "data", type: "keyword", info: "Data can be a list of values or a range" },
+            { label: "data", type: "keyword", info: "Data can be a list of values or a range", apply: addColonAndIndent },
         ],
         "users.goals.function": [
-            { label: "default()", type: "function"},
-            { label: "random()", type: "function"}
+            { label: "default()", type: "function" },
+            { label: "random()", type: "function" }
         ],
         "user.goals.data": [
             { label: "step", type: "keyword", info: "Step value for numeric ranges" },
@@ -85,7 +123,7 @@ function YamlEditor() {
         "chatbot": [
             { label: "is_starter", type: "keyword", info: "Set to True if the chatbot starts the conversation" },
             { label: "fallback", type: "keyword", info: "Fallback when the input was not understood" },
-            { label: "output", type: "keyword", info: "Variables to extract from the conversation" },
+            { label: "output", type: "keyword", info: "Variables to extract from the conversation", apply: addColonIndentAndList },
         ],
         "chatbot.output": [
             { label: "type", type: "keyword", info: "Types: int, float, money, str, time, date" },
@@ -95,13 +133,13 @@ function YamlEditor() {
         "conversation": [
             { label: "number", type: "keyword", info: "Can be: number, sample(0.0 to 1.0), or all_combinations" },
             { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the total execution" },
-            { label: "goal_style", type: "keyword", info: "Defines how to decide when a conversation is finished" },
-            { label: "interaction_style", type: "keyword", info: "Conversation behavior modifiers" },
+            { label: "goal_style", type: "keyword", info: "Defines how to decide when a conversation is finished", apply: addColonAndIndent },
+            { label: "interaction_style", type: "keyword", info: "Conversation behavior modifiers", apply: addColonIndentAndList },
         ],
         "conversation.goal_style": [
             { label: "steps", type: "keyword", info: "Number of steps before conversation ends" },
             { label: "random_steps", type: "keyword", info: "Random number of steps between 1 and specified number" },
-            { label: "all_answered", type: "keyword", info: "Continue until all user goals are met" },
+            { label: "all_answered", type: "keyword", info: "Continue until all user goals are met", apply: addColonAndIndent },
             { label: "default", type: "keyword", info: "Default conversation style" },
             { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the conversation" },
         ],
