@@ -33,28 +33,236 @@ function YamlEditor() {
     const [selectedProject] = useSelectedProject();
     const { showToast } = useMyCustomToast();
 
-
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
-    const completions = [
-        { label: "test_name", type: "keyword", info: "Unique name to identify this profile, make sure it has not been used in the project already" },
-        { label: "llm", type: "keyword", info: "LLM Configuration" },
-        { label: "user", type: "keyword", info: "User Configuration" },
-        { label: "chatbot", type: "keyword", info: "Chatbot Configuration" },
-        { label: "conversation", type: "keyword", info: "Conversation Configuration" },
-    ]
+    // Define the complete schema for autocompletion
+    const completionsSchema = {
+        // Top level
+        "": [
+            { label: "test_name", type: "keyword", info: "Unique name to identify this profile" },
+            { label: "llm", type: "keyword", info: "LLM Configuration" },
+            { label: "user", type: "keyword", info: "User Configuration" },
+            { label: "chatbot", type: "keyword", info: "Chatbot Configuration" },
+            { label: "conversation", type: "keyword", info: "Conversation Configuration" },
+        ],
+        // LLM section
+        "llm": [
+            { label: "temperature", type: "keyword", info: "Controls randomness (0.0 to 1.0)" },
+            { label: "model", type: "keyword", info: "Model to use (e.g., 'gpt-4o-mini')" },
+            { label: "format", type: "keyword", info: "Output format configuration" },
+        ],
+        "llm.format": [
+            { label: "type", type: "keyword", info: "Format type (text or speech)" },
+            { label: "config", type: "keyword", info: "Path to speech configuration file (if type is speech)" },
+        ],
+        // User section
+        "user": [
+            { label: "language", type: "keyword", info: "The language of the user" },
+            { label: "role", type: "keyword", info: "Define the user's role/behavior" },
+            { label: "context", type: "keyword", info: "List of additional background information" },
+            { label: "goals", type: "keyword", info: "Define the user's goals and variables" },
+        ],
+        "user.context": [
+            { label: "personality", type: "keyword", info: "Path to the personality file" },
+        ],
+        "user.goals": [
+            { label: "function", type: "keyword", info: "Function types: default(), random(), random(n), random(rand), another(), forward()" },
+            { label: "type", type: "keyword", info: "Variable type (string, int, float)" },
+            { label: "data", type: "keyword", info: "Data can be a list of values or a range" },
+        ],
+        "users.goals.function": [
+            { label: "default()", type: "function"},
+            { label: "random()", type: "function"}
+        ],
+        "user.goals.data": [
+            { label: "step", type: "keyword", info: "Step value for numeric ranges" },
+            { label: "min", type: "keyword", info: "Minimum value for numeric ranges" },
+            { label: "max", type: "keyword", info: "Maximum value for numeric ranges" },
+            { label: "any", type: "function", info: "Create a variable with the LLM: any(\"prompt\")" },
+        ],
+        // Chatbot section
+        "chatbot": [
+            { label: "is_starter", type: "keyword", info: "Set to True if the chatbot starts the conversation" },
+            { label: "fallback", type: "keyword", info: "Fallback when the input was not understood" },
+            { label: "output", type: "keyword", info: "Variables to extract from the conversation" },
+        ],
+        "chatbot.output": [
+            { label: "type", type: "keyword", info: "Types: int, float, money, str, time, date" },
+            { label: "description", type: "keyword", info: "Description of the variable for LLM extraction" },
+        ],
+        // Conversation section
+        "conversation": [
+            { label: "number", type: "keyword", info: "Can be: number, sample(0.0 to 1.0), or all_combinations" },
+            { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the total execution" },
+            { label: "goal_style", type: "keyword", info: "Defines how to decide when a conversation is finished" },
+            { label: "interaction_style", type: "keyword", info: "Conversation behavior modifiers" },
+        ],
+        "conversation.goal_style": [
+            { label: "steps", type: "keyword", info: "Number of steps before conversation ends" },
+            { label: "random_steps", type: "keyword", info: "Random number of steps between 1 and specified number" },
+            { label: "all_answered", type: "keyword", info: "Continue until all user goals are met" },
+            { label: "default", type: "keyword", info: "Default conversation style" },
+            { label: "max_cost", type: "keyword", info: "Maximum cost in dollars of the conversation" },
+        ],
+        "conversation.goal_style.all_answered": [
+            { label: "limit", type: "keyword", info: "Maximum number of steps before the conversation ends" },
+        ],
+        "conversation.interaction_style": [
+            { label: "long phrase", type: "value", info: "Use longer phrases" },
+            { label: "change your mind", type: "value", info: "Change opinions during conversation" },
+            { label: "change language", type: "value", info: "Change language during conversation (provide list)" },
+            { label: "make spelling mistakes", type: "value", info: "Introduce spelling errors" },
+            { label: "single question", type: "value", info: "Ask only one question at a time" },
+            { label: "all questions", type: "value", info: "Ask all questions at once" },
+            { label: "default", type: "value", info: "Default conversation style without modifications" },
+            { label: "random", type: "keyword", info: "Select a random interaction style from a list" },
+        ],
+        "conversation.interaction_style.random": [
+            { label: "long phrase", type: "value", info: "Use longer phrases" },
+            { label: "change your mind", type: "value", info: "Change opinions during conversation" },
+            { label: "change language", type: "value", info: "Change language during conversation (provide list)" },
+            { label: "make spelling mistakes", type: "value", info: "Introduce spelling errors" },
+            { label: "single question", type: "value", info: "Ask only one question at a time" },
+            { label: "all questions", type: "value", info: "Ask all questions at once" },
+            { label: "default", type: "value", info: "Default conversation style without modifications" },
+        ],
+        "conversation.interaction_style.change language": [
+            { label: "english", type: "value", info: "English language" },
+            { label: "spanish", type: "value", info: "Spanish language" },
+            { label: "french", type: "value", info: "French language" },
+            { label: "german", type: "value", info: "German language" },
+            { label: "italian", type: "value", info: "Italian language" },
+            { label: "portuguese", type: "value", info: "Portuguese language" },
+            { label: "chinese", type: "value", info: "Chinese language" },
+            { label: "japanese", type: "value", info: "Japanese language" },
+        ],
+    };
 
-    function myCompletions(context) {
-        let word = context.matchBefore(/\w*/)
-        if (word.from == word.to && !context.explicit)
-            return null
-        return {
-            from: word.from,
-            options: completions
+    // Function to determine cursor context in YAML
+    function getCursorContext(doc, pos) {
+        // Get all text up to cursor position
+        const textUpToCursor = doc.sliceString(0, pos);
+        const lines = textUpToCursor.split('\n');
+
+        // Check the current line for indentation and content
+        const currentLine = lines[lines.length - 1];
+        const currentLineIndent = currentLine.match(/^\s*/)[0].length;
+        const currentLineContent = currentLine.trim();
+        const isListItem = currentLineContent.startsWith('- ');
+
+        // Build a hierarchy of parent keys
+        let contextPath = [];
+        let currentIndent = currentLineIndent;
+        let listContext = isListItem ? currentLine.trim().substring(2) : null;
+        let inList = isListItem;
+        let listIndentLevel = isListItem ? currentLineIndent : -1;
+
+        // Track the current indentation level for list context
+        for (let i = lines.length - 2; i >= 0; i--) {
+            const line = lines[i];
+            if (line.trim() === '') continue;
+
+            const lineIndent = line.match(/^\s*/)[0].length;
+            const lineContent = line.trim();
+
+            // Skip comments
+            if (lineContent.startsWith('#')) continue;
+
+            // Check if this is a list item
+            const isLineListItem = lineContent.startsWith('- ');
+
+            // If we're in a list and found an item with less indentation, we exit the list
+            if (inList && lineIndent <= listIndentLevel && !isLineListItem) {
+                inList = false;
+            }
+
+            // Process list items
+            if (isLineListItem) {
+                if (!inList) {
+                    inList = true;
+                    listIndentLevel = lineIndent;
+                }
+
+                // If this is part of the same list and has a key-value structure
+                const listItemMatch = lineContent.substring(2).match(/^([^:]+):/);
+                if (listItemMatch && lineIndent === listIndentLevel) {
+                    // This is a list item with a key, add it to context
+                    const key = listItemMatch[1].trim();
+                    if (contextPath.length > 0) {
+                        contextPath[0] = `${contextPath[0]}.${key}`;
+                    }
+                }
+                continue;
+            }
+
+            // Process regular key-value pairs
+            const keyMatch = lineContent.match(/^([^:]+):/);
+            if (keyMatch && lineIndent < currentIndent) {
+                const key = keyMatch[1].trim();
+
+                // If this is at root level (indentation 0), it's a top-level key
+                if (lineIndent === 0) {
+                    contextPath.unshift(key);
+                    currentIndent = 0;
+                    break; // We've reached a top-level key, no need to go further
+                } else {
+                    // This is a nested key
+                    contextPath.unshift(key);
+                    currentIndent = lineIndent;
+                }
+            }
         }
+
+        // Build the final context string
+        let contextString = contextPath.join('.');
+
+        // If we're in a list item that's defining a value (not a key-value pair)
+        if (isListItem && !currentLineContent.includes(':')) {
+            contextString = `${contextString}.${listContext || ""}`;
+        }
+
+        return contextString;
     }
 
+    // Enhanced autocompletion function
+    function myCompletions(context) {
+        let word = context.matchBefore(/\w*/)
+        if (word.from == word.to && !context.explicit) {
+            return null;
+        }
+
+        // Get editor state and cursor position
+        const { state } = context;
+        const pos = context.pos;
+
+        // Determine which context we're in
+        const contextPath = getCursorContext(state.doc, pos);
+
+        // Choose appropriate completions based on context
+        let options = completionsSchema[""] || []; // Default to top level
+
+        // Try to find completions for the exact context
+        if (completionsSchema[contextPath]) {
+            options = completionsSchema[contextPath];
+        } else {
+            // Try to find the closest parent context
+            const contextParts = contextPath.split('.');
+            while (contextParts.length > 0) {
+                const parentContext = contextParts.join('.');
+                if (completionsSchema[parentContext]) {
+                    options = completionsSchema[parentContext];
+                    break;
+                }
+                contextParts.pop();
+            }
+        }
+
+        return {
+            from: word.from,
+            options: options
+        };
+    }
 
     useEffect(() => {
         // Fetch the template for new files
@@ -91,12 +299,10 @@ function YamlEditor() {
             if (fileId) {
                 // Update existing file
                 const response = await updateFile(fileId, editorContent);
-                //alert(response.message || 'File updated successfully');
                 showToast('success', response.message || 'File updated successfully');
             } else {
                 // Create new file
                 if (!selectedProject) {
-                    //alert('Please select a project first');
                     showToast('error', 'Please select a project first');
                     return;
                 }
@@ -104,7 +310,6 @@ function YamlEditor() {
                 if (response.uploaded_file_ids && response.uploaded_file_ids.length > 0) {
                     // Get the first file ID since we are only uploading one
                     const newFileId = response.uploaded_file_ids[0];
-                    //alert('File created successfully');
                     showToast('success', 'File created successfully');
                     // Navigate to the edit view of the new file
                     navigate(`/yaml-editor/${newFileId}`);
@@ -114,13 +319,10 @@ function YamlEditor() {
                     const errorMessage = response.errors && response.errors.length > 0
                         ? response.errors[0].error
                         : 'Failed to create file';
-                    //alert(errorMessage);
                     showToast('error', errorMessage);
                 }
             }
         } catch (err) {
-            // The error is already being displayed by fileApi.js
-            //console.error('Error saving file:', err);
             try {
                 const errorObj = JSON.parse(err.message);
                 if (errorObj.errors) {
@@ -128,20 +330,14 @@ function YamlEditor() {
                     const errorMessages = errorObj.errors.map(err =>
                         `Error: ${err.error}`
                     ).join('\n');
-                    //alert(errorMessages);
                     showToast('error', errorMessages);
                 } else if (errorObj.error) {
                     // Display the error message
-                    //alert(`Error: ${errorObj.error}`);
                     showToast('error', `Error: ${errorObj.error}`);
-                }
-
-                else {
-                    //alert('Error saving file');
+                } else {
                     showToast('error', 'Error saving file');
                 }
             } catch (e) {
-                //alert('Error saving file');
                 showToast('error', 'Error saving file');
             }
         }
