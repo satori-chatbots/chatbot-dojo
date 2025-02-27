@@ -46,18 +46,20 @@ function YamlEditor() {
         if (a.length === 0) return b.length;
         if (b.length === 0) return a.length;
 
-        const matrix = Array(a.length + 1).fill().map(() => Array(b.length + 1).fill(0));
+        const matrix = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(0));
 
+        // Initialize first column and row of the matrix
         for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
         for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
 
+        // Fill in the matrix
         for (let i = 1; i <= a.length; i++) {
             for (let j = 1; j <= b.length; j++) {
                 const cost = a[i - 1] === b[j - 1] ? 0 : 1;
                 matrix[i][j] = Math.min(
-                    matrix[i - 1][j] + 1,     // deletion
-                    matrix[i][j - 1] + 1,     // insertion
-                    matrix[i][j - 1][i - 1] + cost  // substitution
+                    matrix[i - 1][j] + 1,         // deletion
+                    matrix[i][j - 1] + 1,         // insertion
+                    matrix[i - 1][j - 1] + cost   // substitution
                 );
             }
         }
@@ -67,6 +69,8 @@ function YamlEditor() {
 
     // Function to get similar valid keywords
     function findSimilarKeywords(word) {
+        // Dont do it for 3 or less chars
+        if (word.length <= 3) return [];
         // Collect all keywords from the schema
         const allKeywords = Object.values(completionsSchema)
             .flat()
@@ -96,14 +100,13 @@ function YamlEditor() {
                 const from = view.state.doc.line(lineIndex + 1).from + startPos;
                 const to = from + key.length;
 
-                // Check if this is a potentially mistyped keyword
+                // Check for potential typos
                 const similarKeywords = findSimilarKeywords(key);
-
                 if (similarKeywords.length > 0) {
                     diagnostics.push({
                         from,
                         to,
-                        severity: "warning", // Use string value instead of enum
+                        severity: "warning",
                         message: `Possible typo: did you mean ${similarKeywords.join(' or ')}?`,
                         actions: similarKeywords.map(keyword => ({
                             name: `Change to '${keyword}'`,
@@ -120,6 +123,7 @@ function YamlEditor() {
 
         return diagnostics;
     });
+
 
     const customKeymap = keymap.of([{
         key: "Enter",
@@ -317,7 +321,7 @@ function YamlEditor() {
             "user": ["language", "role", "context", "goals"],
             "chatbot": ["is_starter", "fallback", "output"],
             "conversation": ["number", "max_cost", "goal_style", "interaction_style"],
-            }
+        }
     };
 
     // Function to get the current context of the cursor
