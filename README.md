@@ -9,7 +9,8 @@ To update this repo, since it depends on the `user-simulator` we have to make a 
 ```bash
 git pull --recurse-submodules
 ```
-or
+
+or if you have Make installed:
 
 ```bash
 make pull-submodules
@@ -23,7 +24,7 @@ git config submodule.recurse true
 
 ### Backend setup
 
-To make the server run, you need to have the project dependencies installed, but also the `user-simulator` ones. To do so, in a preferabily new virtual environment, run the following commands:
+To make the server run, you need to have the project dependencies installed, but also the `user-simulator` ones. To do so, in a preferably new virtual environment, run the following commands:
 
 ```bash
 pip install -r requirements.txt
@@ -32,20 +33,59 @@ pip install -r ../user-simulator/requirements.txt
 
 After that, you can make the necessary migrations and then execute the server:
 
+Using Make (Unix/Linux):
+
 ```bash
 make migrations
 make run
 ```
 
-In case of problems, I suggest deleting the migrations and the database file and then running the migrations again:
+Without Make (Windows/Unix):
+
+```bash
+# Create and apply migrations
+python manage.py makemigrations
+python manage.py migrate
+
+# Run the server
+python manage.py runserver
+```
+
+In case of problems, you can reset the database:
+
+Using Make (Unix/Linux):
 
 ```bash
 make full-reset
 ```
 
+Without Make (Windows):
+
+```bash
+# Delete migrations and database
+del /s /q */migrations/0*.py
+del db.sqlite3
+
+# Recreate database
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Without Make (Unix/Linux):
+
+```bash
+# Delete migrations and database
+rm -rf */migrations/0*.py
+rm db.sqlite3
+
+# Recreate database
+python manage.py makemigrations
+python manage.py migrate
+```
+
 ### Frontend setup
 
-To set up and run the frontend, you need to have Node.js and npm installed. Follow these steps:
+To set up and run the frontend, you need to have Node.js and npm installed. Then, follow these steps:
 
 1. Navigate to the `frontend` folder:
 
@@ -67,7 +107,6 @@ npm run dev
 
 The frontend will be running at `http://localhost:5173/`.
 
-
 ## Usage
 
-For now, the server is very simple, it is configured to work with `Taskyto` so it must be running at `http://127.0.0.1:5000`. Then, the backend server is running at `http://127.0.0.1:8000`, and the frontend at `http://localhost:5173/`.
+You can now access the webpage at [http://localhost:5173/](http://localhost:5173/).
