@@ -171,7 +171,7 @@ export const requiredSchema = {
         "llm.format": ["type"],
         "user": ["language", "role", "context", "goals"],
         "chatbot": ["is_starter", "fallback", "output"],
-        "conversation": ["number", "max_cost", "goal_style", "interaction_style"],
+        "conversation": ["number", "goal_style", "interaction_style"],
     }
 };
 
