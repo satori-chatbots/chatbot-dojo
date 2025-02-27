@@ -25,7 +25,7 @@ class YamlValidator:
             "llm.format": ["type"],
             "user": ["language", "role", "context", "goals"],
             "chatbot": ["is_starter", "fallback", "output"],
-            "conversation": ["number", "max_cost", "goal_style", "interaction_style"],
+            "conversation": ["number", "goal_style", "interaction_style"],
         }
         self.valid_formats = ["text", "speech"]
         self.valid_goal_functions = ["default()", "random()", "another()", "forward()"]
