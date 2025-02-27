@@ -30,8 +30,22 @@ class YamlValidator:
         self.valid_formats = ["text", "speech"]
         self.valid_goal_functions = ["default()", "random()", "another()", "forward()"]
         self.valid_variable_types = ["string", "float", "int"]
-        self.valid_output_types = ["int", "float", "money", "str", "string", "time", "date"]
-
+        self.valid_output_types = [
+            "int",
+            "float",
+            "money",
+            "str",
+            "string",
+            "time",
+            "date",
+        ]
+        self.valid_goal_styles = [
+            "steps",
+            "random_steps",
+            "all_answered",
+            "max_cost",
+            "default",
+        ]
 
     def validate(self, yaml_content: str) -> List[ValidationError]:
         """Validate YAML content against schema rules.
@@ -478,7 +492,8 @@ class YamlValidator:
             if not isinstance(is_starter, bool):
                 errors.append(
                     ValidationError(
-                        "is_starter must be a boolean (true or false)", "/chatbot/is_starter"
+                        "is_starter must be a boolean (true or false)",
+                        "/chatbot/is_starter",
                     )
                 )
 
@@ -487,19 +502,13 @@ class YamlValidator:
             fallback = chatbot["fallback"]
             if not isinstance(fallback, str):
                 errors.append(
-                    ValidationError(
-                        "Fallback must be a string", "/chatbot/fallback"
-                    )
+                    ValidationError("Fallback must be a string", "/chatbot/fallback")
                 )
-
-
 
         if "output" in chatbot:
             if not isinstance(chatbot["output"], list):
                 errors.append(
-                    ValidationError(
-                        "Output must be a list", "/chatbot/output"
-                    )
+                    ValidationError("Output must be a list", "/chatbot/output")
                 )
             else:
                 for i, output_item in enumerate(chatbot["output"]):
@@ -507,7 +516,8 @@ class YamlValidator:
                     if not isinstance(output_item, dict):
                         errors.append(
                             ValidationError(
-                                "Each output item must be a dictionary", f"/chatbot/output/{i}"
+                                "Each output item must be a dictionary",
+                                f"/chatbot/output/{i}",
                             )
                         )
                         continue
@@ -517,7 +527,7 @@ class YamlValidator:
                         errors.append(
                             ValidationError(
                                 "Each output item must have exactly one key (the output name)",
-                                f"/chatbot/output/{i}"
+                                f"/chatbot/output/{i}",
                             )
                         )
                         continue
@@ -530,7 +540,7 @@ class YamlValidator:
                         errors.append(
                             ValidationError(
                                 f"Output definition for '{output_name}' must be a dictionary",
-                                f"/chatbot/output/{i}/{output_name}"
+                                f"/chatbot/output/{i}/{output_name}",
                             )
                         )
                         continue
@@ -540,7 +550,7 @@ class YamlValidator:
                         errors.append(
                             ValidationError(
                                 f"Output '{output_name}' must have a type",
-                                f"/chatbot/output/{i}/{output_name}"
+                                f"/chatbot/output/{i}/{output_name}",
                             )
                         )
 
@@ -548,16 +558,19 @@ class YamlValidator:
                         errors.append(
                             ValidationError(
                                 f"Output '{output_name}' must have a description",
-                                f"/chatbot/output/{i}/{output_name}"
+                                f"/chatbot/output/{i}/{output_name}",
                             )
                         )
 
                     # Validate output type
-                    if "type" in output_def and output_def["type"] not in self.valid_output_types:
+                    if (
+                        "type" in output_def
+                        and output_def["type"] not in self.valid_output_types
+                    ):
                         errors.append(
                             ValidationError(
                                 f"Invalid output type '{output_def['type']}'. Must be one of: {', '.join(self.valid_output_types)}",
-                                f"/chatbot/output/{i}/{output_name}/type"
+                                f"/chatbot/output/{i}/{output_name}/type",
                             )
                         )
 
@@ -568,7 +581,7 @@ class YamlValidator:
                             errors.append(
                                 ValidationError(
                                     "Description must be a non-empty string",
-                                    f"/chatbot/output/{i}/{output_name}/description"
+                                    f"/chatbot/output/{i}/{output_name}/description",
                                 )
                             )
 
@@ -580,12 +593,53 @@ class YamlValidator:
         """Validate conversation section configuration."""
         errors = []
 
+        # Validate 'number' field - can be integer, 'all_combinations', or sample()
         if "number" in conversation:
             num = conversation["number"]
-            if not isinstance(num, int) or num <= 0:
+            if isinstance(num, int):
+                if num <= 0:
+                    errors.append(
+                        ValidationError(
+                            "Number of conversations must be a positive integer",
+                            "/conversation/number",
+                        )
+                    )
+            elif isinstance(num, str):
+                # Check for "all_combinations" string
+                if num == "all_combinations":
+                    # This is valid
+                    pass
+                # Check for sample() function format
+                elif num.startswith("sample(") and num.endswith(")"):
+                    # Extract the parameter
+                    sample_param = num[len("sample(") : -1]
+                    try:
+                        sample_value = float(sample_param)
+                        if sample_value <= 0 or sample_value > 1:
+                            errors.append(
+                                ValidationError(
+                                    "Sample value must be between 0 and 1",
+                                    "/conversation/number",
+                                )
+                            )
+                    except ValueError:
+                        errors.append(
+                            ValidationError(
+                                "Invalid sample value, must be a decimal between 0 and 1",
+                                "/conversation/number",
+                            )
+                        )
+                else:
+                    errors.append(
+                        ValidationError(
+                            "Number must be a positive integer, 'all_combinations', or sample(0.0-1.0)",
+                            "/conversation/number",
+                        )
+                    )
+            else:
                 errors.append(
                     ValidationError(
-                        "Number of conversations must be a positive integer",
+                        "Number must be a positive integer, 'all_combinations', or sample(0.0-1.0)",
                         "/conversation/number",
                     )
                 )
@@ -596,6 +650,116 @@ class YamlValidator:
                 errors.append(
                     ValidationError(
                         "Max cost must be a positive number", "/conversation/max_cost"
+                    )
+                )
+
+        # Validate goal_style
+        if "goal_style" in conversation:
+            goal_style = conversation["goal_style"]
+
+            # goal_style can be either a string ("default") or a dictionary
+            if isinstance(goal_style, str):
+                # Only "default" is a valid string value
+                if goal_style != "default":
+                    errors.append(
+                        ValidationError(
+                            "When goal_style is a string, it must be 'default'",
+                            "/conversation/goal_style",
+                        )
+                    )
+            elif isinstance(goal_style, dict):
+                # Check for valid goal style options
+                for key in goal_style:
+                    if key not in self.valid_goal_styles:
+                        errors.append(
+                            ValidationError(
+                                f"Invalid goal_style option: {key}\nValid options: {', '.join(self.valid_goal_styles)}",
+                                f"/conversation/goal_style/{key}",
+                            )
+                        )
+
+                # Validate steps (must be positive integer)
+                if "steps" in goal_style:
+                    steps = goal_style["steps"]
+                    if not isinstance(steps, int) or steps <= 0:
+                        errors.append(
+                            ValidationError(
+                                "Steps must be a positive integer",
+                                "/conversation/goal_style/steps",
+                            )
+                        )
+
+                # Validate random_steps (must be positive integer <= 20)
+                if "random_steps" in goal_style:
+                    random_steps = goal_style["random_steps"]
+                    if not isinstance(random_steps, int) or random_steps <= 0:
+                        errors.append(
+                            ValidationError(
+                                "Random steps must be a positive integer",
+                                "/conversation/goal_style/random_steps",
+                            )
+                        )
+                    elif random_steps > 20:
+                        errors.append(
+                            ValidationError(
+                                "Random steps cannot exceed 20",
+                                "/conversation/goal_style/random_steps",
+                            )
+                        )
+
+                # Validate all_answered
+                if "all_answered" in goal_style:
+                    all_answered = goal_style["all_answered"]
+
+                    # all_answered can be boolean or dictionary
+                    if isinstance(all_answered, bool):
+                        # Boolean value is fine
+                        pass
+                    elif isinstance(all_answered, dict):
+                        # Validate export field if present, is optional
+                        if "export" in all_answered and not isinstance(
+                            all_answered["export"], bool
+                        ):
+                            errors.append(
+                                ValidationError(
+                                    "Export field must be a boolean",
+                                    "/conversation/goal_style/all_answered/export",
+                                )
+                            )
+
+                        # Validate limit field if present
+                        if "limit" in all_answered:
+                            limit = all_answered["limit"]
+                            if not isinstance(limit, int) or limit <= 0:
+                                errors.append(
+                                    ValidationError(
+                                        "Limit must be a positive integer",
+                                        "/conversation/goal_style/all_answered/limit",
+                                    )
+                                )
+                    else:
+                        errors.append(
+                            ValidationError(
+                                "all_answered must be a boolean or a dictionary",
+                                "/conversation/goal_style/all_answered",
+                            )
+                        )
+
+                # Validate max_cost (per conversation cost limit), optional
+                if "max_cost" in goal_style:
+                    cost = goal_style["max_cost"]
+                    if not isinstance(cost, (int, float)) or cost <= 0:
+                        errors.append(
+                            ValidationError(
+                                "Goal style max_cost must be a positive number",
+                                "/conversation/goal_style/max_cost",
+                            )
+                        )
+            else:
+                errors.append(
+                    ValidationError(
+                        "Goal style must be either 'default' or a dictionary",
+                        "/conversation/goal_style",
                     )
                 )
 
@@ -652,7 +816,11 @@ if __name__ == "__main__":
     conversation:
       number: 5
       max_cost: 10.0
-      goal_style: default
+      goal_style:
+        all_answered:
+          export: True
+          limit: 20
+        max_cost: 0.3
       interaction_style:
         - friendly
     """
