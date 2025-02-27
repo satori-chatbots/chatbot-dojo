@@ -164,12 +164,12 @@ export const completionsSchema = {
 
 export const requiredSchema = {
     // Define required fields
-    required: ["test_name", "llm", "user", "conversation"],
+    required: ["test_name", "user", "conversation"],
     // Define nested required fields
     nested: {
-        "llm": ["model", "temperature", "format"],
-        "llm.format": ["type"],
-        "user": ["language", "role", "context", "goals"],
+        // "llm": ["model", "temperature", "format"],
+        // "llm.format": ["type"],
+        "user": ["role", "context", "goals"],
         "chatbot": ["is_starter", "fallback", "output"],
         "conversation": ["number", "goal_style", "interaction_style"],
     }

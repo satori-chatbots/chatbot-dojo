@@ -15,15 +15,15 @@ class YamlValidator:
     def __init__(self):
         self.required_top_level = [
             "test_name",
-            "llm",
+            # "llm",
             "user",
             "conversation",
             "chatbot",
         ]
         self.required_nested = {
-            "llm": ["model", "temperature", "format"],
+            #"llm": ["model", "temperature", "format"],
             "llm.format": ["type"],
-            "user": ["language", "role", "context", "goals"],
+            "user": ["role", "context", "goals"],
             "chatbot": ["is_starter", "fallback", "output"],
             "conversation": ["number", "goal_style", "interaction_style"],
         }
