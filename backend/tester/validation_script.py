@@ -812,13 +812,21 @@ class YamlValidator:
             else:
                 for i, style in enumerate(interaction_style):
                     # Simple string style
-                    if style == "change language":
-                        errors.append(
-                            ValidationError(
-                                "'change language' must be a dictionary with a list of languages",
-                                f"/conversation/interaction_style/{i}",
+                    if isinstance(style, str):
+                        if style == "change language":
+                            errors.append(
+                                ValidationError(
+                                    "'change language' must be a dictionary with a list of languages",
+                                    f"/conversation/interaction_style/{i}",
+                                )
                             )
-                        )
+                        elif style not in self.valid_interaction_styles:
+                            errors.append(
+                                ValidationError(
+                                    f"Invalid interaction style: '{style}'. Must be one of: {', '.join(self.valid_interaction_styles)}",
+                                    f"/conversation/interaction_style/{i}",
+                                )
+                            )
 
                     # Complex dictionary style
                     elif isinstance(style, dict):
@@ -951,122 +959,48 @@ if __name__ == "__main__":
 
     # Example YAML content
     yaml_content = """
-# Template for a user profile
+test_name: "academic_helper"
 
-# Input the test name that you want, make sure that it is not in use by another test in the same project
-test_name: "sample_name"
-
-# LLM Configuration
 llm:
-  # Controls the randomness of the model (0.0 to 1.0)
   temperature: 0.8
-  # The model to use for the test
   model: gpt-4o-mini
-  format:
-    # text and speech are available
-    type: text
-    # if using speech, provide the path to the speech configuration file
-    # config: speech_configuration/speech_config.yml
+#  format:
+#    type: speech
 
-# User Configuration
 user:
-  # The language of the user
-  language: English
-  # Define the user's role/behavior
-  # e.g., customer ordering food, patient scheduling appointment
-  role: Define the user's role here
-  # A list of additional background information about the user
+  language: Spanish
+  role: you have to act as a student talking to a chatbot from a university web page
   context:
-    # Path to the personality file
-    - personality: personalities/conversational-user.yml
-    # You can as many additional prompts as you want
-    # e.g. your name is Jon Doe
-    - additional context 1
-    - additional context 2...
-
-  # Define the user's goals and variables
+    - your name is Jon Doe
   goals:
-    - "goal with a {{variable_name}}"
+    - What undergraduate studies are offered at the EPS?
+    - where are the regulations of the TFM
+    - to clarify any of the regulations in the provided information
 
-    # Define all the variables used in the goals
-    - variable_name:
-        function: forward()
-        type: string
-        data:
-        # Manual definition of values
-          - value1
-          - value2
-          - value3
-
-    # Add more variables as needed
-    # Example with numeric value and range:
-    - number_photo:
-        function: forward()
-        type: int
-        data:
-          step: 2
-          min: 1
-          max: 6
-
-# Chatbot Configuration
 chatbot:
-  # Set to True if the chatbot is the one starting the conversation
-  is_starter: Fals
-  # Fallback when the input was not understood
-  fallback: I'm sorry, I didn't understand that. Can you please rephrase?
-  # Variables to extract from the conversation
+  is_starter: False
+  fallback: Perdona, pero no te he entendido, ¿puedes repetirlo?
   output:
-    - output_name:
-        # Types: int, float, money, str, time, date
-        type: string
-        # A description of the variable
-        # This will be used by the LLM to extract the variable so try to be as descriptive as possible
-        description: Description of the variable
+    - order_id:
+        type: str
+        description: the link to the TFM regulations
 
-    # Add more output variables as needed
-
-# Conversation Configuration
 conversation:
-  # Can be: number, sample(0.0 to 1.0), or all_combinations
-  # sample(0.2) means that the number of conversations will be 20% of the total possible combinations
-  number: 2
-  # OPTIONAL, defines the maximum cost in dollars of the total execution
-  max_cost: 1
-  # Goal style is how to decide when a conversation is finished
+  number: 1
+#  max_cost: 1
   goal_style:
-    # Can use: steps (number), random_steps, all_answered, or default
-    # - one step is one user input and one chatbot response
-    # - random steps: the number of steps will be random between 1 and the specified number e.g. random_steps: 35
-    # - all_answered: the conversation will continue until all user goals are met, a limit can be set
-    all_answered:
-      # The maximum number of steps before the conversation ends
-      limit: 10
-
-    # OPTIONAL, the maximum cost in dollars of the conversation
-    max_cost: 0.1
-
-  # Conversation behavior modifiers
+    steps: 3
+#    max_cost: 0.0001
   interaction_style:
-    # Can use:
-    # - long phrase
-    # - change your mind
-    # - change language: must provide a list nested
-    # - make spelling mistakes
-    # - single question
-    # - all questions
-
-    # If we want to select a random interaction style from a list that we provide we can use "random"
-    - random:
-        - make spelling mistakes
-        - all questions
-        - long phrase
-        - change language:
-            - italian
-            - portuguese
-            - chinese
-
-    # We can also use default to carry out the conversation without any modifications
-
+    - default
+#    - random:
+#      - make spelling mistakes
+#      - all questions
+#      - long phrases
+#      - change language:
+#          - italian
+#          - portuguese
+#          - chinese
     """
     print("Starting...")
 
