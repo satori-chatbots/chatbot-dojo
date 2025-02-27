@@ -408,13 +408,14 @@ class YamlValidator:
                                             )
                                         )
                                     # Check that min is smaller than max
-                                    if data["min"] >= data["max"]:
-                                        errors.append(
-                                            ValidationError(
-                                                "Minimum value must be smaller than maximum value",
-                                                f"/user/goals/{i}/{var_name}/data",
+                                    if "min" in data and "max" in data and data["min"] is not None and data["max"] is not None:
+                                        if data["min"] >= data["max"]:
+                                            errors.append(
+                                                ValidationError(
+                                                    "Minimum value must be smaller than maximum value",
+                                                    f"/user/goals/{i}/{var_name}/data",
+                                                )
                                             )
-                                        )
 
                                     # Check that either step or linspace is provided for float
                                     if (
@@ -1010,7 +1011,7 @@ user:
 # Chatbot Configuration
 chatbot:
   # Set to True if the chatbot is the one starting the conversation
-  is_starter: False
+  is_starter: Fals
   # Fallback when the input was not understood
   fallback: I'm sorry, I didn't understand that. Can you please rephrase?
   # Variables to extract from the conversation
