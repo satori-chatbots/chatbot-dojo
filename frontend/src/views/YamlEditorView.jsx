@@ -45,6 +45,7 @@ function YamlEditor() {
     const navigate = useNavigate();
     const [selectedProject] = useSelectedProject();
     const { showToast } = useMyCustomToast();
+    const [serverValidationErrors, setServerValidationErrors] = useState(null);
 
     const zoomIn = () => setFontSize((prev) => Math.min(prev + 2, 24))
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
@@ -129,16 +130,13 @@ function YamlEditor() {
 
     const handleSave = async () => {
         try {
+            setServerValidationErrors(null);
+
             // First, validate YAML on server
             const validationResult = await validateYamlOnServer(editorContent);
 
             if (!validationResult.valid) {
-                // Show validation errors from server
-                const errorMessages = validationResult.errors.map(err =>
-                    `${err.message}${err.line ? ` at line ${err.line}` : ''}${err.path ? ` (${err.path})` : ''}`
-                ).join('\n');
-
-                showToast('error', 'YAML validation failed:\n' + errorMessages);
+                setServerValidationErrors(validationResult.errors);
                 return;
             }
 
@@ -370,6 +368,32 @@ function YamlEditor() {
                             </Button>
                         </div>
                     </div>
+                    {serverValidationErrors && (
+                        <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
+                            <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 flex items-center">
+                                <AlertCircle className="mr-2" />
+                                Server Validation Failed
+                            </h3>
+                            <ul className="list-disc pl-5 mt-2 space-y-1 max-h-60 overflow-y-auto">
+                                {serverValidationErrors.map((err, idx) => (
+                                    <li key={idx} className="text-red-600 dark:text-red-300">
+                                        {err.message}
+                                        {err.line && <span className="font-mono"> at line {err.line}</span>}
+                                        {err.path && <span className="font-mono text-red-500 dark:text-red-400"> ({err.path})</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-3 flex justify-end">
+                                <Button
+                                    color="danger"
+                                    variant="light"
+                                    onPress={() => setServerValidationErrors(null)}
+                                >
+                                    Dismiss
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <div className="w-full lg:w-1/3">
                     <Tabs defaultValue="profile" className="space-y-4">
