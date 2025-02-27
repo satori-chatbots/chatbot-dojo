@@ -313,10 +313,11 @@ function YamlEditor() {
         // Define nested required fields
         nested: {
             "llm": ["model", "temperature", "format"],
+            "llm.format": ["type"],
             "user": ["language", "role", "context", "goals"],
             "chatbot": ["is_starter", "fallback", "output"],
             "conversation": ["number", "max_cost", "goal_style", "interaction_style"],
-        }
+            }
     };
 
     // Function to get the current context of the cursor
