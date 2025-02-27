@@ -1,7 +1,7 @@
 # Template for a user profile
 
 # Input the test name that you want, make sure that it is not in use by another test in the same project
-test_name: "sample_name"
+test_name: "test"
 
 # LLM Configuration
 llm:
@@ -41,28 +41,28 @@ user:
 
     # Define all the variables used in the goals
     - variable_name:
-      # Function types: default(), random(), random(n), random(rand), another(), forward()
-      function: forward()
-      # The type of the variable (string, int, float)
-      type: string
-      # Data can be a list of values or a range
-      data:
-        # Manual definition of values
-        - value1
-        - value2
-        - value3...
-        # Alternatively, you can use any(prompt) to create a variable with the LLM
-        - any()
+        # Function types: default(), random(), random(n), random(rand), another(), forward()
+        function: forward()
+        # The type of the variable (string, int, float)
+        type: string
+        # Data can be a list of values or a range
+        data:
+          # Manual definition of values
+          - value1
+          - value2
+          - value3...
+          # Alternatively, you can use any(prompt) to create a variable with the LLM
+          - any(prompt)
 
     # Add more variables as needed
     # Example with numeric value and range:
     - number_photo:
-      function: forward()
-      type: int
-      data:
-        step: 2
-        min: 1
-        max: 6
+        function: forward()
+        type: int
+        data:
+          step: 2
+          min: 1
+          max: 6
 
 # Chatbot Configuration
 chatbot:
@@ -115,7 +115,7 @@ conversation:
     - random:
         - make spelling mistakes
         - all questions
-        - long phrases
+        - long phrase
         - change language:
             - italian
             - portuguese

@@ -65,15 +65,41 @@ class YamlValidator:
         # YAML usually works without "" but if there are braces it needs them
         lines = yaml_content.split("\n")
         for i, line in enumerate(lines):
-            if "{{" in line and "}}" in line and not ('"{{' in line or "'{{" in line):
-                # This line has curly braces but they're not quoted
-                errors.append(
-                    ValidationError(
-                        "Variables with curly braces {{}} must be quoted in YAML",
-                        f"/line/{i + 1}",
-                        i + 1,
-                    )
+            # Skip empty lines
+            if not line.strip():
+                continue
+
+            # Skip comment-only lines or remove comment portion of the line
+            if line.strip().startswith("#"):
+                continue
+
+            # Remove comment portion if it exists
+            if "#" in line:
+                line = line.split("#", 1)[0]
+
+            # Now check if remaining line contains braces
+            if "{{" in line and "}}" in line:
+                # Check if the line is inside a proper YAML string (quoted or using |- block style)
+                line_stripped = line.strip()
+                is_quoted = (
+                    (line_stripped.startswith('"') and line_stripped.endswith('"'))
+                    or (line_stripped.startswith("'") and line_stripped.endswith("'"))
+                    or
+                    # These handle common YAML block style indicators
+                    line_stripped.endswith(":")  # Key in a mapping
+                    or line_stripped.startswith("-")  # List item
+                    or ":" in line_stripped  # Key-value inside a mapping
                 )
+
+                # If not properly quoted, it's an error
+                if not is_quoted:
+                    errors.append(
+                        ValidationError(
+                            "Variables with curly braces {{}} must be quoted in YAML",
+                            f"/line/{i + 1}",
+                            i + 1,
+                        )
+                    )
 
         if errors:
             return errors
@@ -924,58 +950,122 @@ if __name__ == "__main__":
 
     # Example YAML content
     yaml_content = """
-    test_name: Example Test
-    llm:
-      temperature: 0.7
-      model: gpt-4o-mini
-      format:
-        type: text
-    user:
-      language: English
-      role: customer
-      context:
-        - yapper
-      goals:
-        - "{{cans}} cans of {{drink}}"
+# Template for a user profile
 
-        - cans:
-            function: forward(drink)
-            type: int
-            data:
-              min: 1
-              max: 3
-              step: 1
+# Input the test name that you want, make sure that it is not in use by another test in the same project
+test_name: "sample_name"
 
-        - drink:
-            function: forward()
-            type: string
-            data:
-              - any(drink)
+# LLM Configuration
+llm:
+  # Controls the randomness of the model (0.0 to 1.0)
+  temperature: 0.8
+  # The model to use for the test
+  model: gpt-4o-mini
+  format:
+    # text and speech are available
+    type: text
+    # if using speech, provide the path to the speech configuration file
+    # config: speech_configuration/speech_config.yml
 
-    chatbot:
-      is_starter: True
-      fallback: I don't understand
-      output:
-        - price:
-            type: money
-            description: The final price of the pizza order
-        - time:
-            type: time
-            description: how long is going to take the pizza to be ready
-        - order_id:
-            type: str
-            description: my order ID
-    conversation:
-      number: 5
-      max_cost: 10.0
-      goal_style:
-        all_answered:
-          export: True
-          limit: 20
-        max_cost: 0.3
-      interaction_style:
-        - random:
-          - change language: espanol
+# User Configuration
+user:
+  # The language of the user
+  language: English
+  # Define the user's role/behavior
+  # e.g., customer ordering food, patient scheduling appointment
+  role: Define the user's role here
+  # A list of additional background information about the user
+  context:
+    # Path to the personality file
+    - personality: personalities/conversational-user.yml
+    # You can as many additional prompts as you want
+    # e.g. your name is Jon Doe
+    - additional context 1
+    - additional context 2...
+
+  # Define the user's goals and variables
+  goals:
+    - "goal with a {{variable_name}}"
+
+    # Define all the variables used in the goals
+    - variable_name:
+        function: forward()
+        type: string
+        data:
+        # Manual definition of values
+          - value1
+          - value2
+          - value3
+
+    # Add more variables as needed
+    # Example with numeric value and range:
+    - number_photo:
+        function: forward()
+        type: int
+        data:
+          step: 2
+          min: 1
+          max: 6
+
+# Chatbot Configuration
+chatbot:
+  # Set to True if the chatbot is the one starting the conversation
+  is_starter: False
+  # Fallback when the input was not understood
+  fallback: I'm sorry, I didn't understand that. Can you please rephrase?
+  # Variables to extract from the conversation
+  output:
+    - output_name:
+        # Types: int, float, money, str, time, date
+        type: string
+        # A description of the variable
+        # This will be used by the LLM to extract the variable so try to be as descriptive as possible
+        description: Description of the variable
+
+    # Add more output variables as needed
+
+# Conversation Configuration
+conversation:
+  # Can be: number, sample(0.0 to 1.0), or all_combinations
+  # sample(0.2) means that the number of conversations will be 20% of the total possible combinations
+  number: 2
+  # OPTIONAL, defines the maximum cost in dollars of the total execution
+  max_cost: 1
+  # Goal style is how to decide when a conversation is finished
+  goal_style:
+    # Can use: steps (number), random_steps, all_answered, or default
+    # - one step is one user input and one chatbot response
+    # - random steps: the number of steps will be random between 1 and the specified number e.g. random_steps: 35
+    # - all_answered: the conversation will continue until all user goals are met, a limit can be set
+    all_answered:
+      # The maximum number of steps before the conversation ends
+      limit: 10
+
+    # OPTIONAL, the maximum cost in dollars of the conversation
+    max_cost: 0.1
+
+  # Conversation behavior modifiers
+  interaction_style:
+    # Can use:
+    # - long phrase
+    # - change your mind
+    # - change language: must provide a list nested
+    # - make spelling mistakes
+    # - single question
+    # - all questions
+
+    # If we want to select a random interaction style from a list that we provide we can use "random"
+    - random:
+        - make spelling mistakes
+        - all questions
+        - long phrase
+        - change language:
+            - italian
+            - portuguese
+            - chinese
+
+    # We can also use default to carry out the conversation without any modifications
+
     """
     print("Starting...")
 
