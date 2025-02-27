@@ -916,7 +916,7 @@ class ExecuteSelectedAPIView(APIView):
 
         # Prepare script paths
         base_dir = os.path.dirname(settings.BASE_DIR)
-        script_path = os.path.join(base_dir, "user-simulator", "src", "autotest.py")
+        script_path = os.path.join(base_dir, "user-simulator", "src", "sensei_chat.py")
 
         # Load OPENAI_API_KEY from keys.properties
         # check_keys(["OPENAI_API_KEY"])
