@@ -46,6 +46,14 @@ class YamlValidator:
             "max_cost",
             "default",
         ]
+        self.valid_interaction_styles = [
+            "long phrase",
+            "change your mind",
+            "make spelling mistakes",
+            "single question",
+            "all questions",
+            "default",
+        ]
 
     def validate(self, yaml_content: str) -> List[ValidationError]:
         """Validate YAML content against schema rules.
@@ -763,6 +771,150 @@ class YamlValidator:
                     )
                 )
 
+        # Validate interaction_style
+        if "interaction_style" in conversation:
+            interaction_style = conversation["interaction_style"]
+
+            if not isinstance(interaction_style, list):
+                errors.append(
+                    ValidationError(
+                        "Interaction style must be a list",
+                        "/conversation/interaction_style",
+                    )
+                )
+            else:
+                for i, style in enumerate(interaction_style):
+                    # Simple string style
+                    if style == "change language":
+                        errors.append(
+                            ValidationError(
+                                "'change language' must be a dictionary with a list of languages",
+                                f"/conversation/interaction_style/{i}",
+                            )
+                        )
+
+                    # Complex dictionary style
+                    elif isinstance(style, dict):
+                        if len(style) != 1:
+                            errors.append(
+                                ValidationError(
+                                    "Each complex style must have exactly one key",
+                                    f"/conversation/interaction_style/{i}",
+                                )
+                            )
+                            continue
+
+                        style_type = list(style.keys())[0]
+                        style_value = style[style_type]
+
+                        # Handle "random" style - must be a list of other styles
+                        if style_type == "random":
+                            if not isinstance(style_value, list):
+                                errors.append(
+                                    ValidationError(
+                                        "Random style must be a list of other styles",
+                                        f"/conversation/interaction_style/{i}/random",
+                                    )
+                                )
+                                continue
+
+                            # Check each random style option
+                            for j, random_style in enumerate(style_value):
+                                if isinstance(random_style, str):
+                                    if random_style == "change language":
+                                        errors.append(
+                                            ValidationError(
+                                                "'change language' must be a dictionary with a list of languages",
+                                                f"/conversation/interaction_style/{i}/random/{j}",
+                                            )
+                                        )
+                                    elif (
+                                        random_style
+                                        not in self.valid_interaction_styles
+                                    ):
+                                        errors.append(
+                                            ValidationError(
+                                                f"Invalid style in random list: '{random_style}'",
+                                                f"/conversation/interaction_style/{i}/random/{j}",
+                                            )
+                                        )
+                                elif isinstance(random_style, dict):
+                                    # Handle nested styles within random list
+                                    if (
+                                        len(random_style) != 1
+                                        or "change language" not in random_style
+                                    ):
+                                        errors.append(
+                                            ValidationError(
+                                                "Only 'change language' can be a nested dictionary in random list",
+                                                f"/conversation/interaction_style/{i}/random/{j}",
+                                            )
+                                        )
+                                    else:
+                                        lang_list = random_style["change language"]
+                                        if not isinstance(lang_list, list):
+                                            errors.append(
+                                                ValidationError(
+                                                    "Change language must specify a list of languages",
+                                                    f"/conversation/interaction_style/{i}/random/{j}/change language",
+                                                )
+                                            )
+                                        else:
+                                            # Just check that each item is a string
+                                            for k, lang in enumerate(lang_list):
+                                                if not isinstance(lang, str):
+                                                    errors.append(
+                                                        ValidationError(
+                                                            f"Language must be a string, got {type(lang).__name__}",
+                                                            f"/conversation/interaction_style/{i}/random/{j}/change language/{k}",
+                                                        )
+                                                    )
+                                else:
+                                    errors.append(
+                                        ValidationError(
+                                            "Random style items must be strings or 'change language' dictionary",
+                                            f"/conversation/interaction_style/{i}/random/{j}",
+                                        )
+                                    )
+
+                        # Handle "change language" style - must be a list of languages
+                        elif style_type == "change language":
+                            if not isinstance(style_value, list):
+                                errors.append(
+                                    ValidationError(
+                                        "Change language must be a list of languages",
+                                        f"/conversation/interaction_style/{i}/change language",
+                                    )
+                                )
+                                continue
+
+                            # Check each language is a string (no validation of specific languages)
+                            for j, language in enumerate(style_value):
+                                if not isinstance(language, str):
+                                    errors.append(
+                                        ValidationError(
+                                            f"Language must be a string, got {type(language).__name__}",
+                                            f"/conversation/interaction_style/{i}/change language/{j}",
+                                        )
+                                    )
+
+                        # Any other complex style is invalid
+                        else:
+                            errors.append(
+                                ValidationError(
+                                    f"Invalid complex style: '{style_type}'. Must be 'random' or 'change language'",
+                                    f"/conversation/interaction_style/{i}",
+                                )
+                            )
+
+                    # Not a string or dictionary
+                    else:
+                        errors.append(
+                            ValidationError(
+                                f"Interaction style item must be a string or dictionary, got {type(style).__name__}",
+                                f"/conversation/interaction_style/{i}",
+                            )
+                        )
         return errors
 
 
@@ -822,7 +974,8 @@ if __name__ == "__main__":
           limit: 20
         max_cost: 0.3
       interaction_style:
-        - friendly
+        - random:
+          - change language: espanol
     """
     print("Starting...")
 
