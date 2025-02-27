@@ -30,6 +30,8 @@ class YamlValidator:
         self.valid_formats = ["text", "speech"]
         self.valid_goal_functions = ["default()", "random()", "another()", "forward()"]
         self.valid_variable_types = ["string", "float", "int"]
+        self.valid_output_types = ["int", "float", "money", "str", "string", "time", "date"]
+
 
     def validate(self, yaml_content: str) -> List[ValidationError]:
         """Validate YAML content against schema rules.
@@ -470,21 +472,105 @@ class YamlValidator:
         """Validate chatbot section configuration."""
         errors = []
 
-        if "output" in chatbot and isinstance(chatbot["output"], list):
-            for i, output in enumerate(chatbot["output"]):
-                if isinstance(output, dict):
-                    if "type" not in output:
+        # is_start can only be true or false
+        if "is_starter" in chatbot:
+            is_starter = chatbot["is_starter"]
+            if not isinstance(is_starter, bool):
+                errors.append(
+                    ValidationError(
+                        "is_starter must be a boolean (true or false)", "/chatbot/is_starter"
+                    )
+                )
+
+        # fallback can only be string
+        if "fallback" in chatbot:
+            fallback = chatbot["fallback"]
+            if not isinstance(fallback, str):
+                errors.append(
+                    ValidationError(
+                        "Fallback must be a string", "/chatbot/fallback"
+                    )
+                )
+
+
+
+        if "output" in chatbot:
+            if not isinstance(chatbot["output"], list):
+                errors.append(
+                    ValidationError(
+                        "Output must be a list", "/chatbot/output"
+                    )
+                )
+            else:
+                for i, output_item in enumerate(chatbot["output"]):
+                    # Each output item should be a dictionary with a single key (output name)
+                    if not isinstance(output_item, dict):
                         errors.append(
                             ValidationError(
-                                "Output must have a type", f"/chatbot/output/{i}"
+                                "Each output item must be a dictionary", f"/chatbot/output/{i}"
                             )
                         )
-                    if "description" not in output:
+                        continue
+
+                    # Check if output item has exactly one key (output name)
+                    if len(output_item) != 1:
                         errors.append(
                             ValidationError(
-                                "Output must have a description", f"/chatbot/output/{i}"
+                                "Each output item must have exactly one key (the output name)",
+                                f"/chatbot/output/{i}"
                             )
                         )
+                        continue
+
+                    output_name = list(output_item.keys())[0]
+                    output_def = output_item[output_name]
+
+                    # Check that output definition is a dictionary
+                    if not isinstance(output_def, dict):
+                        errors.append(
+                            ValidationError(
+                                f"Output definition for '{output_name}' must be a dictionary",
+                                f"/chatbot/output/{i}/{output_name}"
+                            )
+                        )
+                        continue
+
+                    # Check required fields: type and description
+                    if "type" not in output_def:
+                        errors.append(
+                            ValidationError(
+                                f"Output '{output_name}' must have a type",
+                                f"/chatbot/output/{i}/{output_name}"
+                            )
+                        )
+
+                    if "description" not in output_def:
+                        errors.append(
+                            ValidationError(
+                                f"Output '{output_name}' must have a description",
+                                f"/chatbot/output/{i}/{output_name}"
+                            )
+                        )
+
+                    # Validate output type
+                    if "type" in output_def and output_def["type"] not in self.valid_output_types:
+                        errors.append(
+                            ValidationError(
+                                f"Invalid output type '{output_def['type']}'. Must be one of: {', '.join(self.valid_output_types)}",
+                                f"/chatbot/output/{i}/{output_name}/type"
+                            )
+                        )
+
+                    # Validate description is a non-empty string
+                    if "description" in output_def:
+                        desc = output_def["description"]
+                        if not isinstance(desc, str) or desc.strip() == "":
+                            errors.append(
+                                ValidationError(
+                                    "Description must be a non-empty string",
+                                    f"/chatbot/output/{i}/{output_name}/description"
+                                )
+                            )
 
         return errors
 
@@ -548,14 +634,21 @@ if __name__ == "__main__":
             function: forward()
             type: string
             data:
-              - any()
+              - any(drink)
 
     chatbot:
-      is_starter: true
+      is_starter: True
       fallback: I don't understand
       output:
-        - type: string
-          description: User response
+        - price:
+            type: money
+            description: The final price of the pizza order
+        - time:
+            type: time
+            description: how long is going to take the pizza to be ready
+        - order_id:
+            type: str
+            description: my order ID
     conversation:
       number: 5
       max_cost: 10.0
