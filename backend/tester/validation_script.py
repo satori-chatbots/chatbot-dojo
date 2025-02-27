@@ -357,6 +357,14 @@ class YamlValidator:
                                     if param == "rand" or param.isdigit():
                                         valid_function = True
 
+                                # CHeck for another() with parameters
+                                elif func.startswith("another(") and func.endswith(")"):
+                                    # Extract the parameter
+                                    another_length = len("another(")
+                                    param = func[another_length:-1]
+                                    if param.isdigit():
+                                        valid_function = True
+
                                 # Check for forward with nested variable
                                 elif func.startswith("forward(") and func.endswith(")"):
                                     nested_length = len("forward(")
