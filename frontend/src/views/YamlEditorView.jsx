@@ -22,13 +22,14 @@ import { documentationSections, yamlBasicsSections } from '../data/yamlDocumenta
 import { autocompletion } from '@codemirror/autocomplete';
 import { keymap } from '@codemirror/view';
 import { defaultKeymap, insertNewlineAndIndent } from '@codemirror/commands';
-import { linter } from '@codemirror/lint';
+import { linter, lintGutter } from '@codemirror/lint';
 import { isEqual } from 'lodash';
 import {
     completionsSchema,
     requiredSchema,
     getCursorContext,
     findSimilarKeywords,
+    createYamlTypoLinter
 } from '../data/yamlSchema';
 
 
@@ -49,42 +50,7 @@ function YamlEditor() {
     const zoomOut = () => setFontSize((prev) => Math.max(prev - 2, 8))
 
     // Create a YAML linter for typo detection
-    const yamlTypoLinter = linter((view) => {
-        const diagnostics = [];
-        const text = view.state.doc.toString();
-        const lines = text.split('\n');
-
-        lines.forEach((line, lineIndex) => {
-            const keyMatch = line.match(/^\s*([a-zA-Z_]+[a-zA-Z0-9_]*):/);
-            if (keyMatch) {
-                const key = keyMatch[1];
-                const startPos = line.indexOf(key);
-                const from = view.state.doc.line(lineIndex + 1).from + startPos;
-                const to = from + key.length;
-
-                const similarKeywords = findSimilarKeywords(key);
-                if (similarKeywords.length > 0) {
-                    diagnostics.push({
-                        from,
-                        to,
-                        severity: "warning",
-                        message: `Possible typo: did you mean ${similarKeywords.join(' or ')}?`,
-                        actions: similarKeywords.map(keyword => ({
-                            name: `Change to '${keyword}'`,
-                            apply(view, from, to) {
-                                view.dispatch({
-                                    changes: { from, to, insert: keyword }
-                                });
-                            }
-                        }))
-                    });
-                }
-            }
-        });
-
-        return diagnostics;
-    });
-
+    const yamlTypoLinter = linter(createYamlTypoLinter());
 
     const customKeymap = keymap.of([{
         key: "Enter",
@@ -357,7 +323,8 @@ function YamlEditor() {
                                 EditorView.lineWrapping,
                                 autocompletion({ override: [myCompletions] }),
                                 yamlTypoLinter,
-                                customKeymap  // Add this
+                                lintGutter(),
+                                customKeymap
                             ]}
                             onChange={handleEditorChange}
                             theme={isDark ? materialDark : tomorrow}

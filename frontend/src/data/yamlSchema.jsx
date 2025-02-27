@@ -203,12 +203,19 @@ export function levenshteinDistance(a, b) {
 
 // Function to get similar valid keywords
 export function findSimilarKeywords(word) {
-    // Dont do it for 3 or less chars
+    // Don't do it for 3 or less chars
     if (word.length <= 3) return [];
+
     // Collect all keywords from the schema
     const allKeywords = Object.values(completionsSchema)
         .flat()
         .map(item => item.label);
+
+    // If the word is an exact match with any keyword, return empty array
+    // This is because we have both step and steps and they get confused
+    if (allKeywords.includes(word)) {
+        return [];
+    }
 
     // Find similar keywords (with distance ≤ 2)
     const similarKeywords = allKeywords.filter(keyword => {
@@ -217,6 +224,57 @@ export function findSimilarKeywords(word) {
     });
 
     return similarKeywords;
+}
+
+export function createYamlTypoLinter() {
+    return (view) => {
+        const diagnostics = [];
+        const text = view.state.doc.toString();
+        const lines = text.split('\n');
+
+        lines.forEach((line, lineIndex) => {
+            // Check both regular keys and keys in list items
+            // Pattern 1: Regular keys - ^\s*([a-zA-Z_][a-zA-Z0-9_]*):
+            // Pattern 2: List item keys - ^\s*-\s+([a-zA-Z_][a-zA-Z0-9_]*):
+            const regularKeyMatch = line.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*):/);
+            const listItemKeyMatch = line.match(/^\s*-\s+([a-zA-Z_][a-zA-Z0-9_]*):/);
+
+            let key, startPos;
+
+            if (regularKeyMatch) {
+                key = regularKeyMatch[1];
+                startPos = line.indexOf(key);
+            } else if (listItemKeyMatch) {
+                key = listItemKeyMatch[1];
+                startPos = line.indexOf(key);
+            } else {
+                return; // No key found in this line
+            }
+
+            const from = view.state.doc.line(lineIndex + 1).from + startPos;
+            const to = from + key.length;
+
+            const similarKeywords = findSimilarKeywords(key);
+            if (similarKeywords.length > 0) {
+                diagnostics.push({
+                    from,
+                    to,
+                    severity: "warning",
+                    message: `Possible typo: did you mean ${similarKeywords.join(' or ')}?`,
+                    actions: similarKeywords.map(keyword => ({
+                        name: `Change to '${keyword}'`,
+                        apply(view, from, to) {
+                            view.dispatch({
+                                changes: { from, to, insert: keyword }
+                            });
+                        }
+                    }))
+                });
+            }
+        });
+
+        return diagnostics;
+    };
 }
 
 // Function to get the current context of the cursor
