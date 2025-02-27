@@ -22,7 +22,8 @@ export const ENDPOINTS = {
     LOGIN: '/login/',
     APIKEYS: '/api-keys/',
     UPDATE_PROFILE: '/update-profile/',
-    FETCH_FILE: '/fetch-file/'
+    FETCH_FILE: '/fetch-file/',
+    VALIDATE_YAML: '/validate-yaml/'
 };
 
 export default API_BASE_URL;

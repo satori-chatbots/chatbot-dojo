@@ -53,6 +53,11 @@ urlpatterns = [
         api.fetch_file_content,
         name="fetch-file-content",
     ),
+    path(
+        "validate-yaml/",
+        api.validate_yaml,
+        name="validate-yaml",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

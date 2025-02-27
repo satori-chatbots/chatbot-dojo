@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { yaml } from '@codemirror/lang-yaml';
-import { fetchFile, updateFile, createFile, fetchTemplate } from '../api/fileApi';
+import { fetchFile, updateFile, createFile, fetchTemplate, validateYamlOnServer } from '../api/fileApi';
 import {
     AlertCircle,
     CheckCircle2,
@@ -129,6 +129,19 @@ function YamlEditor() {
 
     const handleSave = async () => {
         try {
+            // First, validate YAML on server
+            const validationResult = await validateYamlOnServer(editorContent);
+
+            if (!validationResult.valid) {
+                // Show validation errors from server
+                const errorMessages = validationResult.errors.map(err =>
+                    `${err.message}${err.line ? ` at line ${err.line}` : ''}${err.path ? ` (${err.path})` : ''}`
+                ).join('\n');
+
+                showToast('error', 'YAML validation failed:\n' + errorMessages);
+                return;
+            }
+
             if (fileId) {
                 // Update existing file
                 const response = await updateFile(fileId, editorContent);

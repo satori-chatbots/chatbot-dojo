@@ -97,3 +97,22 @@ export const fetchTemplate = async () => {
         throw error;
     }
 };
+
+export const validateYamlOnServer = async (content) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.VALIDATE_YAML}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content }),
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error validating YAML on server:', error);
+        return {
+            valid: false,
+            errors: [{ message: 'Failed to validate YAML on server' }]
+        };
+    }
+};

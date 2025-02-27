@@ -41,7 +41,7 @@ import os
 from .utils import check_keys
 import yaml
 from django.shortcuts import get_object_or_404
-from django.db import close_old_connections, transaction
+from django.db import transaction
 import threading
 import logging
 import psutil
@@ -51,9 +51,8 @@ from django.contrib.auth import authenticate
 from rest_framework.permissions import BasePermission
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.shortcuts import get_object_or_404
-from django.core.exceptions import PermissionDenied
 from django.db.models import OuterRef, Subquery, Sum, Q
+from .validation_script import YamlValidator
 
 # We need this one since it already has the fernet key
 from .models import cipher_suite
@@ -557,6 +556,22 @@ class ProjectViewSet(viewsets.ModelViewSet):
 # - USER PROFILES - YAMLS - #
 # ------------------------- #
 
+@api_view(['POST'])
+def validate_yaml(request):
+    """Validate YAML content using the YamlValidator class."""
+    yaml_content = request.data.get('content')
+    if not yaml_content:
+        return Response({'error': 'No content provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    validator = YamlValidator()
+    validation_errors = validator.validate(yaml_content)
+
+    if validation_errors:
+        formatted_errors = [{'path': error.path, 'message': error.message, 'line': error.line}
+                          for error in validation_errors]
+        return Response({'valid': False, 'errors': formatted_errors}, status=status.HTTP_200_OK)
+
+    return Response({'valid': True}, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
 def fetch_file_content(request, file_id):
