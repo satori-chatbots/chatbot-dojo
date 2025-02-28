@@ -556,22 +556,30 @@ class ProjectViewSet(viewsets.ModelViewSet):
 # - USER PROFILES - YAMLS - #
 # ------------------------- #
 
-@api_view(['POST'])
+
+@api_view(["POST"])
 def validate_yaml(request):
     """Validate YAML content using the YamlValidator class."""
-    yaml_content = request.data.get('content')
+    yaml_content = request.data.get("content")
     if not yaml_content:
-        return Response({'error': 'No content provided'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     validator = YamlValidator()
     validation_errors = validator.validate(yaml_content)
 
     if validation_errors:
-        formatted_errors = [{'path': error.path, 'message': error.message, 'line': error.line}
-                          for error in validation_errors]
-        return Response({'valid': False, 'errors': formatted_errors}, status=status.HTTP_200_OK)
+        formatted_errors = [
+            {"path": error.path, "message": error.message, "line": error.line}
+            for error in validation_errors
+        ]
+        return Response(
+            {"valid": False, "errors": formatted_errors}, status=status.HTTP_200_OK
+        )
 
-    return Response({'valid': True}, status=status.HTTP_200_OK)
+    return Response({"valid": True}, status=status.HTTP_200_OK)
+
 
 @api_view(["GET"])
 def fetch_file_content(request, file_id):
@@ -1210,23 +1218,33 @@ def run_asyn_test_execution(
 
                 try:
                     executed_conversations = 0
-                    for profile in local_test_case.profiles_names:
-                        profile_dir = os.path.join(conversations_dir, profile)
-                        if os.path.exists(profile_dir):
-                            subdirs = os.listdir(profile_dir)
-                            if subdirs:
-                                # Assume the first subdirectory is the one we need
-                                date_hour_dir = os.path.join(profile_dir, subdirs[0])
-                                executed_conversations += len(os.listdir(date_hour_dir))
+                    # NEW PATH: conversations are now in conversation_outputs/{profile}
+                    conversation_outputs_dir = os.path.join(
+                        conversations_dir, "conversation_outputs"
+                    )
+                    if os.path.exists(conversation_outputs_dir):
+                        for profile in local_test_case.profiles_names:
+                            profile_dir = os.path.join(
+                                conversation_outputs_dir, profile
+                            )
+                            if os.path.exists(profile_dir):
+                                subdirs = os.listdir(profile_dir)
+                                if subdirs:
+                                    # Assume the first subdirectory is the one we need
+                                    date_hour_dir = os.path.join(
+                                        profile_dir, subdirs[0]
+                                    )
+                                    executed_conversations += len(
+                                        os.listdir(date_hour_dir)
+                                    )
 
-                    local_test_case.executed_conversations = executed_conversations
-                    local_test_case.save()
-                    final_conversation_count[0] = executed_conversations
+                        local_test_case.executed_conversations = executed_conversations
+                        local_test_case.save()
+                        final_conversation_count[0] = executed_conversations
 
-                    if executed_conversations >= total_conversations:
-                        print("All conversations found. Exiting monitoring.")
-                        break
-
+                        if executed_conversations >= total_conversations:
+                            print("All conversations found. Exiting monitoring.")
+                            break
                 except Exception as e:
                     print(f"Error in monitor_conversations: {e}")
                     break
@@ -1291,7 +1309,8 @@ def run_asyn_test_execution(
         print("COMPLETED")
 
         # Continue with report processing only if we’re not stopped
-        report_path = os.path.join(extract_dir, "__report__")
+        # NEW PATH: reports are now in reports/__stats_reports__
+        report_path = os.path.join(extract_dir, "reports", "__stats_reports__")
         if not os.path.exists(report_path):
             test_case.status = "ERROR"
             test_case.result += "\nError accessing report directory"
@@ -1412,22 +1431,29 @@ def run_asyn_test_execution(
             # It is the {project_id}/{profile_report_name}/{a date + hour}
             conversations_dir = os.path.join(extract_dir, profile_report_name)
             # Since we dont have the date and hour, we get the first directory (the only one)
+            # Process conversations directory with NEW PATH
+            # It is now in conversation_outputs/{profile_name}/{a date + hour}
             conversations_dir = os.path.join(
-                conversations_dir, os.listdir(conversations_dir)[0]
+                extract_dir, "conversation_outputs", profile_report_name
             )
-            print(f"Conversations dir: {conversations_dir}")
             if os.path.exists(conversations_dir):
-                # Get the first conversation file to extract common fields
-                conv_files = sorted(
-                    [f for f in os.listdir(conversations_dir) if f.endswith(".yml")]
-                )
-                print(f"Conversation files: {conv_files}")
-                if conv_files:
-                    print(f"First conversation file: {conv_files[0]}")
-                    first_conv_path = os.path.join(conversations_dir, conv_files[0])
-                    profile_data = process_profile_report_from_conversation(
-                        first_conv_path
+                subdirs = os.listdir(conversations_dir)
+                if subdirs:
+                    # Since we dont have the date and hour, we get the first directory (the only one)
+                    conversations_dir = os.path.join(conversations_dir, subdirs[0])
+                    print(f"Conversations dir: {conversations_dir}")
+
+                    # Get the first conversation file to extract common fields
+                    conv_files = sorted(
+                        [f for f in os.listdir(conversations_dir) if f.endswith(".yml")]
                     )
+                    print(f"Conversation files: {conv_files}")
+                    if conv_files:
+                        print(f"First conversation file: {conv_files[0]}")
+                        first_conv_path = os.path.join(conversations_dir, conv_files[0])
+                        profile_data = process_profile_report_from_conversation(
+                            first_conv_path
+                        )
 
                     # Update profile report with common fields
                     for field, value in profile_data.items():
