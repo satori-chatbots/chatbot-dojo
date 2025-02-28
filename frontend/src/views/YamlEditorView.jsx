@@ -338,7 +338,7 @@ function YamlEditor() {
                                 customKeymap
                             ]}
                             onChange={handleEditorChange}
-                            theme={isDark ? materialDark : tomorrow}
+                            theme={isDark ? materialDark : materialLight}
                             basicSetup={{
                                 lineNumbers: true,
                                 foldGutter: true,
