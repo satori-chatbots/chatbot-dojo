@@ -10,7 +10,6 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button, Switch } from "@heroui/react";
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem } from "@heroui/react";
-import { Card, CardFooter } from "@nextui-org/react";
 import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from 'react-router-dom';
 import SignupView from './views/SignupView';
