@@ -31,6 +31,26 @@ pip install -r requirements.txt
 pip install -r ../user-simulator/requirements.txt
 ```
 
+Set up the Fernet secret key so things in the database get secured:
+
+1. Open a Python interpret (run `python` or `python3`)
+2. Import fernet
+```
+from cryptography.fernet import Fernet
+```
+3. Generate the key
+```
+key = Fernet.generate_key().decode()
+```
+4. Print the key
+```
+print(f"FERNET_SECRET_KEY={key}")
+```
+This will generate something like `FERNET_SECRET_KEY=EZsbc2bocfVw-1I8T-qq9gzrqiNv7_YtT0FOybwak2U=`
+
+Copy this and place it inside: `/sensei-web/backend/.env`, you must create the `.env` if it does not exist
+
+
 After that, you can make the necessary migrations and then execute the server:
 
 Using Make (Unix/Linux):
