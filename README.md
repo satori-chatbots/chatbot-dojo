@@ -64,6 +64,7 @@ Without Make (Windows/Unix):
 
 ```bash
 # Create and apply migrations
+python manage.py makemigrations tester
 python manage.py makemigrations
 python manage.py migrate
 
