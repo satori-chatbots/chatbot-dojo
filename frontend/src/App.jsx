@@ -97,11 +97,11 @@ function AppContent() {
                     <NavbarContent className="hidden sm:flex" justify="start">
                         {user && (
                             <NavbarItem isActive={location.pathname === '/'}>
-                                <Link to="/" className="hover:underline">Home</Link>
+                                <Link to="/" className="hover:underline">Test Center</Link>
                             </NavbarItem>
                         )}
                         <NavbarItem isActive={location.pathname === '/dashboard'}>
-                            <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                            <Link to="/dashboard" className="hover:underline">Results</Link>
                         </NavbarItem>
                         <NavbarItem isActive={location.pathname === '/chatbot-technologies'}>
                             <Link to="/chatbot-technologies" className="hover:underline">
@@ -169,10 +169,10 @@ function AppContent() {
 
                     <NavbarMenu >
                         <NavbarMenuItem isActive={location.pathname === '/'}>
-                            <Link to="/" className="hover:underline" onClick={handleLinkClick}>Home</Link>
+                            <Link to="/" className="hover:underline" onClick={handleLinkClick}>Test Center</Link>
                         </NavbarMenuItem>
                         <NavbarMenuItem isActive={location.pathname === '/dashboard'}>
-                            <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>Dashboard</Link>
+                            <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>Results</Link>
                         </NavbarMenuItem>
                         <NavbarMenuItem isActive={location.pathname === '/chatbot-technologies'}>
                             <Link to="/chatbot-technologies" className="hover:underline" onClick={handleLinkClick}>
