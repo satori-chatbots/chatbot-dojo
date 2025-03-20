@@ -90,6 +90,8 @@ function Home() {
 
     //
     const [isDragging, setIsDragging] = useState(false);
+    const [isFileDragging, setIsFileDragging] = useState(false);
+
 
     // Navigation
     const navigate = useNavigate();
@@ -237,12 +239,35 @@ function Home() {
         setSelectedUploadFiles(acceptedFiles);
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
+    const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+        onDrop: useCallback((acceptedFiles) => {
+            setSelectedUploadFiles(acceptedFiles);
+            setIsFileDragging(false);
+        }, []),
         accept: {
             'text/yaml': ['.yaml', '.yml']
         },
+        noClick: false,
+        onDragEnter: () => setIsFileDragging(true),
+        onDragLeave: () => setIsFileDragging(false),
+        onDropAccepted: () => setIsFileDragging(false),
+        onDropRejected: () => setIsFileDragging(false),
     });
+
+    useEffect(() => {
+        const handleDragLeave = (e) => {
+            if (e.clientX <= 0 || e.clientY <= 0) {
+                setIsFileDragging(false);
+            }
+        };
+
+        window.addEventListener('dragover', (e) => e.preventDefault());
+        window.addEventListener('dragleave', handleDragLeave);
+        return () => {
+            window.removeEventListener('dragover', (e) => e.preventDefault());
+            window.removeEventListener('dragleave', handleDragLeave);
+        };
+    }, []);
 
     // This is for the checkboxes
     const selectFile = (id) => {
@@ -250,6 +275,7 @@ function Home() {
             prev.includes(id) ? prev.filter((fileId) => fileId !== id) : [...prev, id]
         );
     };
+
 
 
     const handleFileChange = (event) => {
@@ -523,19 +549,41 @@ function Home() {
                             <div className="flex flex-col space-y-4">
                                 <div
                                     {...getRootProps()}
-                                    className={`border-2 border-dashed rounded-lg p-6 transition-colors duration-200 flex flex-col items-center justify-center ${isDragActive ? 'border-primary bg-primary/10' : 'border-gray-300 hover:border-gray-400'
-                                        }`}
+                                    className={`
+                                        border-2 border-dashed rounded-lg p-8
+                                        transition-all duration-300 ease-in-out
+                                        flex flex-col items-center justify-center
+                                        ${isDragActive
+                                            ? 'border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg'
+                                            : 'border-gray-300 hover:border-gray-400'
+                                        }
+                                    `}
                                 >
                                     <input {...getInputProps()} />
 
-                                    <div className="flex flex-col items-center gap-3 mb-3">
-                                        <Upload className={`w-10 h-10 ${isDragActive ? 'text-primary' : 'text-gray-400'}`} />
-                                        <p className="text-sm text-center font-medium">
-                                            {isDragActive ? 'Drop files here' : 'Drag and drop YAML files here'}
-                                        </p>
-                                        <p className="text-xs text-gray-500">or click to browse</p>
+                                    <div className="flex flex-col items-center gap-4 mb-4">
+                                        <Upload
+                                            className={`
+                                                transition-all duration-300 ease-in-out
+                                                ${isDragActive
+                                                    ? 'text-primary scale-125 opacity-80'
+                                                    : 'text-gray-400 hover:text-gray-500'
+                                                }
+                                                w-12 h-12
+                                            `}
+                                        />
+                                        <div className="text-center">
+                                            <p className={`
+                                                text-base font-medium transition-all duration-300
+                                                ${isDragActive ? 'text-primary' : ''}
+                                            `}>
+                                                {isDragActive ? 'Drop files here' : 'Drag and drop YAML files here'}
+                                            </p>
+                                            <p className="text-sm mt-1 text-gray-500">or click to browse</p>
+                                        </div>
                                     </div>
 
+                                    {/* File list part, keep your existing implementation */}
                                     {selectedUploadFiles && selectedUploadFiles.length > 0 && (
                                         <div className="mt-4 w-full">
                                             <div className="flex items-center justify-between mb-2">
@@ -582,6 +630,7 @@ function Home() {
                                     )}
                                 </div>
 
+                                {/* Create New YAML button */}
                                 <Button
                                     onPress={() => navigate('/yaml-editor')}
                                     fullWidth
