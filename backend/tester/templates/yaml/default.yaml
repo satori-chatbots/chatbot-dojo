@@ -36,33 +36,34 @@ user:
     # Goals can use variables between {{brackets}}
     # You can add as many goals as needed
     # e.g. "I want a {{size}} pizza with {{toppings}}"
-    - "goal with a {{variable_name}}"
-    - "another goal with a {{variable_name}}"
+    # - "goal with a {{variable_name}}"
+    # - "another goal with a {{variable_name}}"
+    - goal with no variables
 
     # Define all the variables used in the goals
-    - variable_name:
+    # - variable_name:
         # Function types: default(), random(), random(n), random(rand), another(), forward()
-        function: forward()
+        # function: forward()
         # The type of the variable (string, int, float)
-        type: string
+        # type: string
         # Data can be a list of values or a range
-        data:
+        # data:
           # Manual definition of values
-          - value1
-          - value2
-          - value3...
+          # - value1
+          # - value2
+          # - value3...
           # Alternatively, you can use any(prompt) to create a variable with the LLM
-          - any(prompt)
+          # - any(prompt)
 
     # Add more variables as needed
     # Example with numeric value and range:
-    - number_photo:
-        function: forward()
-        type: int
-        data:
-          step: 2
-          min: 1
-          max: 6
+    # - number_photo:
+        # function: forward()
+        # type: int
+        # data:
+          # step: 2
+          # min: 1
+          # max: 6
 
 # Chatbot Configuration
 chatbot:
@@ -115,7 +116,6 @@ conversation:
     - random:
         - make spelling mistakes
         - all questions
-        - long phrase
         - change language:
             - italian
             - portuguese
