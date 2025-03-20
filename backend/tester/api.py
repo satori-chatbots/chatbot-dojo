@@ -987,10 +987,20 @@ class ExecuteSelectedAPIView(APIView):
         except Exception as e:
             print(f"Error loading/decrypting API key for project {project.name}: {e}")
 
-        # Set executed dir to MEDIA / executed_yaml
-        executed_dir_base = os.path.join(settings.MEDIA_ROOT, "executed_yaml")
-        os.makedirs(executed_dir_base, exist_ok=True)
-        print(f"Executed base dir: {executed_dir_base}")
+        # Set executed dir to MEDIA / projects / user_{user_id} / project_{project_id} / profiles / {testcase_id}
+        # This way we can copy all the selected profiles into this directory and execute them
+
+        # Get user and project id
+        user_id = request.user.id
+        project_id = project.id
+
+        project_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "projects",
+            f"user_{user_id}",
+            f"project_{project_id}",
+        )
+        print(f"Project path: {project_path}")
 
         # Make in a transaction to avoid partial saves
         with transaction.atomic():
@@ -1008,21 +1018,34 @@ class ExecuteSelectedAPIView(APIView):
             # Set it to RUNNING
             test_case.status = "RUNNING"
 
-            # Set extract dir to MEDIA / results / {test_case_id}
-            extract_dir = os.path.join(
-                settings.MEDIA_ROOT, "results", str(test_case.id)
+            # Set extract dir to MEDIA / results / user_{user_id} / project_{project_id} / testcase_{testcase_id}
+
+            # Get the user and project id
+            user_id = request.user.id
+            project_id = project.id
+            results_path = os.path.join(
+                settings.MEDIA_ROOT,
+                "results",
+                f"user_{user_id}",
+                f"project_{project_id}",
+                f"testcase_{test_case.id}",
             )
-            print(f"Extract dir: {extract_dir}")
+            print(f"Results path: {results_path}")
 
             # Create a unique subdirectory for this TestCase
-            test_case_dir = os.path.join(executed_dir_base, f"testcase_{test_case.id}")
-            os.makedirs(test_case_dir, exist_ok=True)
-            print(f"TestCase directory: {test_case_dir}")
+            user_profiles_path = os.path.join(
+                project_path, "profiles", f"testcase_{test_case.id}"
+            )
+            os.makedirs(user_profiles_path, exist_ok=True)
+            print(f"User profiles path: {user_profiles_path}")
+
+            # Get just the name of the folder inside /profiles so we can use it as an argument for the script
+            profiles_directory = f"testcase_{test_case.id}"
 
             # Copy all the yaml files to the new directory and save the relative path and name
             for test_file in test_files:
                 file_path = test_file.file.path
-                copied_file_path = shutil.copy(file_path, test_case_dir)
+                copied_file_path = shutil.copy(file_path, user_profiles_path)
                 # Store relative path from MEDIA_ROOT for frontend access
                 copied_file_rel_path = os.path.relpath(
                     copied_file_path, settings.MEDIA_ROOT
@@ -1095,8 +1118,9 @@ class ExecuteSelectedAPIView(APIView):
             args=(
                 script_path,
                 script_cwd,
-                test_case_dir,
-                extract_dir,
+                project_path,
+                profiles_directory,
+                results_path,
                 test_case,
                 technology,
                 link,
@@ -1205,8 +1229,26 @@ def process_conversation(conversation_file_path):
         return conversation_data
 
 
+"""
+                script_path,
+                script_cwd,
+                project_path,
+                profiles_directory,
+                results_path,
+                test_case,
+                technology,
+                link,"""
+
+
 def run_asyn_test_execution(
-    script_path, script_cwd, test_case_dir, extract_dir, test_case, technology, link
+    script_path,
+    script_cwd,
+    project_path,
+    profiles_directory,
+    results_path,
+    test_case,
+    technology,
+    link,
 ):
     try:
         start_time = time.time()
@@ -1219,10 +1261,12 @@ def run_asyn_test_execution(
                 technology,
                 "--chatbot",
                 link,
+                "--project_folder",
+                project_path,
                 "--user",
-                test_case_dir,
+                profiles_directory,
                 "--extract",
-                extract_dir,
+                results_path,
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -1281,7 +1325,7 @@ def run_asyn_test_execution(
                 time.sleep(3)
 
         # Start the monitoring thread
-        conversations_dir = extract_dir
+        conversations_dir = results_path
         total_conversations = test_case.total_conversations
         monitoring_thread = threading.Thread(
             target=monitor_conversations,
@@ -1339,7 +1383,7 @@ def run_asyn_test_execution(
 
         # Continue with report processing only if we’re not stopped
         # NEW PATH: reports are now in reports/__stats_reports__
-        report_path = os.path.join(extract_dir, "reports", "__stats_reports__")
+        report_path = os.path.join(results_path, "reports", "__stats_reports__")
         if not os.path.exists(report_path):
             test_case.status = "ERROR"
             test_case.result += "\nError accessing report directory"
@@ -1458,12 +1502,12 @@ def run_asyn_test_execution(
 
             # Process conversations directory
             # It is the {project_id}/{profile_report_name}/{a date + hour}
-            conversations_dir = os.path.join(extract_dir, profile_report_name)
+            conversations_dir = os.path.join(results_path, profile_report_name)
             # Since we dont have the date and hour, we get the first directory (the only one)
             # Process conversations directory with NEW PATH
             # It is now in conversation_outputs/{profile_name}/{a date + hour}
             conversations_dir = os.path.join(
-                extract_dir, "conversation_outputs", profile_report_name
+                results_path, "conversation_outputs", profile_report_name
             )
             if os.path.exists(conversations_dir):
                 subdirs = os.listdir(conversations_dir)
