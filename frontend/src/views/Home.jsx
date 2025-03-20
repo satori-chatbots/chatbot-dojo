@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     Button,
     Input,
@@ -33,7 +33,7 @@ import EditProjectModal from '../components/EditProjectModal';
 import ProjectsList from '../components/ProjectList';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 import { useNavigate } from 'react-router-dom';
-
+import { useDropzone } from 'react-dropzone';
 
 function Home() {
 
@@ -233,32 +233,16 @@ function Home() {
     /* ------------------------------------------------------ */
 
     // Drag and drop handlers
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
+    const onDrop = useCallback((acceptedFiles) => {
+        setSelectedUploadFiles(acceptedFiles);
+    }, []);
 
-    const handleDragEnter = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            setSelectedUploadFiles(e.dataTransfer.files);
-        }
-    };
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'text/yaml': ['.yaml', '.yml']
+        },
+    });
 
     // This is for the checkboxes
     const selectFile = (id) => {
@@ -538,70 +522,62 @@ function Home() {
                             {/* Upload Section */}
                             <div className="flex flex-col space-y-4">
                                 <div
-                                    className={`border-2 border-dashed rounded-lg p-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-gray-300'}
-    transition-colors duration-200 flex flex-col items-center justify-center`}
-                                    onDragOver={handleDragOver}
-                                    onDragEnter={handleDragEnter}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
+                                    {...getRootProps()}
+                                    className={`border-2 border-dashed rounded-lg p-6 transition-colors duration-200 flex flex-col items-center justify-center ${isDragActive ? 'border-primary bg-primary/10' : 'border-gray-300 hover:border-gray-400'
+                                        }`}
                                 >
-                                    <div className="flex flex-col items-center gap-2 mb-2">
-                                        <Upload className={`w-8 h-8 ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
-                                        <p className="text-sm text-center">
-                                            {isDragging ? 'Drop files here' : 'Drag and drop files here, or click to browse'}
+                                    <input {...getInputProps()} />
+
+                                    <div className="flex flex-col items-center gap-3 mb-3">
+                                        <Upload className={`w-10 h-10 ${isDragActive ? 'text-primary' : 'text-gray-400'}`} />
+                                        <p className="text-sm text-center font-medium">
+                                            {isDragActive ? 'Drop files here' : 'Drag and drop YAML files here'}
                                         </p>
-                                    </div>
-
-                                    <div className="flex gap-2 w-full">
-                                        {selectedUploadFiles && selectedUploadFiles.length > 0 ? (
-                                            <div className="flex-1 border rounded p-2 overflow-hidden text-sm bg-gray-50">
-                                                {selectedUploadFiles.length === 1
-                                                    ? selectedUploadFiles[0].name
-                                                    : `${selectedUploadFiles.length} files selected`}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                type="file"
-                                                multiple
-                                                accept=".yaml,.yml"
-                                                onChange={handleFileChange}
-                                                ref={fileInputRef}
-                                                className="flex-1"
-                                            />
-                                        )}
-
-                                        <Button
-                                            onPress={handleUpload}
-                                            startContent={<Upload className="w-4 h-4" />}
-                                            isDisabled={!selectedUploadFiles}
-                                        >
-                                            Upload
-                                        </Button>
+                                        <p className="text-xs text-gray-500">or click to browse</p>
                                     </div>
 
                                     {selectedUploadFiles && selectedUploadFiles.length > 0 && (
-                                        <div className="mt-2 w-full">
-                                            <Button
-                                                size="sm"
-                                                variant="light"
-                                                color="danger"
-                                                className="mt-1"
-                                                onPress={() => {
-                                                    setSelectedUploadFiles(null);
-                                                    if (fileInputRef.current) {
-                                                        fileInputRef.current.value = null;
-                                                    }
-                                                }}
-                                            >
-                                                Clear selection
-                                            </Button>
-                                            {selectedUploadFiles.length > 1 && (
-                                                <ul className="text-sm text-gray-600 list-disc pl-5 mt-2">
+                                        <div className="mt-4 w-full">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium">
+                                                    {selectedUploadFiles.length === 1
+                                                        ? '1 file selected'
+                                                        : `${selectedUploadFiles.length} files selected`}
+                                                </span>
+                                                <Button
+                                                    size="sm"
+                                                    variant="light"
+                                                    color="danger"
+                                                    onPress={() => {
+                                                        setSelectedUploadFiles(null);
+                                                        if (fileInputRef.current) {
+                                                            fileInputRef.current.value = null;
+                                                        }
+                                                    }}
+                                                >
+                                                    Clear
+                                                </Button>
+                                            </div>
+
+                                            <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-2 max-h-28 overflow-y-auto">
+                                                <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
                                                     {Array.from(selectedUploadFiles).map((file, index) => (
-                                                        <li key={index} className="truncate">{file.name}</li>
+                                                        <li key={index} className="truncate flex items-center">
+                                                            <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                                                            {file.name}
+                                                        </li>
                                                     ))}
                                                 </ul>
-                                            )}
+                                            </div>
+
+                                            <Button
+                                                className="mt-3 w-full"
+                                                color="primary"
+                                                onPress={handleUpload}
+                                                startContent={<Upload className="w-4 h-4" />}
+                                            >
+                                                Upload {selectedUploadFiles.length > 1 ? `${selectedUploadFiles.length} Files` : 'File'}
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
