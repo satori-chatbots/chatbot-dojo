@@ -101,10 +101,13 @@ class CustomUser(AbstractUser):
 
 def upload_to(instance, filename):
     """
-    Returns the path where the Test Files are stored (MEDIA_DIR/user-profiles/<project_id>/<test_name>.yaml)
+    Returns the path where the Test Files are stored (MEDIA_DIR/projects/user_{user_id}/project_{project_id}/profiles/file.yaml
     """
     # The test_name should have been set by the model's clean method
-    return f"user-profiles/{instance.project.id}/{filename}"
+    # Get the user and project id
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+    return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
 
 
 class TestFile(models.Model):
@@ -142,7 +145,10 @@ class TestFile(models.Model):
                         # Create new filename and change the extension to yaml
                         # To avoid having yaml and yml files with the same name
                         new_filename = f"{test_name}.yaml"
-                        new_path = f"user-profiles/{self.project.id}/{new_filename}"
+                        # Get user and project id
+                        user_id = self.project.owner.id
+                        project_id = self.project.id
+                        new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
 
                         # Rename the file
                         old_path = self.file.path
