@@ -517,7 +517,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 {"name": "Project name already exists for this user."}
             )
-        serializer.save(owner=self.request.user)
+        project = serializer.save(owner=self.request.user)
+
+        # Get the path of the script
+        base_dir = os.path.dirname(settings.BASE_DIR)
+        init_script_path = os.path.join(
+            base_dir, "user-simulator", "src", "init_project.py"
+        )
+
+        # Create path structure: filevault/projects/user_{user_id}/project_{project_id}/
+        relative_path = os.path.join(
+            "filevault",
+            "projects",
+            f"user_{self.request.user.id}",
+            f"project_{project.id}",
+        )
+        project_path = os.path.join(base_dir, relative_path)
+
+        if os.path.exists(init_script_path):
+            try:
+                subprocess.run(
+                    ["python", init_script_path, "--project_name", project_path],
+                    check=True,
+                )
+                print(
+                    f"Project {project.name} (ID: {project.id}) initialized successfully at {project_path}"
+                )
+            except subprocess.CalledProcessError as e:
+                print(f"Error initializing project structure: {e}")
+        else:
+            print(f"Warning: Could not find init_project.py at {init_script_path}")
 
     def get_object(self):
         """Override get_object to return 403 instead of 404 when object exists but user has no access"""
