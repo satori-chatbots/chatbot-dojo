@@ -41,6 +41,12 @@ const CreateProjectModal = ({
         navigate('/chatbot-technologies');
     };
 
+    const handleNavigateToProfile = () => {
+        onOpenChange(false);
+        navigate('/profile');
+    };
+
+
     useEffect(() => {
         if (isOpen) {
             const loadApiKeys = async () => {
@@ -204,21 +210,39 @@ const CreateProjectModal = ({
                                     )}
                                 </div>
 
-                                <Select
-                                    placeholder="Select API Key (Optional)"
-                                    fullWidth
-                                    label="API Key"
-                                    labelPlacement="outside"
-                                    onChange={handleApiKeyChange}
-                                    value={formData.apiKey || ''}
-                                    isDisabled={loadingValidation || loadingApiKeys}
-                                >
-                                    {apiKeys.map(key => (
-                                        <SelectItem key={key.id} value={key.id}>
-                                            {key.name}
-                                        </SelectItem>
-                                    ))}
-                                </Select>
+                                <div className="w-full">
+                                    <div className="flex w-full justify-between mb-2">
+                                        <label className="text-sm">API Key</label>
+                                        <Button
+                                            size="sm"
+                                            variant="light"
+                                            color="primary"
+                                            onPress={handleNavigateToProfile}
+                                            startContent={<Settings className="w-3 h-3 mr-1" />}
+                                        >
+                                            {apiKeys.length === 0 ? "Create API Key" : "Manage API Keys"}
+                                        </Button>
+                                    </div>
+                                    <Select
+                                        placeholder={apiKeys.length === 0 ? "No API Keys available" : "Select API Key (Optional)"}
+                                        fullWidth
+                                        labelPlacement="outside"
+                                        onChange={handleApiKeyChange}
+                                        value={formData.apiKey || ''}
+                                        isDisabled={loadingValidation || loadingApiKeys}
+                                    >
+                                        {apiKeys.map(key => (
+                                            <SelectItem key={key.id} value={key.id}>
+                                                {key.name}
+                                            </SelectItem>
+                                        ))}
+                                    </Select>
+                                    {apiKeys.length === 0 && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            API Keys are optional but recommended for authentication.
+                                        </p>
+                                    )}
+                                </div>
 
                                 <div className="flex w-full justify-between items-center">
                                     <label className="text-sm">Make Project Public</label>
