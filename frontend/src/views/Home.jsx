@@ -88,6 +88,9 @@ function Home() {
     // Success modal
     const [successModal, setSuccessModal] = useState({ isOpen: false, message: '' });
 
+    //
+    const [isDragging, setIsDragging] = useState(false);
+
     // Navigation
     const navigate = useNavigate();
 
@@ -228,6 +231,34 @@ function Home() {
     /* ------------------------------------------------------ */
     /* ------------------ File Handlers --------------------- */
     /* ------------------------------------------------------ */
+
+    // Drag and drop handlers
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            setSelectedUploadFiles(e.dataTransfer.files);
+        }
+    };
 
     // This is for the checkboxes
     const selectFile = (id) => {
@@ -506,22 +537,75 @@ function Home() {
                         <div>
                             {/* Upload Section */}
                             <div className="flex flex-col space-y-4">
-                                <div className="flex gap-2">
-                                    <Input
-                                        type="file"
-                                        multiple
-                                        accept=".yaml,.yml"
-                                        onChange={handleFileChange}
-                                        ref={fileInputRef}
-                                        className="flex-1"
-                                    />
-                                    <Button
-                                        onPress={handleUpload}
-                                        startContent={<Upload className="w-4 h-4" />}
-                                    >
-                                        Upload
-                                    </Button>
+                                <div
+                                    className={`border-2 border-dashed rounded-lg p-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-gray-300'}
+    transition-colors duration-200 flex flex-col items-center justify-center`}
+                                    onDragOver={handleDragOver}
+                                    onDragEnter={handleDragEnter}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                >
+                                    <div className="flex flex-col items-center gap-2 mb-2">
+                                        <Upload className={`w-8 h-8 ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
+                                        <p className="text-sm text-center">
+                                            {isDragging ? 'Drop files here' : 'Drag and drop files here, or click to browse'}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex gap-2 w-full">
+                                        {selectedUploadFiles && selectedUploadFiles.length > 0 ? (
+                                            <div className="flex-1 border rounded p-2 overflow-hidden text-sm bg-gray-50">
+                                                {selectedUploadFiles.length === 1
+                                                    ? selectedUploadFiles[0].name
+                                                    : `${selectedUploadFiles.length} files selected`}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                type="file"
+                                                multiple
+                                                accept=".yaml,.yml"
+                                                onChange={handleFileChange}
+                                                ref={fileInputRef}
+                                                className="flex-1"
+                                            />
+                                        )}
+
+                                        <Button
+                                            onPress={handleUpload}
+                                            startContent={<Upload className="w-4 h-4" />}
+                                            isDisabled={!selectedUploadFiles}
+                                        >
+                                            Upload
+                                        </Button>
+                                    </div>
+
+                                    {selectedUploadFiles && selectedUploadFiles.length > 0 && (
+                                        <div className="mt-2 w-full">
+                                            <Button
+                                                size="sm"
+                                                variant="light"
+                                                color="danger"
+                                                className="mt-1"
+                                                onPress={() => {
+                                                    setSelectedUploadFiles(null);
+                                                    if (fileInputRef.current) {
+                                                        fileInputRef.current.value = null;
+                                                    }
+                                                }}
+                                            >
+                                                Clear selection
+                                            </Button>
+                                            {selectedUploadFiles.length > 1 && (
+                                                <ul className="text-sm text-gray-600 list-disc pl-5 mt-2">
+                                                    {Array.from(selectedUploadFiles).map((file, index) => (
+                                                        <li key={index} className="truncate">{file.name}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
+
                                 <Button
                                     onPress={() => navigate('/yaml-editor')}
                                     fullWidth
