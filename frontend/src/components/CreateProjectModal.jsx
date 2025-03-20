@@ -13,8 +13,9 @@ import {
     Switch
 } from "@heroui/react";
 import { createProject, checkProjectName } from '../api/projectApi';
-import { RotateCcw, Plus } from 'lucide-react';
-import { getUserApiKeys } from '../api/authenticationApi'; // Changed import
+import { RotateCcw, Plus, Settings } from 'lucide-react';
+import { getUserApiKeys } from '../api/authenticationApi';
+import { useNavigate } from 'react-router-dom';
 
 const CreateProjectModal = ({
     isOpen,
@@ -22,6 +23,8 @@ const CreateProjectModal = ({
     technologies,
     onProjectCreated,
 }) => {
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
         name: '',
         technology: '',
@@ -33,12 +36,17 @@ const CreateProjectModal = ({
     const [apiKeys, setApiKeys] = useState([]);
     const [loadingApiKeys, setLoadingApiKeys] = useState(true);
 
+    const handleNavigateToTechnologies = () => {
+        onOpenChange(false);
+        navigate('/chatbot-technologies');
+    };
+
     useEffect(() => {
-        if (isOpen) { // Only load API keys when the modal is open
+        if (isOpen) {
             const loadApiKeys = async () => {
                 setLoadingApiKeys(true);
                 try {
-                    const keys = await getUserApiKeys(); // Changed function call
+                    const keys = await getUserApiKeys();
                     setApiKeys(keys);
                 } catch (error) {
                     console.error('Error fetching API keys:', error);
@@ -49,7 +57,7 @@ const CreateProjectModal = ({
 
             loadApiKeys();
         }
-    }, [isOpen]); // Depend on isOpen
+    }, [isOpen]);
 
     const handleProjectNameChange = (event) => {
         setFormData(prev => ({ ...prev, name: event.target.value }));
@@ -160,22 +168,41 @@ const CreateProjectModal = ({
                                     minLength={3}
                                     isDisabled={loadingValidation}
                                 />
-                                <Select
-                                    placeholder="Select chatbot technology"
-                                    fullWidth
-                                    label="Technology"
-                                    labelPlacement="outside"
-                                    onChange={handleTechnologyChange}
-                                    isRequired
-                                    value={formData.technology}
-                                    isDisabled={loadingValidation}
-                                >
-                                    {technologies.map(tech => (
-                                        <SelectItem key={tech.id} value={tech.id}>
-                                            {tech.name}
-                                        </SelectItem>
-                                    ))}
-                                </Select>
+
+                                <div className="w-full">
+                                    <div className="flex w-full justify-between mb-2">
+                                        <label className="text-sm">Technology</label>
+                                        <Button
+                                            size="sm"
+                                            variant="light"
+                                            color="primary"
+                                            onPress={handleNavigateToTechnologies}
+                                            startContent={<Settings className="w-3 h-3 mr-1" />}
+                                        >
+                                            {technologies.length === 0 ? "Create Technology" : "Manage Technologies"}
+                                        </Button>
+                                    </div>
+                                    <Select
+                                        placeholder={technologies.length === 0 ? "No technologies available" : "Select chatbot technology"}
+                                        fullWidth
+                                        labelPlacement="outside"
+                                        onChange={handleTechnologyChange}
+                                        isRequired
+                                        value={formData.technology}
+                                        isDisabled={loadingValidation || technologies.length === 0}
+                                    >
+                                        {technologies.map(tech => (
+                                            <SelectItem key={tech.id} value={tech.id}>
+                                                {tech.name}
+                                            </SelectItem>
+                                        ))}
+                                    </Select>
+                                    {technologies.length === 0 && (
+                                        <p className="text-xs text-danger mt-1">
+                                            You need to create a technology before creating a project.
+                                        </p>
+                                    )}
+                                </div>
 
                                 <Select
                                     placeholder="Select API Key (Optional)"

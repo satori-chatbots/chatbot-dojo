@@ -13,8 +13,9 @@ import {
     Switch
 } from "@heroui/react";
 import { updateProject, checkProjectName } from '../api/projectApi';
-import { RotateCcw, Save } from 'lucide-react';
+import { RotateCcw, Save, Settings } from 'lucide-react';
 import { getUserApiKeys } from '../api/authenticationApi';
+import { useNavigate } from 'react-router-dom';
 
 const EditProjectModal = ({
     isOpen,
@@ -23,6 +24,7 @@ const EditProjectModal = ({
     technologies,
     onProjectUpdated
 }) => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         name: project?.name || '',
         technology: project?.chatbot_technology || '',
@@ -33,6 +35,12 @@ const EditProjectModal = ({
     const [validationErrors, setValidationErrors] = useState({});
     const [apiKeys, setApiKeys] = useState([]);
     const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+
+    const handleNavigateToTechnologies = () => {
+        onOpenChange(false);
+        navigate('/chatbot-technologies');
+    };
+
 
     // Update form data when project changes
     useEffect(() => {
@@ -176,21 +184,40 @@ const EditProjectModal = ({
                             minLength={3}
                             isDisabled={loadingValidation}
                         />
-                        <Select
-                            isRequired
-                            label="Technology"
-                            labelPlacement="outside"
-                            placeholder="Select Technology"
-                            name="technology"
-                            selectedKeys={[String(formData.technology)]}
-                            onChange={(e) => setFormData(prev => ({ ...prev, technology: e.target.value }))}
-                        >
-                            {technologies.map((tech) => (
-                                <SelectItem key={String(tech.id)} value={String(tech.id)}>
-                                    {tech.name}
-                                </SelectItem>
-                            ))}
-                        </Select>
+                        <div className="w-full">
+                            <div className="flex w-full justify-between mb-2">
+                                <label className="text-sm">Technology</label>
+                                <Button
+                                    size="sm"
+                                    variant="light"
+                                    color="primary"
+                                    onPress={handleNavigateToTechnologies}
+                                    startContent={<Settings className="w-3 h-3 mr-1" />}
+                                >
+                                    {technologies.length === 0 ? "Create Technology" : "Manage Technologies"}
+                                </Button>
+                            </div>
+                            <Select
+                                isRequired
+                                labelPlacement="outside"
+                                placeholder={technologies.length === 0 ? "No technologies available" : "Select Technology"}
+                                name="technology"
+                                selectedKeys={[String(formData.technology)]}
+                                onChange={(e) => setFormData(prev => ({ ...prev, technology: e.target.value }))}
+                                isDisabled={loadingValidation || technologies.length === 0}
+                            >
+                                {technologies.map((tech) => (
+                                    <SelectItem key={String(tech.id)} value={String(tech.id)}>
+                                        {tech.name}
+                                    </SelectItem>
+                                ))}
+                            </Select>
+                            {technologies.length === 0 && (
+                                <p className="text-xs text-danger mt-1">
+                                    You need to create a technology before updating this project.
+                                </p>
+                            )}
+                        </div>
 
                         <Select
                             placeholder="Select API Key (Optional)"
