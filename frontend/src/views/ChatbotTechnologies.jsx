@@ -95,8 +95,8 @@ const ChatbotTechnologies = () => {
         setLoadingValidation(true);
 
         // URL check
-        if (!data.link.match(/^https?:\/\//)) {
-            alert("Please enter a valid URL");
+        if (data.link && !data.link.match(/^https?:\/\//)) {
+            alert("Please enter a valid URL or leave it empty");
             setLoadingValidation(false);
             return false;
         }
@@ -296,7 +296,7 @@ const ChatbotTechnologies = () => {
                                         isRequired
                                         isDisabled={loadingValidation}
                                         errorMessage="Please enter a valid URL"
-                                        label="URL"
+                                        label="URL (optional)"
                                         labelPlacement="outside"
                                         name="link"
                                         placeholder="Enter a URL to the technology"
@@ -428,8 +428,7 @@ const ChatbotTechnologies = () => {
                                         ))}
                                     </Select>
                                     <Input
-                                        isRequired
-                                        label="URL"
+                                        label="URL (optional)"
                                         name="link"
                                         value={editData.link}
                                         onChange={(e) => setEditData({ ...editData, link: e.target.value })}

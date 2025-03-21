@@ -268,7 +268,7 @@ class ChatbotTechnology(models.Model):
     # Name of the chatbot technology, must be unique
     name = models.CharField(max_length=255, unique=True)
     technology = models.CharField(max_length=255, choices=TECHNOLOGY_CHOICES)
-    link = models.URLField()
+    link = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return self.name

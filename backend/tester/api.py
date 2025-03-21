@@ -954,7 +954,7 @@ class ExecuteSelectedAPIView(APIView):
 
         # Get the technology and link from the project
         technology = project.chatbot_technology.technology
-        link = project.chatbot_technology.link
+        link = project.chatbot_technology.link if project.chatbot_technology else None
 
         test_files = TestFile.objects.filter(id__in=selected_ids)
         if not test_files.exists():
@@ -1248,26 +1248,31 @@ def run_asyn_test_execution(
     results_path,
     test_case,
     technology,
-    link,
+    link: None,
 ):
     try:
         start_time = time.time()
+        # Build the command list
+        command = [
+            "python",
+            script_path,
+            "--technology",
+            technology,
+            "--project_folder",
+            project_path,
+            "--user",
+            profiles_directory,
+            "--extract",
+            results_path,
+        ]
+
+        # Add the link only if it is not None
+        if link:
+            command.extend(["--chatbot", link])
+
         # Start the subprocess
         process = subprocess.Popen(
-            [
-                "python",
-                script_path,
-                "--technology",
-                technology,
-                "--chatbot",
-                link,
-                "--project_folder",
-                project_path,
-                "--user",
-                profiles_directory,
-                "--extract",
-                results_path,
-            ],
+            command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=script_cwd,
