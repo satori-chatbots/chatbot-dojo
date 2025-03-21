@@ -550,7 +550,7 @@ function Home() {
                                 <div
                                     {...getRootProps()}
                                     className={`
-                                        border-2 border-dashed rounded-lg p-8
+                                        border-2 border-dashed rounded-lg p-5
                                         transition-all duration-300 ease-in-out
                                         flex flex-col items-center justify-center
                                         ${isDragActive
@@ -561,7 +561,7 @@ function Home() {
                                 >
                                     <input {...getInputProps()} />
 
-                                    <div className="flex flex-col items-center gap-4 mb-4">
+                                    <div className="flex flex-col items-center gap-2 mb-2">
                                         <Upload
                                             className={`
                                                 transition-all duration-300 ease-in-out
@@ -569,17 +569,17 @@ function Home() {
                                                     ? 'text-primary scale-125 opacity-80'
                                                     : 'text-gray-400 hover:text-gray-500'
                                                 }
-                                                w-12 h-12
+                                                w-10 h-10
                                             `}
                                         />
                                         <div className="text-center">
                                             <p className={`
-                                                text-base font-medium transition-all duration-300
+                                                text-sm font-medium transition-all duration-300
                                                 ${isDragActive ? 'text-primary' : ''}
                                             `}>
                                                 {isDragActive ? 'Drop files here' : 'Drag and drop YAML files here'}
                                             </p>
-                                            <p className="text-sm mt-1 text-gray-500">or click to browse</p>
+                                            <p className="text-xs mt-0.5 text-gray-500">or click to browse</p>
                                         </div>
                                     </div>
 
