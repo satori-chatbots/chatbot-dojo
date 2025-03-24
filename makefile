@@ -6,8 +6,7 @@ MANAGE=$(BACKEND_DIR)/manage.py
 
 full_reset:
 	rm $(BACKEND_DIR)/db.sqlite3
-	rm -rf $(FILEVAULT)/executed_yaml/
-	rm -rf $(FILEVAULT)/results/
+	rm -rf $(FILEVAULT)
 	find $(BACKEND_DIR) -path "*/migrations/*.py" -not -name "__init__.py" -delete
 	find $(BACKEND_DIR) -path "*/migrations/*.pyc"  -delete
 	$(PYTHON) $(MANAGE) makemigrations tester
