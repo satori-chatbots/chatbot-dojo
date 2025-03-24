@@ -1269,6 +1269,13 @@ def run_asyn_test_execution(
         # Add the link only if it is not None
         if link:
             command.extend(["--chatbot", link])
+        else:
+            # Place holder because --chatbot is a needed parameter
+            command.extend(["--chatbot", "http://localhost:5000"])
+
+        print(f"\nExecuting command: {command}")
+        print(f"Results path: {results_path}")
+        print(f"Project path: {project_path}")
 
         # Start the subprocess
         process = subprocess.Popen(
@@ -1331,6 +1338,7 @@ def run_asyn_test_execution(
 
         # Start the monitoring thread
         conversations_dir = results_path
+        print(f"Monitoring conversations in: {conversations_dir}")
         total_conversations = test_case.total_conversations
         monitoring_thread = threading.Thread(
             target=monitor_conversations,
@@ -1391,7 +1399,7 @@ def run_asyn_test_execution(
         report_path = os.path.join(results_path, "reports", "__stats_reports__")
         if not os.path.exists(report_path):
             test_case.status = "ERROR"
-            test_case.result += "\nError accessing report directory"
+            test_case.result += "\nError accessing __stats_reports__ directory"
             test_case.save()
             return
 
