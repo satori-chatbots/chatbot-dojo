@@ -53,6 +53,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import OuterRef, Subquery, Sum, Q
 from .validation_script import YamlValidator
+import sys
 
 # We need this one since it already has the fernet key
 from .models import cipher_suite
@@ -60,6 +61,9 @@ from .models import cipher_suite
 # Get the latest version of the user model
 User = get_user_model()
 
+base_dir = os.path.dirname(settings.BASE_DIR)
+sys.path.append(os.path.join(base_dir, "user-simulator", "src"))
+from user_sim.role_structure import RoleData
 # ------------- #
 # - USERS API - #
 # ------------- #
@@ -1079,12 +1083,33 @@ class ExecuteSelectedAPIView(APIView):
             for copied_file in copied_files:
                 file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
                 try:
+                    # Load the YAML content
                     with open(file_path, "r") as file:
-                        data = yaml.safe_load(file)
-                        # Extract the number of conversations from the 'conversation' section
-                        conv_data = data.get("conversation")
-                        # Get the test_name
-                        test_name = data.get("test_name")
+                        yaml_content = yaml.safe_load(file)
+
+                    # Get the test_name from the file
+                    test_name = yaml_content.get("test_name", "Unknown")
+                    names.append(test_name)
+
+                    # Use RoleData to properly calculate the number of conversations
+                    try:
+                        # RoleData expects the parsed YAML content, not the file path
+                        # Personality file can be None, project_folder is required
+                        role_data = RoleData(
+                            yaml_file=yaml_content,
+                            personality_file=None,
+                            project_folder=project_path,
+                        )
+                        # The conversation_number attribute has the calculated number
+                        num_conversations = role_data.conversation_number
+                        print(
+                            f"Profile '{test_name}': {num_conversations} conversations"
+                        )
+                        total_conversations += num_conversations
+                    except Exception as e:
+                        print(f"Error using RoleData for {test_name}: {str(e)}")
+                        # Fall back to manual counting if RoleData fails
+                        conv_data = yaml_content.get("conversation")
 
                         if isinstance(conv_data, list):
                             num_conversations = sum(
@@ -1098,14 +1123,16 @@ class ExecuteSelectedAPIView(APIView):
                             num_conversations = 0
 
                         total_conversations += num_conversations
-                        names.append(test_name)
-                except yaml.YAMLError as e:
-                    print(f"Error loading YAML file: {e}")
+                        print(
+                            f"Fallback count for '{test_name}': {num_conversations} conversations"
+                        )
+
+                except Exception as e:
+                    print(f"Error processing YAML file: {str(e)}")
 
             test_case.total_conversations = total_conversations
             test_case.profiles_names = names
-
-        print(f"Total conversations: {total_conversations}")
+            print(f"Total conversations calculated: {total_conversations}")
 
         # Set CWD to the script dir (avoid using os.chdir)
         script_cwd = os.path.dirname(os.path.dirname(script_path))
