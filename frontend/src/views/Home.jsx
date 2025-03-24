@@ -19,7 +19,8 @@ import {
     Trash,
     Play,
     Plus,
-    X
+    X,
+    AlertTriangle,
 } from 'lucide-react';
 import { uploadFiles, deleteFiles } from '../api/fileApi';
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
@@ -657,13 +658,20 @@ function Home() {
                                                         onChange={() => selectFile(file.id)}
                                                         className="form-checkbox h-4 w-4 mt-1"
                                                     />
-                                                    <Link
-                                                        variant="light"
-                                                        onPress={() => navigate(`/yaml-editor/${file.id}`)}
-                                                        className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
-                                                    >
-                                                        {file.name}
-                                                    </Link>
+                                                    <div className="flex items-center space-x-2 flex-1">
+                                                        <Link
+                                                            variant="light"
+                                                            onPress={() => navigate(`/yaml-editor/${file.id}`)}
+                                                            className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
+                                                        >
+                                                            {file.name}
+                                                        </Link>
+                                                        {file.is_valid === false && (
+                                                            <div className="tooltip-container" title="Invalid profile: This YAML has validation errors">
+                                                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </li>
                                         ))}

@@ -124,7 +124,10 @@ class TestFile(models.Model):
     project = models.ForeignKey(
         "Project", related_name="test_files", on_delete=models.CASCADE
     )
-
+    is_valid = models.BooleanField(
+        default=False,
+        help_text="Whether the YAML file is valid for execution in Sensei",
+    )
     # This shouldnt be necessary since we are making sure the file field is always relative
     # Anyway, I leave it as a comment in case we need to go back to it in the future
     # relative_path = models.CharField(max_length=255, blank=True, null=True)
@@ -135,40 +138,62 @@ class TestFile(models.Model):
         # After saving, try to read and process the file
         if self.file and hasattr(self.file, "path") and os.path.exists(self.file.path):
             try:
+                # First read the file for validation
                 with open(self.file.path, "r") as file:
-                    data = yaml.safe_load(file)
-                    test_name = data.get("test_name")
+                    yaml_content = file.read()
 
-                    if test_name:
-                        # Get the file extension
-                        _, ext = os.path.splitext(self.file.name)
-                        # Create new filename and change the extension to yaml
-                        # To avoid having yaml and yml files with the same name
-                        new_filename = f"{test_name}.yaml"
-                        # Get user and project id
-                        user_id = self.project.owner.id
-                        project_id = self.project.id
-                        new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
+                # Validate using YamlValidator
+                from .validation_script import YamlValidator
 
-                        # Rename the file
-                        old_path = self.file.path
-                        new_full_path = os.path.join(settings.MEDIA_ROOT, new_path)
-                        os.rename(old_path, new_full_path)
+                validator = YamlValidator()
+                validation_errors = validator.validate(yaml_content)
 
-                        # Update the model
-                        self.file.name = new_path
-                        self.name = test_name
-                        TestFile.objects.filter(pk=self.pk).update(
-                            file=self.file.name, name=test_name
-                        )
-                    else:
-                        raise ValidationError(
-                            "YAML file must contain a test_name field"
-                        )
+                # Parse the YAML content for further processing
+                data = yaml.safe_load(yaml_content)
+                test_name = data.get("test_name")
+
+                if not test_name:
+                    self.is_valid = False
+                    TestFile.objects.filter(pk=self.pk).update(is_valid=False)
+                    return
+
+                # Get the file extension
+                _, ext = os.path.splitext(self.file.name)
+                # Create new filename and change the extension to yaml
+                # To avoid having yaml and yml files with the same name
+                new_filename = f"{test_name}.yaml"
+                # Get user and project id
+                user_id = self.project.owner.id
+                project_id = self.project.id
+                new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
+
+                # Rename the file
+                old_path = self.file.path
+                new_full_path = os.path.join(settings.MEDIA_ROOT, new_path)
+                os.rename(old_path, new_full_path)
+
+                # Update the model
+                self.file.name = new_path
+                self.name = test_name
+
+                # Set validation status - only boolean flag
+                self.is_valid = not bool(validation_errors)
+
+                # Update all fields in the database
+                TestFile.objects.filter(pk=self.pk).update(
+                    file=self.file.name,
+                    name=test_name,
+                    is_valid=self.is_valid,
+                )
+
             except yaml.YAMLError as e:
-                raise ValidationError(f"Invalid YAML file: {str(e)}")
+                # Set as invalid but don't raise exception
+                self.is_valid = False
+                TestFile.objects.filter(pk=self.pk).update(is_valid=False)
             except Exception as e:
-                raise ValidationError(f"Error processing file: {str(e)}")
+                # Set as invalid but don't raise exception
+                self.is_valid = False
+                TestFile.objects.filter(pk=self.pk).update(is_valid=False)
 
     def __str__(self):
         return os.path.basename(self.file.name)
