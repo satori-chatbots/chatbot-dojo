@@ -134,16 +134,6 @@ function YamlEditor() {
             let hasValidationErrors = false;
             let forceSave = false;
 
-            // Check if there are syntax errors and ask for confirmation
-            if (!isValid && errorInfo && !errorInfo.isSchemaError) {
-                // This is a syntax error, not just a validation error
-                const confirmSave = window.confirm(
-                    "Your YAML contains syntax errors which might cause issues. Save anyway?"
-                );
-                if (!confirmSave) return;
-                forceSave = true;
-            }
-
             // Only validate on server if there are no syntax errors
             if (!forceSave) {
                 try {
@@ -269,28 +259,16 @@ function YamlEditor() {
     // Validates the YAML content
     const validateYaml = (value) => {
         try {
+            // Just parse the YAML to check for syntax errors
             const parsedYaml = yamlLoad(value);
-
-            // Syntax is valid, now check schema
-            const schemaValidation = validateYamlSchema(parsedYaml);
-
-            if (schemaValidation.valid) {
-                setIsValid(true);
-                setErrorInfo(null);
-            } else {
-                setIsValid(false);
-                setErrorInfo({
-                    message: 'Schema validation failed',
-                    errors: schemaValidation.errors,
-                    isSchemaError: true
-                });
-            }
+            setIsValid(true);
+            setErrorInfo(null);
         } catch (e) {
             setIsValid(false);
 
             // Parse error message to extract useful information
             const errorLines = e.message.split('\n');
-            const errorMessage = errorLines[0]; // The first line usually contains the main error message
+            const errorMessage = errorLines[0];
 
             // Get code context if available
             const codeContext = errorLines.slice(1).join('\n');
