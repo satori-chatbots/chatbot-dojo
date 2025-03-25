@@ -215,6 +215,7 @@ function YamlEditor() {
     const handleEditorChange = (value) => {
         setEditorContent(value);
         validateYaml(value);
+        setServerValidationErrors(null);
     }
 
 
@@ -293,7 +294,11 @@ function YamlEditor() {
                     <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center">
                             <span className="mr-2">YAML Validity:</span>
-                            {isValid ? <CheckCircle2 className="text-green-500" /> : <AlertCircle className="text-red-500" />}
+                            {isValid && !serverValidationErrors ? (
+                                <CheckCircle2 className="text-green-500" />
+                            ) : (
+                                <AlertCircle className="text-red-500" />
+                            )}
 
                             {/* Display schema errors if any */}
                             {!isValid && errorInfo && errorInfo.isSchemaError && (
@@ -314,6 +319,13 @@ function YamlEditor() {
                                 <div className="ml-2 text-red-500 text-sm">
                                     {errorInfo.message}
                                     {errorInfo.line && ` at line ${errorInfo.line}`}
+                                </div>
+                            )}
+
+                            {/* Display simplified server validation errors message */}
+                            {serverValidationErrors && (
+                                <div className="ml-2 text-red-500 text-sm">
+                                    {serverValidationErrors.length} server validation {serverValidationErrors.length === 1 ? 'error' : 'errors'} - see details below
                                 </div>
                             )}
                         </div>
@@ -394,15 +406,7 @@ function YamlEditor() {
                                     </li>
                                 ))}
                             </ul>
-                            <div className="mt-3 flex justify-end">
-                                <Button
-                                    color="danger"
-                                    variant="light"
-                                    onPress={() => setServerValidationErrors(null)}
-                                >
-                                    Dismiss
-                                </Button>
-                            </div>
+
                         </div>
                     )}
                 </div>
