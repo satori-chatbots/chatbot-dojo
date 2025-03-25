@@ -122,7 +122,18 @@ function YamlEditor() {
             fetchFile(fileId)
                 .then(response => {
                     setEditorContent(response.yamlContent);
+                    // Validate on startup
                     validateYaml(response.yamlContent);
+                    // Validate on startup
+                    validateYamlOnServer(response.yamlContent)
+                        .then(validationResult => {
+                            if (!validationResult.valid) {
+                                setServerValidationErrors(validationResult.errors);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error validating YAML on server:', err);
+                        });
                 })
                 .catch(err => console.error('Error fetching file:', err));
         }
