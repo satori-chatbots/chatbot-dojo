@@ -54,14 +54,17 @@ export const fetchFile = async (fileId) => {
     }
 };
 
-export const updateFile = async (fileId, content) => {
+export const updateFile = async (fileId, content, options = {}) => {
     try {
         const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.FETCH_FILES}${fileId}/update-file/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ content }),
+            body: JSON.stringify({
+                content,
+                ignore_validation_errors: options.ignoreValidationErrors
+            }),
         });
         return await response.json();
     } catch (error) {
@@ -70,12 +73,13 @@ export const updateFile = async (fileId, content) => {
     }
 };
 
-export const createFile = async (content, projectId) => {
+export const createFile = async (content, projectId, options = {}) => {
     try {
         const formData = new FormData();
         const blob = new Blob([content], { type: 'application/x-yaml' });
         formData.append('file', blob, 'newfile.yaml');
         formData.append('project', projectId);
+        formData.append('ignore_validation_errors', options.ignoreValidationErrors ? 'true' : 'false');
 
         const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.UPLOAD_FILES}`, {
             method: 'POST',

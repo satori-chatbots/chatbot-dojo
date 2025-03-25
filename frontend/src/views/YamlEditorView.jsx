@@ -132,24 +132,44 @@ function YamlEditor() {
         try {
             setServerValidationErrors(null);
             let hasValidationErrors = false;
+            let forceSave = false;
 
-            // First, validate YAML on server
-            const validationResult = await validateYamlOnServer(editorContent);
+            // Check if there are syntax errors and ask for confirmation
+            if (!isValid && errorInfo && !errorInfo.isSchemaError) {
+                // This is a syntax error, not just a validation error
+                const confirmSave = window.confirm(
+                    "Your YAML contains syntax errors which might cause issues. Save anyway?"
+                );
+                if (!confirmSave) return;
+                forceSave = true;
+            }
 
-            if (!validationResult.valid) {
-                setServerValidationErrors(validationResult.errors);
-                hasValidationErrors = true;
+            // Only validate on server if there are no syntax errors
+            if (!forceSave) {
+                try {
+                    const validationResult = await validateYamlOnServer(editorContent);
+                    if (!validationResult.valid) {
+                        setServerValidationErrors(validationResult.errors);
+                        hasValidationErrors = true;
+                    }
+                } catch (validationErr) {
+                    // If server validation fails, continue with the save operation
+                    console.error("Server validation error:", validationErr);
+                    hasValidationErrors = true;
+                }
             }
 
             if (fileId) {
                 // Update existing file
-                const response = await updateFile(fileId, editorContent, { ignoreValidationErrors: hasValidationErrors });
-                const successMessage = hasValidationErrors
+                const response = await updateFile(fileId, editorContent, {
+                    ignoreValidationErrors: hasValidationErrors || forceSave
+                });
+                const successMessage = (hasValidationErrors || forceSave)
                     ? 'File saved with validation errors'
                     : 'File updated successfully';
 
-                if (hasValidationErrors) {
-                    showToast('error', successMessage);
+                if (hasValidationErrors || forceSave) {
+                    showToast('warning', successMessage);
                 } else {
                     showToast('success', response.message || successMessage);
                 }
@@ -159,14 +179,16 @@ function YamlEditor() {
                     showToast('error', 'Please select a project first');
                     return;
                 }
-                const response = await createFile(editorContent, selectedProject.id, { ignoreValidationErrors: hasValidationErrors });
+                const response = await createFile(editorContent, selectedProject.id, {
+                    ignoreValidationErrors: hasValidationErrors || forceSave
+                });
                 if (response.uploaded_file_ids && response.uploaded_file_ids.length > 0) {
                     // Get the first file ID since we are only uploading one
                     const newFileId = response.uploaded_file_ids[0];
-                    const successMessage = hasValidationErrors
+                    const successMessage = (hasValidationErrors || forceSave)
                         ? 'File created with validation errors'
                         : 'File created successfully';
-                    showToast(hasValidationErrors ? 'error' : 'success', successMessage);
+                    showToast(hasValidationErrors || forceSave ? 'warning' : 'success', successMessage);
                     // Navigate to the edit view of the new file
                     navigate(`/yaml-editor/${newFileId}`);
                     return;
@@ -321,7 +343,6 @@ function YamlEditor() {
                             className="text-sm"
                             color="primary"
                             onPress={() => handleSave()}
-                            isDisabled={!isValid}
                         >
                             {fileId ? (
                                 <>

@@ -672,24 +672,41 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def update_file(self, request, pk=None):
         test_file = self.get_object()
         content = request.data.get("content")
+        ignore_validation_errors = request.data.get("ignore_validation_errors", False)
+
         if not content:
             return Response(
                 {"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Try to parse the YAML to get the test name and validate it
         try:
             data = yaml.safe_load(content)
+            new_test_name = data.get("test_name", None)
         except yaml.YAMLError as e:
-            return Response(
-                {"error": f"Invalid YAML: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            # Only reject if not ignoring validation errors
+            if not ignore_validation_errors:
+                return Response(
+                    {"error": f"Invalid YAML: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # If ignoring errors, try to find test_name from the original file
+            try:
+                with open(test_file.file.path, "r") as f:
+                    original_data = yaml.safe_load(f.read())
+                    new_test_name = original_data.get("test_name", test_file.name)
+            except:
+                # If all else fails, keep the current name
+                new_test_name = test_file.name
 
-        new_test_name = data.get("test_name", None)
         if not new_test_name:
-            return Response(
-                {"error": "No test_name found in YAML"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            if not ignore_validation_errors:
+                return Response(
+                    {"error": "No test_name found in YAML"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # If ignoring errors, use the current file name
+            new_test_name = test_file.name
 
         project = test_file.project
         if not project:
