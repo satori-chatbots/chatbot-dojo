@@ -54,6 +54,7 @@ from django.db import models
 from django.db.models import OuterRef, Subquery, Sum, Q
 from .validation_script import YamlValidator
 import sys
+import re
 
 # We need this one since it already has the fernet key
 from .models import cipher_suite
@@ -64,6 +65,24 @@ User = get_user_model()
 base_dir = os.path.dirname(settings.BASE_DIR)
 sys.path.append(os.path.join(base_dir, "user-simulator", "src"))
 from user_sim.role_structure import RoleData
+
+
+def extract_test_name_from_malformed_yaml(content):
+    """
+    Extract test_name from potentially malformed YAML using regex.
+    Returns None if no test_name is found.
+    """
+    try:
+        # Look for test_name: "value" or test_name: 'value' or test_name: value
+        pattern = r'test_name:\s*[\'"]?([\w\d_-]+)[\'"]?'
+        match = re.search(pattern, content.decode("utf-8"))
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return None
+
+
 # ------------- #
 # - USERS API - #
 # ------------- #
@@ -823,9 +842,11 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def upload(self, request):
         uploaded_files = request.FILES.getlist("file")
         project_id = request.data.get("project")
+        ignore_validation_errors = request.data.get("ignore_validation_errors", False)
         errors = []
         test_names = set()
         already_reported_test_names = set()
+        file_data = []  # Store validated file data for later processing
 
         # Check if the project exists
         try:
@@ -841,62 +862,103 @@ class TestFileViewSet(viewsets.ModelViewSet):
             TestFile.objects.filter(project=project).values_list("name", flat=True)
         )
 
-        # Validate all files first
+        # Process all files first
         for f in uploaded_files:
+            is_valid = True
+            test_name = None
             try:
                 content = f.read()
                 f.seek(0)  # Reset pointer so Django can save the file
                 data = yaml.safe_load(content)
                 test_name = data.get("test_name", None)
             except Exception as e:
-                errors.append({"file": f.name, "error": f"Error reading YAML: {e}"})
-                continue
+                is_valid = False
+
+                # Try to extract test_name even from malformed YAML
+                f.seek(0)
+                content = f.read()
+                f.seek(0)
+
+                extracted_name = extract_test_name_from_malformed_yaml(content)
+                test_name = extracted_name
+
+                if not ignore_validation_errors:
+                    errors.append({"file": f.name, "error": f"Error reading YAML: {e}"})
+                    continue
+
+                # Only use file name if we couldn't extract test_name
+                if not test_name:
+                    test_name = f.name
 
             if not test_name:
-                errors.append(
-                    {"file": f.name, "error": "test_name is missing in YAML."}
-                )
-                continue
-
-            if test_name in existing_test_names:
-                if test_name not in already_reported_test_names:
-                    already_reported_test_names.add(test_name)
+                is_valid = False
+                if not ignore_validation_errors:
                     errors.append(
-                        {
-                            "file": f.name,
-                            "error": f"test_name '{test_name}' is already used.",
-                        }
+                        {"file": f.name, "error": "test_name is missing in YAML."}
                     )
-                continue
+                    continue
+                # When ignoring errors, use file name without extension
+                test_name = os.path.splitext(f.name)[0]
+
+            # Handle duplicate names
+            if test_name in existing_test_names:
+                if not ignore_validation_errors:
+                    if test_name not in already_reported_test_names:
+                        already_reported_test_names.add(test_name)
+                        errors.append(
+                            {
+                                "file": f.name,
+                                "error": f"test_name '{test_name}' is already used.",
+                            }
+                        )
+                    continue
+                # With ignore_validation_errors, append a unique suffix
+                base_name = test_name
+                counter = 1
+                while test_name in existing_test_names or test_name in test_names:
+                    test_name = f"{base_name}_{counter}"
+                    counter += 1
+                is_valid = False
 
             if test_name in test_names:
-                if test_name not in already_reported_test_names:
-                    already_reported_test_names.add(test_name)
-                    errors.append(
-                        {
-                            "file": f.name,
-                            "error": f"Duplicate test_name '{test_name}' in uploaded files.",
-                        }
-                    )
-                continue
+                if not ignore_validation_errors:
+                    if test_name not in already_reported_test_names:
+                        already_reported_test_names.add(test_name)
+                        errors.append(
+                            {
+                                "file": f.name,
+                                "error": f"Duplicate test_name '{test_name}' in uploaded files.",
+                            }
+                        )
+                    continue
+                # With ignore_validation_errors, append a unique suffix
+                base_name = test_name
+                counter = 1
+                while test_name in test_names:
+                    test_name = f"{base_name}_{counter}"
+                    counter += 1
+                is_valid = False
 
             test_names.add(test_name)
+            file_data.append({"file": f, "test_name": test_name, "is_valid": is_valid})
 
-        if errors:
+        # Return errors if any and not ignoring validation
+        if errors and not ignore_validation_errors:
             return Response(
                 {"errors": errors},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # All files are valid, proceed to save them atomically
+        # All files processed, proceed to save them
         saved_files = []
         try:
             with transaction.atomic():
-                for f in uploaded_files:
-                    data = yaml.safe_load(f.read())
-                    test_name = data.get("test_name")
+                for data in file_data:
                     instance = TestFile.objects.create(
-                        file=f, name=test_name, project=project
+                        file=data["file"],
+                        name=data["test_name"],
+                        project=project,
+                        is_valid=data["is_valid"],
                     )
                     saved_files.append(instance.id)
         except Exception as e:
