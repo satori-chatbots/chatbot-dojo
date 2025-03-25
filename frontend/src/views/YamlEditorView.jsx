@@ -131,30 +131,42 @@ function YamlEditor() {
     const handleSave = async () => {
         try {
             setServerValidationErrors(null);
+            let hasValidationErrors = false;
 
             // First, validate YAML on server
             const validationResult = await validateYamlOnServer(editorContent);
 
             if (!validationResult.valid) {
                 setServerValidationErrors(validationResult.errors);
-                return;
+                hasValidationErrors = true;
             }
 
             if (fileId) {
                 // Update existing file
-                const response = await updateFile(fileId, editorContent);
-                showToast('success', response.message || 'File updated successfully');
+                const response = await updateFile(fileId, editorContent, { ignoreValidationErrors: hasValidationErrors });
+                const successMessage = hasValidationErrors
+                    ? 'File saved with validation errors'
+                    : 'File updated successfully';
+
+                if (hasValidationErrors) {
+                    showToast('error', successMessage);
+                } else {
+                    showToast('success', response.message || successMessage);
+                }
             } else {
                 // Create new file
                 if (!selectedProject) {
                     showToast('error', 'Please select a project first');
                     return;
                 }
-                const response = await createFile(editorContent, selectedProject.id);
+                const response = await createFile(editorContent, selectedProject.id, { ignoreValidationErrors: hasValidationErrors });
                 if (response.uploaded_file_ids && response.uploaded_file_ids.length > 0) {
                     // Get the first file ID since we are only uploading one
                     const newFileId = response.uploaded_file_ids[0];
-                    showToast('success', 'File created successfully');
+                    const successMessage = hasValidationErrors
+                        ? 'File created with validation errors'
+                        : 'File created successfully';
+                    showToast(hasValidationErrors ? 'error' : 'success', successMessage);
                     // Navigate to the edit view of the new file
                     navigate(`/yaml-editor/${newFileId}`);
                     return;
