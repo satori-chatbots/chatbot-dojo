@@ -31,6 +31,17 @@ export function MyCustomToast({ message, type, onClose }) {
     // If no message, don't render anything
     if (!message) return null;
 
+    // Determine styling based on toast type
+    let toastStyle = '';
+    if (type === 'error') {
+        toastStyle = 'bg-danger-200/30 dark:bg-danger-50/30 text-danger';
+    } else if (type === 'warning') {
+        toastStyle = 'bg-warning-200/30 dark:bg-warning-50/50 text-warning';
+    } else {
+        // Default success styling
+        toastStyle = 'bg-success-200/30 dark:bg-success-50/30 text-success';
+    }
+
     return (
         <Transition
             show={isVisible}
@@ -47,7 +58,7 @@ export function MyCustomToast({ message, type, onClose }) {
                 fixed left-1/2 transform -translate-x-1/2
                 px-6 py-3 rounded-lg shadow-lg
                 text-sm text-center z-50
-                ${type === 'error' ? 'bg-danger-200/30 dark:bg-danger-50/30 text-danger' : 'bg-success-200/30 dark:bg-success-50/30 text-success'}
+                ${toastStyle}
                 backdrop-blur-md
             `}
                 style={{
