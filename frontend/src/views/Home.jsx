@@ -352,12 +352,25 @@ function Home() {
     // Open the modal for the execution name
     const openExecuteModal = () => {
         if (selectedFiles.length === 0) {
-            alert('No files selected for test execution.');
+            showToast('error', 'No files selected for test execution.');
             return;
         }
 
         if (!selectedProject) {
-            alert('Please select a project to execute the test.');
+            showToast('error', 'Please select a project to execute the test.');
+            return;
+        }
+
+        // Check if any of the selected files are invalid
+        const invalidFiles = files
+            .filter(file => selectedFiles.includes(file.id) && file.is_valid === false)
+            .map(file => file.name);
+
+        if (invalidFiles.length > 0) {
+            showToast(
+                'error',
+                `The following files have validation errors and cannot be executed:\n${invalidFiles.join('\n')}`
+            );
             return;
         }
 
