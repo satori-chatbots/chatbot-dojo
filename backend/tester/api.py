@@ -698,34 +698,36 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 {"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Try to parse the YAML to get the test name and validate it
+        # Initialize new_test_name with the current file name as a fallback
+        new_test_name = test_file.name
+        is_valid = True
+
+        # Try to parse the YAML to get the test name
         try:
             data = yaml.safe_load(content)
-            new_test_name = data.get("test_name", None)
+            extracted_name = data.get("test_name", None)
+            if extracted_name:
+                new_test_name = extracted_name
         except yaml.YAMLError as e:
+            # Mark file as invalid
+            is_valid = False
+
             # Only reject if not ignoring validation errors
             if not ignore_validation_errors:
                 return Response(
                     {"error": f"Invalid YAML: {str(e)}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            # If ignoring errors, try to find test_name from the original file
-            try:
-                with open(test_file.file.path, "r") as f:
-                    original_data = yaml.safe_load(f.read())
-                    new_test_name = original_data.get("test_name", test_file.name)
-            except:
-                # If all else fails, keep the current name
-                new_test_name = test_file.name
 
-        if not new_test_name:
-            if not ignore_validation_errors:
-                return Response(
-                    {"error": "No test_name found in YAML"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            # If ignoring errors, use the current file name
-            new_test_name = test_file.name
+            # If we're ignoring errors, try to extract test_name with regex
+            try:
+                pattern = r'test_name:\s*[\'"]?([\w\d_-]+)[\'"]?'
+                match = re.search(pattern, content)
+                if match:
+                    new_test_name = match.group(1)
+            except Exception:
+                # If all extraction methods fail, keep the current name
+                pass
 
         project = test_file.project
         if not project:
@@ -755,6 +757,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         # Update the database fields
         test_file.name = new_test_name
+        test_file.is_valid = is_valid
         test_file.save()
 
         return Response(
