@@ -359,7 +359,42 @@ class YamlValidator:
                 for i, goal in enumerate(user["goals"]):
                     # Goals can be either strings (prompts) or dictionaries (variables)
                     if isinstance(goal, str):
-                        # Check if the string contains variable placeholders
+                        # First find and validate all properly formatted variables
+                        valid_vars = re.findall(r"{{(\w+)}}", goal)
+
+                        # Then check if there are any other curly braces in the string
+                        # This will catch orphaned braces, mismatched braces, or incorrect formatting
+                        clean_goal = goal
+                        for var in valid_vars:
+                            # Remove all properly formatted variables from string
+                            clean_goal = clean_goal.replace(f"{{{{{var}}}}}", "")
+
+                        # Now if there are any remaining curly braces, they are invalid
+                        if "{" in clean_goal or "}" in clean_goal:
+                            # Find the first instance of the remaining invalid brace pattern
+                            invalid_pattern = re.search(r"[^{]*[{}]+[^}]*", clean_goal)
+                            if invalid_pattern:
+                                pattern_text = invalid_pattern.group(0).strip()
+                                errors.append(
+                                    ValidationError(
+                                        f"Invalid use of curly braces: '{pattern_text}'. "
+                                        f"Curly braces can only be used for variables with exactly two opening and two closing braces: '{{{{variable}}}}'. "
+                                        f"Variables must be single words without spaces.",
+                                        f"/user/goals/{i}",
+                                    )
+                                )
+
+                        # Check if properly formatted variables are defined (as before)
+                        for var in valid_vars:
+                            if var not in defined_variables:
+                                errors.append(
+                                    ValidationError(
+                                        f"Variable '{var}' used in goal but not defined",
+                                        f"/user/goals/{i}",
+                                    )
+                                )
+
+                        # Then check properly formatted variables are defined
                         var_placeholders = re.findall(r"{{(\w+)}}", goal)
                         for var in var_placeholders:
                             # Make sure variables used are defined somewhere in the goals
@@ -1137,7 +1172,7 @@ user:
     - personality: personalities/conversational-user.yml
     - your name is Jon Doe
   goals:
-    - "a {{size}} custom pizza with {{toppings}}, {{size}}"
+    - "a size {{custom pizza}} with {{toppings}}, {{size}}"
     - how long is going to take the pizza to arrive
     - how much will it cost
 
@@ -1150,7 +1185,7 @@ user:
           - big
 
     - toppings:
-        function: forward(size)
+        function: forward()
         type: string
         data:
           - cheese
