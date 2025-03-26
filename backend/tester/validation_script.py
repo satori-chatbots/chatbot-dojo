@@ -130,10 +130,66 @@ class YamlValidator:
             if "conversation" in data:
                 errors.extend(self._validate_conversation_section(data["conversation"]))
 
+            if "user" in data and "conversation" in data:
+                errors.extend(
+                    self._validate_conversation_variable_dependencies(
+                        data["user"], data["conversation"]
+                    )
+                )
+
             return errors
 
         except yaml.YAMLError as e:
             return [ValidationError(f"Invalid YAML syntax: {str(e)}", "/")]
+
+    def _validate_conversation_variable_dependencies(
+        self, user: Dict, conversation: Dict
+    ) -> List[ValidationError]:
+        """Validate that sample() or all_combinations is only used when there are nested forwards."""
+        errors = []
+
+        # Check if conversation.number is using sample() or all_combinations
+        using_combinations = False
+        if "number" in conversation:
+            num = conversation["number"]
+            if isinstance(num, str):
+                if num == "all_combinations" or (
+                    isinstance(num, str) and num.startswith("sample(")
+                ):
+                    using_combinations = True
+
+        # If using combinations, check for nested forwards
+        if using_combinations:
+            has_nested_forwards = False
+
+            # Find all forwards in the user goals
+            if "goals" in user and isinstance(user["goals"], list):
+                for goal in user["goals"]:
+                    if isinstance(goal, dict) and len(goal) == 1:
+                        var_name = list(goal.keys())[0]
+                        var_def = goal[var_name]
+
+                        if isinstance(var_def, dict) and "function" in var_def:
+                            func = var_def["function"]
+                            # Check if this is a forward function referring to another variable
+                            if (
+                                func.startswith("forward(")
+                                and func.endswith(")")
+                                and func != "forward()"
+                            ):
+                                has_nested_forwards = True
+                                break
+
+            # If using combinations but no nested forwards, show an error
+            if not has_nested_forwards:
+                errors.append(
+                    ValidationError(
+                        "Using 'all_combinations' or 'sample()' requires at least one variable with nested forward() dependency",
+                        "/conversation/number",
+                    )
+                )
+
+        return errors
 
     def _validate_required_fields(self, data: Dict) -> List[ValidationError]:
         """Validate that all required fields are present."""
@@ -990,7 +1046,7 @@ if __name__ == "__main__":
 test_name: "pizza_order_test_all"
 
 llm:
-  temperatur: 0.8
+  temperature: 0.8
   model: gpt-4o-mini
 #  format:
 #    type: speech
@@ -1016,7 +1072,7 @@ user:
           - big
 
     - toppings:
-        function: forward()
+        function: another()
         type: string
         data:
           - cheese
