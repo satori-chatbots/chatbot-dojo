@@ -20,12 +20,17 @@ class YamlValidator:
             "conversation",
             "chatbot",
         ]
+        # These are mandatory, if they are not present, the validation will fail
         self.required_nested = {
-            #"llm": ["model", "temperature", "format"],
+            # "llm": ["model", "temperature", "format"],
             "llm.format": ["type"],
             "user": ["role", "context", "goals"],
             "chatbot": ["is_starter", "fallback", "output"],
             "conversation": ["number", "goal_style", "interaction_style"],
+        }
+        # While these are not mandatory, but they are only allowed keywords
+        self.allowed_fields = {
+            "llm": ["model", "temperature", "format"],
         }
         self.valid_formats = ["text", "speech"]
         self.valid_goal_functions = ["default()", "random()", "another()", "forward()"]
@@ -163,6 +168,16 @@ class YamlValidator:
     def _validate_llm_section(self, llm: Dict) -> List[ValidationError]:
         """Validate LLM section configuration."""
         errors = []
+
+        # Check for unexpected fields in the llm section
+        for field in llm:
+            if field not in self.allowed_fields["llm"]:
+                errors.append(
+                    ValidationError(
+                        f"Unexpected field '{field}' in llm section. Did you mean one of: {', '.join(self.allowed_fields['llm'])}?",
+                        f"/llm/{field}",
+                    )
+                )
 
         # Check that temperature is a number between 0 and 1
         if "temperature" in llm:
@@ -416,7 +431,12 @@ class YamlValidator:
                                             )
                                         )
                                     # Check that min is smaller than max
-                                    if "min" in data and "max" in data and data["min"] is not None and data["max"] is not None:
+                                    if (
+                                        "min" in data
+                                        and "max" in data
+                                        and data["min"] is not None
+                                        and data["max"] is not None
+                                    ):
                                         if data["min"] >= data["max"]:
                                             errors.append(
                                                 ValidationError(
@@ -967,48 +987,63 @@ if __name__ == "__main__":
 
     # Example YAML content
     yaml_content = """
-test_name: "academic_helper"
+test_name: "pizza_order_test_all"
 
 llm:
-  temperature: 0.8
+  temperatur: 0.8
   model: gpt-4o-mini
 #  format:
 #    type: speech
+#    config: asr_configuration/default_asr_config.yml
 
 user:
-  language: Spanish
-  role: you have to act as a student talking to a chatbot from a university web page
+  language: English
+  role: you have to act as a user ordering a pizza to a pizza shop.
   context:
+    - personality: personalities/conversational-user.yml
     - your name is Jon Doe
   goals:
-    - What undergraduate studies are offered at the EPS?
-    - where are the regulations of the TFM
-    - to clarify any of the regulations in the provided information
+    - "a {{size}} custom pizza with {{toppings}}, {{size}}"
+    - how long is going to take the pizza to arrive
+    - how much will it cost
+
+    - size:
+        function: forward(toppings)
+        type: string
+        data:
+          - small
+          - medium
+          - big
+
+    - toppings:
+        function: forward()
+        type: string
+        data:
+          - cheese
+          - mushrooms
+          - pepperoni
 
 chatbot:
   is_starter: False
-  fallback: Perdona, pero no te he entendido, ¿puedes repetirlo?
+  fallback: I'm sorry it's a little loud in my pizza shop, can you say that again?
   output:
+    - price:
+        type: money
+        description: The final price of the pizza order
+    - time:
+        type: time
+        description: how long is going to take the pizza to be ready
     - order_id:
         type: str
-        description: the link to the TFM regulations
+        description: my order ID
 
 conversation:
-  number: 1
-#  max_cost: 1
+  number: all_combinations
   goal_style:
-    steps: 3
-#    max_cost: 0.0001
+    steps: 2
   interaction_style:
-    - default
-#    - random:
-#      - make spelling mistakes
-#      - all questions
-#      - long phrases
-#      - change language:
-#          - italian
-#          - portuguese
-#          - chinese
+    - random:
+      - make spelling mistakes
     """
     print("Starting...")
 
