@@ -340,12 +340,20 @@ class YamlValidator:
                     )
                 )
             else:
-                # First pass: collect all defined variables
-                defined_variables = set()
-                for goal in user["goals"]:
+                # First pass: collect all defined variables and their functions
+                defined_variables = {}
+                for i, goal in enumerate(user["goals"]):
                     if isinstance(goal, dict) and len(goal) == 1:
                         var_name = list(goal.keys())[0]
-                        defined_variables.add(var_name)
+                        var_def = goal[var_name]
+
+                        if isinstance(var_def, dict) and "function" in var_def:
+                            defined_variables[var_name] = {
+                                "function": var_def["function"],
+                                "index": i,
+                            }
+                        else:
+                            defined_variables[var_name] = {"function": None, "index": i}
 
                 # Second pass: validate all goals (strings and variable definitions)
                 for i, goal in enumerate(user["goals"]):
@@ -598,6 +606,41 @@ class YamlValidator:
                                 f"/user/goals/{i}",
                             )
                         )
+
+            # Third pass: validate forward dependencies
+            forward_dependencies = {}
+            for var_name, var_info in defined_variables.items():
+                # Skip if the variable doesn't have a function defined
+                if not var_info["function"]:
+                    continue
+
+                func = var_info["function"]
+                # Check if this is a forward function with a variable reference
+                if (
+                    func.startswith("forward(")
+                    and func.endswith(")")
+                    and func != "forward()"
+                ):
+                    # Extract the referenced variable name
+                    referenced_var = func[len("forward(") : -1].strip()
+                    if referenced_var:
+                        forward_dependencies[var_name] = referenced_var
+
+            # Validate each forward dependency chain
+            for var_name, referenced_var in forward_dependencies.items():
+                # Skip if the referenced variable doesn't exist (already caught in other validations)
+                if referenced_var not in defined_variables:
+                    continue
+
+                # Check if the referenced variable also uses forward
+                ref_function = defined_variables[referenced_var]["function"]
+                if ref_function and not ref_function.startswith("forward("):
+                    errors.append(
+                        ValidationError(
+                            f"Variable '{referenced_var}' is referenced by forward() but doesn't use forward() itself",
+                            f"/user/goals/{defined_variables[referenced_var]['index']}/{referenced_var}/function",
+                        )
+                    )
 
         return errors
 
