@@ -642,6 +642,41 @@ class YamlValidator:
                         )
                     )
 
+            # Detect circular dependencies
+            def detect_cycle(node, visited, path, cycles):
+                visited[node] = True
+                path.append(node)
+
+                if node in forward_dependencies:
+                    next_node = forward_dependencies[node]
+                    if next_node in path:
+                        # Found a cycle, extract the cycle path
+                        cycle_start = path.index(next_node)
+                        cycle_path = path[cycle_start:] + [next_node]
+                        cycles.append(" → ".join(cycle_path))
+                    elif next_node not in visited or not visited[next_node]:
+                        detect_cycle(next_node, visited, path, cycles)
+
+                path.pop()
+
+            # Find all cycles in the dependencies
+            visited = {var: False for var in defined_variables}
+            cycles = []
+
+            for var in forward_dependencies:
+                if not visited[var]:
+                    detect_cycle(var, visited, [], cycles)
+
+            # Report any cycles found
+            if cycles:
+                cycle_descriptions = "; ".join(cycles)
+                errors.append(
+                    ValidationError(
+                        f"Circular forward dependencies detected: {cycle_descriptions}. Forward references must form a directed acyclic graph.",
+                        "/user/goals",
+                    )
+                )
+
         return errors
 
     def _validate_chatbot_section(self, chatbot: Dict) -> List[ValidationError]:
@@ -1115,7 +1150,7 @@ user:
           - big
 
     - toppings:
-        function: another()
+        function: forward(size)
         type: string
         data:
           - cheese
