@@ -52,7 +52,7 @@ class YamlValidator:
             "default",
         ]
         self.valid_interaction_styles = [
-            "long phrase",
+            "long phrases",
             "change your mind",
             "make spelling mistakes",
             "single question",
@@ -1172,7 +1172,7 @@ user:
     - personality: personalities/conversational-user.yml
     - your name is Jon Doe
   goals:
-    - "a size {{custom pizza}} with {{toppings}}, {{size}}"
+    - "a {{size}} custom pizza with toppings, {{size}}"
     - how long is going to take the pizza to arrive
     - how much will it cost
 
