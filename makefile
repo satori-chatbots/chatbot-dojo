@@ -4,6 +4,9 @@ FRONTEND_DIR=frontend
 FILEVAULT=filevault
 MANAGE=$(BACKEND_DIR)/manage.py
 
+run:
+	$(PYTHON) $(MANAGE) runserver
+
 full_reset:
 	rm $(BACKEND_DIR)/db.sqlite3
 	rm -rf $(FILEVAULT)
@@ -12,9 +15,6 @@ full_reset:
 	$(PYTHON) $(MANAGE) makemigrations tester
 	$(PYTHON) $(MANAGE) makemigrations
 	$(PYTHON) $(MANAGE) migrate
-
-run:
-	$(PYTHON) $(MANAGE) runserver
 
 migrations:
 	$(PYTHON) $(MANAGE) makemigrations tester
