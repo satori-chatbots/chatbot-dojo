@@ -1279,10 +1279,10 @@ def process_profile_report_from_conversation(conversation_file_path):
             print(f"Serial: {first_doc.get('serial')}")
             print(f"Language: {first_doc.get('language')}")
             print(
-                f"Personality: {next((item['personality'] for item in first_doc.get('context', []) if 'personality' in item), '')}"
+                f"Personality: {next((item['personality'] for item in first_doc.get('context', []) if isinstance(item, dict) and 'personality' in item), '')}"
             )
             print(
-                f"Context details: {[(item) for item in first_doc.get('context', []) if 'personality' not in item]}"
+                f"Context details: {[(item) for item in first_doc.get('context', []) if not isinstance(item, dict) or 'personality' not in item]}"
             )
             print(f"Interaction style: {interaction_style}")
             print(f"Number conversations: {number}")
@@ -1294,14 +1294,14 @@ def process_profile_report_from_conversation(conversation_file_path):
                 (
                     item["personality"]
                     for item in first_doc.get("context", [])
-                    if "personality" in item
+                    if isinstance(item, dict) and "personality" in item
                 ),
                 "",
             ),
             "context_details": [
                 item
                 for item in first_doc.get("context", [])
-                if "personality" not in item
+                if not isinstance(item, dict) or "personality" not in item
             ],
             "interaction_style": interaction_style,
             "number_conversations": number,
