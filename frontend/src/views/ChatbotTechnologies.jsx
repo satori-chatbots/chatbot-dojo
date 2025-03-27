@@ -293,7 +293,6 @@ const ChatbotTechnologies = () => {
                                     </Select>
 
                                     <Input
-                                        isRequired
                                         isDisabled={loadingValidation}
                                         errorMessage="Please enter a valid URL"
                                         label="URL (optional)"
