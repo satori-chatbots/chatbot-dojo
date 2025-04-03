@@ -1,3 +1,6 @@
 [submodule "user-simulator"]
 	path = user-simulator
 	url = git@github.com:satori-chatbots/user-simulator.git
+[submodule "tfm"]
+	path = tfm
+	url = git@github.com:LittleHaku/tfm.git
