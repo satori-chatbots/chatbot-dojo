@@ -58,6 +58,12 @@ urlpatterns = [
         api.validate_yaml,
         name="validate-yaml",
     ),
+    path(
+        "generate-profiles/",
+        api.generate_profiles,
+        name="generate-profiles",
+    ),
+
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

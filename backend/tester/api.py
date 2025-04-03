@@ -52,6 +52,7 @@ from rest_framework.permissions import BasePermission
 from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import OuterRef, Subquery, Sum, Q
+from django.core.files import File
 from .validation_script import YamlValidator
 import sys
 import re
@@ -62,6 +63,7 @@ from .models import cipher_suite
 # Get the latest version of the user model
 User = get_user_model()
 
+# Import the RoleData class from user-simulator (Sensei)
 base_dir = os.path.dirname(settings.BASE_DIR)
 sys.path.append(os.path.join(base_dir, "user-simulator", "src"))
 from user_sim.role_structure import RoleData
@@ -1736,3 +1738,145 @@ def stop_test_execution(request):
     except TestCase.DoesNotExist:
         logger.error(f"Test case {test_case_id} not found")
         return Response({"error": "Test case not found"}, status=404)
+
+
+@api_view(["POST"])
+def generate_profiles(request):
+    """
+    Generate profiles using the profiler module based on provided parameters.
+
+    Expected request body:
+    {
+        "project_id": integer,
+        "conversations": integer,
+        "turns": integer
+    }
+    """
+    # Check if user is authenticated
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Authentication required to generate profiles."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Get parameters from request
+    project_id = request.data.get("project_id")
+    conversations = request.data.get("conversations", 5)
+    turns = request.data.get("turns", 5)
+
+    if not project_id:
+        return Response(
+            {"error": "No project ID provided."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Check if the project exists
+    try:
+        project = Project.objects.get(id=project_id)
+        # Check if the project owner is the same as the user
+        if project.owner != request.user:
+            return Response(
+                {"error": "You do not own this project."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+    except Project.DoesNotExist:
+        return Response(
+            {"error": "Project not found, make sure to create a project first."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Get the technology from the project
+    technology = project.chatbot_technology.technology
+
+    # Set up paths
+    base_dir = os.path.dirname(settings.BASE_DIR)
+    tfm_script_path = os.path.join(base_dir, "tfm", "src", "main.py")
+
+    # Create output directory for generated profiles
+    output_dir = os.path.join(
+        settings.MEDIA_ROOT,
+        "projects",
+        f"user_{request.user.id}",
+        f"project_{project_id}",
+        "generated_profiles",
+    )
+    os.makedirs(output_dir, exist_ok=True)
+
+    try:
+        # Build the command to execute
+        command = [
+            "python",
+            tfm_script_path,
+            "-t",
+            technology,
+            "-s",
+            str(conversations),
+            "-n",
+            str(turns),
+            "-o",
+            output_dir,
+        ]
+
+        # Execute the command
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Get list of generated files
+        generated_files = []
+        if os.path.exists(output_dir):
+            generated_files = [
+                f for f in os.listdir(output_dir) if f.endswith((".yaml", ".yml"))
+            ]
+
+        # Save the generated files to the database
+        file_ids = []
+        for filename in generated_files:
+            file_path = os.path.join(output_dir, filename)
+
+            # Extract test_name from the YAML
+            test_name = None
+            with open(file_path, "r") as f:
+                try:
+                    content = yaml.safe_load(f)
+                    test_name = content.get("test_name", os.path.splitext(filename)[0])
+                except yaml.YAMLError:
+                    test_name = os.path.splitext(filename)[0]
+
+            # Create a Django file object
+            with open(file_path, "rb") as f:
+                django_file = File(f)
+                test_file = TestFile.objects.create(
+                    name=test_name,
+                    project=project,
+                    is_valid=True,
+                )
+                test_file.file.save(filename, django_file)
+                file_ids.append(test_file.id)
+
+        return Response(
+            {
+                "message": "Profile generation completed",
+                "generated_files": len(generated_files),
+                "file_ids": file_ids,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except subprocess.CalledProcessError as e:
+        return Response(
+            {
+                "error": f"Error executing profile generation script: {e}",
+                "stdout": e.stdout,
+                "stderr": e.stderr,
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"Error generating profiles: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
