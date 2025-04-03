@@ -21,6 +21,7 @@ import {
     Plus,
     X,
     AlertTriangle,
+    Sparkles
 } from 'lucide-react';
 import { uploadFiles, deleteFiles } from '../api/fileApi';
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
@@ -93,6 +94,11 @@ function Home() {
     const [isDragging, setIsDragging] = useState(false);
     const [isFileDragging, setIsFileDragging] = useState(false);
 
+    const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+    const [profileGenParams, setProfileGenParams] = useState({
+        conversations: 5,
+        turns: 5
+    });
 
     // Navigation
     const navigate = useNavigate();
@@ -110,6 +116,13 @@ function Home() {
         technology: '',
     });
     const [editProjectId, setEditProjectId] = useState(null);
+
+    const handleProfileGenParamChange = (field, value) => {
+        setProfileGenParams(prev => ({
+            ...prev,
+            [field]: parseInt(value) || 0
+        }));
+    };
 
     const handleEditClick = (project) => {
         setEditProjectId(project.id);
@@ -554,8 +567,8 @@ function Home() {
                     {/* Project Dropdown */}
                     <div className="flex flex-col space-y-4">
                         <Button
-                            color="secondary"
-                            variant="bordered"
+                            color="default"
+                            variant="ghost"
                             onPress={() => setSelectedProject(null)}
                             startContent={<X className="w-4 h-4" />}
                         >
@@ -659,13 +672,24 @@ function Home() {
                                     onPress={() => navigate('/yaml-editor')}
                                     fullWidth
                                     color='secondary'
+                                    variant='ghost'
                                     startContent={<File className="w-4 h-4" />}
                                 >
-                                    Create New YAML
+                                    Create Profile Manually
+                                </Button>
+
+                                {/* Auto generate profiels */}
+                                <Button
+                                    fullWidth
+                                    color='secondary'
+                                    variant='ghost'
+                                    startContent={<Sparkles className="w-4 h-4" />}
+                                    onPress={() => setIsGenerateModalOpen(true)}
+                                >
+                                    Auto-Generate Profiles
                                 </Button>
                             </div>
 
-                            {/* Create new Profile */}
 
 
                             {/* List Section */}
@@ -760,6 +784,55 @@ function Home() {
             {/* ------------------------------------------------------ */}
             {/* ------------------ Modals ---------------------------- */}
             {/* ------------------------------------------------------ */}
+
+            {/* Generate Profiles Modal */}
+            <Modal
+                isOpen={isGenerateModalOpen}
+                onOpenChange={setIsGenerateModalOpen}
+            >
+                <ModalContent>
+                    <ModalHeader>Generate Profiles</ModalHeader>
+                    <ModalBody className="flex flex-col gap-4">
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Profiles are generated based on conversations. More conversations with more turns create better profiles but take longer to generate.
+                        </p>
+                        <div className="space-y-4">
+                            <Input
+                                label="Number of conversations"
+                                type="number"
+                                min="1"
+                                value={profileGenParams.conversations.toString()}
+                                onValueChange={(value) => handleProfileGenParamChange('conversations', value)}
+                            />
+                            <Input
+                                label="Turns per conversation"
+                                type="number"
+                                min="1"
+                                value={profileGenParams.turns.toString()}
+                                onValueChange={(value) => handleProfileGenParamChange('turns', value)}
+                            />
+                        </div>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="default"
+                            variant="light"
+                            onPress={() => setIsGenerateModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            color="primary"
+                            onPress={() => {
+                                showToast('success', 'Profile generation started! (FAKE)');
+                                setIsGenerateModalOpen(false);
+                            }}
+                        >
+                            Generate
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
 
             {/* Create Project Modal */}
             <CreateProjectModal
