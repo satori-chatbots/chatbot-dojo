@@ -120,3 +120,23 @@ export const validateYamlOnServer = async (content) => {
         };
     }
 };
+
+export const generateProfiles = async (projectId, params = {}) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}/generate-profiles/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                project_id: projectId,
+                conversations: params.conversations || 5,
+                turns: params.turns || 5
+            }),
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error generating profiles:', error);
+        throw error;
+    }
+};

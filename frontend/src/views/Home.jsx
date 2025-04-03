@@ -23,7 +23,7 @@ import {
     AlertTriangle,
     Sparkles
 } from 'lucide-react';
-import { uploadFiles, deleteFiles } from '../api/fileApi';
+import { uploadFiles, deleteFiles, generateProfiles } from '../api/fileApi';
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';
 import useFetchProjects from '../hooks/useFetchProjects';
@@ -36,6 +36,7 @@ import ProjectsList from '../components/ProjectList';
 import { useMyCustomToast } from '../contexts/MyCustomToastContext';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
+
 
 function Home() {
 
@@ -94,11 +95,15 @@ function Home() {
     const [isDragging, setIsDragging] = useState(false);
     const [isFileDragging, setIsFileDragging] = useState(false);
 
+    // Profiles generation states
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
     const [profileGenParams, setProfileGenParams] = useState({
         conversations: 5,
         turns: 5
     });
+
+    const [isGenerating, setIsGenerating] = useState(false);
+
 
     // Navigation
     const navigate = useNavigate();
@@ -117,11 +122,48 @@ function Home() {
     });
     const [editProjectId, setEditProjectId] = useState(null);
 
+
     const handleProfileGenParamChange = (field, value) => {
         setProfileGenParams(prev => ({
             ...prev,
             [field]: parseInt(value) || 0
         }));
+    };
+
+    const handleGenerateProfiles = async () => {
+        if (!selectedProject) {
+            showToast('error', 'Please select a project first');
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            const response = await generateProfiles(selectedProject.id, {
+                conversations: profileGenParams.conversations,
+                turns: profileGenParams.turns
+            });
+
+            showToast('success', `Successfully generated ${response.generated_files} profiles!`);
+            reloadFiles(); // Refresh the file list
+            setIsGenerateModalOpen(false);
+        } catch (error) {
+            console.error('Error generating profiles:', error);
+            let errorMessage = 'Error generating profiles';
+
+            // Try to extract more detailed error message if available
+            try {
+                const errorData = JSON.parse(error.message);
+                if (errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            } catch (e) {
+                // Use default error message
+            }
+
+            showToast('error', errorMessage);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleEditClick = (project) => {
@@ -823,10 +865,8 @@ function Home() {
                         </Button>
                         <Button
                             color="primary"
-                            onPress={() => {
-                                showToast('success', 'Profile generation started! (FAKE)');
-                                setIsGenerateModalOpen(false);
-                            }}
+                            isLoading={isGenerating}
+                            onPress={handleGenerateProfiles}
                         >
                             Generate
                         </Button>
