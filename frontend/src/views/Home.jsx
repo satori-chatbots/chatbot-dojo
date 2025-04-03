@@ -277,6 +277,16 @@ function Home() {
         );
     };
 
+    const toggleSelectAllFiles = () => {
+        if (selectedFiles.length === files.length) {
+            // If all files are already selected, deselect all
+            setSelectedFiles([]);
+        } else {
+            // Otherwise, select all files
+            setSelectedFiles(files.map(file => file.id));
+        }
+    };
+
 
 
     const handleFileChange = (event) => {
@@ -661,34 +671,47 @@ function Home() {
                             {/* List Section */}
                             <div className="flex-1 overflow-y-auto mt-4">
                                 {files.length > 0 ? (
-                                    <ul className="space-y-2">
-                                        {files.map(file => (
-                                            <li key={file.id} className="flex flex-col space-y-1">
-                                                <div className="flex items-start space-x-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedFiles.includes(file.id)}
-                                                        onChange={() => selectFile(file.id)}
-                                                        className="form-checkbox h-4 w-4 mt-1"
-                                                    />
-                                                    <div className="flex items-center space-x-2 flex-1">
-                                                        <Link
-                                                            variant="light"
-                                                            onPress={() => navigate(`/yaml-editor/${file.id}`)}
-                                                            className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
-                                                        >
-                                                            {file.name}
-                                                        </Link>
-                                                        {file.is_valid === false && (
-                                                            <div className="tooltip-container" title="Invalid profile: This YAML has validation errors">
-                                                                <AlertTriangle className="h-4 w-4 text-red-500" />
-                                                            </div>
-                                                        )}
+                                    <>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium">{files.length} profiles</span>
+                                            <Button
+                                                size="sm"
+                                                variant="light"
+                                                color="primary"
+                                                onPress={toggleSelectAllFiles}
+                                            >
+                                                {selectedFiles.length === files.length ? "Deselect All" : "Select All"}
+                                            </Button>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {files.map(file => (
+                                                <li key={file.id} className="flex flex-col space-y-1">
+                                                    <div className="flex items-start space-x-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedFiles.includes(file.id)}
+                                                            onChange={() => selectFile(file.id)}
+                                                            className="form-checkbox h-4 w-4 mt-1"
+                                                        />
+                                                        <div className="flex items-center space-x-2 flex-1">
+                                                            <Link
+                                                                variant="light"
+                                                                onPress={() => navigate(`/yaml-editor/${file.id}`)}
+                                                                className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
+                                                            >
+                                                                {file.name}
+                                                            </Link>
+                                                            {file.is_valid === false && (
+                                                                <div className="tooltip-container" title="Invalid profile: This YAML has validation errors">
+                                                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
                                 ) : (
                                     <p className="text-gray-500 text-center">No profiles uploaded yet.</p>
                                 )}
