@@ -1803,11 +1803,6 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
         task.process_id = process.pid
         task.save()
 
-        # Track progress
-        current_session = 0
-        total_sessions = conversations
-        total_profiles = 3  # Default estimate
-
         # Non-blocking reading with timeout
         def read_output():
             # Start separate threads to read stdout and stderr
@@ -1821,6 +1816,9 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
                 print(f"STDERR: {stderr_data}")
 
         def process_stdout():
+            current_session = 0
+            total_sessions = 1
+
             for line in iter(process.stdout.readline, ""):
                 print(f"OUTPUT: {line.strip()}")
 
@@ -1835,8 +1833,8 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
                     if match:
                         current_session = int(match.group(1))
                         total_sessions = int(match.group(2))
-                        # Give conversation generation more weight (60% of progress)
-                        progress = 10 + (current_session - 1) / total_sessions * 60
+                        # Allocate 40% for conversation generation (10-50%)
+                        progress = 10 + (current_session - 1) / total_sessions * 40
                         task.stage = f"GENERATING CONVERSATIONS ({current_session}/{total_sessions})"
                         task.progress_percentage = int(progress)
                         task.save()
@@ -1845,47 +1843,51 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
                     match = re.search(r"Session (\d+) complete", line)
                     if match:
                         current_session = int(match.group(1))
-                        progress = 10 + current_session / total_sessions * 60
+                        progress = 10 + current_session / total_sessions * 40
                         task.progress_percentage = int(progress)
                         task.save()
 
-                # Adjust other progress indicators
+                # Analysis phase gets 10% (50-60%)
                 elif "Analyzing results" in line:
                     task.stage = "ANALYZING CONVERSATIONS"
-                    task.progress_percentage = 75
+                    task.progress_percentage = 50
                     task.save()
 
+                # Goal generation gets 10% (60-70%)
                 elif "Generating conversation goals" in line:
                     task.stage = "GENERATING GOALS"
+                    task.progress_percentage = 60
+                    task.save()
+
+                # Parameters generation gets 10% (70-80%)
+                elif "Generating conversation parameters" in line:
+                    task.stage = "GENERATING PARAMETERS"
+                    task.progress_percentage = 70
+                    task.save()
+
+                # Building profiles gets 5% (80-85%)
+                elif "Building user profiles" in line:
+                    task.stage = "BUILDING PROFILES"
                     task.progress_percentage = 80
                     task.save()
 
-                elif "Generating conversation parameters" in line:
-                    task.stage = "GENERATING PARAMETERS"
+                # Validating profiles gets 10% (85-95%)
+                elif "Validating user profiles" in line:
+                    task.stage = "VALIDATING PROFILES"
                     task.progress_percentage = 85
                     task.save()
 
-                elif "Building user profiles" in line:
-                    task.stage = "BUILDING PROFILES"
-                    task.progress_percentage = 90
-                    task.save()
-
-                elif "Validating user profiles" in line:
-                    task.stage = "VALIDATING PROFILES"
-                    task.progress_percentage = 93
-                    task.save()
-
+                # Saving profiles gets 5% (95-100%)
                 elif "Saving" in line and "user profiles to disk" in line:
                     match = re.search(r"Saving (\d+) user profiles", line)
                     if match:
-                        total_profiles = int(match.group(1))
-                        task.stage = f"SAVING PROFILES"
-                        task.progress_percentage = 95
-                        task.save()
-
+                        task.stage = "SAVING PROFILES"
+                    task.stage = "SAVING PROFILES (FINALIZING)"
+                    task.progress_percentage = 95
+                    task.save()
                 elif "Saved profile:" in line:
-                    task.stage = "SAVING PROFILES"
-                    task.progress_percentage = 97
+                    task.stage = "SAVING PROFILES (FINALIZING)"
+                    task.progress_percentage = 95
                     task.save()
 
         # Start the thread to read output
