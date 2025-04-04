@@ -146,7 +146,11 @@ function Home() {
             return;
         }
 
+        // Reset progress indicators immediately when starting a new generation
         setIsGenerating(true);
+        setGenerationStage('INITIALIZING');
+        setGenerationProgress(0);
+
         try {
             const response = await generateProfiles(selectedProject.id, {
                 conversations: profileGenParams.conversations,
@@ -171,7 +175,9 @@ function Home() {
                     errorMessage = errorData.error;
                 }
             } catch (e) {
-                // Use default error message
+                // Console log and toast
+                console.error('Error parsing error message:', e);
+
             }
 
             showToast('error', errorMessage);
@@ -229,6 +235,10 @@ function Home() {
             if (response.ongoing) {
                 // There's an ongoing generation task
                 setIsGenerating(true);
+                // Reset progress indicators to avoid showing stale data
+                setGenerationStage('Loading status...');
+                setGenerationProgress(0);
+
                 setGenerationTaskId(response.task_id);
                 pollGenerationStatus(response.task_id);
 
