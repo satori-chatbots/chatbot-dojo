@@ -136,7 +136,17 @@ export const generateProfiles = async (projectId, params = {}) => {
         });
         return await response.json();
     } catch (error) {
-        console.error('Error generating profiles:', error);
+        console.error('Error starting profile generation:', error);
+        throw error;
+    }
+};
+
+export const checkGenerationStatus = async (taskId) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}/generation-status/${taskId}/`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error checking generation status:', error);
         throw error;
     }
 };

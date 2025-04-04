@@ -104,6 +104,9 @@ function Home() {
 
     const [isGenerating, setIsGenerating] = useState(false);
 
+    const [generationTaskId, setGenerationTaskId] = useState(null);
+    const [statusInterval, setStatusInterval] = useState(null);
+
 
     // Navigation
     const navigate = useNavigate();
@@ -143,14 +146,18 @@ function Home() {
                 turns: profileGenParams.turns
             });
 
-            showToast('success', `Successfully generated ${response.generated_files} profiles!`);
-            reloadFiles(); // Refresh the file list
+            // Start polling for status
+            const taskId = response.task_id;
+            setGenerationTaskId(taskId);
+            pollGenerationStatus(taskId);
+
+            // Close modal but keep "generating" state active
             setIsGenerateModalOpen(false);
+            showToast('info', 'Profile generation started. This may take a few minutes.');
         } catch (error) {
             console.error('Error generating profiles:', error);
-            let errorMessage = 'Error generating profiles';
+            let errorMessage = 'Error starting profile generation';
 
-            // Try to extract more detailed error message if available
             try {
                 const errorData = JSON.parse(error.message);
                 if (errorData.error) {
@@ -161,10 +168,56 @@ function Home() {
             }
 
             showToast('error', errorMessage);
-        } finally {
             setIsGenerating(false);
         }
     };
+
+    const pollGenerationStatus = async (taskId) => {
+        // Clear any existing interval
+        if (statusInterval) {
+            clearInterval(statusInterval);
+        }
+
+        // Set up interval to check status
+        const interval = setInterval(async () => {
+            try {
+                const status = await checkGenerationStatus(taskId);
+
+                if (status.status === 'COMPLETED') {
+                    clearInterval(interval);
+                    setStatusInterval(null);
+
+                    // Explicitly reload files when generation completes
+                    await reloadFiles();
+
+                    setIsGenerating(false);
+                    showToast('success', `Successfully generated ${status.generated_files} profiles!`);
+                } else if (status.status === 'ERROR') {
+                    clearInterval(interval);
+                    setStatusInterval(null);
+                    setIsGenerating(false);
+                    showToast('error', status.error_message || 'Error generating profiles');
+                }
+                // If still PENDING or RUNNING, continue polling
+
+            } catch (error) {
+                clearInterval(interval);
+                setStatusInterval(null);
+                setIsGenerating(false);
+                showToast('error', 'Error checking generation status');
+            }
+        }, 3000); // Check every 3 seconds
+
+        setStatusInterval(interval);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+            }
+        };
+    }, [statusInterval]);
 
     const handleEditClick = (project) => {
         setEditProjectId(project.id);
@@ -720,19 +773,28 @@ function Home() {
                                     Create Profile Manually
                                 </Button>
 
-                                {/* Auto generate profiels */}
+                                {/* Auto generate profiles */}
                                 <Button
                                     fullWidth
                                     color='secondary'
                                     variant='ghost'
-                                    startContent={<Sparkles className="w-4 h-4" />}
+                                    startContent={isGenerating ? null : <Sparkles className="w-4 h-4" />}
+                                    isLoading={isGenerating}
+                                    isDisabled={isGenerating}
                                     onPress={() => setIsGenerateModalOpen(true)}
                                 >
-                                    Auto-Generate Profiles
+                                    {isGenerating ? "Generating Profiles..." : "Auto-Generate Profiles"}
                                 </Button>
+                                {isGenerating && (
+                                    <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
+                                        <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
+                                        <h3 className="text-base font-medium mb-1">Generating Profiles</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                                            This might take a few minutes. Please wait...
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-
-
 
                             {/* List Section */}
                             <div className="flex-1 overflow-y-auto mt-4">
@@ -866,6 +928,7 @@ function Home() {
                         <Button
                             color="primary"
                             isLoading={isGenerating}
+                            isDisabled={isGenerating}
                             onPress={handleGenerateProfiles}
                         >
                             Generate
