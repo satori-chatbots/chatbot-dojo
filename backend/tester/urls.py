@@ -63,7 +63,11 @@ urlpatterns = [
         api.generate_profiles,
         name="generate-profiles",
     ),
-
+    path(
+        "generation-status/<int:task_id>/",
+        api.check_generation_status,
+        name="check-generation-status",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

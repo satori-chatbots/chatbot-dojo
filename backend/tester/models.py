@@ -472,3 +472,22 @@ class TestError(models.Model):
         blank=True,
         null=True,
     )
+
+
+class ProfileGenerationTask(models.Model):
+    STATUS_CHOICES = (
+        ("PENDING", "Pending"),
+        ("RUNNING", "Running"),
+        ("COMPLETED", "Completed"),
+        ("ERROR", "Error"),
+    )
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    error_message = models.TextField(blank=True, null=True)
+    conversations = models.PositiveIntegerField(default=5)
+    turns = models.PositiveIntegerField(default=5)
+    generated_file_ids = models.JSONField(default=list)
+    process_id = models.IntegerField(null=True, blank=True)

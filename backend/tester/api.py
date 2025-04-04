@@ -15,6 +15,7 @@ from .models import (
     ChatbotTechnology,
     Conversation,
     GlobalReport,
+    ProfileGenerationTask,
     ProfileReport,
     TestCase,
     TestError,
@@ -1740,70 +1741,27 @@ def stop_test_execution(request):
         return Response({"error": "Test case not found"}, status=404)
 
 
-@api_view(["POST"])
-def generate_profiles(request):
-    """
-    Generate profiles using the profiler module based on provided parameters.
-
-    Expected request body:
-    {
-        "project_id": integer,
-        "conversations": integer,
-        "turns": integer
-    }
-    """
-    # Check if user is authenticated
-    if not request.user.is_authenticated:
-        return Response(
-            {"error": "Authentication required to generate profiles."},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-
-    # Get parameters from request
-    project_id = request.data.get("project_id")
-    conversations = request.data.get("conversations", 5)
-    turns = request.data.get("turns", 5)
-
-    if not project_id:
-        return Response(
-            {"error": "No project ID provided."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # Check if the project exists
-    try:
-        project = Project.objects.get(id=project_id)
-        # Check if the project owner is the same as the user
-        if project.owner != request.user:
-            return Response(
-                {"error": "You do not own this project."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-    except Project.DoesNotExist:
-        return Response(
-            {"error": "Project not found, make sure to create a project first."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    # Get the technology from the project
-    technology = project.chatbot_technology.technology
-
-    # Set up paths
-    base_dir = os.path.dirname(settings.BASE_DIR)
-    tfm_script_path = os.path.join(base_dir, "tfm", "src", "main.py")
-
-    # Create output directory for generated profiles
-    output_dir = os.path.join(
-        settings.MEDIA_ROOT,
-        "projects",
-        f"user_{request.user.id}",
-        f"project_{project_id}",
-        "generated_profiles",
-    )
-    os.makedirs(output_dir, exist_ok=True)
+def run_async_profile_generation(task_id, technology, conversations, turns, user_id):
+    task = ProfileGenerationTask.objects.get(id=task_id)
+    task.status = "RUNNING"
+    task.save()
 
     try:
-        # Build the command to execute
+        # Set up paths
+        base_dir = os.path.dirname(settings.BASE_DIR)
+        tfm_script_path = os.path.join(base_dir, "tfm", "src", "main.py")
+
+        # Create output directory
+        output_dir = os.path.join(
+            settings.MEDIA_ROOT,
+            "projects",
+            f"user_{user_id}",
+            f"project_{task.project.id}",
+            "generated_profiles",
+        )
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Build and execute command
         command = [
             "python",
             tfm_script_path,
@@ -1817,66 +1775,130 @@ def generate_profiles(request):
             output_dir,
         ]
 
-        # Execute the command
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True,
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
+        task.process_id = process.pid
+        task.save()
 
-        # Get list of generated files
+        stdout, stderr = process.communicate()
+
+        # Process generated files and save to database
         generated_files = []
+        file_ids = []
+
         if os.path.exists(output_dir):
             generated_files = [
                 f for f in os.listdir(output_dir) if f.endswith((".yaml", ".yml"))
             ]
 
-        # Save the generated files to the database
-        file_ids = []
-        for filename in generated_files:
-            file_path = os.path.join(output_dir, filename)
+            for filename in generated_files:
+                file_path = os.path.join(output_dir, filename)
 
-            # Extract test_name from the YAML
-            test_name = None
-            with open(file_path, "r") as f:
-                try:
-                    content = yaml.safe_load(f)
-                    test_name = content.get("test_name", os.path.splitext(filename)[0])
-                except yaml.YAMLError:
-                    test_name = os.path.splitext(filename)[0]
+                # Extract test_name from YAML
+                test_name = None
+                with open(file_path, "r") as f:
+                    try:
+                        content = yaml.safe_load(f)
+                        test_name = content.get(
+                            "test_name", os.path.splitext(filename)[0]
+                        )
+                    except yaml.YAMLError:
+                        test_name = os.path.splitext(filename)[0]
 
-            # Create a Django file object
-            with open(file_path, "rb") as f:
-                django_file = File(f)
-                test_file = TestFile.objects.create(
-                    name=test_name,
-                    project=project,
-                    is_valid=True,
-                )
-                test_file.file.save(filename, django_file)
-                file_ids.append(test_file.id)
+                # Create TestFile
+                with open(file_path, "rb") as f:
+                    django_file = File(f)
+                    test_file = TestFile.objects.create(
+                        name=test_name,
+                        project=task.project,
+                        is_valid=True,
+                    )
+                    test_file.file.save(filename, django_file)
+                    file_ids.append(test_file.id)
 
-        return Response(
-            {
-                "message": "Profile generation completed",
-                "generated_files": len(generated_files),
-                "file_ids": file_ids,
-            },
-            status=status.HTTP_200_OK,
-        )
+        # Update task status
+        task.status = "COMPLETED"
+        task.generated_file_ids = file_ids
+        task.save()
 
-    except subprocess.CalledProcessError as e:
-        return Response(
-            {
-                "error": f"Error executing profile generation script: {e}",
-                "stdout": e.stdout,
-                "stderr": e.stderr,
-            },
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
     except Exception as e:
+        task.status = "ERROR"
+        task.error_message = str(e)
+        task.save()
+
+
+@api_view(["POST"])
+def generate_profiles(request):
+    """
+    Start a profile generation task and return immediately.
+    """
+    # Authentication check
+    if not request.user.is_authenticated:
         return Response(
-            {"error": f"Error generating profiles: {str(e)}"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            {"error": "Authentication required to generate profiles."},
+            status=status.HTTP_401_UNAUTHORIZED,
         )
+
+    # Get parameters
+    project_id = request.data.get("project_id")
+    conversations = request.data.get("conversations", 5)
+    turns = request.data.get("turns", 5)
+
+    if not project_id:
+        return Response(
+            {"error": "No project ID provided."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Check project exists and user has permission
+    try:
+        project = Project.objects.get(id=project_id)
+        if project.owner != request.user:
+            return Response(
+                {"error": "You do not own this project."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+    except Project.DoesNotExist:
+        return Response(
+            {"error": "Project not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Create a task to track generation
+    task = ProfileGenerationTask.objects.create(
+        project=project, status="PENDING", conversations=conversations, turns=turns
+    )
+
+    # Start generation in background thread
+    threading.Thread(
+        target=run_async_profile_generation,
+        args=(
+            task.id,
+            project.chatbot_technology.technology,
+            conversations,
+            turns,
+            request.user.id,
+        ),
+    ).start()
+
+    return Response(
+        {"message": "Profile generation started", "task_id": task.id},
+        status=status.HTTP_202_ACCEPTED,
+    )
+
+
+@api_view(["GET"])
+def check_generation_status(request, task_id):
+    """Check the status of a profile generation task."""
+    try:
+        task = ProfileGenerationTask.objects.get(id=task_id)
+        return Response(
+            {
+                "status": task.status,
+                "generated_files": len(task.generated_file_ids),
+                "error_message": task.error_message,
+            }
+        )
+    except ProfileGenerationTask.DoesNotExist:
+        return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)

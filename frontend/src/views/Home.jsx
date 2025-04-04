@@ -23,7 +23,7 @@ import {
     AlertTriangle,
     Sparkles
 } from 'lucide-react';
-import { uploadFiles, deleteFiles, generateProfiles } from '../api/fileApi';
+import { uploadFiles, deleteFiles, generateProfiles, checkGenerationStatus } from '../api/fileApi';
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';
 import useFetchProjects from '../hooks/useFetchProjects';
