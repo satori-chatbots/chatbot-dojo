@@ -1783,6 +1783,13 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
 
         stdout, stderr = process.communicate()
 
+        # Check the return code of the subprocess
+        if process.returncode != 0:
+            task.status = "ERROR"
+            task.error_message = f"Subprocess failed with return code {process.returncode}. Error: {stderr.decode().strip()}"
+            task.save()
+            return
+
         # Process generated files and save to database
         generated_files = []
         file_ids = []
