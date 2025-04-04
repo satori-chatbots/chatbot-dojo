@@ -1918,3 +1918,31 @@ def check_generation_status(request, task_id):
         )
     except ProfileGenerationTask.DoesNotExist:
         return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["GET"])
+def check_ongoing_generation(request, project_id):
+    """Check if there's an ongoing profile generation task for the project."""
+    try:
+        # Find any PENDING or RUNNING tasks for this project
+        ongoing_task = (
+            ProfileGenerationTask.objects.filter(
+                project_id=project_id, status__in=["PENDING", "RUNNING"]
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if ongoing_task:
+            return Response(
+                {
+                    "ongoing": True,
+                    "task_id": ongoing_task.id,
+                    "status": ongoing_task.status,
+                }
+            )
+        else:
+            return Response({"ongoing": False})
+    except Exception as e:
+        logger.error(f"Error checking ongoing generation: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

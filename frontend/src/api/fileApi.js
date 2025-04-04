@@ -150,3 +150,13 @@ export const checkGenerationStatus = async (taskId) => {
         throw error;
     }
 };
+
+export const checkOngoingGeneration = async (projectId) => {
+    try {
+        const response = await apiClient(`${API_BASE_URL}/ongoing-generation/${projectId}/`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error checking ongoing generation:', error);
+        throw error;
+    }
+};

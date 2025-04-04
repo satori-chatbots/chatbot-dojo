@@ -68,6 +68,11 @@ urlpatterns = [
         api.check_generation_status,
         name="check-generation-status",
     ),
+    path(
+        "ongoing-generation/<int:project_id>/",
+        api.check_ongoing_generation,
+        name="check-ongoing-generation",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

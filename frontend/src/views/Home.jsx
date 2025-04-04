@@ -23,7 +23,13 @@ import {
     AlertTriangle,
     Sparkles
 } from 'lucide-react';
-import { uploadFiles, deleteFiles, generateProfiles, checkGenerationStatus } from '../api/fileApi';
+import {
+    uploadFiles,
+    deleteFiles,
+    generateProfiles,
+    checkGenerationStatus,
+    checkOngoingGeneration
+} from '../api/fileApi';
 import { createProject, deleteProject, updateProject, checkProjectName } from '../api/projectApi';
 import { fetchChatbotTechnologies } from '../api/chatbotTechnologyApi';
 import useFetchProjects from '../hooks/useFetchProjects';
@@ -210,6 +216,32 @@ function Home() {
 
         setStatusInterval(interval);
     };
+
+    const checkForOngoingGeneration = async (projectId) => {
+        if (!projectId) return;
+
+        try {
+            const response = await checkOngoingGeneration(projectId);
+            if (response.ongoing) {
+                // There's an ongoing generation task
+                setIsGenerating(true);
+                setGenerationTaskId(response.task_id);
+                pollGenerationStatus(response.task_id);
+
+                showToast('info', 'Profile generation is in progress');
+            }
+        } catch (error) {
+            console.error('Error checking ongoing generation:', error);
+            showToast('error', 'Error checking ongoing generation. Please try again.');
+        }
+    };
+
+    // This will get called when the user selects a project
+    useEffect(() => {
+        if (selectedProject) {
+            checkForOngoingGeneration(selectedProject.id);
+        }
+    }, [selectedProject]);
 
     useEffect(() => {
         return () => {
