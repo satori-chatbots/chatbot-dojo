@@ -1751,17 +1751,17 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
         base_dir = os.path.dirname(settings.BASE_DIR)
         tfm_script_path = os.path.join(base_dir, "tfm", "src", "main.py")
 
-        # Create output directory
-        output_dir = os.path.join(
+        # Create a temporary output directory specifically for generated files
+        temp_output_dir = os.path.join(
             settings.MEDIA_ROOT,
             "projects",
             f"user_{user_id}",
             f"project_{task.project.id}",
-            "profiles",
+            "generated_profiles_temp",
         )
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(temp_output_dir, exist_ok=True)
 
-        # Build and execute command
+        # Build and execute command with temp directory output
         command = [
             "python",
             tfm_script_path,
@@ -1772,7 +1772,7 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
             "-n",
             str(turns),
             "-o",
-            output_dir,
+            temp_output_dir,
         ]
 
         process = subprocess.Popen(
@@ -1794,13 +1794,13 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
         generated_files = []
         file_ids = []
 
-        if os.path.exists(output_dir):
+        if os.path.exists(temp_output_dir):
             generated_files = [
-                f for f in os.listdir(output_dir) if f.endswith((".yaml", ".yml"))
+                f for f in os.listdir(temp_output_dir) if f.endswith((".yaml", ".yml"))
             ]
 
             for filename in generated_files:
-                file_path = os.path.join(output_dir, filename)
+                file_path = os.path.join(temp_output_dir, filename)
 
                 # Extract test_name from YAML
                 test_name = None
@@ -1813,7 +1813,7 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
                     except yaml.YAMLError:
                         test_name = os.path.splitext(filename)[0]
 
-                # Create TestFile
+                # Create TestFile - when saved through the model, the filename will be normalized
                 with open(file_path, "rb") as f:
                     django_file = File(f)
                     test_file = TestFile.objects.create(
@@ -1824,6 +1824,9 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
                     test_file.file.save(filename, django_file)
                     file_ids.append(test_file.id)
 
+            # Clean up temporary directory
+            shutil.rmtree(temp_output_dir, ignore_errors=True)
+
         # Update task status
         task.status = "COMPLETED"
         task.generated_file_ids = file_ids
@@ -1833,6 +1836,12 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
         task.status = "ERROR"
         task.error_message = str(e)
         task.save()
+        # Ensure temp directory is cleaned up even on error
+        try:
+            if "temp_output_dir" in locals() and os.path.exists(temp_output_dir):
+                shutil.rmtree(temp_output_dir, ignore_errors=True)
+        except Exception:
+            pass
 
 
 @api_view(["POST"])
