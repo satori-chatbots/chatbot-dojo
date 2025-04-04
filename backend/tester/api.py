@@ -1757,7 +1757,7 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
             "projects",
             f"user_{user_id}",
             f"project_{task.project.id}",
-            "generated_profiles",
+            "profiles",
         )
         os.makedirs(output_dir, exist_ok=True)
 
