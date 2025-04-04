@@ -113,7 +113,8 @@ function Home() {
     const [generationTaskId, setGenerationTaskId] = useState(null);
     const [statusInterval, setStatusInterval] = useState(null);
 
-
+    const [generationStage, setGenerationStage] = useState('');
+    const [generationProgress, setGenerationProgress] = useState(0);
     // Navigation
     const navigate = useNavigate();
 
@@ -203,8 +204,11 @@ function Home() {
                     setStatusInterval(null);
                     setIsGenerating(false);
                     showToast('error', status.error_message || 'Error generating profiles');
+                } else {
+                    // Update the stage information in the UI
+                    setGenerationStage(status.stage || 'Processing');
+                    setGenerationProgress(status.progress || 0);
                 }
-                // If still PENDING or RUNNING, continue polling
 
             } catch (error) {
                 clearInterval(interval);
@@ -821,7 +825,25 @@ function Home() {
                                     <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
                                         <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
                                         <h3 className="text-base font-medium mb-1">Generating Profiles</h3>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+
+                                        {generationStage && (
+                                            <p className="text-sm font-medium text-primary mb-1">
+                                                {generationStage}
+                                            </p>
+                                        )}
+
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                                            <div
+                                                className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                                                style={{ width: `${generationProgress}%` }}
+                                            ></div>
+                                        </div>
+
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                            {generationProgress}% complete
+                                        </p>
+
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
                                             This might take a few minutes. Please wait...
                                         </p>
                                     </div>

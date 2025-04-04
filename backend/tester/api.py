@@ -1744,6 +1744,8 @@ def stop_test_execution(request):
 def run_async_profile_generation(task_id, technology, conversations, turns, user_id):
     task = ProfileGenerationTask.objects.get(id=task_id)
     task.status = "RUNNING"
+    task.stage = "INITIALIZING"
+    task.progress_percentage = 5
     task.save()
 
     try:
@@ -1751,7 +1753,7 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
         base_dir = os.path.dirname(settings.BASE_DIR)
         tfm_script_path = os.path.join(base_dir, "tfm", "src", "main.py")
 
-        # Create a temporary output directory specifically for generated files
+        # Create output directory
         temp_output_dir = os.path.join(
             settings.MEDIA_ROOT,
             "projects",
@@ -1761,7 +1763,18 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
         )
         os.makedirs(temp_output_dir, exist_ok=True)
 
-        # Build and execute command with temp directory output
+        print(
+            f"Running profile generation: {technology}, {conversations} conversations, {turns} turns"
+        )
+        print(
+            f"Command: python {tfm_script_path} -t {technology} -s {conversations} -n {turns} -o {temp_output_dir}"
+        )
+
+        task.stage = "STARTING GENERATION"
+        task.progress_percentage = 8
+        task.save()
+
+        # Build command
         command = [
             "python",
             tfm_script_path,
@@ -1775,20 +1788,131 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
             temp_output_dir,
         ]
 
+        # Run the subprocess with unbuffered output
+        # This is critical - adding env var PYTHONUNBUFFERED=1 ensures output isn't buffered
         process = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
         )
+
         task.process_id = process.pid
         task.save()
 
-        stdout, stderr = process.communicate()
+        # Track progress
+        current_session = 0
+        total_sessions = conversations
+        total_profiles = 3  # Default estimate
 
-        # Check the return code of the subprocess
+        # Non-blocking reading with timeout
+        def read_output():
+            # Start separate threads to read stdout and stderr
+            stdout_reader = threading.Thread(target=process_stdout)
+            stdout_reader.daemon = True
+            stdout_reader.start()
+
+            # Also read stderr for any errors
+            stderr_data = process.stderr.read()
+            if stderr_data:
+                print(f"STDERR: {stderr_data}")
+
+        def process_stdout():
+            for line in iter(process.stdout.readline, ""):
+                print(f"OUTPUT: {line.strip()}")
+
+                # Look for specific markers in the output
+                if "=== Chatbot Explorer Configuration ===" in line:
+                    task.stage = "CONFIGURING EXPLORER"
+                    task.progress_percentage = 10
+                    task.save()
+
+                elif "Starting Exploration Session" in line:
+                    match = re.search(r"Starting Exploration Session (\d+)/(\d+)", line)
+                    if match:
+                        current_session = int(match.group(1))
+                        total_sessions = int(match.group(2))
+                        # Give conversation generation more weight (60% of progress)
+                        progress = 10 + (current_session - 1) / total_sessions * 60
+                        task.stage = f"GENERATING CONVERSATIONS ({current_session}/{total_sessions})"
+                        task.progress_percentage = int(progress)
+                        task.save()
+
+                elif "Session complete" in line:
+                    match = re.search(r"Session (\d+) complete", line)
+                    if match:
+                        current_session = int(match.group(1))
+                        progress = 10 + current_session / total_sessions * 60
+                        task.progress_percentage = int(progress)
+                        task.save()
+
+                # Adjust other progress indicators
+                elif "Analyzing results" in line:
+                    task.stage = "ANALYZING CONVERSATIONS"
+                    task.progress_percentage = 75
+                    task.save()
+
+                elif "Generating conversation goals" in line:
+                    task.stage = "GENERATING GOALS"
+                    task.progress_percentage = 80
+                    task.save()
+
+                elif "Generating conversation parameters" in line:
+                    task.stage = "GENERATING PARAMETERS"
+                    task.progress_percentage = 85
+                    task.save()
+
+                elif "Building user profiles" in line:
+                    task.stage = "BUILDING PROFILES"
+                    task.progress_percentage = 90
+                    task.save()
+
+                elif "Validating user profiles" in line:
+                    task.stage = "VALIDATING PROFILES"
+                    task.progress_percentage = 93
+                    task.save()
+
+                elif "Saving" in line and "user profiles to disk" in line:
+                    match = re.search(r"Saving (\d+) user profiles", line)
+                    if match:
+                        total_profiles = int(match.group(1))
+                        task.stage = f"SAVING PROFILES"
+                        task.progress_percentage = 95
+                        task.save()
+
+                elif "Saved profile:" in line:
+                    task.stage = "SAVING PROFILES"
+                    task.progress_percentage = 97
+                    task.save()
+
+        # Start the thread to read output
+        read_output()
+
+        # Wait for the process to complete
+        process.wait()
+
+        # Process remaining output after completion
+        remaining_stdout = process.stdout.read()
+        if remaining_stdout:
+            print(f"REMAINING OUTPUT: {remaining_stdout}")
+
+        # Check return code
         if process.returncode != 0:
+            stderr_output = process.stderr.read()
             task.status = "ERROR"
-            task.error_message = f"Subprocess failed with return code {process.returncode}. Error: {stderr.decode().strip()}"
+            task.error_message = (
+                f"Process failed with return code {process.returncode}: {stderr_output}"
+            )
             task.save()
             return
+
+        # Continue with file processing as before...
+        task.stage = "FINALIZING"
+        task.progress_percentage = 95
+        task.save()
 
         # Process generated files and save to database
         generated_files = []
@@ -1813,7 +1937,7 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
                     except yaml.YAMLError:
                         test_name = os.path.splitext(filename)[0]
 
-                # Create TestFile - when saved through the model, the filename will be normalized
+                # Create TestFile
                 with open(file_path, "rb") as f:
                     django_file = File(f)
                     test_file = TestFile.objects.create(
@@ -1827,9 +1951,10 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
             # Clean up temporary directory
             shutil.rmtree(temp_output_dir, ignore_errors=True)
 
-        # Update task status
+        # Update task status to completed
         task.status = "COMPLETED"
         task.generated_file_ids = file_ids
+        task.progress_percentage = 100
         task.save()
 
     except Exception as e:
@@ -1912,6 +2037,8 @@ def check_generation_status(request, task_id):
         return Response(
             {
                 "status": task.status,
+                "stage": task.stage,
+                "progress": task.progress_percentage,
                 "generated_files": len(task.generated_file_ids),
                 "error_message": task.error_message,
             }

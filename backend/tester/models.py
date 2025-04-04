@@ -474,6 +474,7 @@ class TestError(models.Model):
     )
 
 
+# In your models.py
 class ProfileGenerationTask(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
@@ -482,8 +483,19 @@ class ProfileGenerationTask(models.Model):
         ("ERROR", "Error"),
     )
 
+    STAGE_CHOICES = (
+        ("INITIALIZING", "Initializing generation"),
+        ("GENERATING_CONVERSATIONS", "Generating conversations"),
+        ("CREATING_PROFILES", "Creating profiles"),
+        ("SAVING_FILES", "Saving generated files"),
+    )
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    stage = models.CharField(
+        max_length=25, choices=STAGE_CHOICES, blank=True, null=True
+    )
+    progress_percentage = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     error_message = models.TextField(blank=True, null=True)
