@@ -1,65 +1,60 @@
+import logging
+import os
+import re
 import shutil
-import signal
 import subprocess
+import sys
+import threading
 import time
-import configparser
 import traceback
-from rest_framework import viewsets, status, permissions, serializers
-from rest_framework.views import APIView
-from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
+
+import psutil
+import yaml
 from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model
+from django.core.exceptions import PermissionDenied
+from django.core.files import File
+from django.db import models, transaction
+from django.db.models import OuterRef, Q, Subquery, Sum
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from knox.models import AuthToken
+from rest_framework import permissions, serializers, status, viewsets
+from rest_framework.decorators import action, api_view
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import BasePermission
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+# We need this one since it already has the fernet key
 from .models import (
+    TECHNOLOGY_CHOICES,
     ChatbotTechnology,
     Conversation,
     GlobalReport,
     ProfileGenerationTask,
     ProfileReport,
+    Project,
     TestCase,
     TestError,
     TestFile,
-    Project,
     UserAPIKey,
+    cipher_suite,
 )
 from .serializers import (
     ChatbotTechnologySerializer,
     ConversationSerializer,
     GlobalReportSerializer,
     LoginSerializer,
-    TestCaseSerializer,
-    TestFileSerializer,
-    ProjectSerializer,
-    TestErrorSerializer,
     ProfileReportSerializer,
+    ProjectSerializer,
     RegisterSerializer,
+    TestCaseSerializer,
+    TestErrorSerializer,
+    TestFileSerializer,
     UserAPIKeySerializer,
 )
-from django.http import JsonResponse
-from .models import TECHNOLOGY_CHOICES
-import os
-from .utils import check_keys
-import yaml
-from django.shortcuts import get_object_or_404
-from django.db import transaction
-import threading
-import logging
-import psutil
-from django.contrib.auth import get_user_model
-from knox.models import AuthToken
-from django.contrib.auth import authenticate
-from rest_framework.permissions import BasePermission
-from django.core.exceptions import PermissionDenied
-from django.db import models
-from django.db.models import OuterRef, Subquery, Sum, Q
-from django.core.files import File
 from .validation_script import YamlValidator
-import sys
-import re
-
-# We need this one since it already has the fernet key
-from .models import cipher_suite
 
 # Get the latest version of the user model
 User = get_user_model()
@@ -1749,10 +1744,6 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
     task.save()
 
     try:
-        # Set up paths
-        base_dir = os.path.dirname(settings.BASE_DIR)
-        tfm_script_path = os.path.join(base_dir, "tfm", "src", "main.py")
-
         # Create output directory
         temp_output_dir = os.path.join(
             settings.MEDIA_ROOT,
@@ -1767,17 +1758,16 @@ def run_async_profile_generation(task_id, technology, conversations, turns, user
             f"Running profile generation: {technology}, {conversations} conversations, {turns} turns"
         )
         print(
-            f"Command: python {tfm_script_path} -t {technology} -s {conversations} -n {turns} -o {temp_output_dir}"
+            f"Command: tracer -t {technology} -s {conversations} -n {turns} -o {temp_output_dir}"
         )
 
         task.stage = "STARTING GENERATION"
         task.progress_percentage = 8
         task.save()
 
-        # Build command
+        # Build command using the tracer CLI
         command = [
-            "python",
-            tfm_script_path,
+            "tracer",
             "-t",
             technology,
             "-s",
