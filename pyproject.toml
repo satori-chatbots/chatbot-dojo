@@ -20,6 +20,22 @@ dependencies = [
     "pydantic>=2.11.5",
     "pyyaml>=6.0.2",
     "scikit-learn>=1.6.1",
-    "setuptools>=80.9.0",
     "tiktoken>=0.9.0",
+    "tracer @ file:./tracer"
 ]
+
+[build-system]
+requires = ["setuptools>=61.0"] 
+build-backend = "setuptools.build_meta"
+backend-path = ["."] 
+
+[tool.setuptools]
+# This tells setuptools that the Python package(s) for 'sensei-web' are found in the 'backend' directory.
+# Adjust if your main source directory for 'sensei-web' has a different name.
+packages = ["backend"]
+
+# Alternatively, for more complex scenarios or finer control (e.g., multiple top-level package directories for sensei-web):
+# [tool.setuptools.packages.find]
+# where = ["."]  # Look for packages in the project root ('.') or a specific directory like 'src'
+# include = ["backend*"]  # Include 'backend' and any sub-packages (e.g., backend.api)
+# exclude = ["frontend*", "tracer*", "tests*"] # Explicitly exclude other directories from this package
