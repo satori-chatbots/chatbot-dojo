@@ -210,6 +210,8 @@ pydantic==2.11.5
     #   sensei-web
 pydantic-core==2.33.2
     # via pydantic
+pymupdf==1.26.1
+    # via sensei-web
 pyparsing==3.2.3
     # via httplib2
 python-dateutil==2.9.0.post0
