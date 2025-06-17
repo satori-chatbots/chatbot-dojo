@@ -11,6 +11,10 @@ asgiref==3.8.1
     # via
     #   django
     #   django-cors-headers
+attrs==25.3.0
+    # via
+    #   outcome
+    #   trio
 beautifulsoup4==4.13.4
     # via bs4
 boto3==1.38.30
@@ -28,9 +32,11 @@ certifi==2025.4.26
     #   httpcore
     #   httpx
     #   requests
+    #   selenium
 cffi==1.17.1
     # via
     #   cryptography
+    #   trio
     #   zstandard
 charset-normalizer==3.4.2
     # via requests
@@ -90,6 +96,8 @@ googleapis-common-protos==1.70.0
     #   grpcio-status
 graphviz==0.21
     # via chatbot-tracer
+greenlet==3.2.3 ; (python_full_version < '3.14' and platform_machine == 'AMD64') or (python_full_version < '3.14' and platform_machine == 'WIN32') or (python_full_version < '3.14' and platform_machine == 'aarch64') or (python_full_version < '3.14' and platform_machine == 'amd64') or (python_full_version < '3.14' and platform_machine == 'ppc64le') or (python_full_version < '3.14' and platform_machine == 'win32') or (python_full_version < '3.14' and platform_machine == 'x86_64')
+    # via sqlalchemy
 grpcio==1.73.0
     # via
     #   google-api-core
@@ -97,7 +105,9 @@ grpcio==1.73.0
 grpcio-status==1.71.0
     # via google-api-core
 h11==0.16.0
-    # via httpcore
+    # via
+    #   httpcore
+    #   wsproto
 httpcore==1.0.9
     # via httpx
 httplib2==0.22.0
@@ -114,6 +124,7 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
+    #   trio
 jinja2==3.1.6
     # via sensei-web
 jiter==0.10.0
@@ -128,11 +139,15 @@ jsonpatch==1.33
     # via langchain-core
 jsonpointer==3.0.0
     # via jsonpatch
+langchain==0.3.25
+    # via sensei-web
 langchain-core==0.3.65
     # via
     #   chatbot-tracer
+    #   langchain
     #   langchain-google-genai
     #   langchain-openai
+    #   langchain-text-splitters
     #   langgraph
     #   langgraph-checkpoint
     #   langgraph-prebuilt
@@ -140,6 +155,8 @@ langchain-google-genai==2.0.10
     # via chatbot-tracer
 langchain-openai==0.3.23
     # via chatbot-tracer
+langchain-text-splitters==0.3.8
+    # via langchain
 langgraph==0.4.8
     # via chatbot-tracer
 langgraph-checkpoint==2.0.26
@@ -151,7 +168,9 @@ langgraph-prebuilt==0.2.2
 langgraph-sdk==0.1.70
     # via langgraph
 langsmith==0.3.45
-    # via langchain-core
+    # via
+    #   langchain
+    #   langchain-core
 markupsafe==3.0.2
     # via jinja2
 numpy==2.2.6
@@ -169,10 +188,15 @@ orjson==3.10.18
     #   langsmith
 ormsgpack==1.10.0
     # via langgraph-checkpoint
+outcome==1.3.0.post0
+    # via
+    #   trio
+    #   trio-websocket
 packaging==24.2
     # via
     #   langchain-core
     #   langsmith
+    #   webdriver-manager
 pandas==2.3.0
     # via sensei-web
 pillow==11.2.1
@@ -202,6 +226,7 @@ pycparser==2.22
 pydantic==2.11.5
     # via
     #   google-generativeai
+    #   langchain
     #   langchain-core
     #   langchain-google-genai
     #   langgraph
@@ -210,20 +235,27 @@ pydantic==2.11.5
     #   sensei-web
 pydantic-core==2.33.2
     # via pydantic
+pygame==2.6.1
+    # via sensei-web
 pymupdf==1.26.1
     # via sensei-web
 pyparsing==3.2.3
     # via httplib2
+pysocks==1.7.1
+    # via urllib3
 python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   pandas
 python-dotenv==1.1.0
-    # via dotenv
+    # via
+    #   dotenv
+    #   webdriver-manager
 pytz==2025.2
     # via pandas
 pyyaml==6.0.2
     # via
+    #   langchain
     #   langchain-core
     #   sensei-web
 regex==2024.11.6
@@ -231,9 +263,11 @@ regex==2024.11.6
 requests==2.32.3
     # via
     #   google-api-core
+    #   langchain
     #   langsmith
     #   requests-toolbelt
     #   tiktoken
+    #   webdriver-manager
 requests-toolbelt==1.0.0
     # via langsmith
 rsa==4.9.1
@@ -244,14 +278,21 @@ scikit-learn==1.6.1
     # via sensei-web
 scipy==1.15.3
     # via scikit-learn
+selenium==4.33.0
+    # via sensei-web
 six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
     # via
     #   anyio
     #   openai
+    #   trio
+sortedcontainers==2.4.0
+    # via trio
 soupsieve==2.7
     # via beautifulsoup4
+sqlalchemy==2.0.41
+    # via langchain
 sqlparse==0.5.3
     # via django
 tenacity==9.1.2
@@ -266,7 +307,13 @@ tqdm==4.67.1
     # via
     #   google-generativeai
     #   openai
-typing-extensions==4.14.0
+trio==0.30.0
+    # via
+    #   selenium
+    #   trio-websocket
+trio-websocket==0.12.2
+    # via selenium
+typing-extensions==4.13.2
     # via
     #   anyio
     #   beautifulsoup4
@@ -275,6 +322,8 @@ typing-extensions==4.14.0
     #   openai
     #   pydantic
     #   pydantic-core
+    #   selenium
+    #   sqlalchemy
     #   typing-inspection
 typing-inspection==0.4.1
     # via pydantic
@@ -288,6 +337,13 @@ urllib3==2.4.0
     # via
     #   botocore
     #   requests
+    #   selenium
+webdriver-manager==4.0.2
+    # via sensei-web
+websocket-client==1.8.0
+    # via selenium
+wsproto==1.2.0
+    # via trio-websocket
 xxhash==3.5.0
     # via langgraph
 zstandard==0.23.0
