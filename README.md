@@ -4,6 +4,15 @@ A web server for sensei
 
 ## Installation
 
+### Initialize git submodules
+
+First, initialize the required git submodules:
+
+```bash
+git submodule init
+git submodule update
+```
+
 ### Backend setup
 
 To make the server run, you need to have the project dependencies installed, but also the `user-simulator` ones. To do so, in a preferably new virtual environment, run the following commands:
