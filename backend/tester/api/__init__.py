@@ -10,12 +10,12 @@ from .auth import (
 )
 from .conversations import ConversationViewSet
 from .errors import TestErrorViewSet
-from .execution import (
+from .execution_views import (
     ExecuteSelectedAPIView,
+    stop_test_execution,
     check_generation_status,
     check_ongoing_generation,
     generate_profiles,
-    stop_test_execution,
 )
 from .projects import ProjectViewSet, fetch_file_content, validate_yaml
 from .project_files import (
