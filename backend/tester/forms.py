@@ -1,8 +1,12 @@
+import logging
+
 from django import forms
+
 from .models import TestCase, TestFile
 
+logger = logging.getLogger(__name__)
 
-# https://forum.djangoproject.com/t/multiple-image-upload-like-an-e-commerce-application-handling-djangos-fileinput-doesnt-support-multiple-files/34719
+
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
 
@@ -13,7 +17,9 @@ class MultipleFileField(forms.FileField):
         super().__init__(*args, **kwargs)
 
     def clean(self, data, initial=None):
-        print(">>>", data, initial)
+        logger.debug(
+            f"MultipleFileField.clean called with data={data}, initial={initial}"
+        )
         single_file_clean = super().clean
         if isinstance(data, (list, tuple)):
             result = [single_file_clean(d, initial) for d in data]
