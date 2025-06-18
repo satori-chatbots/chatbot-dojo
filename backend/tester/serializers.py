@@ -1,20 +1,21 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
 from .models import (
     ChatbotTechnology,
+    Conversation,
     GlobalReport,
+    PersonalityFile,
+    ProfileReport,
+    Project,
+    ProjectConfig,
+    RuleFile,
     TestCase,
     TestError,
     TestFile,
-    Project,
-    ProfileReport,
-    Conversation,
-    UserAPIKey,
-    PersonalityFile,
-    RuleFile,
     TypeFile,
-    ProjectConfig,
+    UserAPIKey,
 )
-from django.contrib.auth import get_user_model
 
 # Get the latest version of the user model
 User = get_user_model()
@@ -22,7 +23,7 @@ User = get_user_model()
 
 class FileURLMixin:
     """Mixin to provide file URL generation functionality for serializers."""
-    
+
     def get_file_url(self, obj):
         request = self.context.get("request")
         if obj.file and hasattr(obj.file, "url"):

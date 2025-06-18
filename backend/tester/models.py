@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 
@@ -11,6 +12,9 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .validation_script import YamlValidator
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -363,9 +367,9 @@ class Project(models.Model):
         try:
             with open(run_yml_path, "w") as f:
                 yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
-            print(f"Updated run.yml at {run_yml_path}")
+            logger.info(f"Updated run.yml at {run_yml_path}")
         except Exception as e:
-            print(f"Error creating run.yml: {e}")
+            logger.error(f"Error creating run.yml: {e}")
 
 
 @receiver(post_delete, sender=Project)
@@ -375,9 +379,9 @@ def delete_project_directory(sender, instance, **kwargs):
     if os.path.exists(project_path):
         try:
             shutil.rmtree(project_path)
-            print(f"Deleted project directory: {project_path}")
+            logger.info(f"Deleted project directory: {project_path}")
         except Exception as e:
-            print(f"Error deleting project directory {project_path}: {e}")
+            logger.error(f"Error deleting project directory {project_path}: {e}")
 
 
 TECHNOLOGY_CHOICES = [
@@ -500,9 +504,9 @@ def delete_test_case_directories(sender, instance, **kwargs):
         if os.path.exists(profiles_path):
             try:
                 shutil.rmtree(profiles_path)
-                print(f"Deleted test case profiles directory: {profiles_path}")
+                logger.info(f"Deleted test case profiles directory: {profiles_path}")
             except Exception as e:
-                print(
+                logger.error(
                     f"Error deleting test case profiles directory {profiles_path}: {e}"
                 )
 
@@ -510,12 +514,12 @@ def delete_test_case_directories(sender, instance, **kwargs):
         if os.path.exists(results_path):
             try:
                 shutil.rmtree(results_path)
-                print(f"Deleted test case results directory: {results_path}")
+                logger.info(f"Deleted test case results directory: {results_path}")
             except Exception as e:
-                print(f"Error deleting test case results directory {results_path}: {e}")
+                logger.error(f"Error deleting test case results directory {results_path}: {e}")
 
     except Exception as e:
-        print(f"Error in delete_test_case_directories signal: {e}")
+        logger.error(f"Error in delete_test_case_directories signal: {e}")
 
 
 class GlobalReport(models.Model):
