@@ -70,12 +70,11 @@ class TestFileViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # If we're ignoring errors, try to extract test_name with regex
+            # If we're ignoring errors, try to extract test_name using the utility function
             try:
-                pattern = r'test_name:\s*[\'"]?([\w\d_-]+)[\'"]?'
-                match = re.search(pattern, content)
-                if match:
-                    new_test_name = match.group(1)
+                extracted_name = extract_test_name_from_malformed_yaml(content)
+                if extracted_name:
+                    new_test_name = extracted_name
             except Exception:
                 # If all extraction methods fail, keep the current name
                 pass
