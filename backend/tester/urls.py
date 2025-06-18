@@ -1,6 +1,5 @@
 from rest_framework import routers
 from django.urls import include, path
-from . import views
 from . import api
 
 
@@ -9,6 +8,12 @@ router = routers.DefaultRouter()
 router.register(r"testcases", api.TestCaseViewSet, basename="testcase")
 router.register(r"testfiles", api.TestFileViewSet, basename="testfile")
 router.register(r"projects", api.ProjectViewSet, basename="project")
+router.register(
+    r"personalityfiles", api.PersonalityFileViewSet, basename="personalityfile"
+)
+router.register(r"rulefiles", api.RuleFileViewSet, basename="rulefile")
+router.register(r"typefiles", api.TypeFileViewSet, basename="typefile")
+router.register(r"projectconfigs", api.ProjectConfigViewSet, basename="projectconfig")
 router.register(
     r"chatbottechnologies", api.ChatbotTechnologyViewSet, basename="chatbottechnology"
 )

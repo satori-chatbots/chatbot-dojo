@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 import yaml
 import re

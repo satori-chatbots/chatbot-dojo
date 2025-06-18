@@ -8,6 +8,15 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "allpairspy"
+version = "2.5.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/9e/a5a536c22f56cdbbb0236889cff33915e20fb93a0526887367b38e91122e/allpairspy-2.5.1.tar.gz", hash = "sha256:f69d31a3b56eee119d1ec6063e9c732dd44fbba352ef738cb22d9699fc4009fe", size = 14281, upload-time = "2023-07-08T09:08:54.049Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/1a/fedf0f2ff77ec65e599112b2d5402fee5c166d9378b51760b696bd8cde1d/allpairspy-2.5.1-py3-none-any.whl", hash = "sha256:3f97cbac2bbee86f4bfceffd0fd91dca740a120c78e9368af2bad81a2b3426e2", size = 8965, upload-time = "2023-07-08T09:08:51.994Z" },
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1501,6 +1510,7 @@ name = "sensei-web"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "allpairspy" },
     { name = "boto3" },
     { name = "chatbot-tracer" },
     { name = "cryptography" },
@@ -1527,6 +1537,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "allpairspy", specifier = ">=2.5.1" },
     { name = "boto3", specifier = ">=1.38.30" },
     { name = "chatbot-tracer", specifier = ">=0.2.7" },
     { name = "cryptography", specifier = ">=45.0.3" },

@@ -1,19 +1,36 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
 from .models import (
     ChatbotTechnology,
+    Conversation,
     GlobalReport,
+    PersonalityFile,
+    ProfileReport,
+    Project,
+    ProjectConfig,
+    RuleFile,
     TestCase,
     TestError,
     TestFile,
-    Project,
-    ProfileReport,
-    Conversation,
+    TypeFile,
     UserAPIKey,
 )
-from django.contrib.auth import get_user_model
 
 # Get the latest version of the user model
 User = get_user_model()
+
+
+class FileURLMixin:
+    """Mixin to provide file URL generation functionality for serializers."""
+
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        if obj.file and hasattr(obj.file, "url"):
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
 
 
 class LoginSerializer(serializers.Serializer):
@@ -57,21 +74,13 @@ class ProfileReportSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class TestFileSerializer(serializers.ModelSerializer):
+class TestFileSerializer(FileURLMixin, serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = TestFile
         fields = "__all__"
         read_only_fields = ["name"]
-
-    def get_file_url(self, obj):
-        request = self.context.get("request")
-        if obj.file and hasattr(obj.file, "url"):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url  # Fallback to relative URL if request is not available
-        return None
 
 
 class ChatbotTechnologySerializer(serializers.ModelSerializer):
@@ -157,3 +166,36 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
 
     def get_decrypted_api_key(self, obj):
         return obj.get_api_key()
+
+
+class PersonalityFileSerializer(FileURLMixin, serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PersonalityFile
+        fields = "__all__"
+        read_only_fields = ["name"]
+
+
+class RuleFileSerializer(FileURLMixin, serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RuleFile
+        fields = "__all__"
+        read_only_fields = ["name"]
+
+
+class TypeFileSerializer(FileURLMixin, serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TypeFile
+        fields = "__all__"
+        read_only_fields = ["name"]
+
+
+class ProjectConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectConfig
+        fields = "__all__"

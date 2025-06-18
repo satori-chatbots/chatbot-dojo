@@ -1,12 +1,10 @@
 """
-Execution API endpoints for running tests and generating profiles.
+API views for test execution endpoints.
 """
 
 import os
 import shutil
-import subprocess
 import threading
-import time
 
 import yaml
 from django.conf import settings
@@ -17,7 +15,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..models import (
-    GlobalReport,
     ProfileGenerationTask,
     Project,
     TestCase,
@@ -25,6 +22,8 @@ from ..models import (
     cipher_suite,
 )
 from .base import logger
+from .test_runner import TestRunner
+from .profile_generator import ProfileGenerator
 
 
 class ExecuteSelectedAPIView(APIView):
@@ -143,9 +142,10 @@ class ExecuteSelectedAPIView(APIView):
             )
             logger.info(f"Results path: {results_path}")
 
-            # Create a unique subdirectory for this TestCase
+            # Create a unique subdirectory for this TestCase within the profiles folder
+            profiles_base_path = os.path.join(project_path, "profiles")
             user_profiles_path = os.path.join(
-                project_path, "profiles", f"testcase_{test_case.id}"
+                profiles_base_path, f"testcase_{test_case.id}"
             )
             os.makedirs(user_profiles_path, exist_ok=True)
             logger.info(f"User profiles path: {user_profiles_path}")
@@ -181,9 +181,10 @@ class ExecuteSelectedAPIView(APIView):
             test_case.status = "RUNNING"
             test_case.save()
 
-            # Execute the test in a background thread
+            # Execute the test in a background thread using TestRunner
+            test_runner = TestRunner()
             threading.Thread(
-                target=self._execute_test_background,
+                target=test_runner.execute_test_background,
                 args=(
                     test_case.id,
                     script_path,
@@ -203,120 +204,6 @@ class ExecuteSelectedAPIView(APIView):
             },
             status=status.HTTP_202_ACCEPTED,
         )
-
-    def _execute_test_background(
-        self,
-        test_case_id,
-        script_path,
-        project_path,
-        profiles_directory,
-        results_path,
-        technology,
-        link,
-    ):
-        """Execute the test in background thread"""
-        try:
-            test_case = TestCase.objects.get(id=test_case_id)
-
-            # Execute the actual test script
-            cmd = [
-                "python",
-                script_path,
-                "--project",
-                project_path,
-                "--profiles",
-                profiles_directory,
-                "--results",
-                results_path,
-                "--technology",
-                technology,
-            ]
-
-            if link:
-                cmd.extend(["--link", link])
-
-            logger.info(f"Executing command: {' '.join(cmd)}")
-
-            start_time = time.time()
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=3600
-            )  # 1 hour timeout
-            end_time = time.time()
-
-            execution_time = end_time - start_time
-
-            if result.returncode == 0:
-                test_case.status = "SUCCESS"
-                test_case.execution_time = execution_time
-                test_case.save()
-
-                # Process results and create reports
-                self._process_test_results(test_case, results_path)
-
-            else:
-                test_case.status = "FAILED"
-                test_case.execution_time = execution_time
-                test_case.error_message = result.stderr
-                test_case.save()
-                logger.error(f"Test execution failed: {result.stderr}")
-
-        except Exception as e:
-            logger.error(f"Error in background test execution: {str(e)}")
-            try:
-                test_case = TestCase.objects.get(id=test_case_id)
-                test_case.status = "FAILED"
-                test_case.error_message = str(e)
-                test_case.save()
-            except Exception:
-                pass
-
-    def _process_test_results(self, test_case, results_path):
-        """Process test results and create reports"""
-        try:
-            # Implementation for processing results would go here
-            # This is a complex process that involves parsing output files,
-            # creating GlobalReport, ProfileReport, TestError, and Conversation objects
-            logger.info(f"Processing results for test case {test_case.id}")
-
-            # Placeholder implementation
-            GlobalReport.objects.create(
-                test_case=test_case,
-                total_cost=0.0,
-                total_execution_time=test_case.execution_time or 0,
-            )
-
-            # Additional processing would go here...
-
-        except Exception as e:
-            logger.error(f"Error processing test results: {str(e)}")
-
-
-def run_async_profile_generation(task_id, technology, conversations, turns, user_id):
-    """
-    Run profile generation asynchronously in a background thread.
-    """
-    try:
-        task = ProfileGenerationTask.objects.get(id=task_id)
-        task.status = "RUNNING"
-        task.stage = "Initializing"
-        task.save()
-
-        # Detailed implementation would go here
-        # This is a complex process for generating user profiles
-
-        task.status = "COMPLETED"
-        task.progress_percentage = 100
-        task.save()
-
-    except Exception as e:
-        logger.error(f"Error in profile generation: {str(e)}")
-        try:
-            task = ProfileGenerationTask.objects.get(id=task_id)
-            task.status = "FAILED"
-            task.error_message = str(e)
-            task.save()
-        except Exception:
-            pass
 
 
 @api_view(["POST"])
@@ -350,9 +237,10 @@ def generate_profiles(request):
         project=project, status="PENDING", conversations=conversations, turns=turns
     )
 
-    # Start generation in background thread
+    # Start generation in background thread using ProfileGenerator
+    profile_generator = ProfileGenerator()
     threading.Thread(
-        target=run_async_profile_generation,
+        target=profile_generator.run_async_profile_generation,
         args=(
             task.id,
             project.chatbot_technology.technology,
@@ -416,7 +304,7 @@ def check_ongoing_generation(request, project_id):
 
 @api_view(["POST"])
 def stop_test_execution(request):
-    """Stop ongoing test execution (placeholder implementation)."""
+    """Stop ongoing test execution."""
     test_case_id = request.data.get("test_case_id")
 
     if not test_case_id:
@@ -433,15 +321,20 @@ def stop_test_execution(request):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Implementation for stopping test execution would go here
-        # This could involve killing processes, cleaning up resources, etc.
-        test_case.status = "STOPPED"
-        test_case.save()
+        # Use TestRunner to stop the execution
+        test_runner = TestRunner()
+        success = test_runner.stop_test_execution(test_case)
 
-        return Response(
-            {"message": "Test execution stopped"},
-            status=status.HTTP_200_OK,
-        )
+        if success:
+            return Response(
+                {"message": "Test execution stopped"},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"message": f"Test case is not running (status: {test_case.status})"},
+                status=status.HTTP_200_OK,
+            )
 
     except TestCase.DoesNotExist:
         return Response(
