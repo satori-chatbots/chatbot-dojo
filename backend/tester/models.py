@@ -320,33 +320,41 @@ class Project(models.Model):
         from django.conf import settings
 
         config_data = {
-            'project_folder': f"project_{self.id}",
-            'user_profile': "",
-            'technology': self.chatbot_technology.technology if self.chatbot_technology else "",
-            'connector': self.chatbot_technology.link if self.chatbot_technology else "",
-            'connector_parameters': {},
-            'extract': "",
-            '#execution_parameters': [
-                '# - verbose',
-                '# - clean_cache',
-                '# - update_cache',
-                '# - ignore_cache'
-            ]
+            "project_folder": f"project_{self.id}",
+            "user_profile": "",
+            "technology": self.chatbot_technology.technology
+            if self.chatbot_technology
+            else "",
+            "connector": self.chatbot_technology.link
+            if self.chatbot_technology
+            else "",
+            "connector_parameters": {},
+            "extract": "",
+            "#execution_parameters": [
+                "# - verbose",
+                "# - clean_cache",
+                "# - update_cache",
+                "# - ignore_cache",
+            ],
         }
 
         # Update with saved config if it exists
         try:
-            if hasattr(self, 'config') and self.config:
+            if hasattr(self, "config") and self.config:
                 if self.config.user_profile:
-                    config_data['user_profile'] = self.config.user_profile
+                    config_data["user_profile"] = self.config.user_profile
                 if self.config.connector:
-                    config_data['connector'] = self.config.connector
+                    config_data["connector"] = self.config.connector
                 if self.config.connector_parameters:
-                    config_data['connector_parameters'] = self.config.connector_parameters
+                    config_data["connector_parameters"] = (
+                        self.config.connector_parameters
+                    )
                 if self.config.extract_path:
-                    config_data['extract'] = self.config.extract_path
+                    config_data["extract"] = self.config.extract_path
                 if self.config.execution_parameters:
-                    config_data['execution_parameters'] = self.config.execution_parameters
+                    config_data["execution_parameters"] = (
+                        self.config.execution_parameters
+                    )
         except:
             pass  # If config doesn't exist, use defaults
 
@@ -354,7 +362,7 @@ class Project(models.Model):
         os.makedirs(os.path.dirname(run_yml_path), exist_ok=True)
 
         try:
-            with open(run_yml_path, 'w') as f:
+            with open(run_yml_path, "w") as f:
                 yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
             print(f"Updated run.yml at {run_yml_path}")
         except Exception as e:
@@ -616,6 +624,7 @@ class PersonalityFile(models.Model):
     """
     Model to store personality files in the personalities/ folder
     """
+
     file = models.FileField(upload_to=upload_to_personalities)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
@@ -636,6 +645,7 @@ class RuleFile(models.Model):
     """
     Model to store rule files in the rules/ folder
     """
+
     file = models.FileField(upload_to=upload_to_rules)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
@@ -656,6 +666,7 @@ class TypeFile(models.Model):
     """
     Model to store type files in the types/ folder
     """
+
     file = models.FileField(upload_to=upload_to_types)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
@@ -676,6 +687,7 @@ class ProjectConfig(models.Model):
     """
     Model to store the run.yml configuration for each project
     """
+
     project = models.OneToOneField(
         "Project", related_name="config", on_delete=models.CASCADE
     )

@@ -65,8 +65,7 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
 
         if not project_id:
             return Response(
-                {"error": "No project ID provided."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         project = get_object_or_404(Project, id=project_id)
@@ -75,14 +74,13 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
         if project.owner != request.user:
             return Response(
                 {"error": "You do not own this project."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         created_files = []
         for uploaded_file in uploaded_files:
             personality_file = PersonalityFile.objects.create(
-                file=uploaded_file,
-                project=project
+                file=uploaded_file, project=project
             )
             created_files.append(personality_file)
 
@@ -126,8 +124,7 @@ class RuleFileViewSet(viewsets.ModelViewSet):
 
         if not project_id:
             return Response(
-                {"error": "No project ID provided."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         project = get_object_or_404(Project, id=project_id)
@@ -136,15 +133,12 @@ class RuleFileViewSet(viewsets.ModelViewSet):
         if project.owner != request.user:
             return Response(
                 {"error": "You do not own this project."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         created_files = []
         for uploaded_file in uploaded_files:
-            rule_file = RuleFile.objects.create(
-                file=uploaded_file,
-                project=project
-            )
+            rule_file = RuleFile.objects.create(file=uploaded_file, project=project)
             created_files.append(rule_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -187,8 +181,7 @@ class TypeFileViewSet(viewsets.ModelViewSet):
 
         if not project_id:
             return Response(
-                {"error": "No project ID provided."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         project = get_object_or_404(Project, id=project_id)
@@ -197,15 +190,12 @@ class TypeFileViewSet(viewsets.ModelViewSet):
         if project.owner != request.user:
             return Response(
                 {"error": "You do not own this project."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         created_files = []
         for uploaded_file in uploaded_files:
-            type_file = TypeFile.objects.create(
-                file=uploaded_file,
-                project=project
-            )
+            type_file = TypeFile.objects.create(file=uploaded_file, project=project)
             created_files.append(type_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -222,14 +212,13 @@ class ProjectConfigViewSet(viewsets.ModelViewSet):
         project_id = self.request.query_params.get("project_id", None)
         if project_id:
             return ProjectConfig.objects.filter(
-                project_id=project_id,
-                project__owner=self.request.user
+                project_id=project_id, project__owner=self.request.user
             )
         return ProjectConfig.objects.filter(project__owner=self.request.user)
 
     def perform_create(self, serializer):
         """Ensure the project belongs to the user."""
-        project = serializer.validated_data['project']
+        project = serializer.validated_data["project"]
         if project.owner != self.request.user:
             raise PermissionError("You do not own this project.")
 

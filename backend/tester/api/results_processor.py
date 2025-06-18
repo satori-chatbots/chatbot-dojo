@@ -55,10 +55,14 @@ class ResultsProcessor:
                 documents = list(yaml.safe_load_all(file))
 
             # Process global report
-            global_report_instance = self._process_global_report(documents[0], test_case)
+            global_report_instance = self._process_global_report(
+                documents[0], test_case
+            )
 
             # Process profile reports
-            self._process_profile_reports(documents[1:], global_report_instance, results_path)
+            self._process_profile_reports(
+                documents[1:], global_report_instance, results_path
+            )
 
             logger.info(f"Successfully processed results for test case {test_case.id}")
 
@@ -107,7 +111,9 @@ class ResultsProcessor:
 
         return global_report_instance
 
-    def _process_profile_reports(self, profile_reports, global_report_instance, results_path):
+    def _process_profile_reports(
+        self, profile_reports, global_report_instance, results_path
+    ):
         """Process profile reports and create ProfileReport instances"""
         # Profile reports are in the documents from 1 to n
         for profile_report in profile_reports:
@@ -195,7 +201,7 @@ class ResultsProcessor:
 
     def _process_profile_report_from_conversation(self, conversation_file_path):
         """Read common fields from first conversation file"""
-        
+
         with open(conversation_file_path, "r") as file:
             data = yaml.safe_load_all(file)
             first_doc = next(data)
@@ -210,8 +216,12 @@ class ResultsProcessor:
                 ),
                 {},
             )
-            number = next((item["number"] for item in conv_specs if "number" in item), 0)
-            steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
+            number = next(
+                (item["number"] for item in conv_specs if "number" in item), 0
+            )
+            steps = next(
+                (item["steps"] for item in conv_specs if "steps" in item), None
+            )
             # Extract all_answered with limit if present
             all_answered_item = next(
                 (item for item in conv_specs if "all_answered" in item), None
@@ -266,8 +276,12 @@ class ResultsProcessor:
                 "response_time_avg": docs[1]
                 .get("response time report", {})
                 .get("average", 0),
-                "response_time_max": docs[1].get("response time report", {}).get("max", 0),
-                "response_time_min": docs[1].get("response time report", {}).get("min", 0),
+                "response_time_max": docs[1]
+                .get("response time report", {})
+                .get("max", 0),
+                "response_time_min": docs[1]
+                .get("response time report", {})
+                .get("min", 0),
                 "interaction": docs[2].get("interaction", []),
             }
             return conversation_data

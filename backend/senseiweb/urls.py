@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import include, path
 from django.conf.urls.static import static
@@ -21,9 +22,9 @@ from django.conf.urls.static import static
 from senseiweb import settings
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('tester.urls')),
-    path('auth/', include('knox.urls')),
+    path("admin/", admin.site.urls),
+    path("", include("tester.urls")),
+    path("auth/", include("knox.urls")),
 ]
 
 if settings.DEBUG:

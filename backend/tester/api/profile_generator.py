@@ -9,7 +9,9 @@ from .base import logger
 class ProfileGenerator:
     """Handles user profile generation tasks."""
 
-    def run_async_profile_generation(self, task_id, technology, conversations, turns, user_id):
+    def run_async_profile_generation(
+        self, task_id, technology, conversations, turns, user_id
+    ):
         """
         Run profile generation asynchronously in a background thread.
         """
@@ -20,7 +22,9 @@ class ProfileGenerator:
             task.save()
 
             logger.info(f"Starting profile generation for task {task_id}")
-            logger.info(f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}")
+            logger.info(
+                f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}"
+            )
 
             # Update progress
             task.progress_percentage = 10
@@ -44,9 +48,10 @@ class ProfileGenerator:
                 task.stage = stage_name
                 task.progress_percentage = progress
                 task.save()
-                
+
                 # Simulate processing time
                 import time
+
                 time.sleep(2)
 
                 # Check if task was cancelled

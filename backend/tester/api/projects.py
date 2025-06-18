@@ -83,8 +83,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     [
                         sys.executable,
                         init_script_path,
-                        "--path", os.path.dirname(project_base_path),
-                        "--name", f"project_{project.id}"
+                        "--path",
+                        os.path.dirname(project_base_path),
+                        "--name",
+                        f"project_{project.id}",
                     ],
                     check=True,
                 )

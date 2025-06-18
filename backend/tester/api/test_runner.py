@@ -45,7 +45,15 @@ class TestRunner:
             self.execution_utils.calculate_total_conversations(test_case, project_path)
 
             # Build the run.yml file before execution
-            self._build_run_yml(project, test_case, profiles_directory, results_path, technology, link, user_simulator_dir)
+            self._build_run_yml(
+                project,
+                test_case,
+                profiles_directory,
+                results_path,
+                technology,
+                link,
+                user_simulator_dir,
+            )
 
             # Execute the actual test script with the new command format
             cmd = [
@@ -55,10 +63,12 @@ class TestRunner:
                 project_path,
             ]
 
-            logger.info(f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}")
+            logger.info(
+                f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}"
+            )
 
             start_time = time.time()
-            
+
             # Start the subprocess
             process = subprocess.Popen(
                 cmd,
@@ -81,7 +91,12 @@ class TestRunner:
             total_conversations = test_case.total_conversations
             monitoring_thread = threading.Thread(
                 target=self._monitor_conversations,
-                args=(conversations_dir, total_conversations, test_case.id, final_conversation_count),
+                args=(
+                    conversations_dir,
+                    total_conversations,
+                    test_case.id,
+                    final_conversation_count,
+                ),
             )
             monitoring_thread.daemon = True
             monitoring_thread.start()
@@ -161,7 +176,7 @@ class TestRunner:
         if test_case.status == "RUNNING":
             test_case.status = "STOPPED"
             test_case.save()
-            
+
             # If we have a process ID, try to terminate the process
             if test_case.process_id:
                 try:
@@ -169,21 +184,40 @@ class TestRunner:
                     for child in proc.children(recursive=True):
                         child.terminate()
                     proc.terminate()
-                    logger.info(f"Terminated process {test_case.process_id} for test case {test_case.id}")
+                    logger.info(
+                        f"Terminated process {test_case.process_id} for test case {test_case.id}"
+                    )
                     return True
                 except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                    logger.warning(f"Could not terminate process {test_case.process_id}: {e}")
+                    logger.warning(
+                        f"Could not terminate process {test_case.process_id}: {e}"
+                    )
                     return True  # Still consider it successful since we set status to STOPPED
             return True
         else:
             return False
 
-    def _build_run_yml(self, project, test_case, profiles_directory, results_path, technology, link, user_simulator_dir):
+    def _build_run_yml(
+        self,
+        project,
+        test_case,
+        profiles_directory,
+        results_path,
+        technology,
+        link,
+        user_simulator_dir,
+    ):
         """Build the run.yml file with the correct configuration"""
         try:
             # Build configuration using ExecutionUtils
             config_data = self.execution_utils.build_run_yml_config(
-                project, test_case, profiles_directory, results_path, technology, link, user_simulator_dir
+                project,
+                test_case,
+                profiles_directory,
+                results_path,
+                technology,
+                link,
+                user_simulator_dir,
             )
 
             # Write the configuration to file
@@ -193,7 +227,13 @@ class TestRunner:
             logger.error(f"Error building run.yml: {str(e)}")
             raise
 
-    def _monitor_conversations(self, conversations_dir, total_conversations, test_case_id, final_conversation_count):
+    def _monitor_conversations(
+        self,
+        conversations_dir,
+        total_conversations,
+        test_case_id,
+        final_conversation_count,
+    ):
         """Monitor conversation progress during execution"""
         local_test_case = TestCase.objects.get(id=test_case_id)
         while True:
@@ -210,19 +250,13 @@ class TestRunner:
                 )
                 if os.path.exists(conversation_outputs_dir):
                     for profile in local_test_case.profiles_names:
-                        profile_dir = os.path.join(
-                            conversation_outputs_dir, profile
-                        )
+                        profile_dir = os.path.join(conversation_outputs_dir, profile)
                         if os.path.exists(profile_dir):
                             subdirs = os.listdir(profile_dir)
                             if subdirs:
                                 # Assume the first subdirectory is the one we need
-                                date_hour_dir = os.path.join(
-                                    profile_dir, subdirs[0]
-                                )
-                                executed_conversations += len(
-                                    os.listdir(date_hour_dir)
-                                )
+                                date_hour_dir = os.path.join(profile_dir, subdirs[0])
+                                executed_conversations += len(os.listdir(date_hour_dir))
 
                     local_test_case.executed_conversations = executed_conversations
                     local_test_case.save()
