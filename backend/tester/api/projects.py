@@ -4,6 +4,7 @@ Projects API endpoints and related functionality.
 
 import os
 import subprocess
+import sys
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -76,7 +77,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if os.path.exists(init_script_path):
             try:
                 subprocess.run(
-                    ["python", init_script_path, "--project_name", project_path],
+                    [sys.executable, init_script_path, "--project_name", project_path],
                     check=True,
                 )
                 print(
