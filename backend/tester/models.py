@@ -1,13 +1,13 @@
-from django.conf import settings
-from django.db import models
-from django.db.models.signals import post_delete, post_save
-from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.base_user import BaseUserManager
-from django.dispatch import receiver
 import os
+
 import yaml
 from cryptography.fernet import Fernet
-from django.core.exceptions import ValidationError
+from django.conf import settings
+from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -213,11 +213,11 @@ class TestFile(models.Model):
                     is_valid=self.is_valid,
                 )
 
-            except yaml.YAMLError as e:
+            except yaml.YAMLError:
                 # Set as invalid but don't raise exception
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
-            except Exception as e:
+            except Exception:
                 # Set as invalid but don't raise exception
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
@@ -317,7 +317,6 @@ class Project(models.Model):
         Update the run.yml file with current project configuration
         """
         import yaml
-        from django.conf import settings
 
         config_data = {
             "project_folder": f"project_{self.id}",
@@ -355,7 +354,7 @@ class Project(models.Model):
                     config_data["execution_parameters"] = (
                         self.config.execution_parameters
                     )
-        except:
+        except (AttributeError, TypeError):
             pass  # If config doesn't exist, use defaults
 
         run_yml_path = self.get_run_yml_path()
@@ -373,7 +372,6 @@ class Project(models.Model):
 def delete_project_directory(sender, instance, **kwargs):
     """Delete the entire project directory when the Project is deleted"""
     import shutil
-    from django.conf import settings
 
     project_path = instance.get_project_path()
     if os.path.exists(project_path):

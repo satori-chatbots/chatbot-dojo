@@ -1,9 +1,6 @@
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import TestFileSerializer
-from .forms import TestCaseForm, TestFileForm
 from .models import TestCase, TestFile
 from django.shortcuts import render, get_object_or_404
 import os

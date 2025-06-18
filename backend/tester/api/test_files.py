@@ -3,7 +3,6 @@ Test Files API endpoints.
 """
 
 import os
-import re
 
 import yaml
 from django.conf import settings

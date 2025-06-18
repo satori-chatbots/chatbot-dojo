@@ -3,6 +3,7 @@ Project Files API endpoints for handling personalities, rules, and types files.
 """
 
 import os
+
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -10,12 +11,12 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
-from ..models import Project, PersonalityFile, RuleFile, TypeFile, ProjectConfig
+from ..models import PersonalityFile, Project, ProjectConfig, RuleFile, TypeFile
 from ..serializers import (
     PersonalityFileSerializer,
+    ProjectConfigSerializer,
     RuleFileSerializer,
     TypeFileSerializer,
-    ProjectConfigSerializer,
 )
 
 
@@ -222,7 +223,7 @@ class ProjectConfigViewSet(viewsets.ModelViewSet):
         if project.owner != self.request.user:
             raise PermissionError("You do not own this project.")
 
-        config = serializer.save()
+        serializer.save()
         # Update the run.yml file
         project.update_run_yml()
 
