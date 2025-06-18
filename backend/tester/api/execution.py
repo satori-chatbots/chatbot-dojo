@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import threading
 import time
+import traceback
+import psutil
 
 import yaml
 from django.conf import settings
@@ -17,10 +19,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..models import (
+    Conversation,
     GlobalReport,
     ProfileGenerationTask,
+    ProfileReport,
     Project,
     TestCase,
+    TestError,
     TestFile,
     cipher_suite,
 )
@@ -221,6 +226,9 @@ class ExecuteSelectedAPIView(APIView):
             # Get the user-simulator directory (parent of the script)
             user_simulator_dir = os.path.dirname(os.path.dirname(script_path))
 
+            # Calculate total conversations for monitoring
+            self._calculate_total_conversations(test_case, project_path)
+
             # Build the run.yml file before execution
             self._build_run_yml(project, test_case, profiles_directory, results_path, technology, link, user_simulator_dir)
 
@@ -235,37 +243,193 @@ class ExecuteSelectedAPIView(APIView):
             logger.info(f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}")
 
             start_time = time.time()
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=3600, cwd=user_simulator_dir
-            )  # 1 hour timeout, run from user-simulator directory
-            end_time = time.time()
+            
+            # Start the subprocess
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=user_simulator_dir,
+            )
 
+            # Save the process id and mark the test as RUNNING
+            test_case.process_id = process.pid
+            test_case.status = "RUNNING"
+            test_case.save()
+
+            # To store final conversation count
+            final_conversation_count = [0]
+
+            # Start the monitoring thread
+            conversations_dir = results_path
+            logger.info(f"Monitoring conversations in: {conversations_dir}")
+            total_conversations = test_case.total_conversations
+            monitoring_thread = threading.Thread(
+                target=self._monitor_conversations,
+                args=(conversations_dir, total_conversations, test_case.id, final_conversation_count),
+            )
+            monitoring_thread.daemon = True
+            monitoring_thread.start()
+
+            # Poll the process every few seconds to check if it has finished
+            stdout, stderr = b"", b""
+            timeout_seconds = 3
+            while True:
+                try:
+                    # This will check if the process is still running
+                    stdout, stderr = process.communicate(timeout=timeout_seconds)
+                    break
+                except subprocess.TimeoutExpired:
+                    # If the process is still running, check if the test was stopped
+                    test_case.refresh_from_db()
+                    if test_case.status == "STOPPED":
+                        logger.info("Stop flag detected. Terminating subprocess.")
+                        try:
+                            proc = psutil.Process(test_case.process_id)
+                            for child in proc.children(recursive=True):
+                                child.terminate()
+                            proc.terminate()
+                            psutil.wait_procs([proc], timeout=timeout_seconds)
+                        except Exception as ex:
+                            logger.error(f"Error while terminating process: {ex}")
+                        # Continue polling until process exits
+                        continue
+
+            # Wait for the monitoring thread to finish
+            monitoring_thread.join(timeout=10)
+
+            end_time = time.time()
             execution_time = end_time - start_time
 
-            if result.returncode == 0:
-                test_case.status = "SUCCESS"
+            # Check immediately if the test was stopped.
+            test_case.refresh_from_db()
+            if test_case.status == "STOPPED":
+                logger.info("Test execution was stopped by the user.")
+                test_case.result = "Test execution was stopped by the user."
                 test_case.execution_time = execution_time
                 test_case.save()
+                return
+
+            # Update execution time and result
+            test_case.execution_time = execution_time
+            test_case.result = stdout.decode().strip() or stderr.decode().strip()
+            test_case.executed_conversations = final_conversation_count[0]
+
+            if process.returncode == 0:
+                test_case.status = "COMPLETED"
+                test_case.save()
+                logger.info("Test execution completed successfully")
 
                 # Process results and create reports
                 self._process_test_results(test_case, results_path)
-
             else:
                 test_case.status = "FAILED"
-                test_case.execution_time = execution_time
-                test_case.error_message = result.stderr
+                test_case.error_message = stderr.decode().strip()
                 test_case.save()
-                logger.error(f"Test execution failed: {result.stderr}")
+                logger.error(f"Test execution failed: {stderr.decode().strip()}")
 
         except Exception as e:
             logger.error(f"Error in background test execution: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             try:
                 test_case = TestCase.objects.get(id=test_case_id)
-                test_case.status = "FAILED"
-                test_case.error_message = str(e)
+                test_case.status = "ERROR"
+                test_case.error_message = f"Error: {e}\n{traceback.format_exc()}"
+                test_case.execution_time = 0
                 test_case.save()
             except Exception:
                 pass
+
+
+    def _calculate_total_conversations(self, test_case, project_path):
+        """Calculate total conversations from copied files"""
+        try:
+            total_conversations = 0
+            names = []
+
+            for copied_file in test_case.copied_files:
+                file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
+                try:
+                    # Load the YAML content
+                    with open(file_path, "r") as file:
+                        yaml_content = yaml.safe_load(file)
+
+                    # Get the test_name from the file
+                    test_name = yaml_content.get("test_name", "Unknown")
+                    names.append(test_name)
+
+                    # Calculate conversations from conversation data
+                    conv_data = yaml_content.get("conversation")
+
+                    if isinstance(conv_data, list):
+                        num_conversations = sum(
+                            item.get("number", 0)
+                            for item in conv_data
+                            if isinstance(item, dict)
+                        )
+                    elif isinstance(conv_data, dict):
+                        num_conversations = conv_data.get("number", 0)
+                    else:
+                        num_conversations = 0
+
+                    total_conversations += num_conversations
+                    logger.info(f"Profile '{test_name}': {num_conversations} conversations")
+
+                except Exception as e:
+                    logger.error(f"Error processing YAML file: {str(e)}")
+
+            test_case.total_conversations = total_conversations
+            test_case.profiles_names = names
+            test_case.save()
+            logger.info(f"Total conversations calculated: {total_conversations}")
+
+        except Exception as e:
+            logger.error(f"Error calculating total conversations: {str(e)}")
+
+
+    def _monitor_conversations(self, conversations_dir, total_conversations, test_case_id, final_conversation_count):
+        """Monitor conversation progress during execution"""
+        local_test_case = TestCase.objects.get(id=test_case_id)
+        while True:
+            local_test_case.refresh_from_db()
+            if local_test_case.status != "RUNNING":
+                logger.info("Monitoring stopped because status changed.")
+                break
+
+            try:
+                executed_conversations = 0
+                # NEW PATH: conversations are now in conversation_outputs/{profile}
+                conversation_outputs_dir = os.path.join(
+                    conversations_dir, "conversation_outputs"
+                )
+                if os.path.exists(conversation_outputs_dir):
+                    for profile in local_test_case.profiles_names:
+                        profile_dir = os.path.join(
+                            conversation_outputs_dir, profile
+                        )
+                        if os.path.exists(profile_dir):
+                            subdirs = os.listdir(profile_dir)
+                            if subdirs:
+                                # Assume the first subdirectory is the one we need
+                                date_hour_dir = os.path.join(
+                                    profile_dir, subdirs[0]
+                                )
+                                executed_conversations += len(
+                                    os.listdir(date_hour_dir)
+                                )
+
+                    local_test_case.executed_conversations = executed_conversations
+                    local_test_case.save()
+                    final_conversation_count[0] = executed_conversations
+
+                    if executed_conversations >= total_conversations:
+                        logger.info("All conversations found. Exiting monitoring.")
+                        break
+            except Exception as e:
+                logger.error(f"Error in monitor_conversations: {e}")
+                break
+
+            time.sleep(3)
 
     def _build_run_yml(self, project, test_case, profiles_directory, results_path, technology, link, user_simulator_dir):
         """Build the run.yml file with the correct configuration"""
@@ -349,22 +513,255 @@ class ExecuteSelectedAPIView(APIView):
     def _process_test_results(self, test_case, results_path):
         """Process test results and create reports"""
         try:
-            # Implementation for processing results would go here
-            # This is a complex process that involves parsing output files,
-            # creating GlobalReport, ProfileReport, TestError, and Conversation objects
             logger.info(f"Processing results for test case {test_case.id}")
 
-            # Placeholder implementation
-            GlobalReport.objects.create(
+            # NEW PATH: reports are now in reports/__stats_reports__
+            report_path = os.path.join(results_path, "reports", "__stats_reports__")
+            if not os.path.exists(report_path):
+                test_case.status = "ERROR"
+                test_case.error_message = "Error accessing __stats_reports__ directory"
+                test_case.save()
+                return
+
+            report_file = None
+            try:
+                for file in os.listdir(report_path):
+                    if file.startswith("report_") and file.endswith(".yml"):
+                        report_file = file
+                        break
+            except OSError:
+                test_case.status = "ERROR"
+                test_case.error_message = "Error accessing report directory"
+                test_case.save()
+                return
+
+            if report_file is None:
+                test_case.status = "ERROR"
+                test_case.error_message = "Report file not found"
+                test_case.save()
+                return
+
+            # In the documents there is a global, and then a profile_report for each test_case
+            documents = []
+            with open(os.path.join(report_path, report_file), "r") as file:
+                documents = list(yaml.safe_load_all(file))
+
+            # ----------------- #
+            # - GLOBAL REPORT - #
+            # ----------------- #
+            global_report = documents[0]
+
+            global_avg_response_time = global_report["Global report"][
+                "Average assistant response time"
+            ]
+            global_min_response_time = global_report["Global report"][
+                "Minimum assistant response time"
+            ]
+            global_max_response_time = global_report["Global report"][
+                "Maximum assistant response time"
+            ]
+
+            global_total_cost = global_report["Global report"]["Total Cost"]
+
+            global_report_instance = GlobalReport.objects.create(
+                name="Global Report",
+                avg_execution_time=global_avg_response_time,
+                min_execution_time=global_min_response_time,
+                max_execution_time=global_max_response_time,
+                total_cost=global_total_cost,
                 test_case=test_case,
-                total_cost=0.0,
-                total_execution_time=test_case.execution_time or 0,
             )
 
-            # Additional processing would go here...
+            # Errors in the global report
+            global_errors = global_report["Global report"]["Errors"]
+            for error in global_errors:
+                error_code = error["error"]
+                error_count = error["count"]
+                error_conversations = [conv for conv in error["conversations"]]
+
+                TestError.objects.create(
+                    code=error_code,
+                    count=error_count,
+                    conversations=error_conversations,
+                    global_report=global_report_instance,
+                )
+
+            # ------------------- #
+            # - PROFILE REPORTS - #
+            # ------------------- #
+
+            # Profile reports are in the documents from 1 to n
+            for profile_report in documents[1:]:
+                profile_report_name = profile_report["Test name"]
+                profile_report_avg_response_time = profile_report[
+                    "Average assistant response time"
+                ]
+                profile_report_min_response_time = profile_report[
+                    "Minimum assistant response time"
+                ]
+                profile_report_max_response_time = profile_report[
+                    "Maximum assistant response time"
+                ]
+
+                test_total_cost = profile_report["Total Cost"]
+
+                profile_report_instance = ProfileReport.objects.create(
+                    name=profile_report_name,
+                    avg_execution_time=profile_report_avg_response_time,
+                    min_execution_time=profile_report_min_response_time,
+                    max_execution_time=profile_report_max_response_time,
+                    total_cost=test_total_cost,
+                    global_report=global_report_instance,
+                    # Initialize common fields
+                    serial="",
+                    language="",
+                    personality="",
+                    context_details=[],
+                    interaction_style={},
+                    number_conversations=0,
+                )
+
+                # Process conversations directory with NEW PATH
+                # It is now in conversation_outputs/{profile_name}/{a date + hour}
+                conversations_dir = os.path.join(
+                    results_path, "conversation_outputs", profile_report_name
+                )
+                if os.path.exists(conversations_dir):
+                    subdirs = os.listdir(conversations_dir)
+                    if subdirs:
+                        # Since we dont have the date and hour, we get the first directory (the only one)
+                        conversations_dir = os.path.join(conversations_dir, subdirs[0])
+                        logger.info(f"Conversations dir: {conversations_dir}")
+
+                        # Get the first conversation file to extract common fields
+                        conv_files = sorted(
+                            [f for f in os.listdir(conversations_dir) if f.endswith(".yml")]
+                        )
+                        logger.info(f"Conversation files: {conv_files}")
+                        if conv_files:
+                            logger.info(f"First conversation file: {conv_files[0]}")
+                            first_conv_path = os.path.join(conversations_dir, conv_files[0])
+                            profile_data = self._process_profile_report_from_conversation(
+                                first_conv_path
+                            )
+
+                            # Update profile report with common fields
+                            for field, value in profile_data.items():
+                                setattr(profile_report_instance, field, value)
+                            profile_report_instance.save()
+
+                            # Process each conversation file
+                            for conv_file in conv_files:
+                                conv_path = os.path.join(conversations_dir, conv_file)
+                                conv_data = self._process_conversation(conv_path)
+
+                                Conversation.objects.create(
+                                    profile_report=profile_report_instance, **conv_data
+                                )
+
+                # Errors in the profile report
+                test_errors = profile_report["Errors"]
+                logger.info(f"Test errors: {test_errors}")
+                for error in test_errors:
+                    error_code = error["error"]
+                    error_count = error["count"]
+                    error_conversations = [conv for conv in error["conversations"]]
+
+                    TestError.objects.create(
+                        code=error_code,
+                        count=error_count,
+                        conversations=error_conversations,
+                        profile_report=profile_report_instance,
+                    )
+
+            logger.info(f"Successfully processed results for test case {test_case.id}")
 
         except Exception as e:
             logger.error(f"Error processing test results: {str(e)}")
+            test_case.status = "ERROR"
+            test_case.error_message = f"Error processing results: {str(e)}"
+            test_case.save()
+
+
+    def _process_profile_report_from_conversation(self, conversation_file_path):
+        """Read common fields from first conversation file"""
+        
+        with open(conversation_file_path, "r") as file:
+            data = yaml.safe_load_all(file)
+            first_doc = next(data)
+
+            # Extract conversation specs
+            conv_specs = first_doc.get("conversation", {})
+            interaction_style = next(
+                (
+                    item["interaction_style"]
+                    for item in conv_specs
+                    if "interaction_style" in item
+                ),
+                {},
+            )
+            number = next((item["number"] for item in conv_specs if "number" in item), 0)
+            steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
+            # Extract all_answered with limit if present
+            all_answered_item = next(
+                (item for item in conv_specs if "all_answered" in item), None
+            )
+            all_answered = None
+            if all_answered_item:
+                if isinstance(all_answered_item["all_answered"], dict):
+                    all_answered = all_answered_item["all_answered"]
+                else:
+                    all_answered = {"value": all_answered_item["all_answered"]}
+
+            return {
+                "serial": first_doc.get("serial"),
+                "language": first_doc.get("language"),
+                "personality": next(
+                    (
+                        item["personality"]
+                        for item in first_doc.get("context", [])
+                        if isinstance(item, dict) and "personality" in item
+                    ),
+                    "",
+                ),
+                "context_details": [
+                    item
+                    for item in first_doc.get("context", [])
+                    if not isinstance(item, dict) or "personality" not in item
+                ],
+                "interaction_style": interaction_style,
+                "number_conversations": number,
+                "steps": steps,
+                "all_answered": all_answered,
+            }
+
+
+    def _process_conversation(self, conversation_file_path):
+        """Process individual conversation file"""
+
+        # File name without extension
+        name = os.path.splitext(os.path.basename(conversation_file_path))[0]
+        with open(conversation_file_path, "r") as file:
+            docs = list(yaml.safe_load_all(file))
+            main_doc = docs[0]
+
+            # Split the document at the separator lines
+            conversation_data = {
+                "name": name,
+                "ask_about": main_doc.get("ask_about", {}),
+                "data_output": main_doc.get("data_output", {}),
+                "errors": main_doc.get("errors", {}),
+                "total_cost": float(main_doc.get("total_cost($)", 0)),
+                "conversation_time": float(docs[1].get("conversation time", 0)),
+                "response_times": docs[1].get("assistant response time", []),
+                "response_time_avg": docs[1]
+                .get("response time report", {})
+                .get("average", 0),
+                "response_time_max": docs[1].get("response time report", {}).get("max", 0),
+                "response_time_min": docs[1].get("response time report", {}).get("min", 0),
+                "interaction": docs[2].get("interaction", []),
+            }
+            return conversation_data
 
 
 def run_async_profile_generation(task_id, technology, conversations, turns, user_id):
@@ -492,7 +889,7 @@ def check_ongoing_generation(request, project_id):
 
 @api_view(["POST"])
 def stop_test_execution(request):
-    """Stop ongoing test execution (placeholder implementation)."""
+    """Stop ongoing test execution."""
     test_case_id = request.data.get("test_case_id")
 
     if not test_case_id:
@@ -509,15 +906,31 @@ def stop_test_execution(request):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Implementation for stopping test execution would go here
-        # This could involve killing processes, cleaning up resources, etc.
-        test_case.status = "STOPPED"
-        test_case.save()
+        # Only stop if the test is currently running
+        if test_case.status == "RUNNING":
+            test_case.status = "STOPPED"
+            test_case.save()
+            
+            # If we have a process ID, try to terminate the process
+            if test_case.process_id:
+                try:
+                    proc = psutil.Process(test_case.process_id)
+                    for child in proc.children(recursive=True):
+                        child.terminate()
+                    proc.terminate()
+                    logger.info(f"Terminated process {test_case.process_id} for test case {test_case_id}")
+                except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                    logger.warning(f"Could not terminate process {test_case.process_id}: {e}")
 
-        return Response(
-            {"message": "Test execution stopped"},
-            status=status.HTTP_200_OK,
-        )
+            return Response(
+                {"message": "Test execution stopped"},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"message": f"Test case is not running (status: {test_case.status})"},
+                status=status.HTTP_200_OK,
+            )
 
     except TestCase.DoesNotExist:
         return Response(
