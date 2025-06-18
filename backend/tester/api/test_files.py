@@ -40,7 +40,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def update_file(self, request, pk=None):
         test_file = self.get_object()
         content = request.data.get("content")
-        ignore_validation_errors = request.data.get("ignore_validation_errors", False)
+        ignore_validation_errors = str(
+            request.data.get("ignore_validation_errors", "false")
+        ).lower() in ["true", "1"]
 
         if not content:
             return Response(
@@ -189,7 +191,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def upload(self, request):
         uploaded_files = request.FILES.getlist("file")
         project_id = request.data.get("project")
-        ignore_validation_errors = request.data.get("ignore_validation_errors", False)
+        ignore_validation_errors = str(
+            request.data.get("ignore_validation_errors", "false")
+        ).lower() in ["true", "1"]
         errors = []
         test_names = set()
         already_reported_test_names = set()
