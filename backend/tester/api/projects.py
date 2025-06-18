@@ -8,6 +8,7 @@ import subprocess
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import models
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action, api_view
@@ -171,7 +172,7 @@ def fetch_file_content(request, file_id):
             {"id": test_file.id, "name": test_file.name, "yamlContent": content}
         )
 
-    except TestFile.DoesNotExist:
+    except Http404:
         return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response(
