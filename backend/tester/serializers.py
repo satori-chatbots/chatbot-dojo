@@ -20,6 +20,18 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
+class FileURLMixin:
+    """Mixin to provide file URL generation functionality for serializers."""
+    
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        if obj.file and hasattr(obj.file, "url"):
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -61,21 +73,13 @@ class ProfileReportSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class TestFileSerializer(serializers.ModelSerializer):
+class TestFileSerializer(FileURLMixin, serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = TestFile
         fields = "__all__"
         read_only_fields = ["name"]
-
-    def get_file_url(self, obj):
-        request = self.context.get("request")
-        if obj.file and hasattr(obj.file, "url"):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url  # Fallback to relative URL if request is not available
-        return None
 
 
 class ChatbotTechnologySerializer(serializers.ModelSerializer):
@@ -163,7 +167,7 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
         return obj.get_api_key()
 
 
-class PersonalityFileSerializer(serializers.ModelSerializer):
+class PersonalityFileSerializer(FileURLMixin, serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -171,16 +175,8 @@ class PersonalityFileSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["name"]
 
-    def get_file_url(self, obj):
-        request = self.context.get("request")
-        if obj.file and hasattr(obj.file, "url"):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url
-        return None
 
-
-class RuleFileSerializer(serializers.ModelSerializer):
+class RuleFileSerializer(FileURLMixin, serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -188,30 +184,14 @@ class RuleFileSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["name"]
 
-    def get_file_url(self, obj):
-        request = self.context.get("request")
-        if obj.file and hasattr(obj.file, "url"):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url
-        return None
 
-
-class TypeFileSerializer(serializers.ModelSerializer):
+class TypeFileSerializer(FileURLMixin, serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = TypeFile
         fields = "__all__"
         read_only_fields = ["name"]
-
-    def get_file_url(self, obj):
-        request = self.context.get("request")
-        if obj.file and hasattr(obj.file, "url"):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url
-        return None
 
 
 class ProjectConfigSerializer(serializers.ModelSerializer):
