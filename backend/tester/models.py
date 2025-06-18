@@ -229,10 +229,10 @@ class TestFile(models.Model):
 # Delete file from media when TestFile object is deleted from database
 @receiver(post_delete, sender=TestFile)
 def delete_file_from_media(sender, instance, **kwargs):
-    """
-    Delete the file from the media folder when the TestFile object is deleted
-    """
-    instance.file.delete(save=False)
+    """Delete the file from the media directory when the TestFile is deleted"""
+    if instance.file:
+        if os.path.isfile(instance.file.path):
+            os.remove(instance.file.path)
 
 
 # Use post_save signal to set name after the file is saved
@@ -359,6 +359,21 @@ class Project(models.Model):
             print(f"Updated run.yml at {run_yml_path}")
         except Exception as e:
             print(f"Error creating run.yml: {e}")
+
+
+@receiver(post_delete, sender=Project)
+def delete_project_directory(sender, instance, **kwargs):
+    """Delete the entire project directory when the Project is deleted"""
+    import shutil
+    from django.conf import settings
+
+    project_path = instance.get_project_path()
+    if os.path.exists(project_path):
+        try:
+            shutil.rmtree(project_path)
+            print(f"Deleted project directory: {project_path}")
+        except Exception as e:
+            print(f"Error deleting project directory {project_path}: {e}")
 
 
 TECHNOLOGY_CHOICES = [
@@ -673,3 +688,27 @@ class ProjectConfig(models.Model):
 
     def __str__(self):
         return f"Config for {self.project.name}"
+
+
+@receiver(post_delete, sender=PersonalityFile)
+def delete_personality_file_from_media(sender, instance, **kwargs):
+    """Delete the file from the media directory when the PersonalityFile is deleted"""
+    if instance.file:
+        if os.path.isfile(instance.file.path):
+            os.remove(instance.file.path)
+
+
+@receiver(post_delete, sender=RuleFile)
+def delete_rule_file_from_media(sender, instance, **kwargs):
+    """Delete the file from the media directory when the RuleFile is deleted"""
+    if instance.file:
+        if os.path.isfile(instance.file.path):
+            os.remove(instance.file.path)
+
+
+@receiver(post_delete, sender=TypeFile)
+def delete_type_file_from_media(sender, instance, **kwargs):
+    """Delete the file from the media directory when the TypeFile is deleted"""
+    if instance.file:
+        if os.path.isfile(instance.file.path):
+            os.remove(instance.file.path)
