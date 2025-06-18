@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import yaml
 from cryptography.fernet import Fernet
@@ -8,6 +9,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+
+from .validation_script import YamlValidator
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -170,7 +173,6 @@ class TestFile(models.Model):
                     yaml_content = file.read()
 
                 # Validate using YamlValidator
-                from .validation_script import YamlValidator
 
                 validator = YamlValidator()
                 validation_errors = validator.validate(yaml_content)
@@ -226,7 +228,6 @@ class TestFile(models.Model):
         return os.path.basename(self.file.name)
 
 
-# Delete file from media when TestFile object is deleted from database
 @receiver(post_delete, sender=TestFile)
 def delete_file_from_media(sender, instance, **kwargs):
     """Delete the file from the media directory when the TestFile is deleted"""
@@ -316,7 +317,6 @@ class Project(models.Model):
         """
         Update the run.yml file with current project configuration
         """
-        import yaml
 
         config_data = {
             "project_folder": f"project_{self.id}",
@@ -371,8 +371,6 @@ class Project(models.Model):
 @receiver(post_delete, sender=Project)
 def delete_project_directory(sender, instance, **kwargs):
     """Delete the entire project directory when the Project is deleted"""
-    import shutil
-
     project_path = instance.get_project_path()
     if os.path.exists(project_path):
         try:
@@ -466,6 +464,58 @@ class TestCase(models.Model):
             models.Index(fields=["status"]),
             models.Index(fields=["project"]),
         ]
+
+
+# Delete test case directories when TestCase object is deleted from database
+@receiver(post_delete, sender=TestCase)
+def delete_test_case_directories(sender, instance, **kwargs):
+    """Delete the test case directories when the TestCase is deleted"""
+
+    try:
+        # Get the user and project IDs
+        user_id = instance.project.owner.id
+        project_id = instance.project.id
+        test_case_id = instance.id
+
+        # Path to the profiles directory for this test case
+        profiles_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "projects",
+            f"user_{user_id}",
+            f"project_{project_id}",
+            "profiles",
+            f"testcase_{test_case_id}",
+        )
+
+        # Path to the results directory for this test case
+        results_path = os.path.join(
+            settings.MEDIA_ROOT,
+            "results",
+            f"user_{user_id}",
+            f"project_{project_id}",
+            f"testcase_{test_case_id}",
+        )
+
+        # Delete profiles directory if it exists
+        if os.path.exists(profiles_path):
+            try:
+                shutil.rmtree(profiles_path)
+                print(f"Deleted test case profiles directory: {profiles_path}")
+            except Exception as e:
+                print(
+                    f"Error deleting test case profiles directory {profiles_path}: {e}"
+                )
+
+        # Delete results directory if it exists
+        if os.path.exists(results_path):
+            try:
+                shutil.rmtree(results_path)
+                print(f"Deleted test case results directory: {results_path}")
+            except Exception as e:
+                print(f"Error deleting test case results directory {results_path}: {e}")
+
+    except Exception as e:
+        print(f"Error in delete_test_case_directories signal: {e}")
 
 
 class GlobalReport(models.Model):
