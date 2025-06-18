@@ -4,6 +4,7 @@
   "description": "Web application for sensei",
   "main": "index.js",
   "scripts": {
+    "dev": "vite --host",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
