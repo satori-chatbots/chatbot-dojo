@@ -9,6 +9,10 @@ from .models import (
     ProfileReport,
     Conversation,
     UserAPIKey,
+    PersonalityFile,
+    RuleFile,
+    TypeFile,
+    ProjectConfig,
 )
 from django.contrib.auth import get_user_model
 
@@ -157,3 +161,60 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
 
     def get_decrypted_api_key(self, obj):
         return obj.get_api_key()
+
+
+class PersonalityFileSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PersonalityFile
+        fields = "__all__"
+        read_only_fields = ["name"]
+
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        if obj.file and hasattr(obj.file, "url"):
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
+
+
+class RuleFileSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RuleFile
+        fields = "__all__"
+        read_only_fields = ["name"]
+
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        if obj.file and hasattr(obj.file, "url"):
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
+
+
+class TypeFileSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TypeFile
+        fields = "__all__"
+        read_only_fields = ["name"]
+
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        if obj.file and hasattr(obj.file, "url"):
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
+
+
+class ProjectConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectConfig
+        fields = "__all__"

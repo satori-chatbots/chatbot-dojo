@@ -110,6 +110,33 @@ def upload_to(instance, filename):
     return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
 
 
+def upload_to_personalities(instance, filename):
+    """
+    Returns the path where the Personality files are stored
+    """
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+    return f"projects/user_{user_id}/project_{project_id}/personalities/{filename}"
+
+
+def upload_to_rules(instance, filename):
+    """
+    Returns the path where the Rules files are stored
+    """
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+    return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
+
+
+def upload_to_types(instance, filename):
+    """
+    Returns the path where the Types files are stored
+    """
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+    return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
+
+
 class TestFile(models.Model):
     """
     Model to store the uploaded User Profiles YAML files
@@ -267,6 +294,71 @@ class Project(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_project_path(self):
+        """
+        Get the full filesystem path to the project folder
+        """
+        return os.path.join(
+            settings.MEDIA_ROOT,
+            "projects",
+            f"user_{self.owner.id}",
+            f"project_{self.id}",
+        )
+
+    def get_run_yml_path(self):
+        """
+        Get the path to the run.yml file for this project
+        """
+        return os.path.join(self.get_project_path(), "run.yml")
+
+    def update_run_yml(self):
+        """
+        Update the run.yml file with current project configuration
+        """
+        import yaml
+        from django.conf import settings
+
+        config_data = {
+            'project_folder': f"project_{self.id}",
+            'user_profile': "",
+            'technology': self.chatbot_technology.technology if self.chatbot_technology else "",
+            'connector': self.chatbot_technology.link if self.chatbot_technology else "",
+            'connector_parameters': {},
+            'extract': "",
+            '#execution_parameters': [
+                '# - verbose',
+                '# - clean_cache',
+                '# - update_cache',
+                '# - ignore_cache'
+            ]
+        }
+
+        # Update with saved config if it exists
+        try:
+            if hasattr(self, 'config') and self.config:
+                if self.config.user_profile:
+                    config_data['user_profile'] = self.config.user_profile
+                if self.config.connector:
+                    config_data['connector'] = self.config.connector
+                if self.config.connector_parameters:
+                    config_data['connector_parameters'] = self.config.connector_parameters
+                if self.config.extract_path:
+                    config_data['extract'] = self.config.extract_path
+                if self.config.execution_parameters:
+                    config_data['execution_parameters'] = self.config.execution_parameters
+        except:
+            pass  # If config doesn't exist, use defaults
+
+        run_yml_path = self.get_run_yml_path()
+        os.makedirs(os.path.dirname(run_yml_path), exist_ok=True)
+
+        try:
+            with open(run_yml_path, 'w') as f:
+                yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
+            print(f"Updated run.yml at {run_yml_path}")
+        except Exception as e:
+            print(f"Error creating run.yml: {e}")
 
 
 TECHNOLOGY_CHOICES = [
@@ -503,3 +595,81 @@ class ProfileGenerationTask(models.Model):
     turns = models.PositiveIntegerField(default=5)
     generated_file_ids = models.JSONField(default=list)
     process_id = models.IntegerField(null=True, blank=True)
+
+
+class PersonalityFile(models.Model):
+    """
+    Model to store personality files in the personalities/ folder
+    """
+    file = models.FileField(upload_to=upload_to_personalities)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    project = models.ForeignKey(
+        "Project", related_name="personality_files", on_delete=models.CASCADE
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = os.path.splitext(os.path.basename(self.file.name))[0]
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return os.path.basename(self.file.name)
+
+
+class RuleFile(models.Model):
+    """
+    Model to store rule files in the rules/ folder
+    """
+    file = models.FileField(upload_to=upload_to_rules)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    project = models.ForeignKey(
+        "Project", related_name="rule_files", on_delete=models.CASCADE
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = os.path.splitext(os.path.basename(self.file.name))[0]
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return os.path.basename(self.file.name)
+
+
+class TypeFile(models.Model):
+    """
+    Model to store type files in the types/ folder
+    """
+    file = models.FileField(upload_to=upload_to_types)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    project = models.ForeignKey(
+        "Project", related_name="type_files", on_delete=models.CASCADE
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = os.path.splitext(os.path.basename(self.file.name))[0]
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return os.path.basename(self.file.name)
+
+
+class ProjectConfig(models.Model):
+    """
+    Model to store the run.yml configuration for each project
+    """
+    project = models.OneToOneField(
+        "Project", related_name="config", on_delete=models.CASCADE
+    )
+    user_profile = models.CharField(max_length=255, blank=True, null=True)
+    technology = models.CharField(max_length=255, blank=True, null=True)
+    connector = models.CharField(max_length=255, blank=True, null=True)
+    connector_parameters = models.JSONField(blank=True, null=True)
+    extract_path = models.CharField(max_length=500, blank=True, null=True)
+    execution_parameters = models.JSONField(blank=True, null=True, default=list)
+
+    def __str__(self):
+        return f"Config for {self.project.name}"

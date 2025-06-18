@@ -65,28 +65,42 @@ class ProjectViewSet(viewsets.ModelViewSet):
             base_dir, "user-simulator", "src", "init_project.py"
         )
 
-        # Create path structure: filevault/projects/user_{user_id}/project_{project_id}/
+        # Create path structure: projects/user_{user_id}/project_{project_id}/
+        # This should be consistent with the MEDIA_ROOT structure
         relative_path = os.path.join(
-            "filevault",
             "projects",
             f"user_{self.request.user.id}",
             f"project_{project.id}",
         )
-        project_path = os.path.join(base_dir, relative_path)
+        project_base_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+        # Ensure the parent directory exists
+        os.makedirs(os.path.dirname(project_base_path), exist_ok=True)
 
         if os.path.exists(init_script_path):
             try:
                 subprocess.run(
-                    [sys.executable, init_script_path, "--project_name", project_path],
+                    [
+                        sys.executable,
+                        init_script_path,
+                        "--path", os.path.dirname(project_base_path),
+                        "--name", f"project_{project.id}"
+                    ],
                     check=True,
                 )
                 print(
-                    f"Project {project.name} (ID: {project.id}) initialized successfully at {project_path}"
+                    f"Project {project.name} (ID: {project.id}) initialized successfully at {project_base_path}"
                 )
+
+                # Update the run.yml file with project configuration
+                project.update_run_yml()
+
             except subprocess.CalledProcessError as e:
                 print(f"Error initializing project structure: {e}")
+                project.update_run_yml()
         else:
             print(f"Warning: Could not find init_project.py at {init_script_path}")
+            project.update_run_yml()
 
     def get_object(self):
         """Override get_object to return 403 instead of 404 when object exists but user has no access"""

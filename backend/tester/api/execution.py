@@ -143,10 +143,9 @@ class ExecuteSelectedAPIView(APIView):
             )
             logger.info(f"Results path: {results_path}")
 
-            # Create a unique subdirectory for this TestCase
-            user_profiles_path = os.path.join(
-                project_path, "profiles", f"testcase_{test_case.id}"
-            )
+            # Create a unique subdirectory for this TestCase within the profiles folder
+            profiles_base_path = os.path.join(project_path, "profiles")
+            user_profiles_path = os.path.join(profiles_base_path, f"testcase_{test_case.id}")
             os.makedirs(user_profiles_path, exist_ok=True)
             logger.info(f"User profiles path: {user_profiles_path}")
 
