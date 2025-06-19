@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
 import { validateToken } from "../api/authentication-api";
 
 const AuthContext = createContext();
@@ -6,8 +12,8 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [user, setUser] = useState();
+  const [selectedProject, setSelectedProject] = useState();
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -15,11 +21,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     localStorage.removeItem("selectedProject");
-    setUser(null);
-    setSelectedProject(null);
+    setUser(undefined);
+    setSelectedProject(undefined);
   };
 
-  const checkTokenValidity = async () => {
+  const checkTokenValidity = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       clearAllData();
@@ -35,7 +41,7 @@ export const AuthProvider = ({ children }) => {
       clearAllData();
       return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -59,7 +65,7 @@ export const AuthProvider = ({ children }) => {
       }
     };
     initAuth();
-  }, []);
+  }, [checkTokenValidity]);
 
   const login = (userData) => {
     localStorage.setItem("user", JSON.stringify(userData));
