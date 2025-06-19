@@ -502,7 +502,7 @@ function Dashboard() {
             placeholder="Type to search..."
             className="w-full h-12"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             startContent={<Search className="text-default-400" size={18} />}
             isClearable
             // So that it looks like the selectors
@@ -561,10 +561,7 @@ function Dashboard() {
               const value = [...keys][0];
               setSelectedStatus(value);
             }}
-            renderValue={(items) => {
-              const selectedItem = statusOptions.find(
-                (opt) => opt.value === selectedStatus,
-              );
+            renderValue={() => {
               return (
                 <div className="flex items-center gap-2">
                   {selectedStatus === "ALL" ? (
@@ -745,7 +742,7 @@ function Dashboard() {
                         size="sm"
                         variant="flat"
                         color="danger"
-                        onPress={(e) => handleStop(testCase.id, e)}
+                        onPress={(event) => handleStop(testCase.id, event)}
                         endContent={<XCircle className="w-3 h-3" />}
                       >
                         Stop
@@ -756,7 +753,7 @@ function Dashboard() {
                         size="sm"
                         variant="flat"
                         color="danger"
-                        onPress={(e) => handleDelete(testCase.id, e)}
+                        onPress={(event) => handleDelete(testCase.id, event)}
                         endContent={<Trash className="w-3 h-3" />}
                       >
                         Delete
@@ -788,7 +785,7 @@ function Dashboard() {
           <Modal
             isOpen={deleteModal.isOpen}
             onOpenChange={(open) => {
-              if (!open) setDeleteModal({ isOpen: false, testCaseId: null });
+              if (!open) setDeleteModal({ isOpen: false, testCaseId: undefined });
             }}
           >
             <ModalContent>
