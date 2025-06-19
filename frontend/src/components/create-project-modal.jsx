@@ -183,10 +183,7 @@ const CreateProjectModal = ({
 
                 <div className="w-full">
                   <div className="flex w-full justify-between mb-2">
-                    <label
-                      htmlFor="project-technology"
-                      className="text-sm"
-                    >
+                    <label htmlFor="project-technology" className="text-sm">
                       Technology
                     </label>
                     <Button

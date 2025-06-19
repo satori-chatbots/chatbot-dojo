@@ -8,12 +8,10 @@ import { useAuth } from "../contexts/auth-context";
 function SignupView() {
   const navigate = useNavigate();
   const { login } = useAuth();
-
   const [isVisible, setIsVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const toggleVisibility = () => setIsVisible(!isVisible);
   const toggleConfirmVisibility = () => setIsConfirmVisible(!isConfirmVisible);
-
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -22,10 +20,10 @@ function SignupView() {
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -41,16 +39,16 @@ function SignupView() {
       login(response);
       setLoading(false);
       navigate("/");
-    } catch (error) {
-      setError(error.message);
+    } catch (error_) {
+      setError(error_.message);
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (event) => {
     setFormData((previous) => ({
       ...previous,
-      [e.target.name]: e.target.value,
+      [event.target.name]: event.target.value,
     }));
   };
 
@@ -60,7 +58,6 @@ function SignupView() {
         <h1 className="text-2xl sm:text-3xl font-bold text-center">
           Create Account
         </h1>
-
         <Form
           className="flex flex-col space-y-8"
           onSubmit={handleSubmit}
@@ -75,8 +72,6 @@ function SignupView() {
               onChange={handleChange}
               isRequired
               fullWidth
-              autoFocus
-              labelPlacement="outside"
             />
             <Input
               label="Last Name"
@@ -89,7 +84,6 @@ function SignupView() {
               labelPlacement="outside"
             />
           </div>
-
           <Input
             label="Email"
             name="email"
@@ -101,7 +95,6 @@ function SignupView() {
             fullWidth
             labelPlacement="outside"
           />
-
           <Input
             label="Password"
             name="password"
@@ -126,7 +119,6 @@ function SignupView() {
             fullWidth
             labelPlacement="outside"
           />
-
           <Input
             label="Confirm Password"
             name="confirmPassword"
@@ -151,9 +143,7 @@ function SignupView() {
             fullWidth
             labelPlacement="outside"
           />
-
           {error && <p className="text-danger text-sm text-center">{error}</p>}
-
           <Button
             type="submit"
             color="primary"
@@ -164,7 +154,6 @@ function SignupView() {
             {loading ? <Spinner size="sm" /> : "Sign Up"}
           </Button>
         </Form>
-
         <div className="text-center text-sm text-gray-500">
           Already have an account?{" "}
           <Link to="/login" className="text-primary-500">

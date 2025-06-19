@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
-import { materialDark, materialLight } from "@uiw/codemirror-theme-material";
+import { materialDark } from "@uiw/codemirror-theme-material";
 import { tomorrow } from "thememirror";
 import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
@@ -30,34 +30,62 @@ import {
 } from "../data/yaml-documentation";
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
-import { defaultKeymap, insertNewlineAndIndent } from "@codemirror/commands";
+import { insertNewlineAndIndent } from "@codemirror/commands";
 import { linter, lintGutter } from "@codemirror/lint";
-import { isEqual } from "lodash";
 import {
   completionsSchema,
-  requiredSchema,
   getCursorContext,
-  findSimilarKeywords,
   createYamlTypoLinter,
 } from "../data/yaml-schema";
+
+function myCompletions(context) {
+  const word = context.matchBefore(/\w*/);
+  if (word.from === word.to && !context.explicit) {
+    return;
+  }
+
+  const { state } = context;
+  const pos = context.pos;
+  const contextPath = getCursorContext(state.doc, pos);
+
+  let options = completionsSchema[""] || [];
+
+  if (completionsSchema[contextPath]) {
+    options = completionsSchema[contextPath];
+  } else {
+    const contextParts = contextPath.split(".");
+    while (contextParts.length > 0) {
+      const parentContext = contextParts.join(".");
+      if (completionsSchema[parentContext]) {
+        options = completionsSchema[parentContext];
+        break;
+      }
+      contextParts.pop();
+    }
+  }
+
+  return {
+    from: word.from,
+    options: options,
+  };
+}
 
 function YamlEditor() {
   const { fileId } = useParams();
   const [editorContent, setEditorContent] = useState("");
   const [isValid, setIsValid] = useState(true);
   const [fontSize, setFontSize] = useState(14);
-  const [errorInfo, setErrorInfo] = useState(null);
+  const [errorInfo, setErrorInfo] = useState();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const navigate = useNavigate();
   const [selectedProject] = useSelectedProject();
   const { showToast } = useMyCustomToast();
-  const [serverValidationErrors, setServerValidationErrors] = useState(null);
+  const [serverValidationErrors, setServerValidationErrors] = useState();
 
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
 
-  // Create a YAML linter for typo detection
   const yamlTypoLinter = linter(createYamlTypoLinter());
 
   const customKeymap = keymap.of([
@@ -67,48 +95,45 @@ function YamlEditor() {
     },
   ]);
 
-  function myCompletions(context) {
-    let word = context.matchBefore(/\w*/);
-    if (word.from == word.to && !context.explicit) {
-      return null;
+  const validateYaml = useCallback((value) => {
+    try {
+      yamlLoad(value);
+      setIsValid(true);
+      setErrorInfo(undefined);
+    } catch (error) {
+      setIsValid(false);
+      const errorLines = error.message.split("\n");
+      const errorMessage = errorLines[0];
+      const codeContext = errorLines.slice(1).join("\n");
+      setErrorInfo({
+        message: errorMessage,
+        line: error.mark ? error.mark.line + 1 : undefined,
+        column: error.mark ? error.mark.column + 1 : undefined,
+        codeContext: codeContext,
+        isSchemaError: false,
+      });
+      console.error("Invalid YAML:", error);
     }
-
-    // Get editor state and cursor position
-    const { state } = context;
-    const pos = context.pos;
-
-    // Determine which context we're in
-    const contextPath = getCursorContext(state.doc, pos);
-    console.log("Current context:", contextPath); // Add this for debugging
-
-    // Choose appropriate completions based on context
-    let options = completionsSchema[""] || []; // Default to top level
-
-    // Try to find completions for the exact context
-    if (completionsSchema[contextPath]) {
-      options = completionsSchema[contextPath];
-    } else {
-      // Try to find the closest parent context
-      const contextParts = contextPath.split(".");
-      while (contextParts.length > 0) {
-        const parentContext = contextParts.join(".");
-        if (completionsSchema[parentContext]) {
-          options = completionsSchema[parentContext];
-          break;
-        }
-        contextParts.pop();
-      }
-    }
-
-    return {
-      from: word.from,
-      options: options,
-    };
-  }
+  }, []);
 
   useEffect(() => {
-    // Fetch the template for new files
-    if (!fileId) {
+    if (fileId) {
+      fetchFile(fileId)
+        .then((response) => {
+          setEditorContent(response.yamlContent);
+          validateYaml(response.yamlContent);
+          validateYamlOnServer(response.yamlContent)
+            .then((validationResult) => {
+              if (!validationResult.valid) {
+                setServerValidationErrors(validationResult.errors);
+              }
+            })
+            .catch((error) => {
+              console.error("Error validating YAML on server:", error);
+            });
+        })
+        .catch((error) => console.error("Error fetching file:", error));
+    } else {
       fetchTemplate()
         .then((response) => {
           if (response.template) {
@@ -121,39 +146,14 @@ function YamlEditor() {
           showToast("error", "Failed to load template");
         });
     }
-
-    validateYaml(editorContent);
-  }, []);
-
-  useEffect(() => {
-    if (fileId) {
-      fetchFile(fileId)
-        .then((response) => {
-          setEditorContent(response.yamlContent);
-          // Validate on startup
-          validateYaml(response.yamlContent);
-          // Validate on startup
-          validateYamlOnServer(response.yamlContent)
-            .then((validationResult) => {
-              if (!validationResult.valid) {
-                setServerValidationErrors(validationResult.errors);
-              }
-            })
-            .catch((error) => {
-              console.error("Error validating YAML on server:", error);
-            });
-        })
-        .catch((error) => console.error("Error fetching file:", error));
-    }
-  }, [fileId]);
+  }, [fileId, showToast, validateYaml]);
 
   const handleSave = async () => {
     try {
-      setServerValidationErrors(null);
+      setServerValidationErrors(undefined);
       let hasValidationErrors = false;
-      let forceSave = false;
+      const forceSave = false;
 
-      // Only validate on server if there are no syntax errors
       if (!forceSave) {
         try {
           const validationResult = await validateYamlOnServer(editorContent);
@@ -162,14 +162,12 @@ function YamlEditor() {
             hasValidationErrors = true;
           }
         } catch (error) {
-          // If server validation fails, continue with the save operation
           console.error("Server validation error:", error);
           hasValidationErrors = true;
         }
       }
 
       if (fileId) {
-        // Update existing file
         const response = await updateFile(fileId, editorContent, {
           ignoreValidationErrors: hasValidationErrors || forceSave,
         });
@@ -177,14 +175,11 @@ function YamlEditor() {
           hasValidationErrors || forceSave
             ? "File saved with validation errors"
             : "File updated successfully";
-
-        if (hasValidationErrors || forceSave) {
-          showToast("warning", successMessage);
-        } else {
-          showToast("success", response.message || successMessage);
-        }
+        showToast(
+          hasValidationErrors || forceSave ? "warning" : "success",
+          response.message || successMessage,
+        );
       } else {
-        // Create new file
         if (!selectedProject) {
           showToast("error", "Please select a project first");
           return;
@@ -196,7 +191,6 @@ function YamlEditor() {
           response.uploaded_file_ids &&
           response.uploaded_file_ids.length > 0
         ) {
-          // Get the first file ID since we are only uploading one
           const newFileId = response.uploaded_file_ids[0];
           const successMessage =
             hasValidationErrors || forceSave
@@ -206,11 +200,8 @@ function YamlEditor() {
             hasValidationErrors || forceSave ? "warning" : "success",
             successMessage,
           );
-          // Navigate to the edit view of the new file
           navigate(`/yaml-editor/${newFileId}`);
-          return;
         } else {
-          // Extract error message from the response
           const errorMessage =
             response.errors && response.errors.length > 0
               ? response.errors[0].error
@@ -222,13 +213,11 @@ function YamlEditor() {
       try {
         const errorObject = JSON.parse(error.message);
         if (errorObject.errors) {
-          // Display all error messages
           const errorMessages = errorObject.errors
-            .map((error) => `Error: ${error.error}`)
+            .map((error_) => `Error: ${error_.error}`)
             .join("\n");
           showToast("error", errorMessages);
         } else if (errorObject.error) {
-          // Display the error message
           showToast("error", `Error: ${errorObject.error}`);
         } else {
           showToast("error", "Error saving file");
@@ -239,79 +228,10 @@ function YamlEditor() {
     }
   };
 
-  // Updates the content of the editor and validates the YAML
   const handleEditorChange = (value) => {
     setEditorContent(value);
     validateYaml(value);
-    setServerValidationErrors(null);
-  };
-
-  const validateYamlSchema = (yamlData) => {
-    const errors = [];
-
-    // Check top-level required fields
-    for (const field of requiredSchema.required) {
-      if (!yamlData || yamlData[field] === undefined) {
-        errors.push(`Required field "${field}" is missing`);
-      }
-    }
-
-    // Check nested required fields
-    Object.keys(requiredSchema.nested).forEach((parentField) => {
-      const pathParts = parentField.split(".");
-      let currentObject = yamlData;
-
-      // Navigate to the nested object
-      for (const part of pathParts) {
-        if (!currentObject || currentObject[part] === undefined) {
-          errors.push(`Required section "${parentField}" is missing`);
-          return; // Skip checking children if parent doesn't exist
-        }
-        currentObject = currentObject[part];
-      }
-
-      // Check required children
-      for (const childField of requiredSchema.nested[parentField]) {
-        if (currentObject[childField] === undefined) {
-          errors.push(
-            `Required field "${childField}" is missing in "${parentField}"`,
-          );
-        }
-      }
-    });
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
-  };
-
-  // Validates the YAML content
-  const validateYaml = (value) => {
-    try {
-      // Just parse the YAML to check for syntax errors
-      const parsedYaml = yamlLoad(value);
-      setIsValid(true);
-      setErrorInfo(null);
-    } catch (error) {
-      setIsValid(false);
-
-      // Parse error message to extract useful information
-      const errorLines = error.message.split("\n");
-      const errorMessage = errorLines[0];
-
-      // Get code context if available
-      const codeContext = errorLines.slice(1).join("\n");
-
-      setErrorInfo({
-        message: errorMessage,
-        line: error.mark ? error.mark.line + 1 : null,
-        column: error.mark ? error.mark.column + 1 : null,
-        codeContext: codeContext,
-        isSchemaError: false,
-      });
-      console.error("Invalid YAML:", error);
-    }
+    setServerValidationErrors(undefined);
   };
 
   return (
@@ -330,7 +250,6 @@ function YamlEditor() {
                 <AlertCircle className="text-red-500" />
               )}
 
-              {/* Display schema errors if any */}
               {!isValid && errorInfo && errorInfo.isSchemaError && (
                 <div className="ml-2 text-red-500 text-sm">
                   <details>
@@ -346,7 +265,6 @@ function YamlEditor() {
                 </div>
               )}
 
-              {/* Display syntax error if any */}
               {!isValid && errorInfo && !errorInfo.isSchemaError && (
                 <div className="ml-2 text-red-500 text-sm">
                   {errorInfo.message}
@@ -354,7 +272,6 @@ function YamlEditor() {
                 </div>
               )}
 
-              {/* Display simplified server validation errors message */}
               {serverValidationErrors && (
                 <div className="ml-2 text-red-500 text-sm">
                   {serverValidationErrors.length} server validation{" "}

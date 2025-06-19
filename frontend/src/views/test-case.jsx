@@ -1,12 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Tabs, Tab } from "@heroui/tabs";
-import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
+import { Tabs, Tab } from "@heroui/react";
+import { Card, CardHeader, CardBody } from "@heroui/react";
 import {
   Accordion,
   AccordionItem,
   Progress,
-  Snippet,
   Spinner,
   Table,
   TableBody,
@@ -21,44 +20,52 @@ import { fetchTestErrorByGlobalReport } from "../api/test-errors-api";
 import { fetchProfileReportByGlobalReportId } from "../api/profile-report-api";
 import { fetchTestErrorByProfileReport } from "../api/test-errors-api";
 import { fetchConversationsByProfileReport } from "../api/conversations-api";
-import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fetchProject } from "../api/project-api";
+
+const calculateElapsedTime = (startDate) => {
+  const now = new Date();
+  return Math.floor((now - startDate) / 1000);
+};
+
+const formatExecutionTime = (time) => {
+  if (time < 60) {
+    return `${time.toFixed(2)}s`;
+  }
+  if (time < 3600) {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${minutes}m ${seconds.toFixed(2)}s`;
+  }
+  const hours = Math.floor(time / 3600);
+  const minutes = Math.floor((time % 3600) / 60);
+  const seconds = time % 60;
+  return `${hours}h ${minutes}m ${seconds.toFixed(2)}s`;
+};
+
+const formatTime = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
 
 function TestCase() {
   const { id } = useParams();
   const navigate = useNavigate();
-  // State for the test case
   const [testCase, setTestCase] = useState({});
-  // State for the global report
   const [globalReport, setGlobalReport] = useState({});
-  // State for the test reports
   const [profileReports, setProfileReports] = useState([]);
-
-  // State for the errors of the Global Report
   const [globalErrors, setGlobalErrors] = useState([]);
-
-  // Global Loading State
   const [globalLoading, setGlobalLoading] = useState(true);
-
-  // Status of the test case
   const [status, setStatus] = useState("");
-
-  // status for the project name
   const [projectName, setProjectName] = useState("");
-
-  // Polling interval for fetching the test case if it is still running
   const POLLING_INTERVAL = 2500;
-
-  const [startTime, setStartTime] = useState(null);
+  const [startTime, setStartTime] = useState();
   const [elapsedTime, setElapsedTime] = useState(0);
 
-  const calculateElapsedTime = (startDate) => {
-    const now = new Date();
-    return Math.floor((now - startDate) / 1000);
-  };
-
-  // Initial fetch of the test case and global report
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -70,9 +77,8 @@ function TestCase() {
         }
 
         setTestCase(fetchedTestCase);
-
-        const status = fetchedTestCase[0].status;
-        setStatus(status);
+        const currentStatus = fetchedTestCase[0].status;
+        setStatus(currentStatus);
 
         if (fetchedTestCase[0].executed_at) {
           const executedAt = new Date(fetchedTestCase[0].executed_at);
@@ -80,16 +86,11 @@ function TestCase() {
           setElapsedTime(calculateElapsedTime(executedAt));
         }
 
-        if (status === "RUNNING") {
-          return; // Exit early if still running
+        if (["RUNNING", "ERROR"].includes(currentStatus)) {
+          return;
         }
 
-        if (status === "ERROR") {
-          return; // Exit early if error
-        }
-
-        if (status === "COMPLETED") {
-          // Fetch additional data only when completed
+        if (currentStatus === "COMPLETED") {
           const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
           setGlobalReport(fetchedGlobalReport);
 
@@ -101,7 +102,6 @@ function TestCase() {
           const fetchedProfileReports =
             await fetchProfileReportByGlobalReportId(fetchedGlobalReport.id);
 
-          // Fetch errors and conversations for each report
           for (const report of fetchedProfileReports) {
             const [fetchedErrors, fetchedConversations] = await Promise.all([
               fetchTestErrorByProfileReport(report.id),
@@ -112,12 +112,8 @@ function TestCase() {
           }
 
           setProfileReports(fetchedProfileReports);
-
-          // Fetch the project to get its name
           const fetchedProject = await fetchProject(fetchedTestCase[0].project);
           setProjectName(fetchedProject.name);
-
-          console.log(fetchedProject);
         }
       } catch (error) {
         if (error.message === "403") {
@@ -129,67 +125,33 @@ function TestCase() {
       }
     };
 
-    // Initial fetch
     fetchData();
 
-    // Set up polling if status is RUNNING
     let pollInterval;
     if (status === "RUNNING") {
       pollInterval = setInterval(fetchData, POLLING_INTERVAL);
     }
 
-    // Cleanup polling on unmount or status change
     return () => {
       if (pollInterval) {
         clearInterval(pollInterval);
       }
     };
-  }, [id, status]);
+  }, [id, status, navigate]);
 
   useEffect(() => {
     let timerInterval;
-
     if (status === "RUNNING" && startTime) {
       timerInterval = setInterval(() => {
         setElapsedTime(calculateElapsedTime(startTime));
       }, 1000);
     }
-
     return () => {
       if (timerInterval) {
         clearInterval(timerInterval);
       }
     };
   }, [status, startTime]);
-
-  // Function to format the execution time
-  const formatExecutionTime = (time) => {
-    // If < 60s return XX.XXs
-    if (time < 60) {
-      return `${time.toFixed(2)}s`;
-    }
-
-    // If < 3600s return XXm XXs
-    if (time < 3600) {
-      const minutes = Math.floor(time / 60);
-      const seconds = time % 60;
-      return `${minutes}m ${seconds.toFixed(2)}s`;
-    }
-
-    // Else return XXh XXm XXs
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = time % 60;
-    return `${hours}h ${minutes}m ${seconds.toFixed(2)}s`;
-  };
-
-  // Function to format the execution time for running time
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
 
   if (globalLoading) {
     return (
@@ -200,7 +162,6 @@ function TestCase() {
     );
   }
 
-  // Add early return for running state
   if (status === "RUNNING") {
     const progress =
       testCase[0].total_conversations > 0
@@ -223,8 +184,6 @@ function TestCase() {
             <p className="text-gray-600 dark:text-gray-300 mt-2">
               Please wait while the test case completes...
             </p>
-
-            {/* Progress section */}
             <div className="mt-6">
               <h3 className="text-sm font-medium mb-2">Progress</h3>
               <Progress value={progress} />
@@ -233,12 +192,11 @@ function TestCase() {
                 {testCase[0].total_conversations} conversations completed
               </p>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium mb-1">Started at</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {format(startTime, "PPpp")}
+                  {startTime && format(startTime, "PPpp")}
                 </p>
               </div>
               <div>
@@ -254,7 +212,6 @@ function TestCase() {
     );
   }
 
-  // Add early return for error state
   if (status === "ERROR") {
     return (
       <div className="container mx-auto p-4">
@@ -269,7 +226,6 @@ function TestCase() {
             </h2>
           </CardHeader>
           <CardBody>
-            {/* Output of the terminal */}
             <p className="text-xl font-bold dark:text-gray-200">
               Error Output:
             </p>
@@ -282,7 +238,6 @@ function TestCase() {
     );
   }
 
-  // Add early return for stopped state
   if (status === "STOPPED") {
     return (
       <div className="container mx-auto p-4">
@@ -292,7 +247,6 @@ function TestCase() {
             <h2 className="text-2xl font-bold">Test Case Stopped</h2>
           </CardHeader>
           <CardBody>
-            {/* Output of the terminal */}
             <p className="text-xl font-bold">Stopped Output:</p>
             <pre className="whitespace-pre-wrap text-left p-4">
               {testCase[0].result}
@@ -308,11 +262,7 @@ function TestCase() {
       <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
       <Tabs defaultValue="global" className="space-y-4">
         <Tab key="global" title="Global Details">
-          {/* ------------------ */}
-          {/* - Global Details - */}
-          {/* ------------------ */}
           <div className="space-y-4">
-            {/* Execution Times */}
             <Card shadow="sm">
               <CardHeader>
                 <h2 className="text-2xl font-bold">Execution Times</h2>
@@ -347,7 +297,6 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            {/* Errors */}
             <Card shadow="sm">
               <CardHeader>
                 <h2 className="text-2xl font-bold">Errors</h2>
@@ -382,7 +331,6 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            {/* Cost */}
             <Card shadow="sm">
               <CardHeader>
                 <h2 className="text-2xl font-bold">Total Cost and Time</h2>
@@ -409,7 +357,6 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            {/* Technology and others */}
             <Card shadow="sm">
               <CardHeader>
                 <h2 className="text-2xl font-bold">Technology and Others</h2>
@@ -442,7 +389,6 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            {/* Output of the terminal */}
             <Card shadow="sm">
               <CardHeader>
                 <h2 className="text-2xl font-bold">Terminal Output</h2>
@@ -463,13 +409,11 @@ function TestCase() {
           </div>
         </Tab>
         <Tab key="profiles" title="Profiles">
-          {/* ----------------- */}
-          {/* - User Profiles - */}
-          {/* ----------------- */}
           <div className="space-y-4">
             <Accordion>
               {profileReports.map((report) => (
                 <AccordionItem
+                  key={report.id}
                   title={
                     <Card shadow="sm" className="w-full">
                       <CardHeader>
@@ -510,7 +454,6 @@ function TestCase() {
                   }
                 >
                   <div className="mt-4 space-y-4">
-                    {/* Execution Times */}
                     <Card shadow="sm">
                       <CardHeader>
                         <h2 className="text-2xl font-bold">Execution Times</h2>
@@ -545,7 +488,6 @@ function TestCase() {
                       </CardBody>
                     </Card>
 
-                    {/* Errors */}
                     <Card shadow="sm">
                       <CardHeader>
                         <h2 className="text-2xl font-bold">Errors</h2>
@@ -587,7 +529,6 @@ function TestCase() {
                       </CardBody>
                     </Card>
 
-                    {/* Profile Details */}
                     <Card shadow="sm">
                       <CardHeader>
                         <h2 className="text-2xl font-bold">Profile Details</h2>
@@ -653,7 +594,6 @@ function TestCase() {
                                 {report.number_conversations}
                               </TableCell>
                             </TableRow>
-                            {/* If steps exist, display the int*/}
                             {report.steps && (
                               <TableRow>
                                 <TableCell className="font-medium w-1/3">
@@ -662,7 +602,6 @@ function TestCase() {
                                 <TableCell>{report.steps}</TableCell>
                               </TableRow>
                             )}
-                            {/* If all_answered exists, display in a more readable format */}
                             {report.all_answered && (
                               <TableRow>
                                 <TableCell className="font-medium w-1/3">
@@ -685,7 +624,6 @@ function TestCase() {
                       </CardBody>
                     </Card>
 
-                    {/* Conversations */}
                     <Card shadow="sm">
                       <CardHeader>
                         <h2 className="text-2xl font-bold">Conversations</h2>
@@ -698,11 +636,7 @@ function TestCase() {
                                 key={convIndex}
                                 title={conversation.name}
                               >
-                                {/* ------------------------ */}
-                                {/* - Conversation Details - */}
-                                {/* ------------------------ */}
                                 <div className="space-y-4">
-                                  {/* Ask About */}
                                   <Card
                                     shadow="none"
                                     className="border-none bg-gray-50 dark:bg-default-100"
@@ -713,7 +647,6 @@ function TestCase() {
                                       </h3>
                                     </CardHeader>
                                     <CardBody>
-                                      {/* Questions Section */}
                                       <div className="mb-4">
                                         <h4 className="text-lg font-semibold mb-2">
                                           Questions
@@ -734,8 +667,6 @@ function TestCase() {
                                             ))}
                                         </div>
                                       </div>
-
-                                      {/* Variables Section */}
                                       <div>
                                         <h4 className="text-lg font-semibold mb-2">
                                           Variables
@@ -777,7 +708,6 @@ function TestCase() {
                                     </CardBody>
                                   </Card>
 
-                                  {/* Answer */}
                                   <Card
                                     shadow="none"
                                     className="border-none bg-gray-50 dark:bg-default-100"
@@ -816,7 +746,6 @@ function TestCase() {
                                     </CardBody>
                                   </Card>
 
-                                  {/* Errors */}
                                   <Card
                                     shadow="none"
                                     className="border-none bg-gray-50 dark:bg-default-100"
@@ -856,7 +785,6 @@ function TestCase() {
                                     </CardBody>
                                   </Card>
 
-                                  {/* Total Time and Cost */}
                                   <Card
                                     shadow="none"
                                     className="border-none bg-gray-50 dark:bg-default-100"
@@ -904,7 +832,6 @@ function TestCase() {
                                     </CardBody>
                                   </Card>
 
-                                  {/* Response Time Report */}
                                   <Card
                                     shadow="none"
                                     className="border-none bg-gray-50 dark:bg-default-100"
@@ -963,7 +890,6 @@ function TestCase() {
                                     </CardBody>
                                   </Card>
 
-                                  {/* Interaction */}
                                   <Card
                                     shadow="none"
                                     className="border-none bg-gray-50 dark:bg-default-100"
