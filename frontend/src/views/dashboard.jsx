@@ -49,6 +49,38 @@ const statusOptions = [
   { label: "Stopped", value: "STOPPED" },
 ];
 
+
+const formatExecutionTime = (seconds, status) => {
+    // Check if it was stopped
+    if (status === "STOPPED") {
+      return "Stopped";
+    }
+
+    // Check if it is still running
+    if (seconds === null) {
+      return "Running";
+    }
+
+    if (seconds >= 3600) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = ((seconds % 3600) / 60).toFixed(2);
+      return `${hours}h ${minutes}m`;
+    } else if (seconds >= 60) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = (seconds % 60).toFixed(0);
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${seconds.toFixed(2)}s`;
+    }
+  };
+
+  const formatCost = (cost, status) => {
+    if (status === "STOPPED") {
+      return "Stopped";
+    }
+    return `$${Number.parseFloat(cost || 0).toFixed(5)}`;
+  };
+
 function Dashboard() {
   const { showToast } = useMyCustomToast();
 
@@ -422,36 +454,6 @@ function Dashboard() {
 
   const sortedTestCases = useMemo(() => derivedTestCases, [derivedTestCases]);
 
-  const formatExecutionTime = (seconds, status) => {
-    // Check if it was stopped
-    if (status === "STOPPED") {
-      return "Stopped";
-    }
-
-    // Check if it is still running
-    if (seconds === null) {
-      return "Running";
-    }
-
-    if (seconds >= 3600) {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = ((seconds % 3600) / 60).toFixed(2);
-      return `${hours}h ${minutes}m`;
-    } else if (seconds >= 60) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = (seconds % 60).toFixed(0);
-      return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      return `${seconds.toFixed(2)}s`;
-    }
-  };
-
-  const formatCost = (cost, status) => {
-    if (status === "STOPPED") {
-      return "Stopped";
-    }
-    return `$${Number.parseFloat(cost || 0).toFixed(5)}`;
-  };
 
   return (
     <div
