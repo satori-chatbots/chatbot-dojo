@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Eye, EyeOff } from "lucide-react";
 import {
   Card,
@@ -12,7 +12,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Spinner,
   Form,
 } from "@heroui/react";
 import { useAuth } from "../contexts/auth-context";
@@ -40,6 +39,15 @@ const UserProfileView = () => {
     last_name: "",
   });
 
+  const loadApiKeys = React.useCallback(async () => {
+    try {
+      const keys = await getUserApiKeys();
+      setApiKeys(keys);
+    } catch {
+      showToast("error", "Failed to load API keys");
+    }
+  }, [showToast]);
+
   useEffect(() => {
     if (user) {
       setFormData({
@@ -48,23 +56,14 @@ const UserProfileView = () => {
       });
       loadApiKeys();
     }
-  }, [user]);
+  }, [user, loadApiKeys]);
 
   const toggleShowKey = () => {
     setShowKey(!showKey);
   };
 
-  const loadApiKeys = async () => {
-    try {
-      const keys = await getUserApiKeys();
-      setApiKeys(keys);
-    } catch {
-      showToast("error", "Failed to load API keys");
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
 
     try {
@@ -99,10 +98,10 @@ const UserProfileView = () => {
     }
   };
 
-  const handleUpdateApiKey = async (id, newName, newApiKey) => {
+  const handleUpdateApiKey = async (id, newName, newApiKeyValue) => {
     setLoading(true);
     try {
-      await updateApiKey(id, { name: newName, api_key: newApiKey });
+      await updateApiKey(id, { name: newName, api_key: newApiKeyValue });
       await loadApiKeys();
       showToast("success", "API Key updated successfully");
     } catch (error) {
@@ -129,15 +128,7 @@ const UserProfileView = () => {
   };
 
   return (
-    <div
-      className="p-4 sm:p-6 lg:p-8
-        flex flex-col
-        space-y-4 sm:space-y-6
-        max-w-full sm:max-w-4xl
-        mx-auto
-        my-auto
-        max-h-[90vh]"
-    >
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
       <div className="max-w-4xl mx-auto space-y-6">
         <Card>
           <CardHeader>
@@ -152,10 +143,10 @@ const UserProfileView = () => {
                   label="First Name"
                   name="first_name"
                   value={formData.first_name}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setFormData((previous) => ({
                       ...previous,
-                      first_name: e.target.value,
+                      first_name: event.target.value,
                     }))
                   }
                   variant="bordered"
@@ -166,10 +157,10 @@ const UserProfileView = () => {
                   label="Last Name"
                   name="last_name"
                   value={formData.last_name}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setFormData((previous) => ({
                       ...previous,
-                      last_name: e.target.value,
+                      last_name: event.target.value,
                     }))
                   }
                   variant="bordered"
@@ -218,7 +209,7 @@ const UserProfileView = () => {
             ))}
             {apiKeys.length === 0 && (
               <div className="text-center text-gray-500 py-4">
-                No API keys yet. Click "Add API Key" to create one.
+                No API keys yet. Click Add API Key to create one.
               </div>
             )}
           </CardBody>
@@ -239,10 +230,10 @@ const UserProfileView = () => {
               label="API Key Name"
               placeholder="e.g., Production API Key"
               value={newApiKey.name}
-              onChange={(e) =>
+              onChange={(event) =>
                 setNewApiKey((previous) => ({
                   ...previous,
-                  name: e.target.value,
+                  name: event.target.value,
                 }))
               }
               variant="bordered"
@@ -252,10 +243,10 @@ const UserProfileView = () => {
                 label="API Key Value"
                 placeholder="Enter your API key"
                 value={newApiKey.api_key}
-                onChange={(e) =>
+                onChange={(event) =>
                   setNewApiKey((previous) => ({
                     ...previous,
-                    api_key: e.target.value,
+                    api_key: event.target.value,
                   }))
                 }
                 variant="bordered"
