@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Button, Input, Card, Form, Spinner } from "@heroui/react";
 import { Link, useNavigate } from "react-router-dom";
-import { EyeFilledIcon, EyeSlashFilledIcon } from "./LoginView";
-import { submitSignUp } from "../api/authenticationApi";
-import { useAuth } from "../contexts/AuthContext";
+import { EyeFilledIcon, EyeSlashFilledIcon } from "./login-view";
+import { submitSignUp } from "../api/authentication-api";
+import { useAuth } from "../contexts/auth-context";
 
 function SignupView() {
   const navigate = useNavigate();

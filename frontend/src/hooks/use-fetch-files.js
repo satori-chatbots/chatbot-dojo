@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchFiles } from "../api/fileApi";
+import { fetchFiles } from "../api/file-api";
 
 function useFetchFiles(project_id) {
   const [files, setFiles] = useState([]);

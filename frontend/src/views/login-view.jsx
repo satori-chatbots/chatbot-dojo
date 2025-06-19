@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Button, Input, Card, Form, Spinner } from "@heroui/react";
 import { Link, useNavigate } from "react-router-dom";
-import { submitLogin } from "../api/authenticationApi";
-import { useAuth } from "../contexts/AuthContext";
+import { submitLogin } from "../api/authentication-api";
+import { useAuth } from "../contexts/auth-context";
 
 export const EyeSlashFilledIcon = (properties) => {
   return (

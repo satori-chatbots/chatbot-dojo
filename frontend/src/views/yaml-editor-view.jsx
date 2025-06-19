@@ -8,7 +8,7 @@ import {
   createFile,
   fetchTemplate,
   validateYamlOnServer,
-} from "../api/fileApi";
+} from "../api/file-api";
 import {
   AlertCircle,
   CheckCircle2,
@@ -22,12 +22,12 @@ import { load as yamlLoad } from "js-yaml";
 import { materialDark, materialLight } from "@uiw/codemirror-theme-material";
 import { tomorrow } from "thememirror";
 import { useTheme } from "next-themes";
-import useSelectedProject from "../hooks/useSelectedProject";
-import { useMyCustomToast } from "../contexts/MyCustomToastContext";
+import useSelectedProject from "../hooks/use-selected-projects";
+import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import {
   documentationSections,
   yamlBasicsSections,
-} from "../data/yamlDocumentation";
+} from "../data/yaml-documentation";
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { defaultKeymap, insertNewlineAndIndent } from "@codemirror/commands";
@@ -39,7 +39,7 @@ import {
   getCursorContext,
   findSimilarKeywords,
   createYamlTypoLinter,
-} from "../data/yamlSchema";
+} from "../data/yaml-schema";
 
 function YamlEditor() {
   const { fileId } = useParams();

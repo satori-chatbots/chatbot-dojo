@@ -28,7 +28,7 @@ import {
   updateChatbotTechnology,
   deleteChatbotTechnology,
   checkChatbotTechnologyName,
-} from "../api/chatbotTechnologyApi";
+} from "../api/chatbot-technology-api";
 import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
 
 const ChatbotTechnologies = () => {

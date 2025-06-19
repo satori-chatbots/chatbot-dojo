@@ -29,22 +29,22 @@ import {
   generateProfiles,
   checkGenerationStatus,
   checkOngoingGeneration,
-} from "../api/fileApi";
+} from "../api/file-api";
 import {
   createProject,
   deleteProject,
   updateProject,
   checkProjectName,
-} from "../api/projectApi";
-import { fetchChatbotTechnologies } from "../api/chatbotTechnologyApi";
-import useFetchProjects from "../hooks/useFetchProjects";
-import useFetchFiles from "../hooks/useFetchFiles";
-import { executeTest, checkTestCaseName } from "../api/testCasesApi";
-import useSelectedProject from "../hooks/useSelectedProject";
-import CreateProjectModal from "../components/CreateProjectModal";
-import EditProjectModal from "../components/EditProjectModal";
-import ProjectsList from "../components/ProjectList";
-import { useMyCustomToast } from "../contexts/MyCustomToastContext";
+} from "../api/project-api";
+import { fetchChatbotTechnologies } from "../api/chatbot-technology-api";
+import useFetchProjects from "../hooks/use-fetch-projects";
+import useFetchFiles from "../hooks/use-fetch-files";
+import { executeTest, checkTestCaseName } from "../api/test-cases-api";
+import useSelectedProject from "../hooks/use-selected-projects";
+import CreateProjectModal from "../components/create-project-modal";
+import EditProjectModal from "../components/edit-project-modal";
+import ProjectsList from "../components/project-list";
+import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 

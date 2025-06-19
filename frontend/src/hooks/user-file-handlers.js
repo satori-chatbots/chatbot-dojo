@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { deleteFiles, uploadFiles, fetchFiles } from "../api/fileApi";
 import { executeTest } from "../api/testCasesApi";
-import { fetchProjects } from "../api/projectApi";
+import { fetchProjects } from "../api/project-api";
 import { form } from "@heroui/react";
 
 function useFileHandlers(reload, reloadProjects, projects) {

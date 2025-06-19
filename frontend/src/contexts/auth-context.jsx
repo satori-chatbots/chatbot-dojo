@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { validateToken } from "../api/authenticationApi";
+import { validateToken } from "../api/authentication-api";
 
 const AuthContext = createContext();
 

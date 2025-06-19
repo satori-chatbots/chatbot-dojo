@@ -12,9 +12,9 @@ import {
   Form,
   Switch,
 } from "@heroui/react";
-import { updateProject, checkProjectName } from "../api/projectApi";
+import { updateProject, checkProjectName } from "../api/project-api";
 import { RotateCcw, Save, Settings } from "lucide-react";
-import { getUserApiKeys } from "../api/authenticationApi";
+import { getUserApiKeys } from "../api/authentication-api";
 import { useNavigate } from "react-router-dom";
 
 const EditProjectModal = ({

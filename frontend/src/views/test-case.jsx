@@ -15,15 +15,15 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { fetchTestCaseById } from "../api/testCasesApi";
-import { fetchGlobalReportsByTestCase } from "../api/reportsApi";
-import { fetchTestErrorByGlobalReport } from "../api/testErrorsApi";
-import { fetchProfileReportByGlobalReportId } from "../api/profileReportApi";
-import { fetchTestErrorByProfileReport } from "../api/testErrorsApi";
-import { fetchConversationsByProfileReport } from "../api/conversationsApi";
+import { fetchTestCaseById } from "../api/test-cases-api";
+import { fetchGlobalReportsByTestCase } from "../api/reports-api";
+import { fetchTestErrorByGlobalReport } from "../api/test-errors-api";
+import { fetchProfileReportByGlobalReportId } from "../api/profile-report-api";
+import { fetchTestErrorByProfileReport } from "../api/test-errors-api";
+import { fetchConversationsByProfileReport } from "../api/conversations-api";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { fetchProject } from "../api/projectApi";
+import { fetchProject } from "../api/project-api";
 
 function TestCase() {
   const { id } = useParams();

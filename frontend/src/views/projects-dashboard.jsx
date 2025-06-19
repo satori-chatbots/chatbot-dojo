@@ -21,21 +21,21 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/react";
-import CreateProjectModal from "../components/CreateProjectModal";
-import useFetchProjects from "../hooks/useFetchProjects";
+import CreateProjectModal from "../components/create-project-modal";
+import useFetchProjects from "../hooks/use-fetch-projects";
 import {
   fetchChatbotTechnologies,
   fetchTechnologyChoices,
-} from "../api/chatbotTechnologyApi";
+} from "../api/chatbot-technology-api";
 import {
   createProject,
   deleteProject,
   updateProject,
   checkProjectName,
-} from "../api/projectApi";
-import EditProjectModal from "../components/EditProjectModal";
-import useSelectedProject from "../hooks/useSelectedProject";
-import ProjectsList from "../components/ProjectList";
+} from "../api/project-api";
+import EditProjectModal from "../components/edit-project-modal";
+import useSelectedProject from "../hooks/use-selected-projects";
+import ProjectsList from "../components/project-list";
 import { Plus } from "lucide-react";
 
 const ProjectsDashboard = () => {

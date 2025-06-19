@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchProjects } from "../api/projectApi";
+import { fetchProjects } from "../api/project-api";
 
 function useFetchProjects(showType = "all") {
   const [projects, setProjects] = useState([]);

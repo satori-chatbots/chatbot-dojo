@@ -1,4 +1,4 @@
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/auth-context";
 
 const apiClient = async (url, options = {}) => {
   const token = localStorage.getItem("token");
