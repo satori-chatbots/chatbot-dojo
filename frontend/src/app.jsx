@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { Button, Switch } from "@heroui/react";
 import {
   Navbar,
-  NavbarBrand,
   NavbarContent,
   NavbarItem,
   NavbarMenuToggle,
@@ -71,14 +70,13 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
     setMounted(true);
     const storedTheme = localStorage.getItem("theme") || "light";
     setTheme(storedTheme);
-  }, []);
+  }, [setTheme]);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -90,7 +88,7 @@ function AppContent() {
     setIsMenuOpen(false);
   };
 
-  if (!mounted) return null;
+  if (!mounted) return;
 
   return (
     <HeroUIProvider navigate={navigate} useHref={useHref}>
@@ -255,7 +253,7 @@ function AppContent() {
                 Projects
               </Link>
             </NavbarMenuItem>
-            {isLoggedIn ? (
+            {user ? (
               <NavbarMenuItem isActive={location.pathname === "/profile"}>
                 <Link
                   to="/profile"
