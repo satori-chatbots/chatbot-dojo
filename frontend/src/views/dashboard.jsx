@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
 import useFetchProjects from "../hooks/use-fetch-projects";
 import { fetchTestErrorsByGlobalReports } from "../api/test-errors-api";
@@ -95,52 +95,61 @@ function Dashboard() {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchPagedTestCases = async (pageNumber, sortColumn, sortDirection) => {
-    try {
-      setLoading(true);
-      const data = await fetchPaginatedTestCases({
-        page: pageNumber,
-        per_page: rowsPerPage,
-        sort_column: sortColumn || sortDescriptor.column,
-        sort_direction: sortDirection || sortDescriptor.direction,
-        project_ids: selectedProjects.join(","),
-        status: selectedStatus === "ALL" ? "" : selectedStatus,
-        search: searchTerm,
-      });
-      // Use a temporary const instead of the old state
-      const newTestCases = data.items;
-      setTestCases(newTestCases);
-      setTotalPages(Math.ceil(data.total / rowsPerPage));
+  const fetchPagedTestCases = useCallback(
+    async (pageNumber, sortColumn, sortDirection) => {
+      try {
+        setLoading(true);
+        const data = await fetchPaginatedTestCases({
+          page: pageNumber,
+          per_page: rowsPerPage,
+          sort_column: sortColumn || sortDescriptor.column,
+          sort_direction: sortDirection || sortDescriptor.direction,
+          project_ids: selectedProjects.join(","),
+          status: selectedStatus === "ALL" ? "" : selectedStatus,
+          search: searchTerm,
+        });
+        const newTestCases = data.items;
+        setTestCases(newTestCases);
+        setTotalPages(Math.ceil(data.total / rowsPerPage));
 
-      // Now derive IDs from newTestCases
-      const testCaseIds = newTestCases.map((tc) => tc.id);
-      if (testCaseIds.length > 0) {
-        const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
-        setGlobalReports(fetchedReports);
+        const testCaseIds = newTestCases.map((tc) => tc.id);
+        if (testCaseIds.length > 0) {
+          const fetchedReports =
+            await fetchGlobalReportsByTestCases(testCaseIds);
+          setGlobalReports(fetchedReports);
 
-        const globalReportIds = fetchedReports.map((r) => r.id);
-        if (globalReportIds.length > 0) {
-          const fetchedErrors =
-            await fetchTestErrorsByGlobalReports(globalReportIds);
-          setErrors(fetchedErrors);
+          const globalReportIds = fetchedReports.map((r) => r.id);
+          if (globalReportIds.length > 0) {
+            const fetchedErrors =
+              await fetchTestErrorsByGlobalReports(globalReportIds);
+            setErrors(fetchedErrors);
 
-          const updatedErrorCounts = {};
-          for (const error of fetchedErrors) {
-            if (updatedErrorCounts[error.global_report]) {
-              updatedErrorCounts[error.global_report] += error.count;
-            } else {
-              updatedErrorCounts[error.global_report] = error.count;
+            const updatedErrorCounts = {};
+            for (const error of fetchedErrors) {
+              if (updatedErrorCounts[error.global_report]) {
+                updatedErrorCounts[error.global_report] += error.count;
+              } else {
+                updatedErrorCounts[error.global_report] = error.count;
+              }
             }
+            setErrorCounts(updatedErrorCounts);
           }
-          setErrorCounts(updatedErrorCounts);
         }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching test cases:", error);
+        setLoading(false);
       }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching test cases:", error);
-      setLoading(false);
-    }
-  };
+    },
+    [
+      rowsPerPage,
+      sortDescriptor.column,
+      sortDescriptor.direction,
+      selectedProjects,
+      selectedStatus,
+      searchTerm,
+    ],
+  );
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -152,7 +161,7 @@ function Dashboard() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, selectedProjects.length, fetchPagedTestCases]);
 
   // Modal for deleting a test case
   const [deleteModal, setDeleteModal] = useState({
