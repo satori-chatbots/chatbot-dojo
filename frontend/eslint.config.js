@@ -31,8 +31,8 @@ export default [
     languageOptions: {
       parserOptions: {
         ecmaFeatures: { jsx: true },
-        ecmaVersion: 'latest',
-        sourceType: 'module',
+        ecmaVersion: "latest",
+        sourceType: "module",
       },
       globals: {
         ...globals.browser,

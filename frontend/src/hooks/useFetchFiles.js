@@ -1,33 +1,33 @@
-import { useState, useEffect } from 'react'
-import { fetchFiles } from '../api/fileApi'
+import { useState, useEffect } from "react";
+import { fetchFiles } from "../api/fileApi";
 
 function useFetchFiles(project_id) {
-    const [files, setFiles] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    const loadFiles = () => {
-        setLoading(true)
-        fetchFiles(project_id)
-            .then(data => {
-                setFiles(data)
-                setLoading(false)
-            })
-            .catch(err => {
-                setError(err)
-                setLoading(false)
-            })
-    }
+  const loadFiles = () => {
+    setLoading(true);
+    fetchFiles(project_id)
+      .then((data) => {
+        setFiles(data);
+        setLoading(false);
+      })
+      .catch((error_) => {
+        setError(error_);
+        setLoading(false);
+      });
+  };
 
-    useEffect(() => {
-        loadFiles()
-    }, [project_id])
+  useEffect(() => {
+    loadFiles();
+  }, [project_id]);
 
-    const reloadFiles = () => {
-        loadFiles()
-    };
+  const reloadFiles = () => {
+    loadFiles();
+  };
 
-    return { files, loading, error, reloadFiles }
+  return { files, loading, error, reloadFiles };
 }
 
-export default useFetchFiles
+export default useFetchFiles;
