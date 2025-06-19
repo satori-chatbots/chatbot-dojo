@@ -2,9 +2,6 @@ import React from "react";
 import { MEDIA_URL } from "../api/config";
 
 function TestCasesList({ testCases }) {
-  const getFileName = (filePath) => {
-    return filePath.split("/").pop();
-  };
 
   return (
     <div>
