@@ -96,7 +96,9 @@ const ProjectsDashboard = () => {
         isOpen={isEditOpen}
         onOpenChange={setIsEditOpen}
         project={
-          editProjectId ? projects.find((p) => p.id === editProjectId) : undefined
+          editProjectId
+            ? projects.find((p) => p.id === editProjectId)
+            : undefined
         }
         technologies={technologies}
         onProjectUpdated={reloadProjects}

@@ -49,37 +49,36 @@ const statusOptions = [
   { label: "Stopped", value: "STOPPED" },
 ];
 
-
 const formatExecutionTime = (seconds, status) => {
-    // Check if it was stopped
-    if (status === "STOPPED") {
-      return "Stopped";
-    }
+  // Check if it was stopped
+  if (status === "STOPPED") {
+    return "Stopped";
+  }
 
-    // Check if it is still running
-    if (seconds === null) {
-      return "Running";
-    }
+  // Check if it is still running
+  if (seconds === null) {
+    return "Running";
+  }
 
-    if (seconds >= 3600) {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = ((seconds % 3600) / 60).toFixed(2);
-      return `${hours}h ${minutes}m`;
-    } else if (seconds >= 60) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = (seconds % 60).toFixed(0);
-      return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      return `${seconds.toFixed(2)}s`;
-    }
-  };
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = ((seconds % 3600) / 60).toFixed(2);
+    return `${hours}h ${minutes}m`;
+  } else if (seconds >= 60) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = (seconds % 60).toFixed(0);
+    return `${minutes}m ${remainingSeconds}s`;
+  } else {
+    return `${seconds.toFixed(2)}s`;
+  }
+};
 
-  const formatCost = (cost, status) => {
-    if (status === "STOPPED") {
-      return "Stopped";
-    }
-    return `$${Number.parseFloat(cost || 0).toFixed(5)}`;
-  };
+const formatCost = (cost, status) => {
+  if (status === "STOPPED") {
+    return "Stopped";
+  }
+  return `$${Number.parseFloat(cost || 0).toFixed(5)}`;
+};
 
 function Dashboard() {
   const { showToast } = useMyCustomToast();
@@ -116,8 +115,7 @@ function Dashboard() {
   const { user } = useAuth();
   const [publicView] = useState(!user);
 
-  const { projects, loadingProjects, errorProjects } =
-    useFetchProjects("all");
+  const { projects, loadingProjects, errorProjects } = useFetchProjects("all");
 
   const statusColorMap = {
     COMPLETED: "success",
@@ -243,7 +241,6 @@ function Dashboard() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, selectedProjects.length, fetchPagedTestCases]);
 
-
   // Polling for running test cases
   useEffect(() => {
     let pollingInterval;
@@ -360,7 +357,6 @@ function Dashboard() {
     }
   };
 
-
   const handleStop = async (testCaseId) => {
     try {
       console.log("Stopping test case:", testCaseId);
@@ -455,7 +451,6 @@ function Dashboard() {
       sortable: false,
     },
   ];
-
 
   return (
     <div
@@ -785,7 +780,8 @@ function Dashboard() {
           <Modal
             isOpen={deleteModal.isOpen}
             onOpenChange={(open) => {
-              if (!open) setDeleteModal({ isOpen: false, testCaseId: undefined });
+              if (!open)
+                setDeleteModal({ isOpen: false, testCaseId: undefined });
             }}
           >
             <ModalContent>

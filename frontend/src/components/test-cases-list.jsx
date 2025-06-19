@@ -2,7 +2,6 @@ import React from "react";
 import { MEDIA_URL } from "../api/config";
 
 function TestCasesList({ testCases }) {
-
   return (
     <div>
       {/* Project Selector */}

@@ -2,17 +2,14 @@ import API_BASE_URL, { ENDPOINTS } from "./config";
 import apiClient from "./api-client";
 
 export const executeTest = async (testFileIds, projectId, testName) => {
-  const response = await apiClient(
-    `${API_BASE_URL}${ENDPOINTS.EXECUTE_TEST}`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        test_file_ids: testFileIds,
-        project_id: projectId,
-        test_name: testName,
-      }),
-    },
-  );
+  const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.EXECUTE_TEST}`, {
+    method: "POST",
+    body: JSON.stringify({
+      test_file_ids: testFileIds,
+      project_id: projectId,
+      test_name: testName,
+    }),
+  });
   return await response.json();
 };
 

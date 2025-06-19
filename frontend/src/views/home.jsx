@@ -29,9 +29,7 @@ import {
   checkGenerationStatus,
   checkOngoingGeneration,
 } from "../api/file-api";
-import {
-  deleteProject,
-} from "../api/project-api";
+import { deleteProject } from "../api/project-api";
 import { fetchChatbotTechnologies } from "../api/chatbot-technology-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import useFetchFiles from "../hooks/use-fetch-files";
@@ -952,7 +950,9 @@ function Home() {
         isOpen={isEditOpen}
         onOpenChange={setIsEditOpen}
         project={
-          editProjectId ? projects.find((p) => p.id === editProjectId) : undefined
+          editProjectId
+            ? projects.find((p) => p.id === editProjectId)
+            : undefined
         }
         technologies={availableTechnologies}
         onProjectUpdated={reloadProjects}
