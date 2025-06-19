@@ -1,31 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Button,
-  Input,
-  Select,
-  SelectItem,
-  Modal,
-  ModalContent,
-  ModalFooter,
-  ModalBody,
-  ModalHeader,
-  useDisclosure,
-  Form,
-  Spinner,
-} from "@heroui/react";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
 } from "@heroui/react";
 import CreateProjectModal from "../components/create-project-modal";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import {
   fetchChatbotTechnologies,
-  fetchTechnologyChoices,
 } from "../api/chatbot-technology-api";
 import {
   createProject,
