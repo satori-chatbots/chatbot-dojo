@@ -1,28 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchProjects } from "../api/project-api";
 
 function useFetchProjects(showType = "all") {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState();
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchProjects(showType);
       setProjects(data);
-      setError(null);
+      setError(undefined);
     } catch (error_) {
       setError(error_.message);
       setProjects([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showType]);
 
   useEffect(() => {
     loadProjects();
-  }, [showType]);
+  }, [loadProjects]);
 
   const reloadProjects = () => {
     loadProjects();
