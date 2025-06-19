@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { fetchFiles } from "../api/fileApi";
+import { useState } from "react";
 
 function useProjectHandlers(projects) {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -16,4 +15,4 @@ function useProjectHandlers(projects) {
   };
 }
 
-export { useProjectHandlers, useFetchFiles };
+export { useProjectHandlers };
