@@ -128,15 +128,35 @@ function Dashboard() {
   // Interval for refreshing the projects
   const POLLING_INTERVAL = 2500;
 
-
-  // Global Reports of Test Cases
-  const [globalReports, setGlobalReports] = useState([]);
-
   // Erros of Global Reports
   const [errors, setErrors] = useState([]);
 
   // Error count for each Global Report
   const [errorCounts, setErrorCounts] = useState({});
+
+  // Global Reports of Test Cases
+  const [globalReports, setGlobalReports] = useState([]);
+
+  const derivedTestCases = useMemo(() => {
+    return testCases.map((tc) => {
+      const displayName = tc.name || "Unnamed Test Case";
+      const report = globalReports.find((r) => r.test_case === tc.id);
+      const numberErrors = report ? errorCounts[report.id] || 0 : 0;
+      const testCaseErrors = errors.filter(
+        (error_) => error_.global_report === report?.id,
+      );
+      const totalCost = Number.parseFloat(report?.total_cost || 0).toFixed(5);
+      return {
+        ...tc,
+        displayName,
+        num_errors: numberErrors,
+        testCaseErrors,
+        total_cost: totalCost,
+      };
+    });
+  }, [testCases, globalReports, errorCounts, errors]);
+
+  const sortedTestCases = useMemo(() => derivedTestCases, [derivedTestCases]);
 
   const fetchPagedTestCases = useCallback(
     async (pageNumber, sortColumn, sortDirection) => {
@@ -435,27 +455,6 @@ function Dashboard() {
       sortable: false,
     },
   ];
-
-  const derivedTestCases = useMemo(() => {
-    return testCases.map((tc) => {
-      const displayName = tc.name || "Unnamed Test Case";
-      const report = globalReports.find((r) => r.test_case === tc.id);
-      const numberErrors = report ? errorCounts[report.id] || 0 : 0;
-      const testCaseErrors = errors.filter(
-        (error_) => error_.global_report === report?.id,
-      );
-      const totalCost = Number.parseFloat(report?.total_cost || 0).toFixed(5);
-      return {
-        ...tc,
-        displayName,
-        num_errors: numberErrors,
-        testCaseErrors,
-        total_cost: totalCost,
-      };
-    });
-  }, [testCases, globalReports, errorCounts, errors]);
-
-  const sortedTestCases = useMemo(() => derivedTestCases, [derivedTestCases]);
 
 
   return (
