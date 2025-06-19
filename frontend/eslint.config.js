@@ -1,38 +1,61 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import react from 'eslint-plugin-react'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+// eslint.config.js
+
+import globals from "globals";
+import js from "@eslint/js";
+import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
+import pluginJsxA11y from "eslint-plugin-jsx-a11y";
+import pluginUnicorn from "eslint-plugin-unicorn";
+import pluginImport from "eslint-plugin-import";
+import eslintConfigPrettier from "eslint-config-prettier";
 
 export default [
-  { ignores: ['dist'] },
+  // 1. Global ignores
   {
-    files: ['**/*.{js,jsx}'],
+    ignores: ["dist/", "node_modules/"],
+  },
+
+  // 2. Base ESLint recommended rules
+  js.configs.recommended,
+
+  // 3. React-specific recommended rules
+  {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    plugins: {
+      react: pluginReact,
+      "react-hooks": pluginReactHooks,
+      "jsx-a11y": pluginJsxA11y,
+      unicorn: pluginUnicorn,
+      import: pluginImport,
+    },
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
       parserOptions: {
-        ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
+        ecmaVersion: 'latest',
         sourceType: 'module',
       },
-    },
-    settings: { react: { version: '18.3' } },
-    plugins: {
-      react,
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
+      globals: {
+        ...globals.browser,
+      },
     },
     rules: {
-      ...js.configs.recommended.rules,
-      ...react.configs.recommended.rules,
-      ...react.configs['jsx-runtime'].rules,
-      ...reactHooks.configs.recommended.rules,
-      'react/jsx-no-target-blank': 'off',
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
+      ...pluginReact.configs.recommended.rules,
+      ...pluginReactHooks.configs.recommended.rules,
+      ...pluginJsxA11y.configs.recommended.rules,
+      ...pluginUnicorn.configs.recommended.rules,
+
+      // A couple of very common and useful overrides for modern React
+      "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
+    },
+    settings: {
+      react: {
+        version: "detect",
+      },
     },
   },
-]
+
+  // 4. Prettier compatibility config
+  // This must be last to turn off any conflicting style rules.
+  eslintConfigPrettier,
+];
