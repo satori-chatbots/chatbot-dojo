@@ -91,7 +91,7 @@ function Dashboard() {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
 
   const [searchTerm, setSearchTerm] = useState("");
 
