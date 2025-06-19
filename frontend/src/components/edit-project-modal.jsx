@@ -150,13 +150,6 @@ const EditProjectModal = ({
     setFormData((previous) => ({ ...previous, name: event.target.value }));
   };
 
-  const handleTechnologyChange = (event) => {
-    setFormData((previous) => ({
-      ...previous,
-      technology: event.target.value,
-    }));
-  };
-
   const handleApiKeyChange = (event) => {
     setFormData((previous) => ({ ...previous, apiKey: event.target.value }));
   };

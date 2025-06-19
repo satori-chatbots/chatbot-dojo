@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
 import useFetchProjects from "../hooks/use-fetch-projects";
 import { fetchTestErrorsByGlobalReports } from "../api/test-errors-api";
@@ -39,8 +39,6 @@ import useSelectedProject from "../hooks/use-selected-projects";
 import { useAuth } from "../contexts/auth-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { Eye, Search, Trash, XCircle } from "lucide-react";
-import apiClient from "../api/api-client";
-import API_BASE_URL from "../api/config";
 import { fetchPaginatedTestCases } from "../api/test-cases-api";
 
 const statusOptions = [
@@ -51,6 +49,38 @@ const statusOptions = [
   { label: "Stopped", value: "STOPPED" },
 ];
 
+
+const formatExecutionTime = (seconds, status) => {
+    // Check if it was stopped
+    if (status === "STOPPED") {
+      return "Stopped";
+    }
+
+    // Check if it is still running
+    if (seconds === null) {
+      return "Running";
+    }
+
+    if (seconds >= 3600) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = ((seconds % 3600) / 60).toFixed(2);
+      return `${hours}h ${minutes}m`;
+    } else if (seconds >= 60) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = (seconds % 60).toFixed(0);
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${seconds.toFixed(2)}s`;
+    }
+  };
+
+  const formatCost = (cost, status) => {
+    if (status === "STOPPED") {
+      return "Stopped";
+    }
+    return `$${Number.parseFloat(cost || 0).toFixed(5)}`;
+  };
+
 function Dashboard() {
   const { showToast } = useMyCustomToast();
 
@@ -58,84 +88,35 @@ function Dashboard() {
   const [testCases, setTestCases] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchPagedTestCases = async (pageNumber, sortColumn, sortDirection) => {
-    try {
-      setLoading(true);
-      const data = await fetchPaginatedTestCases({
-        page: pageNumber,
-        per_page: rowsPerPage,
-        sort_column: sortColumn || sortDescriptor.column,
-        sort_direction: sortDirection || sortDescriptor.direction,
-        project_ids: selectedProjects.join(","),
-        status: selectedStatus === "ALL" ? "" : selectedStatus,
-        search: searchTerm,
-      });
-      // Use a temporary const instead of the old state
-      const newTestCases = data.items;
-      setTestCases(newTestCases);
-      setTotalPages(Math.ceil(data.total / rowsPerPage));
+  const [sortDescriptor, setSortDescriptor] = useState({
+    column: "executed_at",
+    direction: "descending",
+  });
 
-      // Now derive IDs from newTestCases
-      const testCaseIds = newTestCases.map((tc) => tc.id);
-      if (testCaseIds.length > 0) {
-        const fetchedReports = await fetchGlobalReportsByTestCases(testCaseIds);
-        setGlobalReports(fetchedReports);
+  // Selected Projects State
+  const [selectedProject, setSelectedProject] = useSelectedProject();
+  const [selectedProjects, setSelectedProjects] = useState([]);
 
-        const globalReportIds = fetchedReports.map((r) => r.id);
-        if (globalReportIds.length > 0) {
-          const fetchedErrors =
-            await fetchTestErrorsByGlobalReports(globalReportIds);
-          setErrors(fetchedErrors);
-
-          const updatedErrorCounts = {};
-          for (const error of fetchedErrors) {
-            if (updatedErrorCounts[error.global_report]) {
-              updatedErrorCounts[error.global_report] += error.count;
-            } else {
-              updatedErrorCounts[error.global_report] = error.count;
-            }
-          }
-          setErrorCounts(updatedErrorCounts);
-        }
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching test cases:", error);
-      setError(error);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (selectedProjects.length > 0) {
-        // When searching go back to the first page
-        fetchPagedTestCases(1);
-        setPage(1);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  // State for initial auto-fetching of test cases
+  const [initialAutoFetchDone, setInitialAutoFetchDone] = useState(false);
 
   // Modal for deleting a test case
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
-    testCaseId: null,
+    testCaseId: undefined,
   });
 
   const { user } = useAuth();
-  const [publicView, setPublicView] = useState(!user);
+  const [publicView] = useState(!user);
 
-  const { projects, loadingProjects, errorProjects, reloadProjects } =
+  const { projects, loadingProjects, errorProjects } =
     useFetchProjects("all");
 
   const statusColorMap = {
@@ -147,24 +128,121 @@ function Dashboard() {
   // Interval for refreshing the projects
   const POLLING_INTERVAL = 2500;
 
-  // Selected Projects State
-  const [selectedProject, setSelectedProject] = useSelectedProject();
-  const [selectedProjects, setSelectedProjects] = useState([]);
-
-  // State for initial auto-fetching of test cases
-  const [initialAutoFetchDone, setInitialAutoFetchDone] = useState(false);
-
-  /* IMPORTANT: */
-  /* A Test Case contains a Global Report which itself can contain multiple errors */
-
-  // Global Reports of Test Cases
-  const [globalReports, setGlobalReports] = useState([]);
-
   // Erros of Global Reports
   const [errors, setErrors] = useState([]);
 
   // Error count for each Global Report
   const [errorCounts, setErrorCounts] = useState({});
+
+  // Global Reports of Test Cases
+  const [globalReports, setGlobalReports] = useState([]);
+
+  const derivedTestCases = useMemo(() => {
+    return testCases.map((tc) => {
+      const displayName = tc.name || "Unnamed Test Case";
+      const report = globalReports.find((r) => r.test_case === tc.id);
+      const numberErrors = report ? errorCounts[report.id] || 0 : 0;
+      const testCaseErrors = errors.filter(
+        (error_) => error_.global_report === report?.id,
+      );
+      const totalCost = Number.parseFloat(report?.total_cost || 0).toFixed(5);
+      return {
+        ...tc,
+        displayName,
+        num_errors: numberErrors,
+        testCaseErrors,
+        total_cost: totalCost,
+      };
+    });
+  }, [testCases, globalReports, errorCounts, errors]);
+
+  const sortedTestCases = useMemo(() => derivedTestCases, [derivedTestCases]);
+
+  const fetchPagedTestCases = useCallback(
+    async (pageNumber, sortColumn, sortDirection) => {
+      try {
+        setLoading(true);
+        const data = await fetchPaginatedTestCases({
+          page: pageNumber,
+          per_page: rowsPerPage,
+          sort_column: sortColumn || sortDescriptor.column,
+          sort_direction: sortDirection || sortDescriptor.direction,
+          project_ids: selectedProjects.join(","),
+          status: selectedStatus === "ALL" ? "" : selectedStatus,
+          search: searchTerm,
+        });
+        const newTestCases = data.items;
+        setTestCases(newTestCases);
+        setTotalPages(Math.ceil(data.total / rowsPerPage));
+
+        const testCaseIds = newTestCases.map((tc) => tc.id);
+        if (testCaseIds.length > 0) {
+          const fetchedReports =
+            await fetchGlobalReportsByTestCases(testCaseIds);
+          setGlobalReports(fetchedReports);
+
+          const globalReportIds = fetchedReports.map((r) => r.id);
+          if (globalReportIds.length > 0) {
+            const fetchedErrors =
+              await fetchTestErrorsByGlobalReports(globalReportIds);
+            setErrors(fetchedErrors);
+
+            const updatedErrorCounts = {};
+            for (const error of fetchedErrors) {
+              if (updatedErrorCounts[error.global_report]) {
+                updatedErrorCounts[error.global_report] += error.count;
+              } else {
+                updatedErrorCounts[error.global_report] = error.count;
+              }
+            }
+            setErrorCounts(updatedErrorCounts);
+          }
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching test cases:", error);
+        setLoading(false);
+      }
+    },
+    [
+      rowsPerPage,
+      sortDescriptor.column,
+      sortDescriptor.direction,
+      selectedProjects,
+      selectedStatus,
+      searchTerm,
+    ],
+  );
+
+  const handleFilterProjects = useCallback(async () => {
+    if (selectedProjects.length === 0) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await fetchPagedTestCases(1);
+      setPage(1);
+    } catch (error_) {
+      console.error("Error filtering projects:", error_);
+      showToast("error", "Failed to filter projects");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchPagedTestCases, selectedProjects.length, showToast]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (selectedProjects.length > 0) {
+        // When searching go back to the first page
+        fetchPagedTestCases(1);
+        setPage(1);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedProjects.length, fetchPagedTestCases]);
+
 
   // Polling for running test cases
   useEffect(() => {
@@ -258,7 +336,7 @@ function Dashboard() {
       handleFilterProjects();
       setInitialAutoFetchDone(true);
     }
-  }, [selectedProjects]);
+  }, [handleFilterProjects, initialAutoFetchDone, selectedProjects]);
 
   /* ----------------------------- */
   /* Handlers for Project Selector */
@@ -282,28 +360,8 @@ function Dashboard() {
     }
   };
 
-  const handleFilterProjects = async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
-    if (selectedProjects.length === 0) {
-      return;
-    }
 
-    try {
-      setLoading(true);
-      setError(null);
-      await fetchPagedTestCases(1); // Reset to first page when filtering
-      setPage(1);
-    } catch (error_) {
-      console.error("Error filtering projects:", error_);
-      showToast("error", "Failed to filter projects");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStop = async (testCaseId, e) => {
+  const handleStop = async (testCaseId) => {
     try {
       console.log("Stopping test case:", testCaseId);
       await stopTestExecution(testCaseId);
@@ -317,7 +375,7 @@ function Dashboard() {
     }
   };
 
-  const handleDelete = async (testCaseId, e) => {
+  const handleDelete = async (testCaseId) => {
     setDeleteModal({ isOpen: true, testCaseId });
   };
 
@@ -333,7 +391,7 @@ function Dashboard() {
       showToast("error", "Failed to delete test case");
     } finally {
       handleFilterProjects();
-      setDeleteModal({ isOpen: false, testCaseId: null });
+      setDeleteModal({ isOpen: false, testCaseId: undefined });
     }
   };
 
@@ -398,62 +456,6 @@ function Dashboard() {
     },
   ];
 
-  const [sortDescriptor, setSortDescriptor] = useState({
-    column: "executed_at",
-    direction: "descending",
-  });
-
-  const derivedTestCases = useMemo(() => {
-    return testCases.map((tc) => {
-      const displayName = tc.name || "Unnamed Test Case";
-      const report = globalReports.find((r) => r.test_case === tc.id);
-      const numberErrors = report ? errorCounts[report.id] || 0 : 0;
-      const testCaseErrors = errors.filter(
-        (error_) => error_.global_report === report?.id,
-      );
-      const totalCost = Number.parseFloat(report?.total_cost || 0).toFixed(5);
-      return {
-        ...tc,
-        displayName,
-        num_errors: numberErrors,
-        testCaseErrors,
-        total_cost: totalCost,
-      };
-    });
-  }, [testCases, globalReports, errorCounts, errors]);
-
-  const sortedTestCases = useMemo(() => derivedTestCases, [derivedTestCases]);
-
-  const formatExecutionTime = (seconds, status) => {
-    // Check if it was stopped
-    if (status === "STOPPED") {
-      return "Stopped";
-    }
-
-    // Check if it is still running
-    if (seconds === null) {
-      return "Running";
-    }
-
-    if (seconds >= 3600) {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = ((seconds % 3600) / 60).toFixed(2);
-      return `${hours}h ${minutes}m`;
-    } else if (seconds >= 60) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = (seconds % 60).toFixed(0);
-      return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      return `${seconds.toFixed(2)}s`;
-    }
-  };
-
-  const formatCost = (cost, status) => {
-    if (status === "STOPPED") {
-      return "Stopped";
-    }
-    return `$${Number.parseFloat(cost || 0).toFixed(5)}`;
-  };
 
   return (
     <div
@@ -500,7 +502,7 @@ function Dashboard() {
             placeholder="Type to search..."
             className="w-full h-12"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             startContent={<Search className="text-default-400" size={18} />}
             isClearable
             // So that it looks like the selectors
@@ -559,10 +561,7 @@ function Dashboard() {
               const value = [...keys][0];
               setSelectedStatus(value);
             }}
-            renderValue={(items) => {
-              const selectedItem = statusOptions.find(
-                (opt) => opt.value === selectedStatus,
-              );
+            renderValue={() => {
               return (
                 <div className="flex items-center gap-2">
                   {selectedStatus === "ALL" ? (
@@ -743,7 +742,7 @@ function Dashboard() {
                         size="sm"
                         variant="flat"
                         color="danger"
-                        onPress={(e) => handleStop(testCase.id, e)}
+                        onPress={(event) => handleStop(testCase.id, event)}
                         endContent={<XCircle className="w-3 h-3" />}
                       >
                         Stop
@@ -754,7 +753,7 @@ function Dashboard() {
                         size="sm"
                         variant="flat"
                         color="danger"
-                        onPress={(e) => handleDelete(testCase.id, e)}
+                        onPress={(event) => handleDelete(testCase.id, event)}
                         endContent={<Trash className="w-3 h-3" />}
                       >
                         Delete
@@ -786,7 +785,7 @@ function Dashboard() {
           <Modal
             isOpen={deleteModal.isOpen}
             onOpenChange={(open) => {
-              if (!open) setDeleteModal({ isOpen: false, testCaseId: null });
+              if (!open) setDeleteModal({ isOpen: false, testCaseId: undefined });
             }}
           >
             <ModalContent>
