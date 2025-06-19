@@ -88,7 +88,6 @@ function Dashboard() {
   const [testCases, setTestCases] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -139,7 +138,6 @@ function Dashboard() {
       setLoading(false);
     } catch (error) {
       console.error("Error fetching test cases:", error);
-      setError(error);
       setLoading(false);
     }
   };
@@ -322,7 +320,6 @@ function Dashboard() {
 
     try {
       setLoading(true);
-      setError(null);
       await fetchPagedTestCases(1); // Reset to first page when filtering
       setPage(1);
     } catch (error_) {
