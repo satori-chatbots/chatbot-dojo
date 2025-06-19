@@ -15,7 +15,6 @@ import {
 import {
   Upload,
   File,
-  Edit,
   Trash,
   Play,
   Plus,
@@ -31,10 +30,7 @@ import {
   checkOngoingGeneration,
 } from "../api/file-api";
 import {
-  createProject,
   deleteProject,
-  updateProject,
-  checkProjectName,
 } from "../api/project-api";
 import { fetchChatbotTechnologies } from "../api/chatbot-technology-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
@@ -48,6 +44,9 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 
+// Move preventDefault to the outer scope
+const preventDefault = (event) => event.preventDefault();
+
 function Home() {
   const { showToast } = useMyCustomToast();
 
@@ -56,15 +55,11 @@ function Home() {
   const [loadingTechnologies, setLoadingTechnologies] = useState(true);
 
   // Fetch the list of projects
-  const { projects, loadingProjects, errorProjects, reloadProjects } =
+  const { projects, loadingProjects, reloadProjects } =
     useFetchProjects("owned");
 
   // Control the selected project
   const [selectedProject, setSelectedProject] = useSelectedProject();
-
-  // Control the project creation modal
-  const [newProjectName, setNewProjectName] = useState("");
-  const [technology, setTechnology] = useState("");
 
   // Controls if the modal is open or not
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -73,18 +68,17 @@ function Home() {
   const [selectedFiles, setSelectedFiles] = useState([]);
 
   // List of files to upload
-  const fileInputReference = useRef(null);
+  const fileInputReference = useRef(undefined);
 
   // State to control the modal for the execution name
   const [isExecuteOpen, setIsExecuteOpen] = useState(false);
-
   const [executionName, setExecutionName] = useState("");
 
-  const [selectedUploadFiles, setSelectedUploadFiles] = useState(null);
+  const [selectedUploadFiles, setSelectedUploadFiles] = useState();
 
   // List of files in the selected project
-  const { files, loading, error, reloadFiles } = useFetchFiles(
-    selectedProject ? selectedProject.id : null,
+  const { files, reloadFiles } = useFetchFiles(
+    selectedProject ? selectedProject.id : undefined,
   );
 
   // Loading state for the serverside validation of the execution name
@@ -93,37 +87,17 @@ function Home() {
   // Errors for the serverside validation of the execution name
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Loading state for the serverside validation of the project
-  const [loadingProjectValidation, setLoadingProjectValidation] =
-    useState(false);
-
-  // Errors for the serverside validation of the project
-  const [projectValidationErrors, setProjectValidationErrors] = useState({});
-
-  // Success modal
-  const [successModal, setSuccessModal] = useState({
-    isOpen: false,
-    message: "",
-  });
-
-  //
-  const [isDragging, setIsDragging] = useState(false);
-  const [isFileDragging, setIsFileDragging] = useState(false);
-
   // Profiles generation states
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [profileGenParameters, setProfileGenParameters] = useState({
     conversations: 5,
     turns: 5,
   });
-
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const [generationTaskId, setGenerationTaskId] = useState(null);
-  const [statusInterval, setStatusInterval] = useState(null);
-
+  const [statusInterval, setStatusInterval] = useState();
   const [generationStage, setGenerationStage] = useState("");
   const [generationProgress, setGenerationProgress] = useState(0);
+
   // Navigation
   const navigate = useNavigate();
 
@@ -131,15 +105,11 @@ function Home() {
   const [deleteProjectModal, setDeleteProjectModal] = useState({
     isOpen: false,
     isLoading: false,
-    projectId: null,
+    projectId: undefined,
   });
 
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    name: "",
-    technology: "",
-  });
-  const [editProjectId, setEditProjectId] = useState(null);
+  const [editProjectId, setEditProjectId] = useState();
 
   const handleProfileGenParameterChange = (field, value) => {
     setProfileGenParameters((previous) => ({
@@ -147,6 +117,54 @@ function Home() {
       [field]: Number.parseInt(value) || 0,
     }));
   };
+
+  const pollGenerationStatus = useCallback(
+    async (taskId) => {
+      // Clear any existing interval
+      if (statusInterval) {
+        clearInterval(statusInterval);
+      }
+
+      // Set up interval to check status
+      const interval = setInterval(async () => {
+        try {
+          const status = await checkGenerationStatus(taskId);
+
+          if (status.status === "COMPLETED") {
+            clearInterval(interval);
+            setStatusInterval(undefined);
+            // Explicitly reload files when generation completes
+            await reloadFiles();
+            setIsGenerating(false);
+            showToast(
+              "success",
+              `Successfully generated ${status.generated_files} profiles!`,
+            );
+          } else if (status.status === "ERROR") {
+            clearInterval(interval);
+            setStatusInterval(undefined);
+            setIsGenerating(false);
+            showToast(
+              "error",
+              status.error_message || "Error generating profiles",
+            );
+          } else {
+            // Update the stage information in the UI
+            setGenerationStage(status.stage || "Processing");
+            setGenerationProgress(status.progress || 0);
+          }
+        } catch {
+          clearInterval(interval);
+          setStatusInterval(undefined);
+          setIsGenerating(false);
+          showToast("error", "Error checking generation status");
+        }
+      }, 3000); // Check every 3 seconds
+
+      setStatusInterval(interval);
+    },
+    [statusInterval, reloadFiles, showToast],
+  );
 
   const handleGenerateProfiles = async () => {
     if (!selectedProject) {
@@ -167,7 +185,6 @@ function Home() {
 
       // Start polling for status
       const taskId = response.task_id;
-      setGenerationTaskId(taskId);
       pollGenerationStatus(taskId);
 
       // Close modal but keep "generating" state active
@@ -179,7 +196,6 @@ function Home() {
     } catch (error) {
       console.error("Error generating profiles:", error);
       let errorMessage = "Error starting profile generation";
-
       try {
         const errorData = JSON.parse(error.message);
         if (errorData.error) {
@@ -189,91 +205,43 @@ function Home() {
         // Console log and toast
         console.error("Error parsing error message:", error_);
       }
-
       showToast("error", errorMessage);
       setIsGenerating(false);
     }
   };
 
-  const pollGenerationStatus = async (taskId) => {
-    // Clear any existing interval
-    if (statusInterval) {
-      clearInterval(statusInterval);
-    }
+  const checkForOngoingGeneration = useCallback(
+    async (projectId) => {
+      if (!projectId) return;
 
-    // Set up interval to check status
-    const interval = setInterval(async () => {
       try {
-        const status = await checkGenerationStatus(taskId);
-
-        if (status.status === "COMPLETED") {
-          clearInterval(interval);
-          setStatusInterval(null);
-
-          // Explicitly reload files when generation completes
-          await reloadFiles();
-
-          setIsGenerating(false);
-          showToast(
-            "success",
-            `Successfully generated ${status.generated_files} profiles!`,
-          );
-        } else if (status.status === "ERROR") {
-          clearInterval(interval);
-          setStatusInterval(null);
-          setIsGenerating(false);
-          showToast(
-            "error",
-            status.error_message || "Error generating profiles",
-          );
-        } else {
-          // Update the stage information in the UI
-          setGenerationStage(status.stage || "Processing");
-          setGenerationProgress(status.progress || 0);
+        const response = await checkOngoingGeneration(projectId);
+        if (response.ongoing) {
+          // There's an ongoing generation task
+          setIsGenerating(true);
+          // Reset progress indicators to avoid showing stale data
+          setGenerationStage("Loading status...");
+          setGenerationProgress(0);
+          pollGenerationStatus(response.task_id);
+          showToast("info", "Profile generation is in progress");
         }
-      } catch {
-        clearInterval(interval);
-        setStatusInterval(null);
-        setIsGenerating(false);
-        showToast("error", "Error checking generation status");
+      } catch (error) {
+        console.error("Error checking ongoing generation:", error);
+        showToast(
+          "error",
+          "Error checking ongoing generation. Please try again.",
+        );
       }
-    }, 3000); // Check every 3 seconds
-
-    setStatusInterval(interval);
-  };
-
-  const checkForOngoingGeneration = async (projectId) => {
-    if (!projectId) return;
-
-    try {
-      const response = await checkOngoingGeneration(projectId);
-      if (response.ongoing) {
-        // There's an ongoing generation task
-        setIsGenerating(true);
-        // Reset progress indicators to avoid showing stale data
-        setGenerationStage("Loading status...");
-        setGenerationProgress(0);
-
-        setGenerationTaskId(response.task_id);
-        pollGenerationStatus(response.task_id);
-
-        showToast("info", "Profile generation is in progress");
-      }
-    } catch (error) {
-      console.error("Error checking ongoing generation:", error);
-      showToast(
-        "error",
-        "Error checking ongoing generation. Please try again.",
-      );
-    }
-  };
+    },
+    [pollGenerationStatus, showToast],
+  );
 
   // This will get called when the user selects a project
   useEffect(() => {
     if (selectedProject) {
       checkForOngoingGeneration(selectedProject.id);
     }
-  }, [selectedProject]);
+  }, [selectedProject, checkForOngoingGeneration]);
 
   useEffect(() => {
     return () => {
@@ -285,88 +253,7 @@ function Home() {
 
   const handleEditClick = (project) => {
     setEditProjectId(project.id);
-    setOriginalName(project.name);
-    setEditFormData({
-      name: project.name,
-      technology: project.chatbot_technology,
-    });
     setIsEditOpen(true);
-  };
-
-  const handleFormValidation = async (
-    event,
-    name,
-    technology,
-    oldName = "",
-  ) => {
-    event.preventDefault();
-    setLoadingValidation(true);
-
-    if (!name.trim()) {
-      setLoadingValidation(false);
-      return false;
-    }
-
-    if (!technology) {
-      setLoadingValidation(false);
-      return false;
-    }
-
-    if (oldName && name === oldName) {
-      setLoadingValidation(false);
-      return true;
-    }
-
-    const existsResponse = await checkProjectName(name);
-    if (existsResponse.exists) {
-      setValidationErrors({ name: "Project name already exists" });
-      setLoadingValidation(false);
-      return false;
-    }
-
-    setValidationErrors({});
-    setLoadingValidation(false);
-    return true;
-  };
-
-  const [originalName, setOriginalName] = useState("");
-
-  const handleUpdateProject = async (event) => {
-    event.preventDefault();
-
-    // Validation
-    const isValid = await handleFormValidation(
-      event,
-      editFormData.name,
-      editFormData.technology,
-      originalName,
-    );
-    if (!isValid) {
-      return;
-    }
-
-    try {
-      await updateProject(editProjectId, {
-        name: editFormData.name,
-        chatbot_technology: editFormData.technology,
-      });
-      setIsEditOpen(false);
-      await reloadProjects();
-    } catch (error) {
-      console.error("Error updating project:", error);
-      const errorData = JSON.parse(error.message);
-      const errors = Object.entries(errorData).map(
-        ([key, value]) => `${key}: ${value}`,
-      );
-      alert(`Error updating project: ${errors.join("\n")}`);
-    }
-  };
-
-  const handleEditFormReset = () => {
-    setEditFormData({
-      name: "",
-      technology: "",
-    });
   };
 
   // Delete confirm modal
@@ -381,7 +268,6 @@ function Home() {
       setLoadingTechnologies(true);
       try {
         const technologies = await fetchChatbotTechnologies();
-        //console.log(technologies);
         setAvailableTechnologies(technologies);
       } catch (error) {
         console.error("Error loading data:", error);
@@ -390,9 +276,8 @@ function Home() {
         setLoadingTechnologies(false);
       }
     };
-
     loadData();
-  }, []);
+  }, [showToast]);
 
   // Load
   useEffect(() => {
@@ -403,47 +288,32 @@ function Home() {
         setSelectedProject(project);
         reloadFiles();
       } else {
-        setSelectedProject(null);
+        setSelectedProject(undefined);
       }
     }
-  }, [projects]);
+  }, [projects, reloadFiles, selectedProject, setSelectedProject]);
 
   /* ------------------------------------------------------ */
   /* ------------------ File Handlers --------------------- */
   /* ------------------------------------------------------ */
 
   // Drag and drop handlers
-  const onDrop = useCallback((acceptedFiles) => {
-    setSelectedUploadFiles(acceptedFiles);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: useCallback((acceptedFiles) => {
       setSelectedUploadFiles(acceptedFiles);
-      setIsFileDragging(false);
     }, []),
     accept: {
       "text/yaml": [".yaml", ".yml"],
     },
     noClick: false,
-    onDragEnter: () => setIsFileDragging(true),
-    onDragLeave: () => setIsFileDragging(false),
-    onDropAccepted: () => setIsFileDragging(false),
-    onDropRejected: () => setIsFileDragging(false),
   });
 
   useEffect(() => {
-    const handleDragLeave = (e) => {
-      if (e.clientX <= 0 || e.clientY <= 0) {
-        setIsFileDragging(false);
-      }
-    };
-
-    globalThis.addEventListener("dragover", (e) => e.preventDefault());
-    globalThis.addEventListener("dragleave", handleDragLeave);
+    globalThis.addEventListener("dragover", preventDefault);
+    globalThis.addEventListener("drop", preventDefault);
     return () => {
-      globalThis.removeEventListener("dragover", (e) => e.preventDefault());
-      globalThis.removeEventListener("dragleave", handleDragLeave);
+      globalThis.removeEventListener("dragover", preventDefault);
+      globalThis.removeEventListener("drop", preventDefault);
     };
   }, []);
 
@@ -466,10 +336,6 @@ function Home() {
     }
   };
 
-  const handleFileChange = (event) => {
-    setSelectedUploadFiles(event.target.files);
-  };
-
   // Handle upload
   const handleUpload = () => {
     if (!selectedUploadFiles || selectedUploadFiles.length === 0) {
@@ -483,13 +349,12 @@ function Home() {
     }
 
     formData.append("project", selectedProject.id);
-    //console.log(formData);
     uploadFiles(formData)
       .then(() => {
         reloadFiles(); // Refresh the file list
-        setSelectedUploadFiles(null);
+        setSelectedUploadFiles(undefined);
         if (fileInputReference.current) {
-          fileInputReference.current.value = null; // Clear the file input
+          fileInputReference.current.value = undefined; // Clear the file input
         }
         showToast("success", "Files uploaded successfully!");
       })
@@ -512,7 +377,6 @@ function Home() {
   };
 
   // Delete selected files
-  // Replace handleDelete implementation
   const handleDelete = () => {
     if (selectedFiles.length === 0) {
       alert("No files selected for deletion.");
@@ -566,45 +430,6 @@ function Home() {
     setIsExecuteOpen(true);
   };
 
-  // Handle the submit of the execution name
-  const handleSubmitPressed = async (e) => {
-    // Prevent the reload
-    e.preventDefault();
-
-    setLoadingValidation(true);
-
-    //console.log("checkpoint");
-    //console.log("name:", executionName);
-
-    // If user left the name blank, skip validation
-    if (!executionName.trim()) {
-      setValidationErrors({});
-      setLoadingValidation(false);
-      handleExecuteTest();
-      return;
-    }
-
-    // Otherwise, check if this name exists
-    const existsResponse = await checkTestCaseName(
-      selectedProject.id,
-      executionName.trim(),
-    );
-    //console.log("exists:", existsResponse);
-
-    if (existsResponse.exists) {
-      // Name already taken
-      setValidationErrors({
-        name: "This name is already taken, choose another one or leave it blank for auto-generation.",
-      });
-    } else {
-      // Name is fine, proceed
-      setValidationErrors({});
-      handleExecuteTest();
-    }
-
-    setLoadingValidation(false);
-  };
-
   // Execute test on selected files and project
   const handleExecuteTest = () => {
     const finalName = executionName.trim();
@@ -621,79 +446,43 @@ function Home() {
       });
   };
 
-  /* ------------------------------------------------------ */
-  /* ------------------ Project Handlers ------------------ */
-  /* ------------------------------------------------------ */
-
-  const handleProjectChange = (projectId) => {
-    const project = projects.find((project) => project.id === projectId);
-    setSelectedProject(project);
-    setSelectedFiles([]);
-    reloadFiles();
-  };
-
-  // For the project creation (name)
-  const handleProjectNameChange = (event) => {
-    setNewProjectName(event.target.value);
-  };
-
-  // For the project creation (technology)
-  const handleTechnologyChange = (event) => {
-    setTechnology(event.target.value);
-  };
-
-  const handleProjectValidation = async (event, name, technology) => {
+  // Handle the submit of the execution name
+  const handleSubmitPressed = async (event) => {
+    // Prevent the reload
     event.preventDefault();
+    setLoadingValidation(true);
 
-    setLoadingProjectValidation(true);
-
-    if (!name.trim()) {
-      return false;
-    }
-
-    if (!technology) {
-      return false;
-    }
-
-    const existsResponse = await checkProjectName(name.trim());
-    if (existsResponse.exists) {
-      setProjectValidationErrors({
-        name: "This name is already taken, choose another one.",
-      });
-      return false;
-    }
-
-    setProjectValidationErrors({});
-    return true;
-  };
-
-  const handleCreateProject = async (event) => {
-    event.preventDefault();
-
-    const isValid = await handleProjectValidation(
-      event,
-      newProjectName,
-      technology,
-    );
-    if (!isValid) {
+    // If user left the name blank, skip validation
+    if (!executionName.trim()) {
+      setValidationErrors({});
+      setLoadingValidation(false);
+      handleExecuteTest();
       return;
     }
 
-    try {
-      const newProject = await createProject({
-        name: newProjectName,
-        chatbot_technology: technology,
+    // Otherwise, check if this name exists
+    const existsResponse = await checkTestCaseName(
+      selectedProject.id,
+      executionName.trim(),
+    );
+
+    if (existsResponse.exists) {
+      // Name already taken
+      setValidationErrors({
+        name: "This name is already taken, choose another one or leave it blank for auto-generation.",
       });
-      await reloadProjects();
-      setSelectedProject(newProject);
-      handleFormReset();
-      onOpenChange(false);
-      showToast("success", "Project created successfully!");
-    } catch (error) {
-      console.error("Error creating project:", error);
-      showToast("error", `Error creating project: ${error.message}`);
+    } else {
+      // Name is fine, proceed
+      setValidationErrors({});
+      handleExecuteTest();
     }
+
+    setLoadingValidation(false);
   };
+
+  /* ------------------------------------------------------ */
+  /* ------------------ Project Handlers ------------------ */
+  /* ------------------------------------------------------ */
 
   const handleProjectDelete = (projectId) => {
     setDeleteProjectModal({
@@ -708,7 +497,7 @@ function Home() {
     try {
       await deleteProject(deleteProjectModal.projectId);
       await reloadProjects();
-      setSelectedProject(null);
+      setSelectedProject(undefined);
       showToast("success", "Project deleted successfully!");
     } catch (error) {
       console.error("Error deleting project:", error);
@@ -717,24 +506,13 @@ function Home() {
       setDeleteProjectModal({
         isOpen: false,
         isLoading: false,
-        projectId: null,
+        projectId: undefined,
       });
     }
   };
 
-  const handleFormReset = () => {
-    setNewProjectName("");
-    setTechnology("");
-  };
-
   return (
-    <div
-      className="flex flex-col
-        items-center justify-center
-        p-6
-        w-full
-        "
-    >
+    <div className="flex flex-col items-center justify-center p-6 w-full">
       {selectedProject ? (
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full">
           {/* Header */}
@@ -747,7 +525,7 @@ function Home() {
             <Button
               color="default"
               variant="ghost"
-              onPress={() => setSelectedProject(null)}
+              onPress={() => setSelectedProject(undefined)}
               startContent={<X className="w-4 h-4" />}
             >
               Change Project
@@ -755,250 +533,227 @@ function Home() {
           </div>
 
           {/* Project Details */}
-          {selectedProject ? (
-            <div>
-              {/* Upload Section */}
-              <div className="flex flex-col space-y-4">
-                <div
-                  {...getRootProps()}
-                  className={`
-                                        border-2 border-dashed rounded-lg p-5
-                                        transition-all duration-300 ease-in-out
-                                        flex flex-col items-center justify-center
-                                        ${
-                                          isDragActive
-                                            ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
-                                            : "border-gray-300 hover:border-gray-400"
-                                        }
-                                    `}
-                >
-                  <input {...getInputProps()} />
-
-                  <div className="flex flex-col items-center gap-2 mb-2">
-                    <Upload
-                      className={`
-                                                transition-all duration-300 ease-in-out
-                                                ${
-                                                  isDragActive
-                                                    ? "text-primary scale-125 opacity-80"
-                                                    : "text-gray-400 hover:text-gray-500"
-                                                }
-                                                w-10 h-10
-                                            `}
-                    />
-                    <div className="text-center">
-                      <p
-                        className={`
-                                                text-sm font-medium transition-all duration-300
-                                                ${isDragActive ? "text-primary" : ""}
-                                            `}
-                      >
-                        {isDragActive
-                          ? "Drop files here"
-                          : "Drag and drop YAML files here"}
-                      </p>
-                      <p className="text-xs mt-0.5 text-gray-500">
-                        or click to browse
-                      </p>
-                    </div>
+          <div>
+            {/* Upload Section */}
+            <div className="flex flex-col space-y-4">
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
+                  isDragActive
+                    ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+              >
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center gap-2 mb-2">
+                  <Upload
+                    className={`transition-all duration-300 ease-in-out ${
+                      isDragActive
+                        ? "text-primary scale-125 opacity-80"
+                        : "text-gray-400 hover:text-gray-500"
+                    } w-10 h-10`}
+                  />
+                  <div className="text-center">
+                    <p
+                      className={`text-sm font-medium transition-all duration-300 ${
+                        isDragActive ? "text-primary" : ""
+                      }`}
+                    >
+                      {isDragActive
+                        ? "Drop files here"
+                        : "Drag and drop YAML files here"}
+                    </p>
+                    <p className="text-xs mt-0.5 text-gray-500">
+                      or click to browse
+                    </p>
                   </div>
-
-                  {/* File list part, keep your existing implementation */}
-                  {selectedUploadFiles && selectedUploadFiles.length > 0 && (
-                    <div className="mt-4 w-full">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">
-                          {selectedUploadFiles.length === 1
-                            ? "1 file selected"
-                            : `${selectedUploadFiles.length} files selected`}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="light"
-                          color="danger"
-                          onPress={() => {
-                            setSelectedUploadFiles(null);
-                            if (fileInputReference.current) {
-                              fileInputReference.current.value = null;
-                            }
-                          }}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-2 max-h-28 overflow-y-auto">
-                        <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                          {[...selectedUploadFiles].map((file, index) => (
-                            <li
-                              key={index}
-                              className="truncate flex items-center"
-                            >
-                              <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                              {file.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <Button
-                        className="mt-3 w-full"
-                        color="primary"
-                        onPress={handleUpload}
-                        startContent={<Upload className="w-4 h-4" />}
-                      >
-                        Upload{" "}
-                        {selectedUploadFiles.length > 1
-                          ? `${selectedUploadFiles.length} Files`
-                          : "File"}
-                      </Button>
-                    </div>
-                  )}
                 </div>
 
-                {/* Create New YAML button */}
-                <Button
-                  onPress={() => navigate("/yaml-editor")}
-                  fullWidth
-                  color="secondary"
-                  variant="ghost"
-                  startContent={<File className="w-4 h-4" />}
-                >
-                  Create Profile Manually
-                </Button>
-
-                {/* Auto generate profiles */}
-                <Button
-                  fullWidth
-                  color="secondary"
-                  variant="ghost"
-                  startContent={
-                    isGenerating ? null : <Sparkles className="w-4 h-4" />
-                  }
-                  isLoading={isGenerating}
-                  isDisabled={isGenerating}
-                  onPress={() => setIsGenerateModalOpen(true)}
-                >
-                  {isGenerating
-                    ? "Generating Profiles..."
-                    : "Auto-Generate Profiles"}
-                </Button>
-                {isGenerating && (
-                  <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
-                    <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
-                    <h3 className="text-base font-medium mb-1">
-                      Generating Profiles
-                    </h3>
-
-                    {generationStage && (
-                      <p className="text-sm font-medium text-primary mb-1">
-                        {generationStage}
-                      </p>
-                    )}
-
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                      <div
-                        className="bg-primary h-2.5 rounded-full transition-all duration-300"
-                        style={{ width: `${generationProgress}%` }}
-                      ></div>
-                    </div>
-
-                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                      {generationProgress}% complete
-                    </p>
-
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                      This might take a few minutes. Please wait...
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* List Section */}
-              <div className="flex-1 overflow-y-auto mt-4">
-                {files.length > 0 ? (
-                  <>
-                    <div className="flex justify-between items-center mb-2">
+                {/* File list part, keep your existing implementation */}
+                {selectedUploadFiles && selectedUploadFiles.length > 0 && (
+                  <div className="mt-4 w-full">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">
-                        {files.length} profiles
+                        {selectedUploadFiles.length === 1
+                          ? "1 file selected"
+                          : `${selectedUploadFiles.length} files selected`}
                       </span>
                       <Button
                         size="sm"
                         variant="light"
-                        color="primary"
-                        onPress={toggleSelectAllFiles}
+                        color="danger"
+                        onPress={() => {
+                          setSelectedUploadFiles(undefined);
+                          if (fileInputReference.current) {
+                            fileInputReference.current.value = undefined;
+                          }
+                        }}
                       >
-                        {selectedFiles.length === files.length
-                          ? "Deselect All"
-                          : "Select All"}
+                        Clear
                       </Button>
                     </div>
-                    <ul className="space-y-2">
-                      {files.map((file) => (
-                        <li key={file.id} className="flex flex-col space-y-1">
-                          <div className="flex items-start space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedFiles.includes(file.id)}
-                              onChange={() => selectFile(file.id)}
-                              className="form-checkbox h-4 w-4 mt-1"
-                            />
-                            <div className="flex items-center space-x-2 flex-1">
-                              <Link
-                                variant="light"
-                                onPress={() =>
-                                  navigate(`/yaml-editor/${file.id}`)
-                                }
-                                className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
-                              >
-                                {file.name}
-                              </Link>
-                              {file.is_valid === false && (
-                                <div
-                                  className="tooltip-container"
-                                  title="Invalid profile: This YAML has validation errors"
-                                >
-                                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <p className="text-gray-500 text-center">
-                    No profiles uploaded yet.
-                  </p>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-2 max-h-28 overflow-y-auto">
+                      <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                        {[...selectedUploadFiles].map((file, index) => (
+                          <li
+                            key={index}
+                            className="truncate flex items-center"
+                          >
+                            <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                            {file.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <Button
+                      className="mt-3 w-full"
+                      color="primary"
+                      onPress={handleUpload}
+                      startContent={<Upload className="w-4 h-4" />}
+                    >
+                      Upload{" "}
+                      {selectedUploadFiles.length > 1
+                        ? `${selectedUploadFiles.length} Files`
+                        : "File"}
+                    </Button>
+                  </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="mt-4 flex space-x-4">
-                <Button
-                  color="danger"
-                  className="flex-1"
-                  onPress={handleDelete}
-                  startContent={<Trash className="w-4 h-4" />}
-                >
-                  Delete Selected
-                </Button>
-                <Button
-                  color="primary"
-                  className="flex-1"
-                  onPress={openExecuteModal}
-                  startContent={<Play className="w-4 h-4" />}
-                >
-                  Execute Test
-                </Button>
-              </div>
+              {/* Create New YAML button */}
+              <Button
+                onPress={() => navigate("/yaml-editor")}
+                fullWidth
+                color="secondary"
+                variant="ghost"
+                startContent={<File className="w-4 h-4" />}
+              >
+                Create Profile Manually
+              </Button>
+
+              {/* Auto generate profiles */}
+              <Button
+                fullWidth
+                color="secondary"
+                variant="ghost"
+                startContent={
+                  isGenerating ? undefined : <Sparkles className="w-4 h-4" />
+                }
+                isLoading={isGenerating}
+                isDisabled={isGenerating}
+                onPress={() => setIsGenerateModalOpen(true)}
+              >
+                {isGenerating
+                  ? "Generating Profiles..."
+                  : "Auto-Generate Profiles"}
+              </Button>
+              {isGenerating && (
+                <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
+                  <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
+                  <h3 className="text-base font-medium mb-1">
+                    Generating Profiles
+                  </h3>
+                  {generationStage && (
+                    <p className="text-sm font-medium text-primary mb-1">
+                      {generationStage}
+                    </p>
+                  )}
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div
+                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${generationProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    {generationProgress}% complete
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
+                    This might take a few minutes. Please wait...
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <p className="text-gray-500 text-center">
-              Select a project to start working!
-            </p>
-          )}
+
+            {/* List Section */}
+            <div className="flex-1 overflow-y-auto mt-4">
+              {files.length > 0 ? (
+                <>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">
+                      {files.length} profiles
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      color="primary"
+                      onPress={toggleSelectAllFiles}
+                    >
+                      {selectedFiles.length === files.length
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  </div>
+                  <ul className="space-y-2">
+                    {files.map((file) => (
+                      <li key={file.id} className="flex flex-col space-y-1">
+                        <div className="flex items-start space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedFiles.includes(file.id)}
+                            onChange={() => selectFile(file.id)}
+                            className="form-checkbox h-4 w-4 mt-1"
+                          />
+                          <div className="flex items-center space-x-2 flex-1">
+                            <Link
+                              variant="light"
+                              onPress={() =>
+                                navigate(`/yaml-editor/${file.id}`)
+                              }
+                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
+                            >
+                              {file.name}
+                            </Link>
+                            {file.is_valid === false && (
+                              <div
+                                className="tooltip-container"
+                                title="Invalid profile: This YAML has validation errors"
+                              >
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p className="text-gray-500 text-center">
+                  No profiles uploaded yet.
+                </p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-4 flex space-x-4">
+              <Button
+                color="danger"
+                className="flex-1"
+                onPress={handleDelete}
+                startContent={<Trash className="w-4 h-4" />}
+              >
+                Delete Selected
+              </Button>
+              <Button
+                color="primary"
+                className="flex-1"
+                onPress={openExecuteModal}
+                startContent={<Play className="w-4 h-4" />}
+              >
+                Execute Test
+              </Button>
+            </div>
+          </div>
         </Card>
       ) : (
         <div className="flex flex-col space-y-4">
@@ -1121,31 +876,6 @@ function Home() {
         </ModalContent>
       </Modal>
 
-      {/* Success Modal */}
-      <Modal
-        isOpen={successModal.isOpen}
-        onOpenChange={(isOpen) =>
-          setSuccessModal((previous) => ({ ...previous, isOpen }))
-        }
-      >
-        <ModalContent>
-          <ModalHeader>Test Execution Started</ModalHeader>
-          <ModalBody className="text-gray-600 dark:text-gray-400">
-            {successModal.message}
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              color="primary"
-              onPress={() =>
-                setSuccessModal((previous) => ({ ...previous, isOpen: false }))
-              }
-            >
-              Ok
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
       {/* Delete Confirm Modal */}
       <Modal
         isOpen={deleteConfirmModal.isOpen}
@@ -1222,7 +952,7 @@ function Home() {
         isOpen={isEditOpen}
         onOpenChange={setIsEditOpen}
         project={
-          editProjectId ? projects.find((p) => p.id === editProjectId) : null
+          editProjectId ? projects.find((p) => p.id === editProjectId) : undefined
         }
         technologies={availableTechnologies}
         onProjectUpdated={reloadProjects}
