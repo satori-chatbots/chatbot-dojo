@@ -39,8 +39,6 @@ import useSelectedProject from "../hooks/use-selected-projects";
 import { useAuth } from "../contexts/auth-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { Eye, Search, Trash, XCircle } from "lucide-react";
-import apiClient from "../api/api-client";
-import API_BASE_URL from "../api/config";
 import { fetchPaginatedTestCases } from "../api/test-cases-api";
 
 const statusOptions = [
