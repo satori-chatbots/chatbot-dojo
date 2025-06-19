@@ -341,7 +341,7 @@ function Dashboard() {
   };
 
 
-  const handleStop = async (testCaseId, e) => {
+  const handleStop = async (testCaseId) => {
     try {
       console.log("Stopping test case:", testCaseId);
       await stopTestExecution(testCaseId);
@@ -355,7 +355,7 @@ function Dashboard() {
     }
   };
 
-  const handleDelete = async (testCaseId, e) => {
+  const handleDelete = async (testCaseId) => {
     setDeleteModal({ isOpen: true, testCaseId });
   };
 
