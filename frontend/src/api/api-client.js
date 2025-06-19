@@ -1,5 +1,3 @@
-import { useAuth } from "../contexts/auth-context";
-
 const apiClient = async (url, options = {}) => {
   const token = localStorage.getItem("token");
   const defaultHeaders = {
@@ -16,36 +14,32 @@ const apiClient = async (url, options = {}) => {
     delete defaultHeaders["Content-Type"];
   }
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-    });
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
 
-    if (response.status === 401) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      localStorage.removeItem("currentProject");
+  if (response.status === 401) {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentProject");
 
-      // Redirect to login page if session expired
-      if (token) {
-        globalThis.location.href = "/login";
-        throw new Error("Session expired. Please login again.");
-      }
+    // Redirect to login page if session expired
+    if (token) {
+      globalThis.location.href = "/login";
+      throw new Error("Session expired. Please login again.");
     }
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
-    return response;
-  } catch (error) {
-    throw error;
   }
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return response;
 };
 
 export default apiClient;
