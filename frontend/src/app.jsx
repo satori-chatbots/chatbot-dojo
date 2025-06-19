@@ -1,17 +1,16 @@
 import React from "react";
 import { Routes, Route, Link, useNavigate, useHref } from "react-router-dom";
-import Home from "./views/Home";
-import Dashboard from "./views/Dashboard";
-import ChatbotTechnologies from "./views/ChatbotTechnologies";
-import ProjectsDashboard from "./views/ProjectsDashboard";
-import TestCase from "./views/TestCase";
-import LoginView from "./views/LoginView";
+import Home from "./views/home";
+import Dashboard from "./views/dashboard";
+import ChatbotTechnologies from "./views/chatbot-technologies";
+import ProjectsDashboard from "./views/projects-dashboard";
+import TestCase from "./views/test-case";
+import LoginView from "./views/login-view";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button, Switch } from "@heroui/react";
 import {
   Navbar,
-  NavbarBrand,
   NavbarContent,
   NavbarItem,
   NavbarMenuToggle,
@@ -20,12 +19,12 @@ import {
 } from "@heroui/react";
 import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from "react-router-dom";
-import SignupView from "./views/SignupView";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import PrivateRoute from "./components/PrivateRoute";
-import UserProfileView from "./views/UserProfileView";
-import { MyCustomToastProvider } from "./contexts/MyCustomToastContext";
-import YamlEditor from "./views/YamlEditorView";
+import SignupView from "./views/signup-view";
+import { AuthProvider, useAuth } from "./contexts/auth-context";
+import PrivateRoute from "./components/private-route";
+import UserProfileView from "./views/user-profile-view";
+import { MyCustomToastProvider } from "./contexts/my-custom-toast-context";
+import YamlEditor from "./views/yaml-editor-view";
 
 export const MoonIcon = (properties) => {
   return (
@@ -71,14 +70,13 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
     setMounted(true);
     const storedTheme = localStorage.getItem("theme") || "light";
     setTheme(storedTheme);
-  }, []);
+  }, [setTheme]);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -90,7 +88,7 @@ function AppContent() {
     setIsMenuOpen(false);
   };
 
-  if (!mounted) return null;
+  if (!mounted) return;
 
   return (
     <HeroUIProvider navigate={navigate} useHref={useHref}>
@@ -255,7 +253,7 @@ function AppContent() {
                 Projects
               </Link>
             </NavbarMenuItem>
-            {isLoggedIn ? (
+            {user ? (
               <NavbarMenuItem isActive={location.pathname === "/profile"}>
                 <Link
                   to="/profile"

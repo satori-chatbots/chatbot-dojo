@@ -12,9 +12,9 @@ import {
   Form,
   Switch,
 } from "@heroui/react";
-import { createProject, checkProjectName } from "../api/projectApi";
+import { createProject, checkProjectName } from "../api/project-api";
 import { RotateCcw, Plus, Settings } from "lucide-react";
-import { getUserApiKeys } from "../api/authenticationApi";
+import { getUserApiKeys } from "../api/authentication-api";
 import { useNavigate } from "react-router-dom";
 
 const CreateProjectModal = ({
@@ -28,7 +28,7 @@ const CreateProjectModal = ({
   const [formData, setFormData] = useState({
     name: "",
     technology: "",
-    apiKey: null,
+    apiKey: undefined,
     public: false,
   });
   const [loadingValidation, setLoadingValidation] = useState(false);
@@ -87,7 +87,7 @@ const CreateProjectModal = ({
     setFormData({
       name: "",
       technology: "",
-      apiKey: null,
+      apiKey: undefined,
       public: false,
     });
     setValidationErrors({});
@@ -183,7 +183,12 @@ const CreateProjectModal = ({
 
                 <div className="w-full">
                   <div className="flex w-full justify-between mb-2">
-                    <label className="text-sm">Technology</label>
+                    <label
+                      htmlFor="project-technology"
+                      className="text-sm"
+                    >
+                      Technology
+                    </label>
                     <Button
                       size="sm"
                       variant="light"
@@ -197,6 +202,7 @@ const CreateProjectModal = ({
                     </Button>
                   </div>
                   <Select
+                    id="project-technology"
                     placeholder={
                       technologies.length === 0
                         ? "No technologies available"
@@ -224,7 +230,9 @@ const CreateProjectModal = ({
 
                 <div className="w-full">
                   <div className="flex w-full justify-between mb-2">
-                    <label className="text-sm">API Key</label>
+                    <label htmlFor="project-api-key" className="text-sm">
+                      API Key
+                    </label>
                     <Button
                       size="sm"
                       variant="light"
@@ -238,6 +246,7 @@ const CreateProjectModal = ({
                     </Button>
                   </div>
                   <Select
+                    id="project-api-key"
                     placeholder={
                       apiKeys.length === 0
                         ? "No API Keys available"
@@ -263,8 +272,11 @@ const CreateProjectModal = ({
                 </div>
 
                 <div className="flex w-full justify-between items-center">
-                  <label className="text-sm">Make Project Public</label>
+                  <label htmlFor="project-public" className="text-sm">
+                    Make Project Public
+                  </label>
                   <Switch
+                    id="project-public"
                     isSelected={formData.public}
                     onValueChange={handlePublicChange}
                     isDisabled={loadingValidation}

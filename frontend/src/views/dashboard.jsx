@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 // import { useFetchTestCases } from '../hooks/useFetchTestCases';
-import useFetchProjects from "../hooks/useFetchProjects";
-import { fetchTestErrorsByGlobalReports } from "../api/testErrorsApi";
-import { fetchGlobalReportsByTestCases } from "../api/reportsApi";
+import useFetchProjects from "../hooks/use-fetch-projects";
+import { fetchTestErrorsByGlobalReports } from "../api/test-errors-api";
+import { fetchGlobalReportsByTestCases } from "../api/reports-api";
 import { MEDIA_URL } from "../api/config";
 import {
   Button,
@@ -22,11 +22,11 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/react";
-import { fetchTestCasesByProjects } from "../api/testCasesApi";
+import { fetchTestCasesByProjects } from "../api/test-cases-api";
 import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from "@heroui/react";
 import { useMemo } from "react";
-import { stopTestExecution } from "../api/testCasesApi";
+import { stopTestExecution } from "../api/test-cases-api";
 import {
   Modal,
   ModalContent,
@@ -34,14 +34,14 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/react";
-import { deleteTestCase } from "../api/testCasesApi";
-import useSelectedProject from "../hooks/useSelectedProject";
-import { useAuth } from "../contexts/AuthContext";
-import { useMyCustomToast } from "../contexts/MyCustomToastContext";
+import { deleteTestCase } from "../api/test-cases-api";
+import useSelectedProject from "../hooks/use-selected-projects";
+import { useAuth } from "../contexts/auth-context";
+import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { Eye, Search, Trash, XCircle } from "lucide-react";
-import apiClient from "../api/apiClient";
+import apiClient from "../api/api-client";
 import API_BASE_URL from "../api/config";
-import { fetchPaginatedTestCases } from "../api/testCasesApi";
+import { fetchPaginatedTestCases } from "../api/test-cases-api";
 
 const statusOptions = [
   { label: "All", value: "ALL" },

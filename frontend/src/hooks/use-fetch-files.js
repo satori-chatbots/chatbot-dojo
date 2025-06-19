@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
-import { fetchFiles } from "../api/fileApi";
+import { useState, useEffect, useCallback } from "react";
+import { fetchFiles } from "../api/file-api";
 
 function useFetchFiles(project_id) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState();
 
-  const loadFiles = () => {
+  const loadFiles = useCallback(() => {
     setLoading(true);
     fetchFiles(project_id)
       .then((data) => {
@@ -17,11 +17,11 @@ function useFetchFiles(project_id) {
         setError(error_);
         setLoading(false);
       });
-  };
+  }, [project_id]);
 
   useEffect(() => {
     loadFiles();
-  }, [project_id]);
+  }, [loadFiles]);
 
   const reloadFiles = () => {
     loadFiles();

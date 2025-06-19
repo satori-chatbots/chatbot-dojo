@@ -92,7 +92,7 @@ const ProjectsList = ({
                 endContent={
                   selectedProject?.id === project.id ? (
                     <Check className="w-3 h-3" />
-                  ) : null
+                  ) : undefined
                 }
               >
                 {selectedProject?.id === project.id ? "Selected" : "Select"}

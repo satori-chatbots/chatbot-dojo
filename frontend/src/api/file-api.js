@@ -1,4 +1,4 @@
-import apiClient from "./apiClient";
+import apiClient from "./api-client";
 import API_BASE_URL, { ENDPOINTS } from "./config";
 
 export const fetchFiles = async (project_id) => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 export default function useSelectedProject() {
-  const [selectedProject, setSelectedProjectState] = useState(null);
+  const [selectedProject, setSelectedProjectState] = useState();
 
   // Load from localStorage on mount
   useEffect(() => {

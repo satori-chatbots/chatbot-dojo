@@ -15,16 +15,16 @@ import {
   Spinner,
   Form,
 } from "@heroui/react";
-import { useAuth } from "../contexts/AuthContext";
-import { ApiKeyItem } from "../components/ApiKeyItem";
+import { useAuth } from "../contexts/auth-context";
+import { ApiKeyItem } from "../components/api-key-item";
 import {
   updateUserProfile,
   getUserApiKeys,
   createApiKey,
   updateApiKey,
   deleteApiKey,
-} from "../api/authenticationApi";
-import { useMyCustomToast } from "../contexts/MyCustomToastContext";
+} from "../api/authentication-api";
+import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
 const UserProfileView = () => {
   const { user, refreshUser } = useAuth();

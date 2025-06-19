@@ -1,5 +1,5 @@
 import API_BASE_URL, { ENDPOINTS } from "./config";
-import apiClient from "./apiClient";
+import apiClient from "./api-client";
 
 export const submitSignUp = async (data) => {
   try {

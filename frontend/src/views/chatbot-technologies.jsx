@@ -28,7 +28,7 @@ import {
   updateChatbotTechnology,
   deleteChatbotTechnology,
   checkChatbotTechnologyName,
-} from "../api/chatbotTechnologyApi";
+} from "../api/chatbot-technology-api";
 import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
 
 const ChatbotTechnologies = () => {
@@ -298,8 +298,8 @@ const ChatbotTechnologies = () => {
                     name="name"
                     placeholder="Enter a name to identify the technology"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
+                    onChange={(event) =>
+                      setFormData({ ...formData, name: event.target.value })
                     }
                     type="text"
                   />
@@ -337,8 +337,8 @@ const ChatbotTechnologies = () => {
                     name="link"
                     placeholder="Enter a URL to the technology"
                     value={formData.link}
-                    onChange={(e) =>
-                      setFormData({ ...formData, link: e.target.value })
+                    onChange={(event) =>
+                      setFormData({ ...formData, link: event.target.value })
                     }
                     isInvalid={
                       formData.link.length > 0 &&
@@ -468,8 +468,8 @@ const ChatbotTechnologies = () => {
                     name="name"
                     value={editData.name}
                     isDisabled={loadingValidation}
-                    onChange={(e) =>
-                      setEditData({ ...editData, name: e.target.value })
+                    onChange={(event) =>
+                      setEditData({ ...editData, name: event.target.value })
                     }
                     type="text"
                   />
@@ -480,10 +480,10 @@ const ChatbotTechnologies = () => {
                     placeholder="Select a new Technology"
                     name="technology"
                     value={editData.technology}
-                    onChange={(e) => {
+                    onChange={(event) => {
                       setEditData((previous) => ({
                         ...previous,
-                        technology: e.target.value,
+                        technology: event.target.value,
                       }));
                     }}
                     selectedKeys={[editData?.technology]}
@@ -498,8 +498,8 @@ const ChatbotTechnologies = () => {
                     label="URL (optional)"
                     name="link"
                     value={editData.link}
-                    onChange={(e) =>
-                      setEditData({ ...editData, link: e.target.value })
+                    onChange={(event) =>
+                      setEditData({ ...editData, link: event.target.value })
                     }
                     isDisabled={loadingValidation}
                     type="url"
