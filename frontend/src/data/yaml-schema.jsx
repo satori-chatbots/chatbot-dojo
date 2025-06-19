@@ -1,5 +1,3 @@
-import { EditorView } from "@uiw/react-codemirror";
-
 export function addColonAndIndent(view, completion, from, to) {
   const line = view.state.doc.lineAt(from);
   const currentIndent = line.text.match(/^\s*/)[0];
@@ -434,7 +432,7 @@ export function levenshteinDistance(a, b) {
   if (b.length === 0) return a.length;
 
   const matrix = Array.from({ length: a.length + 1 })
-    .fill(null)
+    .fill()
     .map(() => Array.from({ length: b.length + 1 }).fill(0));
 
   // Initialize first column and row of the matrix
