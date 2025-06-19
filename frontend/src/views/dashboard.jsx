@@ -371,7 +371,7 @@ function Dashboard() {
       showToast("error", "Failed to delete test case");
     } finally {
       handleFilterProjects();
-      setDeleteModal({ isOpen: false, testCaseId: null });
+      setDeleteModal({ isOpen: false, testCaseId: undefined });
     }
   };
 
