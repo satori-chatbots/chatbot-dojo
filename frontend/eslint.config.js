@@ -43,8 +43,8 @@ export default [
       ...pluginUnicorn.configs.recommended.rules,
 
       // A couple of very common and useful overrides for modern React
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
+      "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
     },
     settings: {
       react: {
