@@ -95,6 +95,49 @@ function Dashboard() {
 
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [sortDescriptor, setSortDescriptor] = useState({
+    column: "executed_at",
+    direction: "descending",
+  });
+
+  // Selected Projects State
+  const [selectedProject, setSelectedProject] = useSelectedProject();
+  const [selectedProjects, setSelectedProjects] = useState([]);
+
+  // State for initial auto-fetching of test cases
+  const [initialAutoFetchDone, setInitialAutoFetchDone] = useState(false);
+
+  // Modal for deleting a test case
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    testCaseId: undefined,
+  });
+
+  const { user } = useAuth();
+  const [publicView] = useState(!user);
+
+  const { projects, loadingProjects, errorProjects } =
+    useFetchProjects("all");
+
+  const statusColorMap = {
+    COMPLETED: "success",
+    ERROR: "danger",
+    RUNNING: "warning",
+  };
+
+  // Interval for refreshing the projects
+  const POLLING_INTERVAL = 2500;
+
+
+  // Global Reports of Test Cases
+  const [globalReports, setGlobalReports] = useState([]);
+
+  // Erros of Global Reports
+  const [errors, setErrors] = useState([]);
+
+  // Error count for each Global Report
+  const [errorCounts, setErrorCounts] = useState({});
+
   const fetchPagedTestCases = useCallback(
     async (pageNumber, sortColumn, sortDirection) => {
       try {
@@ -151,6 +194,23 @@ function Dashboard() {
     ],
   );
 
+  const handleFilterProjects = useCallback(async () => {
+    if (selectedProjects.length === 0) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await fetchPagedTestCases(1);
+      setPage(1);
+    } catch (error_) {
+      console.error("Error filtering projects:", error_);
+      showToast("error", "Failed to filter projects");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchPagedTestCases, selectedProjects.length, showToast]);
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (selectedProjects.length > 0) {
@@ -163,45 +223,6 @@ function Dashboard() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, selectedProjects.length, fetchPagedTestCases]);
 
-  // Modal for deleting a test case
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    testCaseId: undefined,
-  });
-
-  const { user } = useAuth();
-  const [publicView] = useState(!user);
-
-  const { projects, loadingProjects, errorProjects } =
-    useFetchProjects("all");
-
-  const statusColorMap = {
-    COMPLETED: "success",
-    ERROR: "danger",
-    RUNNING: "warning",
-  };
-
-  // Interval for refreshing the projects
-  const POLLING_INTERVAL = 2500;
-
-  // Selected Projects State
-  const [selectedProject, setSelectedProject] = useSelectedProject();
-  const [selectedProjects, setSelectedProjects] = useState([]);
-
-  // State for initial auto-fetching of test cases
-  const [initialAutoFetchDone, setInitialAutoFetchDone] = useState(false);
-
-  /* IMPORTANT: */
-  /* A Test Case contains a Global Report which itself can contain multiple errors */
-
-  // Global Reports of Test Cases
-  const [globalReports, setGlobalReports] = useState([]);
-
-  // Erros of Global Reports
-  const [errors, setErrors] = useState([]);
-
-  // Error count for each Global Report
-  const [errorCounts, setErrorCounts] = useState({});
 
   // Polling for running test cases
   useEffect(() => {
@@ -319,22 +340,6 @@ function Dashboard() {
     }
   };
 
-  const handleFilterProjects = useCallback(async () => {
-    if (selectedProjects.length === 0) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await fetchPagedTestCases(1);
-      setPage(1);
-    } catch (error_) {
-      console.error("Error filtering projects:", error_);
-      showToast("error", "Failed to filter projects");
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchPagedTestCases, selectedProjects.length, showToast]);
 
   const handleStop = async (testCaseId, e) => {
     try {
@@ -430,11 +435,6 @@ function Dashboard() {
       sortable: false,
     },
   ];
-
-  const [sortDescriptor, setSortDescriptor] = useState({
-    column: "executed_at",
-    direction: "descending",
-  });
 
   const derivedTestCases = useMemo(() => {
     return testCases.map((tc) => {
