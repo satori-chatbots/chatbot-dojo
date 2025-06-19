@@ -4,7 +4,7 @@ import { fetchTestCases } from "../api/testCasesApi";
 export const useFetchTestCases = () => {
   const [testCases, setTestCases] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState();
 
   const loadTestCases = () => {
     setLoading(true);
