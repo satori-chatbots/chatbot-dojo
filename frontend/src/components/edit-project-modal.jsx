@@ -28,7 +28,7 @@ const EditProjectModal = ({
   const [formData, setFormData] = useState({
     name: project?.name || "",
     technology: project?.chatbot_technology || "",
-    apiKey: project?.api_key || null,
+    apiKey: project?.api_key || undefined,
     public: project?.public || false,
   });
   const [loadingValidation, setLoadingValidation] = useState(false);
@@ -52,7 +52,7 @@ const EditProjectModal = ({
       setFormData({
         name: project.name,
         technology: project.chatbot_technology,
-        apiKey: project.api_key || null,
+        apiKey: project.api_key || undefined,
         public: project.public || false,
       });
       //console.log('Project:', project);
@@ -140,7 +140,7 @@ const EditProjectModal = ({
     setFormData({
       name: project.name,
       technology: project.chatbot_technology,
-      apiKey: project.api_key || null,
+      apiKey: project.api_key || undefined,
       public: project.public || false,
     });
     setValidationErrors({});
@@ -199,7 +199,9 @@ const EditProjectModal = ({
             />
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label className="text-sm">Technology</label>
+                <label htmlFor="edit-project-technology" className="text-sm">
+                  Technology
+                </label>
                 <Button
                   size="sm"
                   variant="light"
@@ -213,6 +215,7 @@ const EditProjectModal = ({
                 </Button>
               </div>
               <Select
+                id="edit-project-technology"
                 isRequired
                 labelPlacement="outside"
                 placeholder={
@@ -222,10 +225,10 @@ const EditProjectModal = ({
                 }
                 name="technology"
                 selectedKeys={[String(formData.technology)]}
-                onChange={(e) =>
+                onChange={(event) =>
                   setFormData((previous) => ({
                     ...previous,
-                    technology: e.target.value,
+                    technology: event.target.value,
                   }))
                 }
                 isDisabled={loadingValidation || technologies.length === 0}
@@ -245,7 +248,9 @@ const EditProjectModal = ({
 
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label className="text-sm">API Key</label>
+                <label htmlFor="edit-project-api-key" className="text-sm">
+                  API Key
+                </label>
                 <Button
                   size="sm"
                   variant="light"
@@ -257,6 +262,7 @@ const EditProjectModal = ({
                 </Button>
               </div>
               <Select
+                id="edit-project-api-key"
                 placeholder={
                   apiKeys.length === 0
                     ? "No API Keys available"
@@ -283,8 +289,11 @@ const EditProjectModal = ({
             </div>
 
             <div className="flex w-full justify-between items-center">
-              <label className="text-sm">Make Project Public</label>
+              <label htmlFor="edit-project-public" className="text-sm">
+                Make Project Public
+              </label>
               <Switch
+                id="edit-project-public"
                 isSelected={formData.public}
                 onValueChange={handlePublicChange}
                 isDisabled={loadingValidation}
