@@ -6,6 +6,7 @@ import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 import pluginUnicorn from "eslint-plugin-unicorn";
+import pluginImport from "eslint-plugin-import";
 import eslintConfigPrettier from "eslint-config-prettier";
 
 export default [
@@ -25,6 +26,7 @@ export default [
       "react-hooks": pluginReactHooks,
       "jsx-a11y": pluginJsxA11y,
       unicorn: pluginUnicorn,
+      import: pluginImport,
     },
     languageOptions: {
       parserOptions: {
