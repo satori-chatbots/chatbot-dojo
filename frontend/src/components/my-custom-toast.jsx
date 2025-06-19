@@ -29,7 +29,7 @@ export function MyCustomToast({ message, type, onClose }) {
   }, [message, handleClose]);
 
   // If no message, don't render anything
-  if (!message) return null;
+  if (!message) return;
 
   // Determine styling based on toast type
   let toastStyle = "";
