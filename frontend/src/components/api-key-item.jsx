@@ -8,8 +8,8 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
   const [newApiKey, setNewApiKey] = useState(apiKey.decrypted_api_key);
   const [showKey, setShowKey] = useState(false);
 
-  const handleSave = (e) => {
-    e.preventDefault();
+  const handleSave = (event) => {
+    event.preventDefault();
     if (newName.trim()) {
       onUpdate(apiKey.id, newName, newApiKey);
       setIsEditing(false);
@@ -35,15 +35,14 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
               <Input
                 label="Name"
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(event) => setNewName(event.target.value)}
                 variant="bordered"
-                autoFocus
               />
               <div className="relative">
                 <Input
                   label="API Key"
                   value={newApiKey}
-                  onChange={(e) => setNewApiKey(e.target.value)}
+                  onChange={(event) => setNewApiKey(event.target.value)}
                   variant="bordered"
                   type={showKey ? "text" : "password"}
                   className="break-all"
