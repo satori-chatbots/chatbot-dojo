@@ -166,13 +166,13 @@ function Dashboard() {
   // Modal for deleting a test case
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
-    testCaseId: null,
+    testCaseId: undefined,
   });
 
   const { user } = useAuth();
-  const [publicView, setPublicView] = useState(!user);
+  const [publicView] = useState(!user);
 
-  const { projects, loadingProjects, errorProjects, reloadProjects } =
+  const { projects, loadingProjects, errorProjects } =
     useFetchProjects("all");
 
   const statusColorMap = {
@@ -295,7 +295,7 @@ function Dashboard() {
       handleFilterProjects();
       setInitialAutoFetchDone(true);
     }
-  }, [selectedProjects]);
+  }, [handleFilterProjects, initialAutoFetchDone, selectedProjects]);
 
   /* ----------------------------- */
   /* Handlers for Project Selector */
@@ -319,17 +319,14 @@ function Dashboard() {
     }
   };
 
-  const handleFilterProjects = async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
+  const handleFilterProjects = useCallback(async () => {
     if (selectedProjects.length === 0) {
       return;
     }
 
     try {
       setLoading(true);
-      await fetchPagedTestCases(1); // Reset to first page when filtering
+      await fetchPagedTestCases(1);
       setPage(1);
     } catch (error_) {
       console.error("Error filtering projects:", error_);
@@ -337,7 +334,7 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchPagedTestCases, selectedProjects.length, showToast]);
 
   const handleStop = async (testCaseId, e) => {
     try {
