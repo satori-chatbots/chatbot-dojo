@@ -21,7 +21,7 @@ from ..models import (
 )
 from .base import logger
 from .profile_generator import ProfileGenerator
-from .test_runner import TestRunner
+from .test_runner import TestRunner, TestExecutionConfig
 
 
 class ExecuteSelectedAPIView(APIView):
@@ -166,17 +166,18 @@ class ExecuteSelectedAPIView(APIView):
 
             # Execute the test in a background thread using TestRunner
             test_runner = TestRunner()
+            execution_config = TestExecutionConfig(
+                test_case_id=test_case.id,
+                script_path=script_path,
+                project_path=project_path,
+                profiles_directory=profiles_directory,
+                results_path=results_path,
+                technology=technology,
+                link=link,
+            )
             threading.Thread(
                 target=test_runner.execute_test_background,
-                args=(
-                    test_case.id,
-                    script_path,
-                    project_path,
-                    profiles_directory,
-                    results_path,
-                    technology,
-                    link,
-                ),
+                args=(execution_config,),
             ).start()
 
         return Response(
