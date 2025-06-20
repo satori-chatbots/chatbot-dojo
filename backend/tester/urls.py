@@ -1,9 +1,10 @@
+"""URLs for the sensei and tracer web app, defining API endpoints and custom routes."""
+
 from django.urls import include, path
 from rest_framework import routers
 
 from . import api
 
-# urlpatterns = router.urls
 router = routers.DefaultRouter()
 router.register(r"testcases", api.TestCaseViewSet, basename="testcase")
 router.register(r"testfiles", api.TestFileViewSet, basename="testfile")
