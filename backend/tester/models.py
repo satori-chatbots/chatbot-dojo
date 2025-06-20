@@ -3,6 +3,8 @@
 import logging
 import os
 import shutil
+from pathlib import Path
+from typing import Any, ClassVar
 
 import yaml
 from cryptography.fernet import Fernet
@@ -19,9 +21,10 @@ from .validation_script import YamlValidator
 logger = logging.getLogger(__name__)
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
+FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
 if not FERNET_KEY:
-    raise ValueError("FERNET_SECRET_KEY is not set in the environment!")
+    raise ValueError(FERNET_KEY_ERROR)
 
 # Create cipher suite
 cipher_suite = Fernet(FERNET_KEY)
@@ -38,27 +41,27 @@ class UserAPIKey(models.Model):
     api_key_encrypted = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def set_api_key(self, api_key):
+    def __str__(self) -> str:
+        """Return a string representation of the UserAPIKey."""
+        return self.name
+
+    def set_api_key(self, api_key: str) -> None:
         """Encrypt and store the provided API key."""
         encrypted_key = cipher_suite.encrypt(api_key.encode())
         self.api_key_encrypted = encrypted_key.decode()
         self.save()
 
-    def get_api_key(self):
+    def get_api_key(self) -> str | None:
         """Decrypt and return the stored API key."""
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
 
-    def __str__(self):
-        """Return a string representation of the UserAPIKey."""
-        return self.name
-
 
 class CustomUserManager(BaseUserManager):
     """Custom user manager for the CustomUser model."""
 
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":
         """Create and save a user with the given email and password."""
         if not email:
             raise ValueError("Email is a required field")
@@ -67,8 +70,9 @@ class CustomUserManager(BaseUserManager):
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
+        return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
+    def create_superuser(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":
         """Create and save a superuser with the given email and password."""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -82,27 +86,27 @@ class CustomUser(AbstractUser):
     # Default model doesnt make it unique
     email = models.EmailField(max_length=255, unique=True)
     # Username doesnt really matter for now since we are using email as the main identifier
-    username = models.CharField(max_length=255, blank=True, null=True)
+    username = models.CharField(max_length=255, blank=True)
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS: ClassVar[list[str]] = []
 
-    def set_api_key(self):
+    def set_api_key(self) -> None:
         """Encrypt and store the API Key."""
         encrypted_key = cipher_suite.encrypt(self.api_key.encode())
         self.api_key = encrypted_key.decode()
         self.save()
 
-    def get_api_key(self):
+    def get_api_key(self) -> str | None:
         """Decrypt and return the API Key."""
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
 
 
-def upload_to(instance, filename):
+def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
     # The test_name should have been set by the model's clean method
     # Get the user and project id
@@ -111,21 +115,21 @@ def upload_to(instance, filename):
     return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
 
 
-def upload_to_personalities(instance, filename):
+def upload_to_personalities(instance: "PersonalityFile", filename: str) -> str:
     """Returns the path where the Personality files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return f"projects/user_{user_id}/project_{project_id}/personalities/{filename}"
 
 
-def upload_to_rules(instance, filename):
+def upload_to_rules(instance: "RuleFile", filename: str) -> str:
     """Returns the path where the Rules files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
 
 
-def upload_to_types(instance, filename):
+def upload_to_types(instance: "TypeFile", filename: str) -> str:
     """Returns the path where the Types files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
@@ -141,25 +145,26 @@ class TestFile(models.Model):
 
     file = models.FileField(upload_to=upload_to)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
     is_valid = models.BooleanField(
         default=False,
         help_text="Whether the YAML file is valid for execution in Sensei",
     )
-    # This shouldnt be necessary since we are making sure the file field is always relative
-    # Anyway, I leave it as a comment in case we need to go back to it in the future
-    # relative_path = models.CharField(max_length=255, blank=True, null=True)
 
-    def save(self, *args, **kwargs):
+    def __str__(self) -> str:
+        """Return the base name of the file."""
+        return Path(self.file.name).name
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the TestFile instance."""
         super().save(*args, **kwargs)
 
         # After saving, try to read and process the file
-        if self.file and hasattr(self.file, "path") and os.path.exists(self.file.path):
+        if self.file and hasattr(self.file, "path") and Path(self.file.path).exists():
             try:
                 # First read the file for validation
-                with open(self.file.path) as file:
+                with Path(self.file.path).open() as file:
                     yaml_content = file.read()
 
                 # Validate using YamlValidator
@@ -177,7 +182,7 @@ class TestFile(models.Model):
                     return
 
                 # Get the file extension
-                _, ext = os.path.splitext(self.file.name)
+                ext = Path(self.file.name).suffix
                 # Create new filename and change the extension to yaml
                 # To avoid having yaml and yml files with the same name
                 new_filename = f"{test_name}.yaml"
@@ -188,8 +193,8 @@ class TestFile(models.Model):
 
                 # Rename the file
                 old_path = self.file.path
-                new_full_path = os.path.join(settings.MEDIA_ROOT, new_path)
-                os.rename(old_path, new_full_path)
+                new_full_path = Path(settings.MEDIA_ROOT) / new_path
+                Path(old_path).rename(new_full_path)
 
                 # Update the model
                 self.file.name = new_path
@@ -209,42 +214,23 @@ class TestFile(models.Model):
                 # Set as invalid but don't raise exception
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
-            except Exception:
+            except OSError:
                 # Set as invalid but don't raise exception
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
 
-    def __str__(self):
-        """Return the base name of the file."""
-        return os.path.basename(self.file.name)
-
 
 @receiver(post_delete, sender=TestFile)
-def delete_file_from_media(sender, instance, **kwargs):
+def delete_file_from_media(sender: type[TestFile], instance: TestFile, **kwargs: Any) -> None:
     """Delete the file from the media directory when the TestFile is deleted."""
-    if instance.file:
-        if os.path.isfile(instance.file.path):
-            os.remove(instance.file.path)
+    if instance.file and Path(instance.file.path).is_file():
+        Path(instance.file.path).unlink()
 
 
 # Use post_save signal to set name after the file is saved
 @receiver(post_save, sender=TestFile)
-def set_name(sender, instance, created, **kwargs):
+def set_name(sender: type[TestFile], instance: TestFile, created: bool, **kwargs: Any) -> None:
     """Set the name of the TestFile to the "test_name" field in the YAML file."""
-    # if created:
-    #     # Extract 'test_name' from the YAML file
-    #     try:
-    #         with open(instance.file.path, "r") as file:
-    #             data = yaml.safe_load(file)
-    #             instance.name = data.get(
-    #                 "test_name", os.path.basename(instance.file.name)
-    #             )
-    #     except yaml.YAMLError as e:
-    #         print(f"Error loading YAML file: {e}")
-    #         instance.name = os.path.basename(instance.file.name)
-
-    #     # Save the updated instance without triggering another save signal
-    #     sender.objects.filter(pk=instance.pk).update(name=instance.name)
 
 
 class Project(models.Model):
@@ -275,24 +261,19 @@ class Project(models.Model):
         null=True,
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return the name of the project."""
         return self.name
 
-    def get_project_path(self):
+    def get_project_path(self) -> str:
         """Get the full filesystem path to the project folder."""
-        return os.path.join(
-            settings.MEDIA_ROOT,
-            "projects",
-            f"user_{self.owner.id}",
-            f"project_{self.id}",
-        )
+        return str(Path(settings.MEDIA_ROOT) / "projects" / f"user_{self.owner.id}" / f"project_{self.id}")
 
-    def get_run_yml_path(self):
+    def get_run_yml_path(self) -> str:
         """Get the path to the run.yml file for this project."""
-        return os.path.join(self.get_project_path(), "run.yml")
+        return str(Path(self.get_project_path()) / "run.yml")
 
-    def update_run_yml(self):
+    def update_run_yml(self) -> None:
         """Update the run.yml file with current project configuration."""
         config_data = {
             "project_folder": f"project_{self.id}",
@@ -326,26 +307,26 @@ class Project(models.Model):
             pass  # If config doesn't exist, use defaults
 
         run_yml_path = self.get_run_yml_path()
-        os.makedirs(os.path.dirname(run_yml_path), exist_ok=True)
+        Path(run_yml_path).parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            with open(run_yml_path, "w") as f:
+            with Path(run_yml_path).open("w") as f:
                 yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
-            logger.info(f"Updated run.yml at {run_yml_path}")
-        except Exception as e:
-            logger.error(f"Error creating run.yml: {e}")
+            logger.info("Updated run.yml at %s", run_yml_path)
+        except yaml.YAMLError as e:
+            logger.exception("Error creating run.yml: %s", e)
 
 
 @receiver(post_delete, sender=Project)
-def delete_project_directory(sender, instance, **kwargs):
+def delete_project_directory(sender: type[Project], instance: Project, **kwargs: Any) -> None:
     """Delete the entire project directory when the Project is deleted."""
     project_path = instance.get_project_path()
-    if os.path.exists(project_path):
+    if Path(project_path).exists():
         try:
             shutil.rmtree(project_path)
-            logger.info(f"Deleted project directory: {project_path}")
-        except Exception as e:
-            logger.error(f"Error deleting project directory {project_path}: {e}")
+            logger.info("Deleted project directory: %s", project_path)
+        except OSError as e:
+            logger.exception("Error deleting project directory %s: %s", project_path, e)
 
 
 TECHNOLOGY_CHOICES = [
@@ -372,9 +353,9 @@ class ChatbotTechnology(models.Model):
     # Name of the chatbot technology, must be unique
     name = models.CharField(max_length=255, unique=True)
     technology = models.CharField(max_length=255, choices=TECHNOLOGY_CHOICES)
-    link = models.URLField(blank=True, null=True)
+    link = models.URLField(blank=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return the name of the chatbot technology."""
         return self.name
 
@@ -391,11 +372,11 @@ class TestCase(models.Model):
     # Timestamp of when the test case was executed
     executed_at = models.DateTimeField(auto_now_add=True)
     # STDOUT of the test case
-    result = models.TextField(blank=True, null=True)
+    result = models.TextField(blank=True)
     # Global execution time of the test case measured by the API, not the script
     execution_time = models.FloatField(blank=True, null=True)
     # If the execution was Successful, Failed or Running
-    status = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=255, blank=True)
     # These are the user profiles used
     copied_files = models.JSONField(blank=True, null=True)
     # Test case belongs to only one project
@@ -403,7 +384,7 @@ class TestCase(models.Model):
     # Process ID of the test case, used to kill the process if needed
     process_id = models.IntegerField(blank=True, null=True)
     # Technology used
-    technology = models.CharField(max_length=255, blank=True, null=True)
+    technology = models.CharField(max_length=255, blank=True)
 
     # To be able to track the progress of the execution
     # Name of the profiles so we can access the directories
@@ -413,7 +394,20 @@ class TestCase(models.Model):
     # Number of conversations that have already been
     executed_conversations = models.IntegerField(blank=True, null=True)
 
-    def save(self, *args, **kwargs):
+    class Meta:
+        """Meta options for the TestCase model."""
+
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["executed_at"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["project"]),
+        ]
+
+    def __str__(self) -> str:
+        """Return a string representation of the TestCase."""
+        return f"TestCase {self.id}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the TestCase instance."""
         # Save the test case, if given name is null, set it to TestCase <id>
         super().save(*args, **kwargs)
@@ -422,23 +416,10 @@ class TestCase(models.Model):
             self.name = f"TestCase {self.id}"
             super().save(update_fields=["name"])
 
-    def __str__(self):
-        """Return a string representation of the TestCase."""
-        return f"TestCase {self.id}"
-
-    class Meta:
-        """Meta options for the TestCase model."""
-
-        indexes = [
-            models.Index(fields=["executed_at"]),
-            models.Index(fields=["status"]),
-            models.Index(fields=["project"]),
-        ]
-
 
 # Delete test case directories when TestCase object is deleted from database
 @receiver(post_delete, sender=TestCase)
-def delete_test_case_directories(sender, instance, **kwargs):
+def delete_test_case_directories(sender: type[TestCase], instance: TestCase, **kwargs: Any) -> None:
     """Delete the test case directories when the TestCase is deleted."""
     try:
         # Get the user and project IDs
@@ -447,42 +428,42 @@ def delete_test_case_directories(sender, instance, **kwargs):
         test_case_id = instance.id
 
         # Path to the profiles directory for this test case
-        profiles_path = os.path.join(
-            settings.MEDIA_ROOT,
-            "projects",
-            f"user_{user_id}",
-            f"project_{project_id}",
-            "profiles",
-            f"testcase_{test_case_id}",
+        profiles_path = (
+            Path(settings.MEDIA_ROOT)
+            / "projects"
+            / f"user_{user_id}"
+            / f"project_{project_id}"
+            / "profiles"
+            / f"testcase_{test_case_id}"
         )
 
         # Path to the results directory for this test case
-        results_path = os.path.join(
-            settings.MEDIA_ROOT,
-            "results",
-            f"user_{user_id}",
-            f"project_{project_id}",
-            f"testcase_{test_case_id}",
+        results_path = (
+            Path(settings.MEDIA_ROOT)
+            / "results"
+            / f"user_{user_id}"
+            / f"project_{project_id}"
+            / f"testcase_{test_case_id}"
         )
 
         # Delete profiles directory if it exists
-        if os.path.exists(profiles_path):
+        if profiles_path.exists():
             try:
                 shutil.rmtree(profiles_path)
-                logger.info(f"Deleted test case profiles directory: {profiles_path}")
-            except Exception as e:
-                logger.error(f"Error deleting test case profiles directory {profiles_path}: {e}")
+                logger.info("Deleted test case profiles directory: %s", profiles_path)
+            except OSError as e:
+                logger.exception("Error deleting test case profiles directory %s: %s", profiles_path, e)
 
         # Delete results directory if it exists
-        if os.path.exists(results_path):
+        if results_path.exists():
             try:
                 shutil.rmtree(results_path)
-                logger.info(f"Deleted test case results directory: {results_path}")
-            except Exception as e:
-                logger.error(f"Error deleting test case results directory {results_path}: {e}")
+                logger.info("Deleted test case results directory: %s", results_path)
+            except OSError as e:
+                logger.exception("Error deleting test case results directory %s: %s", results_path, e)
 
     except Exception as e:
-        logger.error(f"Error in delete_test_case_directories signal: {e}")
+        logger.exception("Error in delete_test_case_directories signal: %s", e)
 
 
 class GlobalReport(models.Model):
@@ -503,6 +484,10 @@ class GlobalReport(models.Model):
     total_cost = models.FloatField(blank=True, null=True)
     # Test report belongs to only one test case
     test_case = models.ForeignKey(TestCase, related_name="global_reports", on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        """Return the name of the global report."""
+        return self.name
 
 
 class ProfileReport(models.Model):
@@ -536,6 +521,10 @@ class ProfileReport(models.Model):
     # Test report belongs to only one global report
     global_report = models.ForeignKey(GlobalReport, related_name="profile_reports", on_delete=models.CASCADE)
 
+    def __str__(self) -> str:
+        """Return the name of the profile report."""
+        return self.name
+
 
 class Conversation(models.Model):
     """Conversation is a model to store the details generated by a conversation during a test case execution."""
@@ -565,6 +554,10 @@ class Conversation(models.Model):
     # Interaction History
     interaction = models.JSONField()
 
+    def __str__(self) -> str:
+        """Return the name of the conversation."""
+        return self.name
+
 
 class TestError(models.Model):
     """Test Error is a model to store the errors in a Test Report.
@@ -593,6 +586,10 @@ class TestError(models.Model):
         null=True,
     )
 
+    def __str__(self) -> str:
+        """Return the error code."""
+        return self.code
+
 
 # In your models.py
 class ProfileGenerationTask(models.Model):
@@ -614,15 +611,19 @@ class ProfileGenerationTask(models.Model):
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
-    stage = models.CharField(max_length=25, choices=STAGE_CHOICES, blank=True, null=True)
+    stage = models.CharField(max_length=25, choices=STAGE_CHOICES, blank=True)
     progress_percentage = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    error_message = models.TextField(blank=True, null=True)
+    error_message = models.TextField(blank=True)
     conversations = models.PositiveIntegerField(default=5)
     turns = models.PositiveIntegerField(default=5)
     generated_file_ids = models.JSONField(default=list)
     process_id = models.IntegerField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        """Return a string representation of the task."""
+        return f"ProfileGenerationTask {self.id} for Project {self.project.name}"
 
 
 class PersonalityFile(models.Model):
@@ -630,18 +631,18 @@ class PersonalityFile(models.Model):
 
     file = models.FileField(upload_to=upload_to_personalities)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="personality_files", on_delete=models.CASCADE)
 
-    def save(self, *args, **kwargs):
+    def __str__(self) -> str:
+        """Return the base name of the file."""
+        return Path(self.file.name).name
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the PersonalityFile instance."""
         if not self.name:
-            self.name = os.path.splitext(os.path.basename(self.file.name))[0]
+            self.name = Path(self.file.name).stem
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        """Return the base name of the file."""
-        return os.path.basename(self.file.name)
 
 
 class RuleFile(models.Model):
@@ -649,18 +650,18 @@ class RuleFile(models.Model):
 
     file = models.FileField(upload_to=upload_to_rules)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="rule_files", on_delete=models.CASCADE)
 
-    def save(self, *args, **kwargs):
+    def __str__(self) -> str:
+        """Return the base name of the file."""
+        return Path(self.file.name).name
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the RuleFile instance."""
         if not self.name:
-            self.name = os.path.splitext(os.path.basename(self.file.name))[0]
+            self.name = Path(self.file.name).stem
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        """Return the base name of the file."""
-        return os.path.basename(self.file.name)
 
 
 class TypeFile(models.Model):
@@ -668,55 +669,52 @@ class TypeFile(models.Model):
 
     file = models.FileField(upload_to=upload_to_types)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="type_files", on_delete=models.CASCADE)
 
-    def save(self, *args, **kwargs):
+    def __str__(self) -> str:
+        """Return the base name of the file."""
+        return Path(self.file.name).name
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the TypeFile instance."""
         if not self.name:
-            self.name = os.path.splitext(os.path.basename(self.file.name))[0]
+            self.name = Path(self.file.name).stem
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        """Return the base name of the file."""
-        return os.path.basename(self.file.name)
 
 
 class ProjectConfig(models.Model):
     """Model to store the run.yml configuration for each project."""
 
     project = models.OneToOneField("Project", related_name="config", on_delete=models.CASCADE)
-    user_profile = models.CharField(max_length=255, blank=True, null=True)
-    technology = models.CharField(max_length=255, blank=True, null=True)
-    connector = models.CharField(max_length=255, blank=True, null=True)
+    user_profile = models.CharField(max_length=255, blank=True)
+    technology = models.CharField(max_length=255, blank=True)
+    connector = models.CharField(max_length=255, blank=True)
     connector_parameters = models.JSONField(blank=True, null=True)
-    extract_path = models.CharField(max_length=500, blank=True, null=True)
+    extract_path = models.CharField(max_length=500, blank=True)
     execution_parameters = models.JSONField(blank=True, null=True, default=list)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the ProjectConfig."""
         return f"Config for {self.project.name}"
 
 
 @receiver(post_delete, sender=PersonalityFile)
-def delete_personality_file_from_media(sender, instance, **kwargs):
+def delete_personality_file_from_media(sender: type[PersonalityFile], instance: PersonalityFile, **kwargs: Any) -> None:
     """Delete the file from the media directory when the PersonalityFile is deleted."""
-    if instance.file:
-        if os.path.isfile(instance.file.path):
-            os.remove(instance.file.path)
+    if instance.file and Path(instance.file.path).is_file():
+        Path(instance.file.path).unlink()
 
 
 @receiver(post_delete, sender=RuleFile)
-def delete_rule_file_from_media(sender, instance, **kwargs):
+def delete_rule_file_from_media(sender: type[RuleFile], instance: RuleFile, **kwargs: Any) -> None:
     """Delete the file from the media directory when the RuleFile is deleted."""
-    if instance.file:
-        if os.path.isfile(instance.file.path):
-            os.remove(instance.file.path)
+    if instance.file and Path(instance.file.path).is_file():
+        Path(instance.file.path).unlink()
 
 
 @receiver(post_delete, sender=TypeFile)
-def delete_type_file_from_media(sender, instance, **kwargs):
+def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **kwargs: Any) -> None:
     """Delete the file from the media directory when the TypeFile is deleted."""
-    if instance.file:
-        if os.path.isfile(instance.file.path):
-            os.remove(instance.file.path)
+    if instance.file and Path(instance.file.path).is_file():
+        Path(instance.file.path).unlink()
