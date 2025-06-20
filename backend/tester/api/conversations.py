@@ -1,5 +1,4 @@
-"""
-Conversations API endpoints.
+"""Conversations API endpoints.
 """
 
 from rest_framework import viewsets
@@ -26,13 +25,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        elif profile_report_id is not None:
+        if profile_report_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 profile_report=profile_report_id
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        else:
-            queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

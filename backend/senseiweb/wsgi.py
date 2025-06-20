@@ -1,5 +1,4 @@
-"""
-WSGI config for senseiweb project.
+"""WSGI config for senseiweb project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

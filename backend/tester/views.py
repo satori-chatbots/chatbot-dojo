@@ -1,11 +1,13 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import TestCase, TestFile
-from django.shortcuts import render, get_object_or_404
 import os
 import subprocess
 import time
+
+from django.shortcuts import get_object_or_404, render
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import TestCase, TestFile
 
 
 class ExecuteAPIView(APIView):
@@ -41,7 +43,7 @@ class ExecuteAPIView(APIView):
                     "--extract",
                     extract_dir,
                 ],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
             )
             end_time = time.time()

@@ -1,5 +1,4 @@
-"""
-Test execution and management functionality.
+"""Test execution and management functionality.
 """
 
 import os
@@ -12,8 +11,8 @@ import psutil
 
 from ..models import TestCase
 from .base import logger
-from .results_processor import ResultsProcessor
 from .execution_utils import ExecutionUtils
+from .results_processor import ResultsProcessor
 
 
 class TestRunner:
@@ -159,7 +158,7 @@ class TestRunner:
                 logger.error(f"Test execution failed: {stderr.decode().strip()}")
 
         except Exception as e:
-            logger.error(f"Error in background test execution: {str(e)}")
+            logger.error(f"Error in background test execution: {e!s}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             try:
                 test_case = TestCase.objects.get(id=test_case_id)
@@ -194,8 +193,7 @@ class TestRunner:
                     )
                     return True  # Still consider it successful since we set status to STOPPED
             return True
-        else:
-            return False
+        return False
 
     def _build_run_yml(
         self,
@@ -224,7 +222,7 @@ class TestRunner:
             self.execution_utils.write_run_yml(config_data, project)
 
         except Exception as e:
-            logger.error(f"Error building run.yml: {str(e)}")
+            logger.error(f"Error building run.yml: {e!s}")
             raise
 
     def _monitor_conversations(

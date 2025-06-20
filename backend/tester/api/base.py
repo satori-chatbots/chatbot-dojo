@@ -1,5 +1,4 @@
-"""
-Base module with common imports and utilities for the tester API.
+"""Base module with common imports and utilities for the tester API.
 """
 
 import logging
@@ -22,8 +21,7 @@ sys.path.append(os.path.join(base_dir, "user-simulator", "src"))
 
 
 def extract_test_name_from_malformed_yaml(content):
-    """
-    Extract test_name from potentially malformed YAML using regex.
+    """Extract test_name from potentially malformed YAML using regex.
     Returns None if no test_name is found.
     """
     try:

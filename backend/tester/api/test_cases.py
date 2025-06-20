@@ -1,5 +1,4 @@
-"""
-Test Cases API endpoints.
+"""Test Cases API endpoints.
 """
 
 from django.db import models

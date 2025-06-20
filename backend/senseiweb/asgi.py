@@ -1,5 +1,4 @@
-"""
-ASGI config for senseiweb project.
+"""ASGI config for senseiweb project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

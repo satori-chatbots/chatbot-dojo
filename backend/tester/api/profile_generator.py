@@ -1,5 +1,4 @@
-"""
-Profile generation functionality.
+"""Profile generation functionality.
 """
 
 from ..models import ProfileGenerationTask
@@ -12,8 +11,7 @@ class ProfileGenerator:
     def run_async_profile_generation(
         self, task_id, technology, conversations, turns, user_id
     ):
-        """
-        Run profile generation asynchronously in a background thread.
+        """Run profile generation asynchronously in a background thread.
         """
         try:
             task = ProfileGenerationTask.objects.get(id=task_id)
@@ -68,7 +66,7 @@ class ProfileGenerator:
             logger.info(f"Profile generation completed for task {task_id}")
 
         except Exception as e:
-            logger.error(f"Error in profile generation: {str(e)}")
+            logger.error(f"Error in profile generation: {e!s}")
             try:
                 task = ProfileGenerationTask.objects.get(id=task_id)
                 task.status = "FAILED"

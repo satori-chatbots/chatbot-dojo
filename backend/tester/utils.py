@@ -1,6 +1,6 @@
-import os
 import configparser
 import logging
+import os
 
 logger = logging.getLogger("Info Logger")
 

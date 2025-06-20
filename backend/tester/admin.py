@@ -1,14 +1,15 @@
 from django.contrib import admin
+
 from .models import (
-    CustomUser,
-    TestFile,
-    Project,
     ChatbotTechnology,
-    TestCase,
+    Conversation,
+    CustomUser,
     GlobalReport,
     ProfileReport,
-    Conversation,
+    Project,
+    TestCase,
     TestError,
+    TestFile,
     UserAPIKey,
 )
 

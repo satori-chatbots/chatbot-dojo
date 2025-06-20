@@ -1,5 +1,4 @@
-"""
-Results processing and report generation functionality.
+"""Results processing and report generation functionality.
 """
 
 import os
@@ -51,7 +50,7 @@ class ResultsProcessor:
 
             # In the documents there is a global, and then a profile_report for each test_case
             documents = []
-            with open(os.path.join(report_path, report_file), "r") as file:
+            with open(os.path.join(report_path, report_file)) as file:
                 documents = list(yaml.safe_load_all(file))
 
             # Process global report
@@ -67,9 +66,9 @@ class ResultsProcessor:
             logger.info(f"Successfully processed results for test case {test_case.id}")
 
         except Exception as e:
-            logger.error(f"Error processing test results: {str(e)}")
+            logger.error(f"Error processing test results: {e!s}")
             test_case.status = "ERROR"
-            test_case.error_message = f"Error processing results: {str(e)}"
+            test_case.error_message = f"Error processing results: {e!s}"
             test_case.save()
 
     def _process_global_report(self, global_report, test_case):
@@ -201,8 +200,7 @@ class ResultsProcessor:
 
     def _process_profile_report_from_conversation(self, conversation_file_path):
         """Read common fields from first conversation file"""
-
-        with open(conversation_file_path, "r") as file:
+        with open(conversation_file_path) as file:
             data = yaml.safe_load_all(file)
             first_doc = next(data)
 
@@ -257,10 +255,9 @@ class ResultsProcessor:
 
     def _process_conversation(self, conversation_file_path):
         """Process individual conversation file"""
-
         # File name without extension
         name = os.path.splitext(os.path.basename(conversation_file_path))[0]
-        with open(conversation_file_path, "r") as file:
+        with open(conversation_file_path) as file:
             docs = list(yaml.safe_load_all(file))
             main_doc = docs[0]
 

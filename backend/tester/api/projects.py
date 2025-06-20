@@ -1,5 +1,4 @@
-"""
-Projects API endpoints and related functionality.
+"""Projects API endpoints and related functionality.
 """
 
 import os
@@ -46,10 +45,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         if show_type == "owned":
             return Project.objects.filter(owner=self.request.user)
-        else:  # show_type == "all"
-            return Project.objects.filter(
-                models.Q(public=True) | models.Q(owner=self.request.user)
-            )
+        # show_type == "all"
+        return Project.objects.filter(
+            models.Q(public=True) | models.Q(owner=self.request.user)
+        )
 
     def perform_create(self, serializer):
         name = serializer.validated_data["name"]
@@ -162,8 +161,7 @@ def validate_yaml(request):
 
 @api_view(["GET"])
 def fetch_file_content(request, file_id):
-    """
-    Fetch the content of a specific YAML file
+    """Fetch the content of a specific YAML file
     """
     try:
         test_file = get_object_or_404(TestFile, id=file_id)
@@ -182,7 +180,7 @@ def fetch_file_content(request, file_id):
             )
 
         # Read the file content
-        with open(test_file.file.path, "r") as file:
+        with open(test_file.file.path) as file:
             content = file.read()
 
         return Response(
@@ -193,7 +191,7 @@ def fetch_file_content(request, file_id):
         return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response(
-            {"error": f"Error reading file: {str(e)}"},
+            {"error": f"Error reading file: {e!s}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 

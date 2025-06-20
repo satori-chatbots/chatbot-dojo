@@ -1,5 +1,4 @@
-"""
-Chatbot Technology API endpoints.
+"""Chatbot Technology API endpoints.
 """
 
 from django.http import JsonResponse

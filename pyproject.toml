@@ -40,6 +40,63 @@ backend-path = ["."]
 # Adjust if your main source directory for 'sensei-web' has a different name.
 packages = ["backend"]
 
+[tool.ruff]
+# default is too small
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
+# E: pycode style (error)
+# W: pycode style (warning)
+# F: Pyflakes
+# I: ishort
+# ANN: type annotations
+# D: docstrings
+# B: bugbear
+select = [
+    "ALL"
+]
+ignore = [
+    "E501", # line too long
+    # "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", # Common missing docstring rules
+    "COM812", # Creates incompatibility with formatter
+    "T201", # Doesnt let you use prints
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+]
+
 # Alternatively, for more complex scenarios or finer control (e.g., multiple top-level package directories for sensei-web):
 # [tool.setuptools.packages.find]
 # where = ["."]  # Look for packages in the project root ('.') or a specific directory like 'src'

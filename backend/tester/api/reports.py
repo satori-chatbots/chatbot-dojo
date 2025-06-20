@@ -1,5 +1,4 @@
-"""
-Reports API endpoints for Profile and Global reports.
+"""Reports API endpoints for Profile and Global reports.
 """
 
 from rest_framework import viewsets
@@ -27,16 +26,15 @@ class ProfileReportViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
 
-        elif global_report_id is not None:
+        if global_report_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 global_report=global_report_id
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        else:
-            queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class GlobalReportViewSet(viewsets.ModelViewSet):
@@ -54,7 +52,7 @@ class GlobalReportViewSet(viewsets.ModelViewSet):
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        elif test_case is not None:
+        if test_case is not None:
             # Get the global report for a single test case
             queryset = (
                 self.filter_queryset(self.get_queryset())
@@ -63,7 +61,6 @@ class GlobalReportViewSet(viewsets.ModelViewSet):
             )
             serializer = self.get_serializer(queryset)
             return Response(serializer.data)
-        else:
-            queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

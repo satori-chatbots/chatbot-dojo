@@ -1,5 +1,4 @@
-"""
-Test Files API endpoints.
+"""Test Files API endpoints.
 """
 
 import os
@@ -65,7 +64,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
             # Only reject if not ignoring validation errors
             if not ignore_validation_errors:
                 return Response(
-                    {"error": f"Invalid YAML: {str(e)}"},
+                    {"error": f"Invalid YAML: {e!s}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -146,8 +145,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["delete"], url_path="delete-bulk")
     def bulk_delete(self, request):
-        """
-        Endpoint for bulk deleting files.
+        """Endpoint for bulk deleting files.
         Expects a JSON body with a list of file IDs:
         {
             "ids": [1, 2, 3]
@@ -326,7 +324,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
             settings.BASE_DIR, "tester/templates/yaml/default.yaml"
         )
         try:
-            with open(template_path, "r") as f:
+            with open(template_path) as f:
                 template_content = f.read()
             return Response({"template": template_content})
         except FileNotFoundError:
