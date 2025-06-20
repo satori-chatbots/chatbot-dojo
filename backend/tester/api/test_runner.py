@@ -1,15 +1,16 @@
 """Test execution and management functionality."""
 
 import json
-import os
 import subprocess
 import threading
 import time
 import traceback
+from pathlib import Path
 
 import psutil
 
-from ..models import TestCase
+from tester.models import TestCase
+
 from .base import logger
 from .execution_utils import ExecutionUtils
 from .results_processor import ResultsProcessor
@@ -18,7 +19,8 @@ from .results_processor import ResultsProcessor
 class TestRunner:
     """Handles test execution, monitoring, and process management."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize the TestRunner."""
         self.results_processor = ResultsProcessor()
         self.execution_utils = ExecutionUtils()
 
@@ -32,13 +34,13 @@ class TestRunner:
         technology,
         link,
     ):
-        """Execute the test in background thread"""
+        """Execute the test in a background thread."""
         try:
             test_case = TestCase.objects.get(id=test_case_id)
             project = test_case.project
 
             # Get the user-simulator directory (parent of the script)
-            user_simulator_dir = os.path.dirname(os.path.dirname(script_path))
+            user_simulator_dir = str(Path(script_path).parent.parent)
 
             # Calculate total conversations for monitoring
             self.execution_utils.calculate_total_conversations(test_case, project_path)
@@ -133,7 +135,7 @@ class TestRunner:
                                 child.terminate()
                             proc.terminate()
                             psutil.wait_procs([proc], timeout=timeout_seconds)
-                        except Exception as ex:
+                        except psutil.Error as ex:
                             logger.error(f"Error while terminating process: {ex}")
                         # Continue polling until process exits
                         continue
@@ -181,9 +183,9 @@ class TestRunner:
                 test_case.execution_time = 0
                 test_case.save()
             except Exception:
-                pass
+                logger.exception("Failed to update test case status to ERROR after a critical failure.")
 
-    def stop_test_execution(self, test_case):
+    def stop_test_execution(self, test_case: TestCase) -> bool:
         """Stop a running test execution."""
         # Only stop if the test is currently running
         if test_case.status == "RUNNING":
@@ -207,12 +209,12 @@ class TestRunner:
 
     def _monitor_conversations(
         self,
-        conversations_dir,
-        total_conversations,
-        test_case_id,
-        final_conversation_count,
-    ):
-        """Monitor conversation progress during execution"""
+        conversations_dir: str,
+        total_conversations: int,
+        test_case_id: int,
+        final_conversation_count: list[int],
+    ) -> None:
+        """Monitor conversation progress during execution."""
         local_test_case = TestCase.objects.get(id=test_case_id)
         while True:
             local_test_case.refresh_from_db()
@@ -223,16 +225,16 @@ class TestRunner:
             try:
                 executed_conversations = 0
                 # NEW PATH: conversations are now in conversation_outputs/{profile}
-                conversation_outputs_dir = os.path.join(conversations_dir, "conversation_outputs")
-                if os.path.exists(conversation_outputs_dir):
+                conversation_outputs_dir = Path(conversations_dir) / "conversation_outputs"
+                if conversation_outputs_dir.exists():
                     for profile in local_test_case.profiles_names:
-                        profile_dir = os.path.join(conversation_outputs_dir, profile)
-                        if os.path.exists(profile_dir):
-                            subdirs = os.listdir(profile_dir)
+                        profile_dir = conversation_outputs_dir / profile
+                        if profile_dir.exists():
+                            subdirs = list(profile_dir.iterdir())
                             if subdirs:
                                 # Assume the first subdirectory is the one we need
-                                date_hour_dir = os.path.join(profile_dir, subdirs[0])
-                                executed_conversations += len(os.listdir(date_hour_dir))
+                                date_hour_dir = subdirs[0]
+                                executed_conversations += len(list(date_hour_dir.iterdir()))
 
                     local_test_case.executed_conversations = executed_conversations
                     local_test_case.save()
