@@ -1,5 +1,4 @@
-"""
-Test Errors API endpoints.
+"""Test Errors API endpoints.
 """
 
 from rest_framework import viewsets
@@ -29,25 +28,24 @@ class TestErrorViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
 
-        elif global_report_id is not None:
+        if global_report_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 global_report=global_report_id
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        elif profile_report_ids is not None:
+        if profile_report_ids is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 profile_report__in=profile_report_ids.split(",")
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        elif profile_report_id is not None:
+        if profile_report_id is not None:
             queryset = self.filter_queryset(self.get_queryset()).filter(
                 profile_report=profile_report_id
             )
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
-        else:
-            queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

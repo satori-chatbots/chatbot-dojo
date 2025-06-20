@@ -1,5 +1,4 @@
-"""
-Utility functions for test execution.
+"""Utility functions for test execution.
 """
 
 import os
@@ -23,7 +22,7 @@ class ExecutionUtils:
                 file_path = os.path.join(settings.MEDIA_ROOT, copied_file["path"])
                 try:
                     # Load the YAML content
-                    with open(file_path, "r") as file:
+                    with open(file_path) as file:
                         yaml_content = yaml.safe_load(file)
 
                     # Get the test_name from the file
@@ -50,7 +49,7 @@ class ExecutionUtils:
                     )
 
                 except Exception as e:
-                    logger.error(f"Error processing YAML file: {str(e)}")
+                    logger.error(f"Error processing YAML file: {e!s}")
 
             test_case.total_conversations = total_conversations
             test_case.profiles_names = names
@@ -58,7 +57,7 @@ class ExecutionUtils:
             logger.info(f"Total conversations calculated: {total_conversations}")
 
         except Exception as e:
-            logger.error(f"Error calculating total conversations: {str(e)}")
+            logger.error(f"Error calculating total conversations: {e!s}")
 
     @staticmethod
     def get_connector_path(technology):
@@ -150,5 +149,5 @@ class ExecutionUtils:
             logger.info(f"Run.yml content: {config_data}")
 
         except Exception as e:
-            logger.error(f"Error writing run.yml: {str(e)}")
+            logger.error(f"Error writing run.yml: {e!s}")
             raise

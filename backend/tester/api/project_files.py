@@ -1,5 +1,4 @@
-"""
-Project Files API endpoints for handling personalities, rules, and types files.
+"""Project Files API endpoints for handling personalities, rules, and types files.
 """
 
 import os

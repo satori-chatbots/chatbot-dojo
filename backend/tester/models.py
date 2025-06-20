@@ -26,8 +26,7 @@ cipher_suite = Fernet(FERNET_KEY)
 
 
 class UserAPIKey(models.Model):
-    """
-    Model to store the API keys for the users
+    """Model to store the API keys for the users
 
     It has a name, the encrypted API key and the user it belongs to
     """
@@ -40,16 +39,14 @@ class UserAPIKey(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def set_api_key(self, api_key):
-        """
-        Encrypt and store the provided API key.
+        """Encrypt and store the provided API key.
         """
         encrypted_key = cipher_suite.encrypt(api_key.encode())
         self.api_key_encrypted = encrypted_key.decode()
         self.save()
 
     def get_api_key(self):
-        """
-        Decrypt and return the stored API key.
+        """Decrypt and return the stored API key.
         """
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
@@ -88,27 +85,22 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS = []
 
     def set_api_key(self):
+        """Encrypt and store the API Key
         """
-        Encrypt and store the API Key
-        """
-
         encrypted_key = cipher_suite.encrypt(self.api_key.encode())
         self.api_key = encrypted_key.decode()
         self.save()
 
     def get_api_key(self):
+        """Decrypt and return the API Key
         """
-        Decrypt and return the API Key
-        """
-
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
 
 
 def upload_to(instance, filename):
-    """
-    Returns the path where the Test Files are stored (MEDIA_DIR/projects/user_{user_id}/project_{project_id}/profiles/file.yaml
+    """Returns the path where the Test Files are stored (MEDIA_DIR/projects/user_{user_id}/project_{project_id}/profiles/file.yaml
     """
     # The test_name should have been set by the model's clean method
     # Get the user and project id
@@ -118,8 +110,7 @@ def upload_to(instance, filename):
 
 
 def upload_to_personalities(instance, filename):
-    """
-    Returns the path where the Personality files are stored
+    """Returns the path where the Personality files are stored
     """
     user_id = instance.project.owner.id
     project_id = instance.project.id
@@ -127,8 +118,7 @@ def upload_to_personalities(instance, filename):
 
 
 def upload_to_rules(instance, filename):
-    """
-    Returns the path where the Rules files are stored
+    """Returns the path where the Rules files are stored
     """
     user_id = instance.project.owner.id
     project_id = instance.project.id
@@ -136,8 +126,7 @@ def upload_to_rules(instance, filename):
 
 
 def upload_to_types(instance, filename):
-    """
-    Returns the path where the Types files are stored
+    """Returns the path where the Types files are stored
     """
     user_id = instance.project.owner.id
     project_id = instance.project.id
@@ -145,8 +134,7 @@ def upload_to_types(instance, filename):
 
 
 class TestFile(models.Model):
-    """
-    Model to store the uploaded User Profiles YAML files
+    """Model to store the uploaded User Profiles YAML files
 
     These are the models that are available to the user to run tests, each testfile belongs to a project
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
@@ -173,7 +161,7 @@ class TestFile(models.Model):
         if self.file and hasattr(self.file, "path") and os.path.exists(self.file.path):
             try:
                 # First read the file for validation
-                with open(self.file.path, "r") as file:
+                with open(self.file.path) as file:
                     yaml_content = file.read()
 
                 # Validate using YamlValidator
@@ -243,10 +231,8 @@ def delete_file_from_media(sender, instance, **kwargs):
 # Use post_save signal to set name after the file is saved
 @receiver(post_save, sender=TestFile)
 def set_name(sender, instance, created, **kwargs):
+    """Set the name of the TestFile to the "test_name" field in the YAML file
     """
-    Set the name of the TestFile to the "test_name" field in the YAML file
-    """
-    pass
     # if created:
     #     # Extract 'test_name' from the YAML file
     #     try:
@@ -264,8 +250,7 @@ def set_name(sender, instance, created, **kwargs):
 
 
 class Project(models.Model):
-    """
-    A Project is a collection of test cases, it uses one chatbot technology
+    """A Project is a collection of test cases, it uses one chatbot technology
     """
 
     # Name of the project, must be unique for the user
@@ -301,8 +286,7 @@ class Project(models.Model):
         return self.name
 
     def get_project_path(self):
-        """
-        Get the full filesystem path to the project folder
+        """Get the full filesystem path to the project folder
         """
         return os.path.join(
             settings.MEDIA_ROOT,
@@ -312,16 +296,13 @@ class Project(models.Model):
         )
 
     def get_run_yml_path(self):
-        """
-        Get the path to the run.yml file for this project
+        """Get the path to the run.yml file for this project
         """
         return os.path.join(self.get_project_path(), "run.yml")
 
     def update_run_yml(self):
+        """Update the run.yml file with current project configuration
         """
-        Update the run.yml file with current project configuration
-        """
-
         config_data = {
             "project_folder": f"project_{self.id}",
             "user_profile": "",
@@ -415,8 +396,7 @@ class ChatbotTechnology(models.Model):
 
 
 class TestCase(models.Model):
-    """
-    A Test Case is a execution of one or multiple test files
+    """A Test Case is a execution of one or multiple test files
 
     It contains the details of the execution, as well as the reports.
     """
@@ -474,7 +454,6 @@ class TestCase(models.Model):
 @receiver(post_delete, sender=TestCase)
 def delete_test_case_directories(sender, instance, **kwargs):
     """Delete the test case directories when the TestCase is deleted"""
-
     try:
         # Get the user and project IDs
         user_id = instance.project.owner.id
@@ -523,8 +502,7 @@ def delete_test_case_directories(sender, instance, **kwargs):
 
 
 class GlobalReport(models.Model):
-    """
-    A Global Report contains the information generated by an execution of multiple test cases
+    """A Global Report contains the information generated by an execution of multiple test cases
     Then it contains the different reports of the contained test cases.
 
     Contains:
@@ -545,8 +523,7 @@ class GlobalReport(models.Model):
 
 
 class ProfileReport(models.Model):
-    """
-    A Test Report contains the information generated by a Test Case.
+    """A Test Report contains the information generated by a Test Case.
 
     Contains:
     Average, minimum and maximum execution time.
@@ -580,8 +557,7 @@ class ProfileReport(models.Model):
 
 
 class Conversation(models.Model):
-    """
-    Conversation is a model to store the details generated by a conversation during a test case execution
+    """Conversation is a model to store the details generated by a conversation during a test case execution
     """
 
     # Django Info
@@ -613,8 +589,7 @@ class Conversation(models.Model):
 
 
 class TestError(models.Model):
-    """
-    Test Error is a model to store the errors in a Test Report
+    """Test Error is a model to store the errors in a Test Report
 
     contains the error code and the number of times it has occurred and the relative path of the conversation files with that error
     """
@@ -673,8 +648,7 @@ class ProfileGenerationTask(models.Model):
 
 
 class PersonalityFile(models.Model):
-    """
-    Model to store personality files in the personalities/ folder
+    """Model to store personality files in the personalities/ folder
     """
 
     file = models.FileField(upload_to=upload_to_personalities)
@@ -694,8 +668,7 @@ class PersonalityFile(models.Model):
 
 
 class RuleFile(models.Model):
-    """
-    Model to store rule files in the rules/ folder
+    """Model to store rule files in the rules/ folder
     """
 
     file = models.FileField(upload_to=upload_to_rules)
@@ -715,8 +688,7 @@ class RuleFile(models.Model):
 
 
 class TypeFile(models.Model):
-    """
-    Model to store type files in the types/ folder
+    """Model to store type files in the types/ folder
     """
 
     file = models.FileField(upload_to=upload_to_types)
@@ -736,8 +708,7 @@ class TypeFile(models.Model):
 
 
 class ProjectConfig(models.Model):
-    """
-    Model to store the run.yml configuration for each project
+    """Model to store the run.yml configuration for each project
     """
 
     project = models.OneToOneField(

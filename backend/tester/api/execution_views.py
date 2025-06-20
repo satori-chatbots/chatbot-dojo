@@ -1,5 +1,4 @@
-"""
-API views for test execution endpoints.
+"""API views for test execution endpoints.
 """
 
 import os
@@ -22,14 +21,13 @@ from ..models import (
     cipher_suite,
 )
 from .base import logger
-from .test_runner import TestRunner
 from .profile_generator import ProfileGenerator
+from .test_runner import TestRunner
 
 
 class ExecuteSelectedAPIView(APIView):
     def post(self, request, format=None):
-        """
-        Execute selected test files in the user-yaml directory using Taskyto.
+        """Execute selected test files in the user-yaml directory using Taskyto.
         Create a TestCase instance and associate executed TestFiles with it.
         """
         # Check if user is authenticated
@@ -165,7 +163,7 @@ class ExecuteSelectedAPIView(APIView):
                 name_extracted = "Unknown"
                 if os.path.exists(file_path):
                     try:
-                        with open(file_path, "r") as file:
+                        with open(file_path) as file:
                             data = yaml.safe_load(file)
                             name_extracted = data.get("test_name", name_extracted)
                     except yaml.YAMLError as e:
@@ -295,10 +293,9 @@ def check_ongoing_generation(request, project_id):
                     "status": ongoing_task.status,
                 }
             )
-        else:
-            return Response({"ongoing": False})
+        return Response({"ongoing": False})
     except Exception as e:
-        logger.error(f"Error checking ongoing generation: {str(e)}")
+        logger.error(f"Error checking ongoing generation: {e!s}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -330,11 +327,10 @@ def stop_test_execution(request):
                 {"message": "Test execution stopped"},
                 status=status.HTTP_200_OK,
             )
-        else:
-            return Response(
-                {"message": f"Test case is not running (status: {test_case.status})"},
-                status=status.HTTP_200_OK,
-            )
+        return Response(
+            {"message": f"Test case is not running (status: {test_case.status})"},
+            status=status.HTTP_200_OK,
+        )
 
     except TestCase.DoesNotExist:
         return Response(

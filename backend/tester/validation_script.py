@@ -1,14 +1,14 @@
-from typing import Dict, List, Optional
-from dataclasses import dataclass
-import yaml
 import re
+from dataclasses import dataclass
+
+import yaml
 
 
 @dataclass
 class ValidationError:
     message: str
     path: str
-    line: Optional[int] = None
+    line: int | None = None
 
 
 class YamlValidator:
@@ -60,7 +60,7 @@ class YamlValidator:
             "default",
         ]
 
-    def validate(self, yaml_content: str) -> List[ValidationError]:
+    def validate(self, yaml_content: str) -> list[ValidationError]:
         """Validate YAML content against schema rules.
         Checks that all required fields are present and have the correct type.
         """
@@ -97,11 +97,11 @@ class YamlValidator:
             return errors
 
         except yaml.YAMLError as e:
-            return [ValidationError(f"Invalid YAML syntax: {str(e)}", "/")]
+            return [ValidationError(f"Invalid YAML syntax: {e!s}", "/")]
 
     def _validate_conversation_variable_dependencies(
-        self, user: Dict, conversation: Dict
-    ) -> List[ValidationError]:
+        self, user: dict, conversation: dict
+    ) -> list[ValidationError]:
         """Validate that sample() or all_combinations is only used when there are nested forwards."""
         errors = []
 
@@ -148,7 +148,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_required_fields(self, data: Dict) -> List[ValidationError]:
+    def _validate_required_fields(self, data: dict) -> list[ValidationError]:
         """Validate that all required fields are present."""
         errors = []
 
@@ -178,7 +178,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_llm_section(self, llm: Dict) -> List[ValidationError]:
+    def _validate_llm_section(self, llm: dict) -> list[ValidationError]:
         """Validate LLM section configuration."""
         errors = []
 
@@ -219,15 +219,7 @@ class YamlValidator:
 
             # If type is speech, check for config
             if format_type == "speech":
-                if "config" not in format_section:
-                    errors.append(
-                        ValidationError(
-                            "Speech format requires 'config' field with path to configuration file",
-                            "/llm/format/config",
-                        )
-                    )
-                # Check that the string is a path
-                elif format_section["config"] == "":
+                if "config" not in format_section or format_section["config"] == "":
                     errors.append(
                         ValidationError(
                             "Speech format requires 'config' field with path to configuration file",
@@ -237,7 +229,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_user_section(self, user: Dict) -> List[ValidationError]:
+    def _validate_user_section(self, user: dict) -> list[ValidationError]:
         """Validate user section configuration."""
         errors = []
 
@@ -437,11 +429,7 @@ class YamlValidator:
                                 valid_function = False
 
                                 # Check for default(), another(), forward() without parameters
-                                if func in ["default()", "another()", "forward()"]:
-                                    valid_function = True
-
-                                # Check for random() with different formats
-                                elif func == "random()":
+                                if func in ["default()", "another()", "forward()"] or func == "random()":
                                     valid_function = True
                                 elif func.startswith("random(") and func.endswith(")"):
                                     # Extract the parameter
@@ -674,7 +662,7 @@ class YamlValidator:
                 path.pop()
 
             # Find all cycles in the dependencies
-            visited = {var: False for var in defined_variables}
+            visited = dict.fromkeys(defined_variables, False)
             cycles = []
 
             for var in forward_dependencies:
@@ -693,7 +681,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_chatbot_section(self, chatbot: Dict) -> List[ValidationError]:
+    def _validate_chatbot_section(self, chatbot: dict) -> list[ValidationError]:
         """Validate chatbot section configuration."""
         errors = []
 
@@ -799,8 +787,8 @@ class YamlValidator:
         return errors
 
     def _validate_conversation_section(
-        self, conversation: Dict
-    ) -> List[ValidationError]:
+        self, conversation: dict
+    ) -> list[ValidationError]:
         """Validate conversation section configuration."""
         errors = []
 
