@@ -230,7 +230,7 @@ def delete_file_from_media(_sender: type[TestFile], instance: TestFile, **_kwarg
 
 # Use post_save signal to set name after the file is saved
 @receiver(post_save, sender=TestFile)
-def set_name(sender: type[TestFile], instance: TestFile, created: bool, **kwargs: Any) -> None:  # noqa: ANN401
+def set_name(sender: type[TestFile], instance: TestFile, *, created: bool, **kwargs: Any) -> None:  # noqa: ANN401
     """Set the name of the TestFile to the "test_name" field in the YAML file."""
 
 
