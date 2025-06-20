@@ -1,6 +1,9 @@
-"""Test Files API endpoints."""
+"""API endpoints for managing and validating TestFiles."""
 
-import os
+import builtins
+import logging
+from pathlib import Path
+from typing import Any, ClassVar
 
 import yaml
 from django.conf import settings
@@ -10,117 +13,64 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from ..models import Project, TestFile
-from ..serializers import TestFileSerializer
+from tester.models import Project, TestFile
+from tester.serializers import TestFileSerializer
+
 from .base import extract_test_name_from_malformed_yaml
+
+logger = logging.getLogger(__name__)
 
 
 class TestFilePermission(BasePermission):
-    """Permission class for TestFile access"""
+    """Permission class to control access to TestFile objects."""
 
-    def has_object_permission(self, request, view, obj):
-        # Allow access if project is public or user is the owner
+    def has_object_permission(self, request: Request, _view: APIView, obj: TestFile) -> bool:
+        """Check if the user has permission to access the TestFile object.
+
+        Allows access if the project is public or the user is the project owner.
+        """
         return obj.project.public or (request.user.is_authenticated and request.user == obj.project.owner)
 
 
 class TestFileViewSet(viewsets.ModelViewSet):
+    """API ViewSet for managing TestFiles."""
+
     queryset = TestFile.objects.all()
     serializer_class = TestFileSerializer
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
-    permission_classes = [permissions.IsAuthenticated, TestFilePermission]
+    parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [permissions.IsAuthenticated, TestFilePermission]
 
-    @action(detail=True, methods=["put"], url_path="update-file")
-    def update_file(self, request, pk=None):
-        test_file = self.get_object()
-        content = request.data.get("content")
-        ignore_validation_errors = str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
-
-        if not content:
-            return Response({"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Initialize new_test_name with the current file name as a fallback
-        new_test_name = test_file.name
-        is_valid = True
-
-        # Try to parse the YAML to get the test name
-        try:
-            data = yaml.safe_load(content)
-            extracted_name = data.get("test_name", None)
-            if extracted_name:
-                new_test_name = extracted_name
-        except yaml.YAMLError as e:
-            # Mark file as invalid
-            is_valid = False
-
-            # Only reject if not ignoring validation errors
-            if not ignore_validation_errors:
-                return Response(
-                    {"error": f"Invalid YAML: {e!s}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # If we're ignoring errors, try to extract test_name using the utility function
-            try:
-                extracted_name = extract_test_name_from_malformed_yaml(content)
-                if extracted_name:
-                    new_test_name = extracted_name
-            except Exception:
-                # If all extraction methods fail, keep the current name
-                pass
-
-        project = test_file.project
-        if not project:
-            return Response(
-                {"error": "No project associated with this file"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Check if the new name is already used in the project
-        conflict = TestFile.objects.filter(project=project, name=new_test_name).exclude(pk=test_file.pk).first()
-        # If so, we dont allow the update
-        if conflict:
-            return Response(
-                {"error": f"A file named '{new_test_name}' already exists in this project."},
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        # Update file on disk
-        with open(test_file.file.path, "w") as f:
-            f.write(content)
-
-        # Update the database fields
-        test_file.name = new_test_name
-        test_file.is_valid = is_valid
-        test_file.save()
-
-        return Response({"message": "File updated successfully"}, status=status.HTTP_200_OK)
-
-    def list(self, request, *args, **kwargs):
-        """Return a list of all the YAML files uploaded, if one is missing, delete the row in the DB.
+    def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
+        """Return a list of all YAML files, filtering out any that are missing from disk.
 
         Args:
-            request (Request): The request object.
+            request: The DRF request object.
 
         Returns:
-            Response: Serialized data of the files.
+            A paginated or full list of serialized TestFile data.
         """
-        project_id = request.query_params.get("project_id", None)
-        if project_id is not None:
+        project_id = request.query_params.get("project_id")
+        if project_id:
             project = get_object_or_404(Project, id=project_id)
             queryset = self.filter_queryset(self.get_queryset()).filter(project=project)
         else:
             queryset = self.filter_queryset(self.get_queryset())
 
-        # Check if a file is missing, if so, delete the row in the DB
-        for file in queryset:
-            if not os.path.exists(file.file.path):
-                file.delete()
+        # Eagerly load related project to avoid N+1 queries
+        queryset = queryset.select_related("project")
 
-        # Paginate the queryset if needed
-        page = self.paginate_queryset(queryset)
+        # Check if files exist on disk and delete the DB entry if not
+        for test_file in list(queryset):
+            if not Path(test_file.file.path).exists():
+                test_file.delete()
+                logger.warning("Deleted TestFile object %s as its file was missing.", test_file.id)
 
+        # Re-fetch queryset after potential deletions
+        page = self.paginate_queryset(queryset.all())
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
@@ -128,177 +78,171 @@ class TestFileViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["put"], url_path="update-file")
+    def update_file(self, request: Request, pk: int | None = None) -> Response:  # noqa: ARG002
+        """Update the content and metadata of a TestFile."""
+        test_file = self.get_object()
+        content = request.data.get("content")
+        ignore_validation_errors = str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
+
+        if not content:
+            return Response({"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        new_test_name = test_file.name
+        is_valid = True
+
+        try:
+            data = yaml.safe_load(content)
+            if extracted_name := data.get("test_name"):
+                new_test_name = extracted_name
+        except yaml.YAMLError as e:
+            is_valid = False
+            if not ignore_validation_errors:
+                return Response({"error": f"Invalid YAML: {e!s}"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                if extracted_name := extract_test_name_from_malformed_yaml(content):
+                    new_test_name = extracted_name
+            except (AttributeError, TypeError, IndexError):
+                logger.warning("Could not extract test_name from malformed YAML for file %s", test_file.id)
+
+        # Check for name conflicts within the project
+        if TestFile.objects.filter(project=test_file.project, name=new_test_name).exclude(pk=test_file.pk).exists():
+            return Response(
+                {"error": f"A file named '{new_test_name}' already exists in this project."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Update file on disk
+        try:
+            with Path(test_file.file.path).open("w") as f:
+                f.write(content)
+        except OSError as e:
+            return Response({"error": f"Could not write to file: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        test_file.name = new_test_name
+        test_file.is_valid = is_valid
+        test_file.save()
+
+        return Response({"message": "File updated successfully"}, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=["delete"], url_path="delete-bulk")
-    def bulk_delete(self, request):
-        """Endpoint for bulk deleting files.
-        Expects a JSON body with a list of file IDs:
-        {
-            "ids": [1, 2, 3]
-        }
+    def bulk_delete(self, request: Request) -> Response:
+        """Delete multiple TestFile objects based on a list of IDs.
 
-        Args:
-            request (Request): The request object.
-
-        Returns:
-            Response: Response with the number of files deleted or an error message.
+        Expects a JSON body with a list of file IDs: `{"ids": [1, 2, 3]}`.
         """
         ids = request.data.get("ids", [])
-        # This because if not when deleting a single file, it will be a single int and not a list
         if not isinstance(ids, list):
             ids = [ids]
         if not ids:
             return Response({"error": "No IDs provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        files = TestFile.objects.filter(id__in=ids)
-        if not files.exists():
-            return Response(
-                {"error": "No files found for the provided IDs."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        # The `delete()` method on a queryset is atomic and more efficient
+        deleted_count, _ = TestFile.objects.filter(id__in=ids).delete()
 
-        for file in files:
-            file.delete()
+        if deleted_count == 0:
+            return Response({"error": "No files found for the provided IDs."}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"deleted": len(files)}, status=status.HTTP_200_OK)
+        return Response({"deleted": deleted_count}, status=status.HTTP_200_OK)
 
-    @action(
-        detail=False,
-        methods=["post"],
-        url_path="upload",
-        parser_classes=[MultiPartParser, FormParser],
-    )
-    def upload(self, request):
+    @action(detail=False, methods=["post"], url_path="upload", parser_classes=[MultiPartParser, FormParser])
+    def upload(self, request: Request) -> Response:
+        """Handle the bulk upload of one or more test files to a project."""
         uploaded_files = request.FILES.getlist("file")
         project_id = request.data.get("project")
-        ignore_validation_errors = str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
-        errors = []
-        test_names = set()
-        already_reported_test_names = set()
-        file_data = []  # Store validated file data for later processing
+        ignore_errors = str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
 
-        # Check if the project exists
         try:
             project = Project.objects.get(id=project_id)
         except Project.DoesNotExist:
-            return Response(
-                {"error": "Project not found, make sure to create a project first."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Collect all existing test_names in the project
-        existing_test_names = set(TestFile.objects.filter(project=project).values_list("name", flat=True))
+        processed_files, errors, _ = self._process_files(project, uploaded_files, ignore_errors=ignore_errors)
 
-        # Process all files first
+        if errors and not ignore_errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            saved_file_ids = self._create_test_files_from_data(project, processed_files)
+        except Exception as e:
+            logger.exception("Failed to save files during bulk upload.")
+            return Response({"error": f"Failed to save files: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"uploaded_file_ids": saved_file_ids}, status=status.HTTP_201_CREATED)
+
+    def _process_files(
+        self, project: Project, uploaded_files: builtins.list[Any], *, ignore_errors: bool
+    ) -> tuple[builtins.list[dict], builtins.list[dict], set]:
+        """Validate and prepare a list of uploaded files before saving."""
+        file_data, errors, reported_names = [], [], set()
+        existing_names = set(TestFile.objects.filter(project=project).values_list("name", flat=True))
+        upload_names = set()
+
         for f in uploaded_files:
-            is_valid = True
-            test_name = None
+            is_valid, test_name = True, None
             try:
                 content = f.read()
-                f.seek(0)  # Reset pointer so Django can save the file
+                f.seek(0)
                 data = yaml.safe_load(content)
-                test_name = data.get("test_name", None)
-            except Exception as e:
+                test_name = data.get("test_name")
+            except yaml.YAMLError as e:
                 is_valid = False
-
-                # Try to extract test_name even from malformed YAML
-                f.seek(0)
-                content = f.read()
-                f.seek(0)
-
-                extracted_name = extract_test_name_from_malformed_yaml(content)
-                test_name = extracted_name
-
-                if not ignore_validation_errors:
-                    errors.append({"file": f.name, "error": f"Error reading YAML: {e}"})
+                if not ignore_errors:
+                    errors.append({"file": f.name, "error": f"Invalid YAML: {e}"})
                     continue
-
-                # Only use file name if we couldn't extract test_name
-                if not test_name:
-                    test_name = f.name
+                f.seek(0)
+                test_name = extract_test_name_from_malformed_yaml(f.read())
+                f.seek(0)
 
             if not test_name:
                 is_valid = False
-                if not ignore_validation_errors:
-                    errors.append({"file": f.name, "error": "test_name is missing in YAML."})
+                if not ignore_errors:
+                    errors.append({"file": f.name, "error": "'test_name' is missing."})
                     continue
-                # When ignoring errors, use file name without extension
-                test_name = os.path.splitext(f.name)[0]
+                test_name = Path(f.name).stem
 
-            # Handle duplicate names
-            if test_name in existing_test_names:
-                if not ignore_validation_errors:
-                    if test_name not in already_reported_test_names:
-                        already_reported_test_names.add(test_name)
-                        errors.append(
-                            {
-                                "file": f.name,
-                                "error": f"test_name '{test_name}' is already used.",
-                            }
-                        )
+            # Handle name conflicts
+            if test_name in existing_names or test_name in upload_names:
+                if not ignore_errors:
+                    if test_name not in reported_names:
+                        errors.append({"file": f.name, "error": f"Name '{test_name}' is already used."})
+                        reported_names.add(test_name)
                     continue
-                # With ignore_validation_errors, append a unique suffix
-                base_name = test_name
-                counter = 1
-                while test_name in existing_test_names or test_name in test_names:
+                # If ignoring errors, create a unique name
+                base_name, counter = test_name, 1
+                while test_name in existing_names or test_name in upload_names:
                     test_name = f"{base_name}_{counter}"
                     counter += 1
                 is_valid = False
 
-            if test_name in test_names:
-                if not ignore_validation_errors:
-                    if test_name not in already_reported_test_names:
-                        already_reported_test_names.add(test_name)
-                        errors.append(
-                            {
-                                "file": f.name,
-                                "error": f"Duplicate test_name '{test_name}' in uploaded files.",
-                            }
-                        )
-                    continue
-                # With ignore_validation_errors, append a unique suffix
-                base_name = test_name
-                counter = 1
-                while test_name in test_names:
-                    test_name = f"{base_name}_{counter}"
-                    counter += 1
-                is_valid = False
-
-            test_names.add(test_name)
+            upload_names.add(test_name)
             file_data.append({"file": f, "test_name": test_name, "is_valid": is_valid})
 
-        # Return errors if any and not ignoring validation
-        if errors and not ignore_validation_errors:
-            return Response(
-                {"errors": errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        return file_data, errors, reported_names
 
-        # All files processed, proceed to save them
-        saved_files = []
-        try:
-            with transaction.atomic():
-                for data in file_data:
-                    instance = TestFile.objects.create(
-                        file=data["file"],
-                        name=data["test_name"],
-                        project=project,
-                        is_valid=data["is_valid"],
-                    )
-                    saved_files.append(instance.id)
-        except Exception as e:
-            return Response(
-                {"error": f"Failed to save files: {e}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        return Response({"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED)
+    def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
+        """Save processed file data to the database in a single transaction."""
+        saved_instances = []
+        with transaction.atomic():
+            for data in file_data:
+                instance = TestFile(
+                    file=data["file"], name=data["test_name"], project=project, is_valid=data["is_valid"]
+                )
+                saved_instances.append(instance)
+            TestFile.objects.bulk_create(saved_instances)
+        # We need to return the IDs, which are only available after creation.
+        # A simple way is to fetch them back by name, assuming names are now unique.
+        names = [data["test_name"] for data in file_data]
+        return list(TestFile.objects.filter(project=project, name__in=names).values_list("id", flat=True))
 
     @action(detail=False, methods=["get"], url_path="template")
-    def get_template(self, request):
-        template_path = os.path.join(settings.BASE_DIR, "tester/templates/yaml/default.yaml")
+    def get_template(self, _request: Request) -> Response:
+        """Provide a default YAML template for creating new test files."""
+        template_path = Path(settings.BASE_DIR) / "tester/templates/yaml/default.yaml"
         try:
-            with open(template_path) as f:
+            with template_path.open() as f:
                 template_content = f.read()
             return Response({"template": template_content})
         except FileNotFoundError:
+            logger.exception("Default YAML template not found at %s", template_path)
             return Response({"error": "Template file not found"}, status=status.HTTP_404_NOT_FOUND)
