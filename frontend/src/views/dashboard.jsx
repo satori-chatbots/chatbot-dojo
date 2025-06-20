@@ -263,16 +263,18 @@ function Dashboard() {
           });
 
           // Update reports and errors if status changed
-          const completedTestCases = updatedTestCases.filter(
+          const runningTestCaseIds = new Set(runningTestCases.map((tc) => tc.id));
+          const newlyCompletedTestCases = updatedTestCases.filter(
             (tc) =>
-              tc.status === "COMPLETED" ||
-              tc.status === "ERROR" ||
-              tc.status === "STOPPED",
+              runningTestCaseIds.has(tc.id) &&
+              (tc.status === "COMPLETED" ||
+                tc.status === "ERROR" ||
+                tc.status === "STOPPED"),
           );
 
           // Fetch reports and errors for completed test cases
-          if (completedTestCases.length > 0) {
-            const testCaseIds = completedTestCases.map((tc) => tc.id);
+          if (newlyCompletedTestCases.length > 0) {
+            const testCaseIds = newlyCompletedTestCases.map((tc) => tc.id);
             const fetchedReports =
               await fetchGlobalReportsByTestCases(testCaseIds);
 
@@ -281,13 +283,25 @@ function Dashboard() {
               const fetchedErrors =
                 await fetchTestErrorsByGlobalReports(globalReportIds);
 
-              setGlobalReports((previous) => [...previous, ...fetchedReports]);
-              setErrors((previous) => [...previous, ...fetchedErrors]);
+              setGlobalReports((previous) => {
+                const updatedReportIds = new Set(fetchedReports.map((r) => r.id));
+                const filtered = previous.filter(
+                  (r) => !updatedReportIds.has(r.id),
+                );
+                return [...filtered, ...fetchedReports];
+              });
+              setErrors((previous) => {
+                const updatedErrorIds = new Set(fetchedErrors.map((error_) => error_.id));
+                const filtered = previous.filter(
+                  (error_) => !updatedErrorIds.has(error_.id),
+                );
+                return [...filtered, ...fetchedErrors];
+              });
 
               // Update error counts
               const newErrorCounts = {};
               for (const error of fetchedErrors) {
-                if (error.global_report in newErrorCounts) {
+                if (newErrorCounts[error.global_report]) {
                   newErrorCounts[error.global_report] += error.count;
                 } else {
                   newErrorCounts[error.global_report] = error.count;
