@@ -28,40 +28,55 @@ Or if you use `uv`:
 uv sync
 ```
 
-#### Set up the Fernet secret key
+#### Set up environment variables (.env)
 
-Run the provided script to generate your encryption key:
+You must have a `.env` file in the `backend` directory with the following variables:
+
+- `FERNET_SECRET_KEY` — Used for encryption (auto-generated)
+- `SECRET_KEY` — Django secret key (auto-generated)
+- `DEBUG` — Set to `True` or `False` (default: True)
+
+To generate or update your `.env` file with all required variables, run:
 
 ```bash
-python scripts/generate_fernet_key.py
+make env
 ```
 
-This will automatically create a `.env` file in the `backend` directory with your secret key.
+This will run the script at `scripts/generate_env.py`, which will create or update `.env` with all necessary keys. You can also run the script directly:
 
-Alternatively, you can generate it manually:
+```bash
+python scripts/generate_env.py
+```
 
-1. Open a Python interpreter (run `python` or `python3`)
-2. Import fernet:
+#### Manual .env generation (if script cannot be used)
 
+If you cannot run the script, you can manually generate the required keys and create the `.env` file:
+
+1. **Generate Fernet key:**
+
+   Open a Python shell and run:
    ```python
    from cryptography.fernet import Fernet
+   print(Fernet.generate_key().decode())
    ```
+   Copy the output (it will look like `EZsbc2bocfVw-1I8T-qq9gzrqiNv7_YtT0FOybwak2U=`).
 
-3. Generate the key:
+2. **Generate Django SECRET_KEY:**
 
+   If Django is installed, run:
    ```python
-   key = Fernet.generate_key().decode()
+   from django.core.management.utils import get_random_secret_key
+   print(get_random_secret_key())
    ```
+   Copy the output (a long random string).
 
-4. Print the key:
-
-   ```python
-   print(f"FERNET_SECRET_KEY={key}")
+3. **Create the `.env` file in the `backend` directory** with the following content:
+   ```env
+   FERNET_SECRET_KEY=<your-generated-fernet-key>
+   SECRET_KEY=<your-generated-django-secret-key>
+   DEBUG=True
    ```
-
-This will generate something like `FERNET_SECRET_KEY=EZsbc2bocfVw-1I8T-qq9gzrqiNv7_YtT0FOybwak2U=`
-
-Copy this and place it inside: `sensei-web/backend/.env` (create the `.env` file if it doesn't exist)
+   Replace the values with the ones you generated above.
 
 #### Database setup and running the server
 
