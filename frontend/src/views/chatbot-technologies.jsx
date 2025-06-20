@@ -108,50 +108,58 @@ const ChatbotTechnologies = () => {
     event.preventDefault();
     setLoadingValidation(true);
 
-    // URL check
-    if (data.link && !/^https?:\/\//.test(data.link)) {
-      alert("Please enter a valid URL or leave it empty");
-      setLoadingValidation(false);
-      return false;
-    }
+    try {
+      // URL check
+      if (data.link && !/^https?:\/\//.test(data.link)) {
+        alert("Please enter a valid URL or leave it empty");
+        setLoadingValidation(false);
+        return false;
+      }
 
-    // Technology check
-    if (!data.technology) {
-      alert("Please select a technology");
-      setLoadingValidation(false);
-      return false;
-    }
+      // Technology check
+      if (!data.technology) {
+        alert("Please select a technology");
+        setLoadingValidation(false);
+        return false;
+      }
 
-    // Skip check only if the user truly didn't change their name
-    if (oldName && data.name === oldName) {
-      console.log(
-        "Skipping validation for name, name:",
-        data.name,
-        "originalName:",
-        oldName,
-      );
+      // Skip check only if the user truly didn't change their name
+      if (oldName && data.name === oldName) {
+        console.log(
+          "Skipping validation for name, name:",
+          data.name,
+          "originalName:",
+          oldName,
+        );
+        setValidationErrors({});
+        setLoadingValidation(false);
+        return true;
+      }
+
+      // Otherwise, check if the name exists
+      const existsResponse = await checkChatbotTechnologyName(data.name);
+      if (existsResponse.exists) {
+        setValidationErrors({ name: "Name already exists" });
+        setLoadingValidation(false);
+        return false;
+      }
+
       setValidationErrors({});
       setLoadingValidation(false);
       return true;
-    }
-
-    // Otherwise, check if the name exists
-    const existsResponse = await checkChatbotTechnologyName(data.name);
-    if (existsResponse.exists) {
-      setValidationErrors({ name: "Name already exists" });
+    } catch (error) {
+      console.error("Validation error:", error);
+      alert("An error occurred during validation. Please try again.");
       setLoadingValidation(false);
       return false;
     }
-
-    setValidationErrors({});
-    return true;
   };
 
   // Called after the form is submitted
   const handleFormSubmit = async (event) => {
     event.preventDefault();
 
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = formData;
 
     // Validate the form
     const isValid = await handleValidation(event, data);
@@ -169,7 +177,7 @@ const ChatbotTechnologies = () => {
       // Close modal
       onOpenChange(false);
     } catch (error) {
-      console.log("DFSDError creating chatbot technology:", error);
+      console.log("Error creating chatbot technology:", error);
       alert(`Error creating chatbot technology: ${error.message}`);
     } finally {
       setLoadingValidation(false);
@@ -180,25 +188,30 @@ const ChatbotTechnologies = () => {
   const handleFormReset = () => {
     setFormData({
       name: "",
-      technology: "",
+      technology: technologyChoices[0]?.[0] || "",
       link: "",
     });
+    setValidationErrors({});
   };
 
   // Handle the reset of the edit form so it clears the data
   const handleEditFormReset = () => {
-    // console.log('Resetting edit form');
     setEditData({
       name: "",
       technology: "",
       link: "",
     });
+    setValidationErrors({});
   };
 
   // Update technology
   const handleUpdate = async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = {
+      name: editData.name,
+      technology: editData.technology,
+      link: editData.link,
+    };
 
     // Now pass the stored originalName
     const isValid = await handleValidation(event, data, originalName);
@@ -287,7 +300,7 @@ const ChatbotTechnologies = () => {
                   className="w-full flex flex-col gap-4"
                   onSubmit={handleFormSubmit}
                   onReset={handleFormReset}
-                  validationBehavior="native"
+                  validationBehavior="aria"
                   validationErrors={validationErrors}
                 >
                   <Input
@@ -298,10 +311,16 @@ const ChatbotTechnologies = () => {
                     name="name"
                     placeholder="Enter a name to identify the technology"
                     value={formData.name}
-                    onChange={(event) =>
-                      setFormData({ ...formData, name: event.target.value })
-                    }
+                    onChange={(event) => {
+                      setFormData({ ...formData, name: event.target.value });
+                      // Clear validation errors when user starts typing
+                      if (validationErrors.name) {
+                        setValidationErrors({ ...validationErrors, name: undefined });
+                      }
+                    }}
                     type="text"
+                    isInvalid={!!validationErrors.name}
+                    errorMessage={validationErrors.name}
                   />
 
                   {/* Select for technology choices */}
@@ -312,12 +331,12 @@ const ChatbotTechnologies = () => {
                     labelPlacement="outside"
                     placeholder="Select Technology"
                     name="technology"
-                    value={formData.technology}
-                    onChange={(value) => {
-                      // 'val' is expected to be a string
+                    selectedKeys={formData.technology ? [formData.technology] : []}
+                    onSelectionChange={(keys) => {
+                      const selectedValue = [...keys][0];
                       setFormData((previous) => ({
                         ...previous,
-                        technology: value,
+                        technology: selectedValue,
                       }));
                     }}
                     fullWidth
@@ -378,7 +397,6 @@ const ChatbotTechnologies = () => {
       {/* Table of existing technologies */}
       <Table
         aria-label="Chatbot Technologies Table"
-        //isStriped={technologies.length > 4}
         className="max-h-[60vh] sm:max-h-[50vh] overflow-y-auto"
         sortDescriptor={sortDescriptor}
         onSortChange={setSortDescriptor}
@@ -459,7 +477,7 @@ const ChatbotTechnologies = () => {
                   className="w-full flex flex-col gap-4"
                   onSubmit={handleUpdate}
                   onReset={handleEditFormReset}
-                  validationBehavior="native"
+                  validationBehavior="aria"
                   validationErrors={validationErrors}
                 >
                   <Input
@@ -468,10 +486,16 @@ const ChatbotTechnologies = () => {
                     name="name"
                     value={editData.name}
                     isDisabled={loadingValidation}
-                    onChange={(event) =>
-                      setEditData({ ...editData, name: event.target.value })
-                    }
+                    onChange={(event) => {
+                      setEditData({ ...editData, name: event.target.value });
+                      // Clear validation errors when user starts typing
+                      if (validationErrors.name) {
+                        setValidationErrors({ ...validationErrors, name: undefined });
+                      }
+                    }}
                     type="text"
+                    isInvalid={!!validationErrors.name}
+                    errorMessage={validationErrors.name}
                   />
                   <Select
                     isRequired
@@ -479,14 +503,14 @@ const ChatbotTechnologies = () => {
                     isDisabled={loadingValidation}
                     placeholder="Select a new Technology"
                     name="technology"
-                    value={editData.technology}
-                    onChange={(event) => {
+                    selectedKeys={editData.technology ? [editData.technology] : []}
+                    onSelectionChange={(keys) => {
+                      const selectedValue = [...keys][0];
                       setEditData((previous) => ({
                         ...previous,
-                        technology: event.target.value,
+                        technology: selectedValue,
                       }));
                     }}
-                    selectedKeys={[editData?.technology]}
                   >
                     {technologyChoices.map(([key, value]) => (
                       <SelectItem key={key} value={key}>
