@@ -9,6 +9,7 @@ import yaml
 from cryptography.fernet import InvalidToken
 from django.conf import settings
 from django.db import transaction
+from django.db.models import QuerySet
 from django.db.utils import DatabaseError
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -65,42 +66,65 @@ class ExecuteSelectedAPIView(APIView):
             copied_files.append({"path": rel_path, "name": name_extracted})
         return copied_files
 
+    def _validate_request(self, request: Request) -> tuple[Response | None, Project | None, QuerySet[TestFile] | None]:
+        """Validate the incoming request and return an error Response or the required data."""
+        if not request.user.is_authenticated:
+            return (
+                Response(
+                    {"error": "Authentication required to execute tests."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                ),
+                None,
+                None,
+            )
+
+        selected_ids = request.data.get("test_file_ids", [])
+        project_id = request.data.get("project_id")
+
+        if not selected_ids or not project_id:
+            return (
+                Response({"error": "Project and test file IDs are required."}, status=status.HTTP_400_BAD_REQUEST),
+                None,
+                None,
+            )
+
+        try:
+            project = Project.objects.get(id=project_id)
+            if project.owner != request.user:
+                return Response({"error": "You do not own this project."}, status=status.HTTP_403_FORBIDDEN), None, None
+        except Project.DoesNotExist:
+            return (
+                Response(
+                    {"error": "Project not found, make sure to create a project first."},
+                    status=status.HTTP_404_NOT_FOUND,
+                ),
+                None,
+                None,
+            )
+
+        test_files = TestFile.objects.filter(id__in=selected_ids)
+        if not test_files.exists():
+            return (
+                Response(
+                    {"error": "No valid test files found for the provided IDs."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                ),
+                None,
+                None,
+            )
+
+        return None, project, test_files
+
     def post(self, request: Request) -> Response:
         """Execute selected test files in the user-yaml directory using Taskyto.
 
         Create a TestCase instance and associate executed TestFiles with it.
         """
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Authentication required to execute tests."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+        error_response, project, test_files = self._validate_request(request)
+        if error_response:
+            return error_response
 
-        selected_ids = request.data.get("test_file_ids", [])
-        project_id = request.data.get("project_id")
         test_name = request.data.get("test_name")
-
-        if not selected_ids:
-            return Response({"error": "No test file IDs provided."}, status=status.HTTP_400_BAD_REQUEST)
-        if not project_id:
-            return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            project = Project.objects.get(id=project_id)
-            if project.owner != request.user:
-                return Response({"error": "You do not own this project."}, status=status.HTTP_403_FORBIDDEN)
-        except Project.DoesNotExist:
-            return Response(
-                {"error": "Project not found, make sure to create a project first."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        test_files = TestFile.objects.filter(id__in=selected_ids)
-        if not test_files.exists():
-            return Response(
-                {"error": "No valid test files found for the provided IDs."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         self._setup_api_key(project)
 
