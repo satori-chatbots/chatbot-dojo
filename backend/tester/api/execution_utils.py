@@ -1,5 +1,4 @@
-"""Utility functions for test execution.
-"""
+"""Utility functions for test execution."""
 
 import os
 
@@ -33,20 +32,14 @@ class ExecutionUtils:
                     conv_data = yaml_content.get("conversation")
 
                     if isinstance(conv_data, list):
-                        num_conversations = sum(
-                            item.get("number", 0)
-                            for item in conv_data
-                            if isinstance(item, dict)
-                        )
+                        num_conversations = sum(item.get("number", 0) for item in conv_data if isinstance(item, dict))
                     elif isinstance(conv_data, dict):
                         num_conversations = conv_data.get("number", 0)
                     else:
                         num_conversations = 0
 
                     total_conversations += num_conversations
-                    logger.info(
-                        f"Profile '{test_name}': {num_conversations} conversations"
-                    )
+                    logger.info(f"Profile '{test_name}': {num_conversations} conversations")
 
                 except Exception as e:
                     logger.error(f"Error processing YAML file: {e!s}")
@@ -72,9 +65,7 @@ class ExecutionUtils:
             "julie": "data/connectors/julie.yml",
             "kuki": "data/connectors/kuki.yml",
         }
-        return connector_map.get(
-            technology, "data/connectors/taskyto.yml"
-        )  # Default to taskyto
+        return connector_map.get(technology, "data/connectors/taskyto.yml")  # Default to taskyto
 
     @staticmethod
     def get_user_profile_name(test_case):

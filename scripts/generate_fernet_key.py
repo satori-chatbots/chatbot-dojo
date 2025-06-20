@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""
-Fernet Key Generation Script for Sensei Web
+"""Fernet Key Generation Script for Sensei Web
 
 This script generates a secure Fernet key for encrypting sensitive data
 and automatically creates/updates the .env file in the backend directory.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -33,10 +31,9 @@ def get_backend_dir():
         alt_backend_dir = script_dir / "backend"
         if alt_backend_dir.exists():
             return alt_backend_dir
-        else:
-            print("Error: Could not find backend directory!")
-            print(f"Looked for: {backend_dir} and {alt_backend_dir}")
-            return None
+        print("Error: Could not find backend directory!")
+        print(f"Looked for: {backend_dir} and {alt_backend_dir}")
+        return None
 
     return backend_dir
 
@@ -49,7 +46,7 @@ def update_env_file(backend_dir, fernet_key):
     env_content = {}
     if env_file.exists():
         try:
-            with open(env_file, "r") as f:
+            with open(env_file) as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
@@ -111,7 +108,7 @@ def main():
         print("\nYour Fernet key has been securely stored in the .env file.")
         print("Keep this file secure and do not commit it to version control!")
     else:
-        print(f"Failed to update .env file")
+        print("Failed to update .env file")
         print(f"You can manually add this to your .env file at {env_file_path}:")
         print(f"FERNET_SECRET_KEY={fernet_key}")
         sys.exit(1)

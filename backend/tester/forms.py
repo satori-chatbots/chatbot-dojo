@@ -17,9 +17,7 @@ class MultipleFileField(forms.FileField):
         super().__init__(*args, **kwargs)
 
     def clean(self, data, initial=None):
-        logger.debug(
-            f"MultipleFileField.clean called with data={data}, initial={initial}"
-        )
+        logger.debug(f"MultipleFileField.clean called with data={data}, initial={initial}")
         single_file_clean = super().clean
         if isinstance(data, (list, tuple)):
             result = [single_file_clean(d, initial) for d in data]

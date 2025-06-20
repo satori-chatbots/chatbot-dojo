@@ -88,20 +88,14 @@ class YamlValidator:
                 errors.extend(self._validate_conversation_section(data["conversation"]))
 
             if "user" in data and "conversation" in data:
-                errors.extend(
-                    self._validate_conversation_variable_dependencies(
-                        data["user"], data["conversation"]
-                    )
-                )
+                errors.extend(self._validate_conversation_variable_dependencies(data["user"], data["conversation"]))
 
             return errors
 
         except yaml.YAMLError as e:
             return [ValidationError(f"Invalid YAML syntax: {e!s}", "/")]
 
-    def _validate_conversation_variable_dependencies(
-        self, user: dict, conversation: dict
-    ) -> list[ValidationError]:
+    def _validate_conversation_variable_dependencies(self, user: dict, conversation: dict) -> list[ValidationError]:
         """Validate that sample() or all_combinations is only used when there are nested forwards."""
         errors = []
 
@@ -110,9 +104,7 @@ class YamlValidator:
         if "number" in conversation:
             num = conversation["number"]
             if isinstance(num, str):
-                if num == "all_combinations" or (
-                    isinstance(num, str) and num.startswith("sample(")
-                ):
+                if num == "all_combinations" or (isinstance(num, str) and num.startswith("sample(")):
                     using_combinations = True
 
         # If using combinations, check for nested forwards
@@ -129,11 +121,7 @@ class YamlValidator:
                         if isinstance(var_def, dict) and "function" in var_def:
                             func = var_def["function"]
                             # Check if this is a forward function referring to another variable
-                            if (
-                                func.startswith("forward(")
-                                and func.endswith(")")
-                                and func != "forward()"
-                            ):
+                            if func.startswith("forward(") and func.endswith(")") and func != "forward()":
                                 has_nested_forwards = True
                                 break
 
@@ -154,9 +142,7 @@ class YamlValidator:
 
         for field in self.required_top_level:
             if field not in data:
-                errors.append(
-                    ValidationError(f"Missing required field: {field}", f"/{field}")
-                )
+                errors.append(ValidationError(f"Missing required field: {field}", f"/{field}"))
 
         # Check nested required fields
         for path, fields in self.required_nested.items():
@@ -260,10 +246,7 @@ class YamlValidator:
                             has_personality = True
 
                             # Validate that personality points to a path
-                            if (
-                                not isinstance(item["personality"], str)
-                                or item["personality"] == ""
-                            ):
+                            if not isinstance(item["personality"], str) or item["personality"] == "":
                                 errors.append(
                                     ValidationError(
                                         "Personality must be a non-empty string path",
@@ -450,10 +433,7 @@ class YamlValidator:
                                 elif func.startswith("forward(") and func.endswith(")"):
                                     nested_length = len("forward(")
                                     nested_var = func[nested_length:-1]
-                                    if (
-                                        nested_var in defined_variables
-                                        or nested_var == ""
-                                    ):
+                                    if nested_var in defined_variables or nested_var == "":
                                         valid_function = True
                                     else:
                                         errors.append(
@@ -478,9 +458,7 @@ class YamlValidator:
                                 var_type = var_def["type"]
 
                                 # For numeric types with range definition
-                                if var_type in ["int", "float"] and isinstance(
-                                    data, dict
-                                ):
+                                if var_type in ["int", "float"] and isinstance(data, dict):
                                     # Check for min/max
                                     if "min" not in data:
                                         errors.append(
@@ -512,11 +490,7 @@ class YamlValidator:
                                             )
 
                                     # Check that either step or linspace is provided for float
-                                    if (
-                                        var_type == "float"
-                                        and "step" not in data
-                                        and "linspace" not in data
-                                    ):
+                                    if var_type == "float" and "step" not in data and "linspace" not in data:
                                         errors.append(
                                             ValidationError(
                                                 "Float range must define either 'step' or 'linspace'",
@@ -534,9 +508,7 @@ class YamlValidator:
                                         )
 
                                 # For list data, check that it's actually a list
-                                elif not isinstance(data, list) and not isinstance(
-                                    data, dict
-                                ):
+                                elif not isinstance(data, list) and not isinstance(data, dict):
                                     errors.append(
                                         ValidationError(
                                             "Data must be a list, range definition, or custom function",
@@ -574,9 +546,7 @@ class YamlValidator:
                                                             f"/user/goals/{i}/{var_name}/data/{j}",
                                                         )
                                                     )
-                                                elif (
-                                                    len(item) <= 5
-                                                ):  # "any()" has length 5
+                                                elif len(item) <= 5:  # "any()" has length 5
                                                     errors.append(
                                                         ValidationError(
                                                             "Empty any() function: Must contain instructions",
@@ -591,9 +561,7 @@ class YamlValidator:
                                                             f"/user/goals/{i}/{var_name}/data/{j}",
                                                         )
                                                     )
-                                        elif not isinstance(
-                                            item, (str, int, float, bool)
-                                        ):
+                                        elif not isinstance(item, (str, int, float, bool)):
                                             errors.append(
                                                 ValidationError(
                                                     f"Invalid data list item type: {type(item).__name__}. Must be a primitive value or any() function",
@@ -618,11 +586,7 @@ class YamlValidator:
 
                 func = var_info["function"]
                 # Check if this is a forward function with a variable reference
-                if (
-                    func.startswith("forward(")
-                    and func.endswith(")")
-                    and func != "forward()"
-                ):
+                if func.startswith("forward(") and func.endswith(")") and func != "forward()":
                     # Extract the referenced variable name
                     referenced_var = func[len("forward(") : -1].strip()
                     if referenced_var:
@@ -700,15 +664,11 @@ class YamlValidator:
         if "fallback" in chatbot:
             fallback = chatbot["fallback"]
             if not isinstance(fallback, str):
-                errors.append(
-                    ValidationError("Fallback must be a string", "/chatbot/fallback")
-                )
+                errors.append(ValidationError("Fallback must be a string", "/chatbot/fallback"))
 
         if "output" in chatbot:
             if not isinstance(chatbot["output"], list):
-                errors.append(
-                    ValidationError("Output must be a list", "/chatbot/output")
-                )
+                errors.append(ValidationError("Output must be a list", "/chatbot/output"))
             else:
                 for i, output_item in enumerate(chatbot["output"]):
                     # Each output item should be a dictionary with a single key (output name)
@@ -762,10 +722,7 @@ class YamlValidator:
                         )
 
                     # Validate output type
-                    if (
-                        "type" in output_def
-                        and output_def["type"] not in self.valid_output_types
-                    ):
+                    if "type" in output_def and output_def["type"] not in self.valid_output_types:
                         errors.append(
                             ValidationError(
                                 f"Invalid output type '{output_def['type']}'. Must be one of: {', '.join(self.valid_output_types)}",
@@ -786,9 +743,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_conversation_section(
-        self, conversation: dict
-    ) -> list[ValidationError]:
+    def _validate_conversation_section(self, conversation: dict) -> list[ValidationError]:
         """Validate conversation section configuration."""
         errors = []
 
@@ -846,11 +801,7 @@ class YamlValidator:
         if "max_cost" in conversation:
             cost = conversation["max_cost"]
             if not isinstance(cost, (int, float)) or cost <= 0:
-                errors.append(
-                    ValidationError(
-                        "Max cost must be a positive number", "/conversation/max_cost"
-                    )
-                )
+                errors.append(ValidationError("Max cost must be a positive number", "/conversation/max_cost"))
 
         # Validate goal_style
         if "goal_style" in conversation:
@@ -916,9 +867,7 @@ class YamlValidator:
                         pass
                     elif isinstance(all_answered, dict):
                         # Validate export field if present, is optional
-                        if "export" in all_answered and not isinstance(
-                            all_answered["export"], bool
-                        ):
+                        if "export" in all_answered and not isinstance(all_answered["export"], bool):
                             errors.append(
                                 ValidationError(
                                     "Export field must be a boolean",
@@ -1027,10 +976,7 @@ class YamlValidator:
                                                 f"/conversation/interaction_style/{i}/random/{j}",
                                             )
                                         )
-                                    elif (
-                                        random_style
-                                        not in self.valid_interaction_styles
-                                    ):
+                                    elif random_style not in self.valid_interaction_styles:
                                         errors.append(
                                             ValidationError(
                                                 f"Invalid style in random list: '{random_style}'",
@@ -1039,10 +985,7 @@ class YamlValidator:
                                         )
                                 elif isinstance(random_style, dict):
                                     # Handle nested styles within random list
-                                    if (
-                                        len(random_style) != 1
-                                        or "change language" not in random_style
-                                    ):
+                                    if len(random_style) != 1 or "change language" not in random_style:
                                         errors.append(
                                             ValidationError(
                                                 "Only 'change language' can be a nested dictionary in random list",

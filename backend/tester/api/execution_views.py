@@ -1,5 +1,4 @@
-"""API views for test execution endpoints.
-"""
+"""API views for test execution endpoints."""
 
 import os
 import shutil
@@ -90,17 +89,13 @@ class ExecuteSelectedAPIView(APIView):
         try:
             api_key_instance = project.api_key
             if api_key_instance is not None:
-                openai_api_key = cipher_suite.decrypt(
-                    api_key_instance.api_key_encrypted
-                ).decode()
+                openai_api_key = cipher_suite.decrypt(api_key_instance.api_key_encrypted).decode()
                 os.environ["OPENAI_API_KEY"] = openai_api_key
                 logger.info(f"API key successfully loaded for project {project.name}")
             else:
                 logger.warning(f"No API key found for project {project.name}")
         except Exception as e:
-            logger.error(
-                f"Error loading/decrypting API key for project {project.name}: {e}"
-            )
+            logger.error(f"Error loading/decrypting API key for project {project.name}: {e}")
 
         # Set executed dir to MEDIA / projects / user_{user_id} / project_{project_id} / profiles / {testcase_id}
         user_id = request.user.id
@@ -119,13 +114,9 @@ class ExecuteSelectedAPIView(APIView):
             # Create TestCase instance first to get its ID
             if test_name:
                 logger.info(f"Test name: {test_name}")
-                test_case = TestCase.objects.create(
-                    project=project, name=test_name, technology=technology
-                )
+                test_case = TestCase.objects.create(project=project, name=test_name, technology=technology)
             else:
-                test_case = TestCase.objects.create(
-                    project=project, technology=technology
-                )
+                test_case = TestCase.objects.create(project=project, technology=technology)
 
             # Set it to RUNNING
             test_case.status = "RUNNING"
@@ -142,9 +133,7 @@ class ExecuteSelectedAPIView(APIView):
 
             # Create a unique subdirectory for this TestCase within the profiles folder
             profiles_base_path = os.path.join(project_path, "profiles")
-            user_profiles_path = os.path.join(
-                profiles_base_path, f"testcase_{test_case.id}"
-            )
+            user_profiles_path = os.path.join(profiles_base_path, f"testcase_{test_case.id}")
             os.makedirs(user_profiles_path, exist_ok=True)
             logger.info(f"User profiles path: {user_profiles_path}")
 
@@ -156,9 +145,7 @@ class ExecuteSelectedAPIView(APIView):
                 file_path = test_file.file.path
                 copied_file_path = shutil.copy(file_path, user_profiles_path)
                 # Store relative path from MEDIA_ROOT for frontend access
-                copied_file_rel_path = os.path.relpath(
-                    copied_file_path, settings.MEDIA_ROOT
-                )
+                copied_file_rel_path = os.path.relpath(copied_file_path, settings.MEDIA_ROOT)
                 # Get the test_name from the YAML file
                 name_extracted = "Unknown"
                 if os.path.exists(file_path):
@@ -170,9 +157,7 @@ class ExecuteSelectedAPIView(APIView):
                         logger.error(f"Error loading YAML file: {e}")
 
                 # Save the path and name of the copied file
-                copied_files.append(
-                    {"path": copied_file_rel_path, "name": name_extracted}
-                )
+                copied_files.append({"path": copied_file_rel_path, "name": name_extracted})
 
             # Save the copied files to the TestCase instance
             test_case.copied_files = copied_files
@@ -278,9 +263,7 @@ def check_ongoing_generation(request, project_id):
     try:
         # Find any PENDING or RUNNING tasks for this project
         ongoing_task = (
-            ProfileGenerationTask.objects.filter(
-                project_id=project_id, status__in=["PENDING", "RUNNING"]
-            )
+            ProfileGenerationTask.objects.filter(project_id=project_id, status__in=["PENDING", "RUNNING"])
             .order_by("-created_at")
             .first()
         )

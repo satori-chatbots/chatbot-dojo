@@ -1,5 +1,4 @@
-"""Project Files API endpoints for handling personalities, rules, and types files.
-"""
+"""Project Files API endpoints for handling personalities, rules, and types files."""
 
 import os
 
@@ -24,9 +23,7 @@ class ProjectFilePermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Allow access if project is public or user is the owner
-        return obj.project.public or (
-            request.user.is_authenticated and request.user == obj.project.owner
-        )
+        return obj.project.public or (request.user.is_authenticated and request.user == obj.project.owner)
 
 
 class PersonalityFileViewSet(viewsets.ModelViewSet):
@@ -64,9 +61,7 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
         project_id = request.data.get("project")
 
         if not project_id:
-            return Response(
-                {"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
 
         project = get_object_or_404(Project, id=project_id)
 
@@ -79,9 +74,7 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            personality_file = PersonalityFile.objects.create(
-                file=uploaded_file, project=project
-            )
+            personality_file = PersonalityFile.objects.create(file=uploaded_file, project=project)
             created_files.append(personality_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -123,9 +116,7 @@ class RuleFileViewSet(viewsets.ModelViewSet):
         project_id = request.data.get("project")
 
         if not project_id:
-            return Response(
-                {"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
 
         project = get_object_or_404(Project, id=project_id)
 
@@ -180,9 +171,7 @@ class TypeFileViewSet(viewsets.ModelViewSet):
         project_id = request.data.get("project")
 
         if not project_id:
-            return Response(
-                {"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
 
         project = get_object_or_404(Project, id=project_id)
 
@@ -211,9 +200,7 @@ class ProjectConfigViewSet(viewsets.ModelViewSet):
         """Filter configs to only those owned by the user."""
         project_id = self.request.query_params.get("project_id", None)
         if project_id:
-            return ProjectConfig.objects.filter(
-                project_id=project_id, project__owner=self.request.user
-            )
+            return ProjectConfig.objects.filter(project_id=project_id, project__owner=self.request.user)
         return ProjectConfig.objects.filter(project__owner=self.request.user)
 
     def perform_create(self, serializer):

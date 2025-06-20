@@ -1,5 +1,4 @@
-"""Profile generation functionality.
-"""
+"""Profile generation functionality."""
 
 from ..models import ProfileGenerationTask
 from .base import logger
@@ -8,11 +7,8 @@ from .base import logger
 class ProfileGenerator:
     """Handles user profile generation tasks."""
 
-    def run_async_profile_generation(
-        self, task_id, technology, conversations, turns, user_id
-    ):
-        """Run profile generation asynchronously in a background thread.
-        """
+    def run_async_profile_generation(self, task_id, technology, conversations, turns, user_id):
+        """Run profile generation asynchronously in a background thread."""
         try:
             task = ProfileGenerationTask.objects.get(id=task_id)
             task.status = "RUNNING"
@@ -20,9 +16,7 @@ class ProfileGenerator:
             task.save()
 
             logger.info(f"Starting profile generation for task {task_id}")
-            logger.info(
-                f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}"
-            )
+            logger.info(f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}")
 
             # Update progress
             task.progress_percentage = 10

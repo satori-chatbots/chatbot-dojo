@@ -22,9 +22,7 @@ class ExecuteAPIView(APIView):
             )
 
         file_path = os.path.dirname(files.first().file.path)
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        )
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         extract_dir = os.path.dirname(file_path)
         script_path = os.path.join(base_dir, "user-simulator/src/autotest.py")
         os.chdir(os.path.dirname(os.path.dirname(script_path)))
@@ -43,7 +41,8 @@ class ExecuteAPIView(APIView):
                     "--extract",
                     extract_dir,
                 ],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
             )
             end_time = time.time()
@@ -51,15 +50,11 @@ class ExecuteAPIView(APIView):
             test_case_instance.execution_time = round(elapsed_time, 2)
             test_case_instance.result = result.stdout
             test_case_instance.save()
-            return Response(
-                {"result": test_case_instance.result}, status=status.HTTP_200_OK
-            )
+            return Response({"result": test_case_instance.result}, status=status.HTTP_200_OK)
         except Exception as e:
             test_case_instance.result = f"Error: {e}"
             test_case_instance.save()
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def show_results(request, pk):

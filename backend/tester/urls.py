@@ -8,15 +8,11 @@ router = routers.DefaultRouter()
 router.register(r"testcases", api.TestCaseViewSet, basename="testcase")
 router.register(r"testfiles", api.TestFileViewSet, basename="testfile")
 router.register(r"projects", api.ProjectViewSet, basename="project")
-router.register(
-    r"personalityfiles", api.PersonalityFileViewSet, basename="personalityfile"
-)
+router.register(r"personalityfiles", api.PersonalityFileViewSet, basename="personalityfile")
 router.register(r"rulefiles", api.RuleFileViewSet, basename="rulefile")
 router.register(r"typefiles", api.TypeFileViewSet, basename="typefile")
 router.register(r"projectconfigs", api.ProjectConfigViewSet, basename="projectconfig")
-router.register(
-    r"chatbottechnologies", api.ChatbotTechnologyViewSet, basename="chatbottechnology"
-)
+router.register(r"chatbottechnologies", api.ChatbotTechnologyViewSet, basename="chatbottechnology")
 router.register(r"globalreports", api.GlobalReportViewSet, basename="globalreport")
 router.register(r"testerrors", api.TestErrorViewSet, basename="testerror")
 router.register(r"profilereports", api.ProfileReportViewSet, basename="profilereport")

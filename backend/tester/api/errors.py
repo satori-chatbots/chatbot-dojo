@@ -1,5 +1,4 @@
-"""Test Errors API endpoints.
-"""
+"""Test Errors API endpoints."""
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -19,19 +18,13 @@ class TestErrorViewSet(viewsets.ModelViewSet):
         profile_report_id = request.query_params.get("profile_report_id", None)
 
         if global_report_ids is not None:
-            global_reports = GlobalReport.objects.filter(
-                id__in=global_report_ids.split(",")
-            )
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                global_report__in=global_reports
-            )
+            global_reports = GlobalReport.objects.filter(id__in=global_report_ids.split(","))
+            queryset = self.filter_queryset(self.get_queryset()).filter(global_report__in=global_reports)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
 
         if global_report_id is not None:
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                global_report=global_report_id
-            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(global_report=global_report_id)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         if profile_report_ids is not None:
@@ -41,9 +34,7 @@ class TestErrorViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         if profile_report_id is not None:
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                profile_report=profile_report_id
-            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(profile_report=profile_report_id)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         queryset = self.filter_queryset(self.get_queryset())

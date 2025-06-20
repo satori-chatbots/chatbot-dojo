@@ -1,5 +1,4 @@
-"""Projects API endpoints and related functionality.
-"""
+"""Projects API endpoints and related functionality."""
 
 import os
 import subprocess
@@ -46,23 +45,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if show_type == "owned":
             return Project.objects.filter(owner=self.request.user)
         # show_type == "all"
-        return Project.objects.filter(
-            models.Q(public=True) | models.Q(owner=self.request.user)
-        )
+        return Project.objects.filter(models.Q(public=True) | models.Q(owner=self.request.user))
 
     def perform_create(self, serializer):
         name = serializer.validated_data["name"]
         if Project.objects.filter(owner=self.request.user, name=name).exists():
-            raise serializers.ValidationError(
-                {"name": "Project name already exists for this user."}
-            )
+            raise serializers.ValidationError({"name": "Project name already exists for this user."})
         project = serializer.save(owner=self.request.user)
 
         # Get the path of the script
         base_dir = os.path.dirname(settings.BASE_DIR)
-        init_script_path = os.path.join(
-            base_dir, "user-simulator", "src", "init_project.py"
-        )
+        init_script_path = os.path.join(base_dir, "user-simulator", "src", "init_project.py")
 
         # Create path structure: projects/user_{user_id}/project_{project_id}/
         # This should be consistent with the MEDIA_ROOT structure
@@ -89,9 +82,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     ],
                     check=True,
                 )
-                print(
-                    f"Project {project.name} (ID: {project.id}) initialized successfully at {project_base_path}"
-                )
+                print(f"Project {project.name} (ID: {project.id}) initialized successfully at {project_base_path}")
 
                 # Update the run.yml file with project configuration
                 project.update_run_yml()
@@ -140,29 +131,23 @@ def validate_yaml(request):
     """Validate YAML content using the YamlValidator class."""
     yaml_content = request.data.get("content")
     if not yaml_content:
-        return Response(
-            {"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST)
 
     validator = YamlValidator()
     validation_errors = validator.validate(yaml_content)
 
     if validation_errors:
         formatted_errors = [
-            {"path": error.path, "message": error.message, "line": error.line}
-            for error in validation_errors
+            {"path": error.path, "message": error.message, "line": error.line} for error in validation_errors
         ]
-        return Response(
-            {"valid": False, "errors": formatted_errors}, status=status.HTTP_200_OK
-        )
+        return Response({"valid": False, "errors": formatted_errors}, status=status.HTTP_200_OK)
 
     return Response({"valid": True}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 def fetch_file_content(request, file_id):
-    """Fetch the content of a specific YAML file
-    """
+    """Fetch the content of a specific YAML file"""
     try:
         test_file = get_object_or_404(TestFile, id=file_id)
 
@@ -175,17 +160,13 @@ def fetch_file_content(request, file_id):
 
         # Check if file exists
         if not os.path.exists(test_file.file.path):
-            return Response(
-                {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Read the file content
         with open(test_file.file.path) as file:
             content = file.read()
 
-        return Response(
-            {"id": test_file.id, "name": test_file.name, "yamlContent": content}
-        )
+        return Response({"id": test_file.id, "name": test_file.name, "yamlContent": content})
 
     except Http404:
         return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -201,6 +182,4 @@ class TestFilePermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Allow access if project is public or user is the owner
-        return obj.project.public or (
-            request.user.is_authenticated and request.user == obj.project.owner
-        )
+        return obj.project.public or (request.user.is_authenticated and request.user == obj.project.owner)

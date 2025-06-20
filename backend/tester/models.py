@@ -31,23 +31,19 @@ class UserAPIKey(models.Model):
     It has a name, the encrypted API key and the user it belongs to
     """
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys"
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys")
     name = models.CharField(max_length=255)
     api_key_encrypted = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def set_api_key(self, api_key):
-        """Encrypt and store the provided API key.
-        """
+        """Encrypt and store the provided API key."""
         encrypted_key = cipher_suite.encrypt(api_key.encode())
         self.api_key_encrypted = encrypted_key.decode()
         self.save()
 
     def get_api_key(self):
-        """Decrypt and return the stored API key.
-        """
+        """Decrypt and return the stored API key."""
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
@@ -85,23 +81,20 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS = []
 
     def set_api_key(self):
-        """Encrypt and store the API Key
-        """
+        """Encrypt and store the API Key"""
         encrypted_key = cipher_suite.encrypt(self.api_key.encode())
         self.api_key = encrypted_key.decode()
         self.save()
 
     def get_api_key(self):
-        """Decrypt and return the API Key
-        """
+        """Decrypt and return the API Key"""
         if self.api_key_encrypted:
             return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
         return None
 
 
 def upload_to(instance, filename):
-    """Returns the path where the Test Files are stored (MEDIA_DIR/projects/user_{user_id}/project_{project_id}/profiles/file.yaml
-    """
+    """Returns the path where the Test Files are stored (MEDIA_DIR/projects/user_{user_id}/project_{project_id}/profiles/file.yaml"""
     # The test_name should have been set by the model's clean method
     # Get the user and project id
     user_id = instance.project.owner.id
@@ -110,24 +103,21 @@ def upload_to(instance, filename):
 
 
 def upload_to_personalities(instance, filename):
-    """Returns the path where the Personality files are stored
-    """
+    """Returns the path where the Personality files are stored"""
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return f"projects/user_{user_id}/project_{project_id}/personalities/{filename}"
 
 
 def upload_to_rules(instance, filename):
-    """Returns the path where the Rules files are stored
-    """
+    """Returns the path where the Rules files are stored"""
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
 
 
 def upload_to_types(instance, filename):
-    """Returns the path where the Types files are stored
-    """
+    """Returns the path where the Types files are stored"""
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
@@ -143,9 +133,7 @@ class TestFile(models.Model):
     file = models.FileField(upload_to=upload_to)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
-    project = models.ForeignKey(
-        "Project", related_name="test_files", on_delete=models.CASCADE
-    )
+    project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
     is_valid = models.BooleanField(
         default=False,
         help_text="Whether the YAML file is valid for execution in Sensei",
@@ -231,8 +219,7 @@ def delete_file_from_media(sender, instance, **kwargs):
 # Use post_save signal to set name after the file is saved
 @receiver(post_save, sender=TestFile)
 def set_name(sender, instance, created, **kwargs):
-    """Set the name of the TestFile to the "test_name" field in the YAML file
-    """
+    """Set the name of the TestFile to the "test_name" field in the YAML file"""
     # if created:
     #     # Extract 'test_name' from the YAML file
     #     try:
@@ -250,22 +237,17 @@ def set_name(sender, instance, created, **kwargs):
 
 
 class Project(models.Model):
-    """A Project is a collection of test cases, it uses one chatbot technology
-    """
+    """A Project is a collection of test cases, it uses one chatbot technology"""
 
     # Name of the project, must be unique for the user
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # A project can only have one chatbot technology, but a technology can be used in multiple projects
-    chatbot_technology = models.ForeignKey(
-        "ChatbotTechnology", related_name="projects", on_delete=models.CASCADE
-    )
+    chatbot_technology = models.ForeignKey("ChatbotTechnology", related_name="projects", on_delete=models.CASCADE)
 
     # Owner of the project
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name="projects", on_delete=models.CASCADE
-    )
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="projects", on_delete=models.CASCADE)
 
     # Visibility of the project
     # This makes the project visible, but not editable by other users
@@ -286,8 +268,7 @@ class Project(models.Model):
         return self.name
 
     def get_project_path(self):
-        """Get the full filesystem path to the project folder
-        """
+        """Get the full filesystem path to the project folder"""
         return os.path.join(
             settings.MEDIA_ROOT,
             "projects",
@@ -296,22 +277,16 @@ class Project(models.Model):
         )
 
     def get_run_yml_path(self):
-        """Get the path to the run.yml file for this project
-        """
+        """Get the path to the run.yml file for this project"""
         return os.path.join(self.get_project_path(), "run.yml")
 
     def update_run_yml(self):
-        """Update the run.yml file with current project configuration
-        """
+        """Update the run.yml file with current project configuration"""
         config_data = {
             "project_folder": f"project_{self.id}",
             "user_profile": "",
-            "technology": self.chatbot_technology.technology
-            if self.chatbot_technology
-            else "",
-            "connector": self.chatbot_technology.link
-            if self.chatbot_technology
-            else "",
+            "technology": self.chatbot_technology.technology if self.chatbot_technology else "",
+            "connector": self.chatbot_technology.link if self.chatbot_technology else "",
             "connector_parameters": {},
             "extract": "",
             "#execution_parameters": [
@@ -330,15 +305,11 @@ class Project(models.Model):
                 if self.config.connector:
                     config_data["connector"] = self.config.connector
                 if self.config.connector_parameters:
-                    config_data["connector_parameters"] = (
-                        self.config.connector_parameters
-                    )
+                    config_data["connector_parameters"] = self.config.connector_parameters
                 if self.config.extract_path:
                     config_data["extract"] = self.config.extract_path
                 if self.config.execution_parameters:
-                    config_data["execution_parameters"] = (
-                        self.config.execution_parameters
-                    )
+                    config_data["execution_parameters"] = self.config.execution_parameters
         except (AttributeError, TypeError):
             pass  # If config doesn't exist, use defaults
 
@@ -415,9 +386,7 @@ class TestCase(models.Model):
     # These are the user profiles used
     copied_files = models.JSONField(blank=True, null=True)
     # Test case belongs to only one project
-    project = models.ForeignKey(
-        Project, related_name="test_cases", on_delete=models.CASCADE
-    )
+    project = models.ForeignKey(Project, related_name="test_cases", on_delete=models.CASCADE)
     # Process ID of the test case, used to kill the process if needed
     process_id = models.IntegerField(blank=True, null=True)
     # Technology used
@@ -485,9 +454,7 @@ def delete_test_case_directories(sender, instance, **kwargs):
                 shutil.rmtree(profiles_path)
                 logger.info(f"Deleted test case profiles directory: {profiles_path}")
             except Exception as e:
-                logger.error(
-                    f"Error deleting test case profiles directory {profiles_path}: {e}"
-                )
+                logger.error(f"Error deleting test case profiles directory {profiles_path}: {e}")
 
         # Delete results directory if it exists
         if os.path.exists(results_path):
@@ -517,9 +484,7 @@ class GlobalReport(models.Model):
     max_execution_time = models.FloatField(blank=True, null=True)
     total_cost = models.FloatField(blank=True, null=True)
     # Test report belongs to only one test case
-    test_case = models.ForeignKey(
-        TestCase, related_name="global_reports", on_delete=models.CASCADE
-    )
+    test_case = models.ForeignKey(TestCase, related_name="global_reports", on_delete=models.CASCADE)
 
 
 class ProfileReport(models.Model):
@@ -551,20 +516,15 @@ class ProfileReport(models.Model):
     all_answered = models.JSONField(blank=True, null=True)
 
     # Test report belongs to only one global report
-    global_report = models.ForeignKey(
-        GlobalReport, related_name="profile_reports", on_delete=models.CASCADE
-    )
+    global_report = models.ForeignKey(GlobalReport, related_name="profile_reports", on_delete=models.CASCADE)
 
 
 class Conversation(models.Model):
-    """Conversation is a model to store the details generated by a conversation during a test case execution
-    """
+    """Conversation is a model to store the details generated by a conversation during a test case execution"""
 
     # Django Info
     id = models.AutoField(primary_key=True)
-    profile_report = models.ForeignKey(
-        ProfileReport, related_name="conversations", on_delete=models.CASCADE
-    )
+    profile_report = models.ForeignKey(ProfileReport, related_name="conversations", on_delete=models.CASCADE)
 
     # Basic Info
     name = models.CharField(max_length=255)
@@ -634,9 +594,7 @@ class ProfileGenerationTask(models.Model):
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
-    stage = models.CharField(
-        max_length=25, choices=STAGE_CHOICES, blank=True, null=True
-    )
+    stage = models.CharField(max_length=25, choices=STAGE_CHOICES, blank=True, null=True)
     progress_percentage = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -648,15 +606,12 @@ class ProfileGenerationTask(models.Model):
 
 
 class PersonalityFile(models.Model):
-    """Model to store personality files in the personalities/ folder
-    """
+    """Model to store personality files in the personalities/ folder"""
 
     file = models.FileField(upload_to=upload_to_personalities)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
-    project = models.ForeignKey(
-        "Project", related_name="personality_files", on_delete=models.CASCADE
-    )
+    project = models.ForeignKey("Project", related_name="personality_files", on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.name:
@@ -668,15 +623,12 @@ class PersonalityFile(models.Model):
 
 
 class RuleFile(models.Model):
-    """Model to store rule files in the rules/ folder
-    """
+    """Model to store rule files in the rules/ folder"""
 
     file = models.FileField(upload_to=upload_to_rules)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
-    project = models.ForeignKey(
-        "Project", related_name="rule_files", on_delete=models.CASCADE
-    )
+    project = models.ForeignKey("Project", related_name="rule_files", on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.name:
@@ -688,15 +640,12 @@ class RuleFile(models.Model):
 
 
 class TypeFile(models.Model):
-    """Model to store type files in the types/ folder
-    """
+    """Model to store type files in the types/ folder"""
 
     file = models.FileField(upload_to=upload_to_types)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True, null=True)
-    project = models.ForeignKey(
-        "Project", related_name="type_files", on_delete=models.CASCADE
-    )
+    project = models.ForeignKey("Project", related_name="type_files", on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.name:
@@ -708,12 +657,9 @@ class TypeFile(models.Model):
 
 
 class ProjectConfig(models.Model):
-    """Model to store the run.yml configuration for each project
-    """
+    """Model to store the run.yml configuration for each project"""
 
-    project = models.OneToOneField(
-        "Project", related_name="config", on_delete=models.CASCADE
-    )
+    project = models.OneToOneField("Project", related_name="config", on_delete=models.CASCADE)
     user_profile = models.CharField(max_length=255, blank=True, null=True)
     technology = models.CharField(max_length=255, blank=True, null=True)
     connector = models.CharField(max_length=255, blank=True, null=True)

@@ -1,5 +1,4 @@
-"""Reports API endpoints for Profile and Global reports.
-"""
+"""Reports API endpoints for Profile and Global reports."""
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -17,19 +16,13 @@ class ProfileReportViewSet(viewsets.ModelViewSet):
         global_report_id = request.query_params.get("global_report_id", None)
 
         if global_report_ids is not None:
-            global_reports = GlobalReport.objects.filter(
-                id__in=global_report_ids.split(",")
-            )
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                global_report__in=global_reports
-            )
+            global_reports = GlobalReport.objects.filter(id__in=global_report_ids.split(","))
+            queryset = self.filter_queryset(self.get_queryset()).filter(global_report__in=global_reports)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
 
         if global_report_id is not None:
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                global_report=global_report_id
-            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(global_report=global_report_id)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         queryset = self.filter_queryset(self.get_queryset())
@@ -47,18 +40,12 @@ class GlobalReportViewSet(viewsets.ModelViewSet):
 
         if test_cases is not None:
             test_cases = test_cases.split(",")
-            queryset = self.filter_queryset(self.get_queryset()).filter(
-                test_case__in=test_cases
-            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(test_case__in=test_cases)
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         if test_case is not None:
             # Get the global report for a single test case
-            queryset = (
-                self.filter_queryset(self.get_queryset())
-                .filter(test_case=test_case)
-                .first()
-            )
+            queryset = self.filter_queryset(self.get_queryset()).filter(test_case=test_case).first()
             serializer = self.get_serializer(queryset)
             return Response(serializer.data)
         queryset = self.filter_queryset(self.get_queryset())

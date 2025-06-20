@@ -1,5 +1,4 @@
-"""Base module with common imports and utilities for the tester API.
-"""
+"""Base module with common imports and utilities for the tester API."""
 
 import logging
 import os

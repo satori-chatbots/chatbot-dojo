@@ -1,5 +1,4 @@
-"""Authentication API endpoints for user management.
-"""
+"""Authentication API endpoints for user management."""
 
 from django.contrib.auth import authenticate
 from knox.models import AuthToken
@@ -82,9 +81,7 @@ class RegisterViewSet(viewsets.ModelViewSet):
         # Create token
         _, token = AuthToken.objects.create(user)
 
-        return Response(
-            {"user": serializer.data, "token": token}, status=status.HTTP_201_CREATED
-        )
+        return Response({"user": serializer.data, "token": token}, status=status.HTTP_201_CREATED)
 
 
 class UserAPIKeyViewSet(viewsets.ModelViewSet):

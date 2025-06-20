@@ -91,14 +91,10 @@ class ChatbotTechnologySerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     test_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    chatbot_technology = serializers.PrimaryKeyRelatedField(
-        queryset=ChatbotTechnology.objects.all()
-    )
+    chatbot_technology = serializers.PrimaryKeyRelatedField(queryset=ChatbotTechnology.objects.all())
     is_owner = serializers.SerializerMethodField()
     # Add the API key field to the serializer
-    api_key = serializers.PrimaryKeyRelatedField(
-        queryset=UserAPIKey.objects.all(), required=False, allow_null=True
-    )
+    api_key = serializers.PrimaryKeyRelatedField(queryset=UserAPIKey.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Project

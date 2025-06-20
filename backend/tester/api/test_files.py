@@ -1,5 +1,4 @@
-"""Test Files API endpoints.
-"""
+"""Test Files API endpoints."""
 
 import os
 
@@ -23,9 +22,7 @@ class TestFilePermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Allow access if project is public or user is the owner
-        return obj.project.public or (
-            request.user.is_authenticated and request.user == obj.project.owner
-        )
+        return obj.project.public or (request.user.is_authenticated and request.user == obj.project.owner)
 
 
 class TestFileViewSet(viewsets.ModelViewSet):
@@ -38,14 +35,10 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def update_file(self, request, pk=None):
         test_file = self.get_object()
         content = request.data.get("content")
-        ignore_validation_errors = str(
-            request.data.get("ignore_validation_errors", "false")
-        ).lower() in ["true", "1"]
+        ignore_validation_errors = str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
 
         if not content:
-            return Response(
-                {"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Initialize new_test_name with the current file name as a fallback
         new_test_name = test_file.name
@@ -85,17 +78,11 @@ class TestFileViewSet(viewsets.ModelViewSet):
             )
 
         # Check if the new name is already used in the project
-        conflict = (
-            TestFile.objects.filter(project=project, name=new_test_name)
-            .exclude(pk=test_file.pk)
-            .first()
-        )
+        conflict = TestFile.objects.filter(project=project, name=new_test_name).exclude(pk=test_file.pk).first()
         # If so, we dont allow the update
         if conflict:
             return Response(
-                {
-                    "error": f"A file named '{new_test_name}' already exists in this project."
-                },
+                {"error": f"A file named '{new_test_name}' already exists in this project."},
                 status=status.HTTP_409_CONFLICT,
             )
 
@@ -108,9 +95,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
         test_file.is_valid = is_valid
         test_file.save()
 
-        return Response(
-            {"message": "File updated successfully"}, status=status.HTTP_200_OK
-        )
+        return Response({"message": "File updated successfully"}, status=status.HTTP_200_OK)
 
     def list(self, request, *args, **kwargs):
         """Return a list of all the YAML files uploaded, if one is missing, delete the row in the DB.
@@ -162,9 +147,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
         if not isinstance(ids, list):
             ids = [ids]
         if not ids:
-            return Response(
-                {"error": "No IDs provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No IDs provided."}, status=status.HTTP_400_BAD_REQUEST)
 
         files = TestFile.objects.filter(id__in=ids)
         if not files.exists():
@@ -187,9 +170,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def upload(self, request):
         uploaded_files = request.FILES.getlist("file")
         project_id = request.data.get("project")
-        ignore_validation_errors = str(
-            request.data.get("ignore_validation_errors", "false")
-        ).lower() in ["true", "1"]
+        ignore_validation_errors = str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
         errors = []
         test_names = set()
         already_reported_test_names = set()
@@ -205,9 +186,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
             )
 
         # Collect all existing test_names in the project
-        existing_test_names = set(
-            TestFile.objects.filter(project=project).values_list("name", flat=True)
-        )
+        existing_test_names = set(TestFile.objects.filter(project=project).values_list("name", flat=True))
 
         # Process all files first
         for f in uploaded_files:
@@ -240,9 +219,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
             if not test_name:
                 is_valid = False
                 if not ignore_validation_errors:
-                    errors.append(
-                        {"file": f.name, "error": "test_name is missing in YAML."}
-                    )
+                    errors.append({"file": f.name, "error": "test_name is missing in YAML."})
                     continue
                 # When ignoring errors, use file name without extension
                 test_name = os.path.splitext(f.name)[0]
@@ -314,20 +291,14 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response(
-            {"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED
-        )
+        return Response({"uploaded_file_ids": saved_files}, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"], url_path="template")
     def get_template(self, request):
-        template_path = os.path.join(
-            settings.BASE_DIR, "tester/templates/yaml/default.yaml"
-        )
+        template_path = os.path.join(settings.BASE_DIR, "tester/templates/yaml/default.yaml")
         try:
             with open(template_path) as f:
                 template_content = f.read()
             return Response({"template": template_content})
         except FileNotFoundError:
-            return Response(
-                {"error": "Template file not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Template file not found"}, status=status.HTTP_404_NOT_FOUND)

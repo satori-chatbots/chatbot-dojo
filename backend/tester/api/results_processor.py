@@ -1,5 +1,4 @@
-"""Results processing and report generation functionality.
-"""
+"""Results processing and report generation functionality."""
 
 import os
 
@@ -54,14 +53,10 @@ class ResultsProcessor:
                 documents = list(yaml.safe_load_all(file))
 
             # Process global report
-            global_report_instance = self._process_global_report(
-                documents[0], test_case
-            )
+            global_report_instance = self._process_global_report(documents[0], test_case)
 
             # Process profile reports
-            self._process_profile_reports(
-                documents[1:], global_report_instance, results_path
-            )
+            self._process_profile_reports(documents[1:], global_report_instance, results_path)
 
             logger.info(f"Successfully processed results for test case {test_case.id}")
 
@@ -73,15 +68,9 @@ class ResultsProcessor:
 
     def _process_global_report(self, global_report, test_case):
         """Process global report and create GlobalReport instance"""
-        global_avg_response_time = global_report["Global report"][
-            "Average assistant response time"
-        ]
-        global_min_response_time = global_report["Global report"][
-            "Minimum assistant response time"
-        ]
-        global_max_response_time = global_report["Global report"][
-            "Maximum assistant response time"
-        ]
+        global_avg_response_time = global_report["Global report"]["Average assistant response time"]
+        global_min_response_time = global_report["Global report"]["Minimum assistant response time"]
+        global_max_response_time = global_report["Global report"]["Maximum assistant response time"]
 
         global_total_cost = global_report["Global report"]["Total Cost"]
 
@@ -110,22 +99,14 @@ class ResultsProcessor:
 
         return global_report_instance
 
-    def _process_profile_reports(
-        self, profile_reports, global_report_instance, results_path
-    ):
+    def _process_profile_reports(self, profile_reports, global_report_instance, results_path):
         """Process profile reports and create ProfileReport instances"""
         # Profile reports are in the documents from 1 to n
         for profile_report in profile_reports:
             profile_report_name = profile_report["Test name"]
-            profile_report_avg_response_time = profile_report[
-                "Average assistant response time"
-            ]
-            profile_report_min_response_time = profile_report[
-                "Minimum assistant response time"
-            ]
-            profile_report_max_response_time = profile_report[
-                "Maximum assistant response time"
-            ]
+            profile_report_avg_response_time = profile_report["Average assistant response time"]
+            profile_report_min_response_time = profile_report["Minimum assistant response time"]
+            profile_report_max_response_time = profile_report["Maximum assistant response time"]
 
             test_total_cost = profile_report["Total Cost"]
 
@@ -147,9 +128,7 @@ class ResultsProcessor:
 
             # Process conversations directory with NEW PATH
             # It is now in conversation_outputs/{profile_name}/{a date + hour}
-            conversations_dir = os.path.join(
-                results_path, "conversation_outputs", profile_report_name
-            )
+            conversations_dir = os.path.join(results_path, "conversation_outputs", profile_report_name)
             if os.path.exists(conversations_dir):
                 subdirs = os.listdir(conversations_dir)
                 if subdirs:
@@ -158,16 +137,12 @@ class ResultsProcessor:
                     logger.info(f"Conversations dir: {conversations_dir}")
 
                     # Get the first conversation file to extract common fields
-                    conv_files = sorted(
-                        [f for f in os.listdir(conversations_dir) if f.endswith(".yml")]
-                    )
+                    conv_files = sorted([f for f in os.listdir(conversations_dir) if f.endswith(".yml")])
                     logger.info(f"Conversation files: {conv_files}")
                     if conv_files:
                         logger.info(f"First conversation file: {conv_files[0]}")
                         first_conv_path = os.path.join(conversations_dir, conv_files[0])
-                        profile_data = self._process_profile_report_from_conversation(
-                            first_conv_path
-                        )
+                        profile_data = self._process_profile_report_from_conversation(first_conv_path)
 
                         # Update profile report with common fields
                         for field, value in profile_data.items():
@@ -179,9 +154,7 @@ class ResultsProcessor:
                             conv_path = os.path.join(conversations_dir, conv_file)
                             conv_data = self._process_conversation(conv_path)
 
-                            Conversation.objects.create(
-                                profile_report=profile_report_instance, **conv_data
-                            )
+                            Conversation.objects.create(profile_report=profile_report_instance, **conv_data)
 
             # Errors in the profile report
             test_errors = profile_report["Errors"]
@@ -207,23 +180,13 @@ class ResultsProcessor:
             # Extract conversation specs
             conv_specs = first_doc.get("conversation", {})
             interaction_style = next(
-                (
-                    item["interaction_style"]
-                    for item in conv_specs
-                    if "interaction_style" in item
-                ),
+                (item["interaction_style"] for item in conv_specs if "interaction_style" in item),
                 {},
             )
-            number = next(
-                (item["number"] for item in conv_specs if "number" in item), 0
-            )
-            steps = next(
-                (item["steps"] for item in conv_specs if "steps" in item), None
-            )
+            number = next((item["number"] for item in conv_specs if "number" in item), 0)
+            steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
             # Extract all_answered with limit if present
-            all_answered_item = next(
-                (item for item in conv_specs if "all_answered" in item), None
-            )
+            all_answered_item = next((item for item in conv_specs if "all_answered" in item), None)
             all_answered = None
             if all_answered_item:
                 if isinstance(all_answered_item["all_answered"], dict):
@@ -270,15 +233,9 @@ class ResultsProcessor:
                 "total_cost": float(main_doc.get("total_cost($)", 0)),
                 "conversation_time": float(docs[1].get("conversation time", 0)),
                 "response_times": docs[1].get("assistant response time", []),
-                "response_time_avg": docs[1]
-                .get("response time report", {})
-                .get("average", 0),
-                "response_time_max": docs[1]
-                .get("response time report", {})
-                .get("max", 0),
-                "response_time_min": docs[1]
-                .get("response time report", {})
-                .get("min", 0),
+                "response_time_avg": docs[1].get("response time report", {}).get("average", 0),
+                "response_time_max": docs[1].get("response time report", {}).get("max", 0),
+                "response_time_min": docs[1].get("response time report", {}).get("min", 0),
                 "interaction": docs[2].get("interaction", []),
             }
             return conversation_data

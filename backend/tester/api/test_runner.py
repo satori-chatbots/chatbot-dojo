@@ -1,12 +1,11 @@
-"""Test execution and management functionality.
-"""
+"""Test execution and management functionality."""
 
+import json
 import os
 import subprocess
 import threading
 import time
 import traceback
-import json
 
 import psutil
 
@@ -79,9 +78,7 @@ class TestRunner:
                     ]
                 )
 
-            logger.info(
-                f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}"
-            )
+            logger.info(f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}")
 
             start_time = time.time()
 
@@ -200,14 +197,10 @@ class TestRunner:
                     for child in proc.children(recursive=True):
                         child.terminate()
                     proc.terminate()
-                    logger.info(
-                        f"Terminated process {test_case.process_id} for test case {test_case.id}"
-                    )
+                    logger.info(f"Terminated process {test_case.process_id} for test case {test_case.id}")
                     return True
                 except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                    logger.warning(
-                        f"Could not terminate process {test_case.process_id}: {e}"
-                    )
+                    logger.warning(f"Could not terminate process {test_case.process_id}: {e}")
                     return True  # Still consider it successful since we set status to STOPPED
             return True
         return False
@@ -230,9 +223,7 @@ class TestRunner:
             try:
                 executed_conversations = 0
                 # NEW PATH: conversations are now in conversation_outputs/{profile}
-                conversation_outputs_dir = os.path.join(
-                    conversations_dir, "conversation_outputs"
-                )
+                conversation_outputs_dir = os.path.join(conversations_dir, "conversation_outputs")
                 if os.path.exists(conversation_outputs_dir):
                     for profile in local_test_case.profiles_names:
                         profile_dir = os.path.join(conversation_outputs_dir, profile)

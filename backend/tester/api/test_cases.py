@@ -1,5 +1,4 @@
-"""Test Cases API endpoints.
-"""
+"""Test Cases API endpoints."""
 
 from django.db import models
 from django.db.models import OuterRef, Q, Subquery, Sum
@@ -18,9 +17,7 @@ class TestCaseAccessPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Allow access if project is public or user is the owner
-        return obj.project.public or (
-            request.user.is_authenticated and request.user == obj.project.owner
-        )
+        return obj.project.public or (request.user.is_authenticated and request.user == obj.project.owner)
 
 
 class TestCaseViewSet(viewsets.ModelViewSet):
@@ -46,10 +43,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 
         # Filter based on permissions
         if self.request.user.is_authenticated:
-            return queryset.filter(
-                models.Q(project__public=True)
-                | models.Q(project__owner=self.request.user)
-            )
+            return queryset.filter(models.Q(project__public=True) | models.Q(project__owner=self.request.user))
         return queryset.filter(project__public=True)
 
     def get_object(self):
@@ -90,11 +84,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
         # Annotate each TestCase with total_cost and num_errors
         queryset = TestCase.objects.annotate(
             # total_cost comes from the first GlobalReport found for the TestCase
-            total_cost=Subquery(
-                GlobalReport.objects.filter(test_case=OuterRef("pk")).values(
-                    "total_cost"
-                )[:1]
-            ),
+            total_cost=Subquery(GlobalReport.objects.filter(test_case=OuterRef("pk")).values("total_cost")[:1]),
             # num_errors is the sum of all errors for that test case
             num_errors=Subquery(
                 TestError.objects.filter(global_report__test_case=OuterRef("pk"))
@@ -114,9 +104,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 
         # Add search filter
         if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | Q(id__icontains=search)
-            )
+            queryset = queryset.filter(Q(name__icontains=search) | Q(id__icontains=search))
 
         # Handle sorting (executed_at, total_cost, num_errors, etc.)
         # Make sure these match possible columns from the frontend
