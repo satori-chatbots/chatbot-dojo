@@ -1,39 +1,35 @@
 """Results processing and report generation functionality."""
 
-import os
+from pathlib import Path
 
 import yaml
 
-from ..models import (
-    Conversation,
-    GlobalReport,
-    ProfileReport,
-    TestError,
-)
+from tester.models import Conversation, GlobalReport, ProfileReport, TestError
+
 from .base import logger
 
 
 class ResultsProcessor:
     """Handles processing of test results and creation of database reports."""
 
-    def process_test_results(self, test_case, results_path):
-        """Process test results and create reports"""
+    def process_test_results(self, test_case: object, results_path: str) -> None:
+        """Process test results and create reports."""
         try:
             logger.info(f"Processing results for test case {test_case.id}")
 
             # NEW PATH: reports are now in reports/__stats_reports__
-            report_path = os.path.join(results_path, "reports", "__stats_reports__")
-            if not os.path.exists(report_path):
+            report_path = Path(results_path) / "reports" / "__stats_reports__"
+            if not report_path.exists():
                 test_case.status = "ERROR"
                 test_case.error_message = "Error accessing __stats_reports__ directory"
                 test_case.save()
                 return
 
-            report_file = None
+            report_file: str | None = None
             try:
-                for file in os.listdir(report_path):
-                    if file.startswith("report_") and file.endswith(".yml"):
-                        report_file = file
+                for file in report_path.iterdir():
+                    if file.name.startswith("report_") and file.name.endswith(".yml"):
+                        report_file = file.name
                         break
             except OSError:
                 test_case.status = "ERROR"
@@ -49,7 +45,7 @@ class ResultsProcessor:
 
             # In the documents there is a global, and then a profile_report for each test_case
             documents = []
-            with open(os.path.join(report_path, report_file)) as file:
+            with (report_path / report_file).open() as file:
                 documents = list(yaml.safe_load_all(file))
 
             # Process global report
@@ -60,14 +56,15 @@ class ResultsProcessor:
 
             logger.info(f"Successfully processed results for test case {test_case.id}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            # Catching broad Exception for logging and error reporting
             logger.error(f"Error processing test results: {e!s}")
             test_case.status = "ERROR"
             test_case.error_message = f"Error processing results: {e!s}"
             test_case.save()
 
-    def _process_global_report(self, global_report, test_case):
-        """Process global report and create GlobalReport instance"""
+    def _process_global_report(self, global_report: dict[str, object], test_case: object) -> GlobalReport:
+        """Process global report and create GlobalReport instance."""
         global_avg_response_time = global_report["Global report"]["Average assistant response time"]
         global_min_response_time = global_report["Global report"]["Minimum assistant response time"]
         global_max_response_time = global_report["Global report"]["Maximum assistant response time"]
@@ -88,7 +85,7 @@ class ResultsProcessor:
         for error in global_errors:
             error_code = error["error"]
             error_count = error["count"]
-            error_conversations = [conv for conv in error["conversations"]]
+            error_conversations = list(error["conversations"])
 
             TestError.objects.create(
                 code=error_code,
@@ -99,8 +96,8 @@ class ResultsProcessor:
 
         return global_report_instance
 
-    def _process_profile_reports(self, profile_reports, global_report_instance, results_path):
-        """Process profile reports and create ProfileReport instances"""
+    def _process_profile_reports(self, profile_reports: list[dict[str, object]], global_report_instance: GlobalReport, results_path: str) -> None:
+        """Process profile reports and create ProfileReport instances."""
         # Profile reports are in the documents from 1 to n
         for profile_report in profile_reports:
             profile_report_name = profile_report["Test name"]
@@ -128,20 +125,20 @@ class ResultsProcessor:
 
             # Process conversations directory with NEW PATH
             # It is now in conversation_outputs/{profile_name}/{a date + hour}
-            conversations_dir = os.path.join(results_path, "conversation_outputs", profile_report_name)
-            if os.path.exists(conversations_dir):
-                subdirs = os.listdir(conversations_dir)
+            conversations_dir = Path(results_path) / "conversation_outputs" / profile_report_name
+            if conversations_dir.exists():
+                subdirs = [d for d in conversations_dir.iterdir() if d.is_dir()]
                 if subdirs:
                     # Since we dont have the date and hour, we get the first directory (the only one)
-                    conversations_dir = os.path.join(conversations_dir, subdirs[0])
+                    conversations_dir = subdirs[0]
                     logger.info(f"Conversations dir: {conversations_dir}")
 
                     # Get the first conversation file to extract common fields
-                    conv_files = sorted([f for f in os.listdir(conversations_dir) if f.endswith(".yml")])
+                    conv_files = sorted([f.name for f in conversations_dir.iterdir() if f.is_file() and f.name.endswith(".yml")])
                     logger.info(f"Conversation files: {conv_files}")
                     if conv_files:
                         logger.info(f"First conversation file: {conv_files[0]}")
-                        first_conv_path = os.path.join(conversations_dir, conv_files[0])
+                        first_conv_path = conversations_dir / conv_files[0]
                         profile_data = self._process_profile_report_from_conversation(first_conv_path)
 
                         # Update profile report with common fields
@@ -151,7 +148,7 @@ class ResultsProcessor:
 
                         # Process each conversation file
                         for conv_file in conv_files:
-                            conv_path = os.path.join(conversations_dir, conv_file)
+                            conv_path = conversations_dir / conv_file
                             conv_data = self._process_conversation(conv_path)
 
                             Conversation.objects.create(profile_report=profile_report_instance, **conv_data)
@@ -162,7 +159,7 @@ class ResultsProcessor:
             for error in test_errors:
                 error_code = error["error"]
                 error_count = error["count"]
-                error_conversations = [conv for conv in error["conversations"]]
+                error_conversations = list(error["conversations"])
 
                 TestError.objects.create(
                     code=error_code,
@@ -171,9 +168,9 @@ class ResultsProcessor:
                     profile_report=profile_report_instance,
                 )
 
-    def _process_profile_report_from_conversation(self, conversation_file_path):
-        """Read common fields from first conversation file"""
-        with open(conversation_file_path) as file:
+    def _process_profile_report_from_conversation(self, conversation_file_path: Path) -> dict[str, object]:
+        """Read common fields from first conversation file."""
+        with conversation_file_path.open() as file:
             data = yaml.safe_load_all(file)
             first_doc = next(data)
 
@@ -216,16 +213,16 @@ class ResultsProcessor:
                 "all_answered": all_answered,
             }
 
-    def _process_conversation(self, conversation_file_path):
-        """Process individual conversation file"""
+    def _process_conversation(self, conversation_file_path: Path) -> dict[str, object]:
+        """Process individual conversation file."""
         # File name without extension
-        name = os.path.splitext(os.path.basename(conversation_file_path))[0]
-        with open(conversation_file_path) as file:
+        name = conversation_file_path.stem
+        with conversation_file_path.open() as file:
             docs = list(yaml.safe_load_all(file))
             main_doc = docs[0]
 
             # Split the document at the separator lines
-            conversation_data = {
+            return {
                 "name": name,
                 "ask_about": main_doc.get("ask_about", {}),
                 "data_output": main_doc.get("data_output", {}),
@@ -238,4 +235,3 @@ class ResultsProcessor:
                 "response_time_min": docs[1].get("response time report", {}).get("min", 0),
                 "interaction": docs[2].get("interaction", []),
             }
-            return conversation_data
