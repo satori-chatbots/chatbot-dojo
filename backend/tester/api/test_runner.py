@@ -148,13 +148,12 @@ class TestRunner:
         user_simulator_dir = str(Path(config.script_path).parent.parent)
 
         # Calculate total conversations for monitoring
-        self.execution_utils.calculate_total_conversations(test_case, config.project_path)
+        self.execution_utils.calculate_total_conversations(test_case)
 
         # Build config for command line arguments
         config_data = self.execution_utils.build_run_yml_config(
             project,
             test_case,
-            config.profiles_directory,
             config.results_path,
             config.technology,
             config.link,
