@@ -108,43 +108,51 @@ const ChatbotTechnologies = () => {
     event.preventDefault();
     setLoadingValidation(true);
 
-    // URL check
-    if (data.link && !/^https?:\/\//.test(data.link)) {
-      alert("Please enter a valid URL or leave it empty");
-      setLoadingValidation(false);
-      return false;
-    }
+    try {
+      // URL check
+      if (data.link && !/^https?:\/\//.test(data.link)) {
+        alert("Please enter a valid URL or leave it empty");
+        setLoadingValidation(false);
+        return false;
+      }
 
-    // Technology check
-    if (!data.technology) {
-      alert("Please select a technology");
-      setLoadingValidation(false);
-      return false;
-    }
+      // Technology check
+      if (!data.technology) {
+        alert("Please select a technology");
+        setLoadingValidation(false);
+        return false;
+      }
 
-    // Skip check only if the user truly didn't change their name
-    if (oldName && data.name === oldName) {
-      console.log(
-        "Skipping validation for name, name:",
-        data.name,
-        "originalName:",
-        oldName,
-      );
+      // Skip check only if the user truly didn't change their name
+      if (oldName && data.name === oldName) {
+        console.log(
+          "Skipping validation for name, name:",
+          data.name,
+          "originalName:",
+          oldName,
+        );
+        setValidationErrors({});
+        setLoadingValidation(false);
+        return true;
+      }
+
+      // Otherwise, check if the name exists
+      const existsResponse = await checkChatbotTechnologyName(data.name);
+      if (existsResponse.exists) {
+        setValidationErrors({ name: "Name already exists" });
+        setLoadingValidation(false);
+        return false;
+      }
+
       setValidationErrors({});
       setLoadingValidation(false);
       return true;
-    }
-
-    // Otherwise, check if the name exists
-    const existsResponse = await checkChatbotTechnologyName(data.name);
-    if (existsResponse.exists) {
-      setValidationErrors({ name: "Name already exists" });
+    } catch (error) {
+      console.error("Validation error:", error);
+      alert("An error occurred during validation. Please try again.");
       setLoadingValidation(false);
       return false;
     }
-
-    setValidationErrors({});
-    return true;
   };
 
   // Called after the form is submitted
