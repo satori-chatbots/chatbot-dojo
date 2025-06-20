@@ -6,6 +6,7 @@ import subprocess
 import threading
 import time
 import traceback
+import json
 
 import psutil
 
@@ -43,8 +44,8 @@ class TestRunner:
             # Calculate total conversations for monitoring
             self.execution_utils.calculate_total_conversations(test_case, project_path)
 
-            # Build the run.yml file before execution
-            self._build_run_yml(
+            # Build config for command line arguments
+            config_data = self.execution_utils.build_run_yml_config(
                 project,
                 test_case,
                 profiles_directory,
@@ -54,13 +55,29 @@ class TestRunner:
                 user_simulator_dir,
             )
 
-            # Execute the actual test script with the new command format
+            # Execute the actual test script with command line arguments
             cmd = [
                 "python",
                 "src/sensei_chat.py",
-                "--run_from_yaml",
+                "--technology",
+                config_data["technology"],
+                "--connector",
+                config_data["connector"],
+                "--project_path",
                 project_path,
+                "--user_profile",
+                config_data["user_profile"],
+                "--extract",
+                config_data["extract"],
+                "--verbose",
             ]
+            if config_data.get("connector_parameters"):
+                cmd.extend(
+                    [
+                        "--connector_parameters",
+                        json.dumps(config_data["connector_parameters"]),
+                    ]
+                )
 
             logger.info(
                 f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}"
@@ -194,36 +211,6 @@ class TestRunner:
                     return True  # Still consider it successful since we set status to STOPPED
             return True
         return False
-
-    def _build_run_yml(
-        self,
-        project,
-        test_case,
-        profiles_directory,
-        results_path,
-        technology,
-        link,
-        user_simulator_dir,
-    ):
-        """Build the run.yml file with the correct configuration"""
-        try:
-            # Build configuration using ExecutionUtils
-            config_data = self.execution_utils.build_run_yml_config(
-                project,
-                test_case,
-                profiles_directory,
-                results_path,
-                technology,
-                link,
-                user_simulator_dir,
-            )
-
-            # Write the configuration to file
-            self.execution_utils.write_run_yml(config_data, project)
-
-        except Exception as e:
-            logger.error(f"Error building run.yml: {e!s}")
-            raise
 
     def _monitor_conversations(
         self,
