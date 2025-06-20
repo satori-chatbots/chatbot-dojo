@@ -18,8 +18,8 @@ export function MyCustomToastProvider({ children }) {
     <MyCustomToastContext.Provider value={{ showToast, hideToast }}>
       {children}
       <MyCustomToast
-        message={toast.message}
         type={toast.type}
+        message={toast.message}
         onClose={hideToast}
       />
     </MyCustomToastContext.Provider>
