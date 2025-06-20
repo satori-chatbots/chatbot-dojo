@@ -1,4 +1,8 @@
-# API module for tester app
+"""API module for tester app.
+
+This package provides API views and viewsets for authentication, project management,
+test execution, reporting, and related functionalities in the tester application.
+"""
 
 # Import all ViewSets and API views from split modules
 from .auth import (
@@ -30,39 +34,29 @@ from .test_cases import TestCaseViewSet
 from .test_files import TestFileViewSet
 
 __all__ = [
-    # Auth
-    "LoginViewSet",
-    "UpdateProfileView",
-    "validate_token",
-    "RegisterViewSet",
-    "UserAPIKeyViewSet",
-    # Conversations
-    "ConversationViewSet",
-    # Errors
-    "TestErrorViewSet",
-    # Reports
-    "ProfileReportViewSet",
-    "GlobalReportViewSet",
-    # Technologies
-    "get_technology_choices",
     "ChatbotTechnologyViewSet",
-    # Test Cases
-    "TestCaseViewSet",
-    # Projects
-    "ProjectViewSet",
-    "validate_yaml",
-    "fetch_file_content",
-    # Project Files
-    "PersonalityFileViewSet",
-    "RuleFileViewSet",
-    "TypeFileViewSet",
-    "ProjectConfigViewSet",
-    # Test Files
-    "TestFileViewSet",
-    # Execution
+    "ConversationViewSet",
     "ExecuteSelectedAPIView",
-    "generate_profiles",
+    "GlobalReportViewSet",
+    "LoginViewSet",
+    "PersonalityFileViewSet",
+    "ProfileReportViewSet",
+    "ProjectConfigViewSet",
+    "ProjectViewSet",
+    "RegisterViewSet",
+    "RuleFileViewSet",
+    "TestCaseViewSet",
+    "TestErrorViewSet",
+    "TestFileViewSet",
+    "TypeFileViewSet",
+    "UpdateProfileView",
+    "UserAPIKeyViewSet",
     "check_generation_status",
     "check_ongoing_generation",
+    "fetch_file_content",
+    "generate_profiles",
+    "get_technology_choices",
     "stop_test_execution",
+    "validate_token",
+    "validate_yaml",
 ]

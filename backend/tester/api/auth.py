@@ -1,24 +1,33 @@
-"""Authentication API endpoints for user management.
-"""
+"""Authentication API endpoints for user management."""
+
+from typing import ClassVar
 
 from django.contrib.auth import authenticate
+from django.db.models.query import QuerySet
 from knox.models import AuthToken
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import UserAPIKey
-from ..serializers import LoginSerializer, RegisterSerializer, UserAPIKeySerializer
-from .base import User
+from tester.api.base import User
+from tester.models import UserAPIKey
+from tester.serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    UserAPIKeySerializer,
+)
 
 
 class LoginViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.AllowAny]
+    """Handles user login and token generation."""
+
+    permission_classes: ClassVar = [permissions.AllowAny]
     serializer_class = LoginSerializer
 
-    def create(self, request):
-        """Login the user"""
+    def create(self, request: Request) -> Response:
+        """Login the user."""
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid():
@@ -47,9 +56,12 @@ class LoginViewSet(viewsets.ViewSet):
 
 
 class UpdateProfileView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    """Handles user profile updates."""
 
-    def patch(self, request):
+    permission_classes: ClassVar = [permissions.IsAuthenticated]
+
+    def patch(self, request: Request) -> Response:
+        """Update the authenticated user's profile."""
         serializer = RegisterSerializer(
             request.user, data=request.data, partial=True
         )  # Use RegisterSerializer for updating
@@ -60,19 +72,22 @@ class UpdateProfileView(APIView):
 
 
 @api_view(["POST"])
-def validate_token(request):
-    """Validate if the provided token is valid and not expired"""
+def validate_token(request: Request) -> Response:
+    """Validate if the provided token is valid and not expired."""
     if request.user.is_authenticated:
         return Response({"valid": True}, status=status.HTTP_200_OK)
     return Response({"valid": False}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class RegisterViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.AllowAny]
+    """Handles user registration."""
+
+    permission_classes: ClassVar = [permissions.AllowAny]
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
 
-    def create(self, request):
+    def create(self, request: Request) -> Response:
+        """Create a new user and return an auth token."""
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -82,15 +97,15 @@ class RegisterViewSet(viewsets.ModelViewSet):
         # Create token
         _, token = AuthToken.objects.create(user)
 
-        return Response(
-            {"user": serializer.data, "token": token}, status=status.HTTP_201_CREATED
-        )
+        return Response({"user": serializer.data, "token": token}, status=status.HTTP_201_CREATED)
 
 
 class UserAPIKeyViewSet(viewsets.ModelViewSet):
-    serializer_class = UserAPIKeySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    """Manages API keys for the authenticated user."""
 
-    def get_queryset(self):
-        # Return API keys only for the current authenticated user.
+    serializer_class = UserAPIKeySerializer
+    permission_classes: ClassVar = [permissions.IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet[UserAPIKey]:
+        """Return API keys only for the current authenticated user."""
         return UserAPIKey.objects.filter(user=self.request.user)

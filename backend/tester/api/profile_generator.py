@@ -1,18 +1,25 @@
-"""Profile generation functionality.
-"""
+"""Profile generation functionality."""
 
-from ..models import ProfileGenerationTask
-from .base import logger
+import time
+from typing import Any
+
+from tester.api.base import logger
+from tester.models import ProfileGenerationTask
 
 
 class ProfileGenerator:
     """Handles user profile generation tasks."""
 
     def run_async_profile_generation(
-        self, task_id, technology, conversations, turns, user_id
-    ):
-        """Run profile generation asynchronously in a background thread.
-        """
+        self,
+        task_id: int,
+        technology: str,
+        conversations: int,
+        turns: int,
+        _user_id: Any,  # noqa: ANN401
+    ) -> None:
+        """Run profile generation asynchronously in a background thread."""
+        task = None
         try:
             task = ProfileGenerationTask.objects.get(id=task_id)
             task.status = "RUNNING"
@@ -20,9 +27,7 @@ class ProfileGenerator:
             task.save()
 
             logger.info(f"Starting profile generation for task {task_id}")
-            logger.info(
-                f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}"
-            )
+            logger.info(f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}")
 
             # Update progress
             task.progress_percentage = 10
@@ -48,8 +53,6 @@ class ProfileGenerator:
                 task.save()
 
                 # Simulate processing time
-                import time
-
                 time.sleep(2)
 
                 # Check if task was cancelled
@@ -65,12 +68,17 @@ class ProfileGenerator:
 
             logger.info(f"Profile generation completed for task {task_id}")
 
-        except Exception as e:
-            logger.error(f"Error in profile generation: {e!s}")
-            try:
-                task = ProfileGenerationTask.objects.get(id=task_id)
-                task.status = "FAILED"
-                task.error_message = str(e)
-                task.save()
-            except Exception:
-                pass
+        # Here it is helpful to catch everything
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error in profile generation for task {task_id}: {e!s}")
+            if task:
+                try:
+                    task.status = "FAILED"
+                    task.error_message = str(e)
+                    task.save()
+                # Here too
+                except Exception as update_exc:  # noqa: BLE001
+                    logger.critical(
+                        f"Failed to update task {task_id} to FAILED status after an error. "
+                        f"Initial error: {e!s}. Update error: {update_exc!s}"
+                    )

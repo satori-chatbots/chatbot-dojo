@@ -36,3 +36,6 @@ npm-install:
 
 npm-dev:
 	cd $(FRONTEND_DIR) && npm run dev
+
+env:
+	$(PYTHON) scripts/generate_env.py
