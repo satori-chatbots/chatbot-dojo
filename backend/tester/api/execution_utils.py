@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 @dataclass
 class RunYmlConfigParams:
     """Parameters for building the run.yml configuration."""
+
     project: Project
     test_case: TestCase
     results_path: str

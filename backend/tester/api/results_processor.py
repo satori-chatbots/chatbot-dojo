@@ -96,7 +96,9 @@ class ResultsProcessor:
 
         return global_report_instance
 
-    def _process_profile_reports(self, profile_reports: list[dict[str, object]], global_report_instance: GlobalReport, results_path: str) -> None:
+    def _process_profile_reports(
+        self, profile_reports: list[dict[str, object]], global_report_instance: GlobalReport, results_path: str
+    ) -> None:
         """Process profile reports and create ProfileReport instances."""
         # Profile reports are in the documents from 1 to n
         for profile_report in profile_reports:
@@ -134,7 +136,9 @@ class ResultsProcessor:
                     logger.info(f"Conversations dir: {conversations_dir}")
 
                     # Get the first conversation file to extract common fields
-                    conv_files = sorted([f.name for f in conversations_dir.iterdir() if f.is_file() and f.name.endswith(".yml")])
+                    conv_files = sorted(
+                        [f.name for f in conversations_dir.iterdir() if f.is_file() and f.name.endswith(".yml")]
+                    )
                     logger.info(f"Conversation files: {conv_files}")
                     if conv_files:
                         logger.info(f"First conversation file: {conv_files[0]}")
