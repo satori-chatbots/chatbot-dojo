@@ -86,7 +86,7 @@ function Dashboard() {
   // Initialize testCases state as empty
   const [testCases, setTestCases] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -349,6 +349,12 @@ function Dashboard() {
     }
   }, [handleFilterProjects, initialAutoFetchDone, selectedProjects]);
 
+  useEffect(() => {
+    if (!loadingProjects && !selectedProject) {
+      setLoading(false);
+    }
+  }, [loadingProjects, selectedProject]);
+
   /* ----------------------------- */
   /* Handlers for Project Selector */
   /* ----------------------------- */
@@ -409,13 +415,6 @@ function Dashboard() {
   /* Conditional Rendering for Projects */
   /* ---------------------------------- */
 
-  if (loadingProjects) {
-    return <div>Loading projects...</div>;
-  }
-
-  if (errorProjects) {
-    return <div>Error loading projects: {errorProjects}</div>;
-  }
 
   // Columns for the Test Cases Table
   const columns = [
@@ -531,29 +530,42 @@ function Dashboard() {
             selectionMode="multiple"
             selectedKeys={new Set(selectedProjects)}
             onSelectionChange={handleProjectChange}
+            isDisabled={loadingProjects || !!errorProjects}
           >
-            <SelectItem key="all" className="text-primary">
-              All Projects
-            </SelectItem>
-            {projects.length > 0 ? (
-              projects.map((project) => (
-                <SelectItem
-                  key={project.id}
-                  value={String(project.id)}
-                  textValue={project.name}
-                >
-                  <div className="flex justify-between items-center">
-                    <span>{project.name}</span>
-                    {project.public && (
-                      <span className="text-default-400">(Public)</span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))
-            ) : (
-              <SelectItem key="no-projects" disabled>
-                No Projects Available
+            {loadingProjects ? (
+              <SelectItem key="loading" isDisabled>
+                Loading projects...
               </SelectItem>
+            ) : errorProjects ? (
+              <SelectItem key="error" isDisabled>
+                Error: {errorProjects}
+              </SelectItem>
+            ) : (
+              <>
+                <SelectItem key="all" className="text-primary">
+                  All Projects
+                </SelectItem>
+                {projects.length > 0 ? (
+                  projects.map((project) => (
+                    <SelectItem
+                      key={project.id}
+                      value={String(project.id)}
+                      textValue={project.name}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>{project.name}</span>
+                        {project.public && (
+                          <span className="text-default-400">(Public)</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem key="no-projects" isDisabled>
+                    No Projects Available
+                  </SelectItem>
+                )}
+              </>
             )}
           </Select>
         </div>
