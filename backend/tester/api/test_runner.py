@@ -26,14 +26,14 @@ class TestRunner:
 
     def execute_test_background(
         self,
-        test_case_id,
-        script_path,
-        project_path,
-        profiles_directory,
-        results_path,
-        technology,
-        link,
-    ):
+        test_case_id: int,
+        script_path: str,
+        project_path: str,
+        profiles_directory: str,
+        results_path: str,
+        technology: str,
+        link: str,
+    ) -> None:
         """Execute the test in a background thread."""
         try:
             test_case = TestCase.objects.get(id=test_case_id)
@@ -85,7 +85,8 @@ class TestRunner:
             start_time = time.time()
 
             # Start the subprocess
-            process = subprocess.Popen(
+            # S603: Trusted source
+            process = subprocess.Popen(  # noqa: S603
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -173,7 +174,9 @@ class TestRunner:
                 test_case.save()
                 logger.error(f"Test execution failed: {stderr.decode().strip()}")
 
-        except Exception as e:
+        # BLE001: This is a top-level exception handler for a background thread.
+        # It's crucial to catch any unexpected error to prevent the thread from crashing silently.
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Error in background test execution: {e!s}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             try:
@@ -182,7 +185,8 @@ class TestRunner:
                 test_case.error_message = f"Error: {e}\n{traceback.format_exc()}"
                 test_case.execution_time = 0
                 test_case.save()
-            except Exception:
+            # BLE001: If updating the DB fails during critical error handling, we can't do much more.
+            except Exception:  # noqa: BLE001
                 logger.exception("Failed to update test case status to ERROR after a critical failure.")
 
     def stop_test_execution(self, test_case: TestCase) -> bool:
@@ -200,10 +204,10 @@ class TestRunner:
                         child.terminate()
                     proc.terminate()
                     logger.info(f"Terminated process {test_case.process_id} for test case {test_case.id}")
-                    return True
                 except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
                     logger.warning(f"Could not terminate process {test_case.process_id}: {e}")
-                    return True  # Still consider it successful since we set status to STOPPED
+                else:
+                    return True
             return True
         return False
 
@@ -243,7 +247,9 @@ class TestRunner:
                     if executed_conversations >= total_conversations:
                         logger.info("All conversations found. Exiting monitoring.")
                         break
-            except Exception as e:
+            # BLE001: Catching broad exception in a monitoring loop is acceptable
+            # to prevent the monitor from crashing due to transient filesystem issues.
+            except Exception as e:  # noqa: BLE001
                 logger.error(f"Error in monitor_conversations: {e}")
                 break
 
