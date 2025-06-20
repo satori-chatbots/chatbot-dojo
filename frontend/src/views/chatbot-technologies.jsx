@@ -151,7 +151,7 @@ const ChatbotTechnologies = () => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
 
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = formData;
 
     // Validate the form
     const isValid = await handleValidation(event, data);
@@ -199,7 +199,11 @@ const ChatbotTechnologies = () => {
   // Update technology
   const handleUpdate = async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = {
+      name: editData.name,
+      technology: editData.technology,
+      link: editData.link,
+    };
 
     // Now pass the stored originalName
     const isValid = await handleValidation(event, data, originalName);

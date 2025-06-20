@@ -27,10 +27,12 @@ export const createChatbotTechnology = async (data) => {
     });
     if (!response.ok) {
       const errorData = await response.json();
-      const errorMessage = errorData.link
-        ? errorData.link.join(", ")
-        : `HTTP error! status: ${response.status}`;
-      throw new Error(errorMessage);
+      const errorMessage = Object.entries(errorData)
+        .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
+        .join("; ");
+      throw new Error(
+        errorMessage || `HTTP error! status: ${response.status}`,
+      );
     }
     return await response.json();
   } catch (error) {
@@ -61,7 +63,13 @@ export const updateChatbotTechnology = async (id, data) => {
       body: JSON.stringify(data),
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json();
+      const errorMessage = Object.entries(errorData)
+        .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
+        .join("; ");
+      throw new Error(
+        errorMessage || `HTTP error! status: ${response.status}`,
+      );
     }
     return await response.json();
   } catch (error) {
