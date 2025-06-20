@@ -92,7 +92,7 @@ function Home() {
     turns: 5,
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [statusInterval, setStatusInterval] = useState();
+  const statusIntervalReference = useRef();
   const [generationStage, setGenerationStage] = useState("");
   const [generationProgress, setGenerationProgress] = useState(0);
 
@@ -119,18 +119,18 @@ function Home() {
   const pollGenerationStatus = useCallback(
     async (taskId) => {
       // Clear any existing interval
-      if (statusInterval) {
-        clearInterval(statusInterval);
+      if (statusIntervalReference.current) {
+        clearInterval(statusIntervalReference.current);
       }
 
       // Set up interval to check status
-      const interval = setInterval(async () => {
+      statusIntervalReference.current = setInterval(async () => {
         try {
           const status = await checkGenerationStatus(taskId);
 
           if (status.status === "COMPLETED") {
-            clearInterval(interval);
-            setStatusInterval(undefined);
+            clearInterval(statusIntervalReference.current);
+            statusIntervalReference.current = undefined;
             // Explicitly reload files when generation completes
             await reloadFiles();
             setIsGenerating(false);
@@ -139,8 +139,8 @@ function Home() {
               `Successfully generated ${status.generated_files} profiles!`,
             );
           } else if (status.status === "ERROR") {
-            clearInterval(interval);
-            setStatusInterval(undefined);
+            clearInterval(statusIntervalReference.current);
+            statusIntervalReference.current = undefined;
             setIsGenerating(false);
             showToast(
               "error",
@@ -152,16 +152,14 @@ function Home() {
             setGenerationProgress(status.progress || 0);
           }
         } catch {
-          clearInterval(interval);
-          setStatusInterval(undefined);
+          clearInterval(statusIntervalReference.current);
+          statusIntervalReference.current = undefined;
           setIsGenerating(false);
           showToast("error", "Error checking generation status");
         }
       }, 3000); // Check every 3 seconds
-
-      setStatusInterval(interval);
     },
-    [statusInterval, reloadFiles, showToast],
+    [reloadFiles, showToast],
   );
 
   const handleGenerateProfiles = async () => {
@@ -243,11 +241,11 @@ function Home() {
 
   useEffect(() => {
     return () => {
-      if (statusInterval) {
-        clearInterval(statusInterval);
+      if (statusIntervalReference.current) {
+        clearInterval(statusIntervalReference.current);
       }
     };
-  }, [statusInterval]);
+  }, []);
 
   const handleEditClick = (project) => {
     setEditProjectId(project.id);
@@ -277,19 +275,23 @@ function Home() {
     loadData();
   }, [showToast]);
 
-  // Load
+  // When the selected project changes, reload the files
+  useEffect(() => {
+    if (selectedProject) {
+      reloadFiles();
+    }
+    // We don't want to trigger this when reloadFiles changes, only when the project selection changes.
+  }, [selectedProject, reloadFiles]);
+
+  // When the list of projects changes, verify that the selected project still exists
   useEffect(() => {
     if (selectedProject && projects.length > 0) {
-      // Verify project still exists
-      const project = projects.find((p) => p.id === selectedProject.id);
-      if (project) {
-        setSelectedProject(project);
-        reloadFiles();
-      } else {
+      const projectExists = projects.some((p) => p.id === selectedProject.id);
+      if (!projectExists) {
         setSelectedProject(undefined);
       }
     }
-  }, [projects, reloadFiles, selectedProject, setSelectedProject]);
+  }, [projects, selectedProject, setSelectedProject]);
 
   /* ------------------------------------------------------ */
   /* ------------------ File Handlers --------------------- */

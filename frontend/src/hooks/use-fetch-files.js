@@ -23,9 +23,9 @@ function useFetchFiles(project_id) {
     loadFiles();
   }, [loadFiles]);
 
-  const reloadFiles = () => {
+  const reloadFiles = useCallback(() => {
     loadFiles();
-  };
+  }, [loadFiles]);
 
   return { files, loading, error, reloadFiles };
 }
