@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -15,6 +16,17 @@ from .base import logger
 if TYPE_CHECKING:
     # These are type-hint only imports to prevent circular dependencies
     from tester.models import Project, TestCase
+
+
+@dataclass
+class RunYmlConfigParams:
+    """Parameters for building the run.yml configuration."""
+    project: Project
+    test_case: TestCase
+    results_path: str
+    technology: str
+    link: str
+    user_simulator_dir: str
 
 
 class ExecutionUtils:
@@ -86,29 +98,22 @@ class ExecutionUtils:
         return f"testcase_{test_case.id}"
 
     @staticmethod
-    def build_run_yml_config(
-        project: Project,
-        test_case: TestCase,
-        results_path: str,
-        technology: str,
-        link: str,
-        user_simulator_dir: str,
-    ) -> dict[str, Any]:
+    def build_run_yml_config(params: RunYmlConfigParams) -> dict[str, Any]:
         """Build the run.yml configuration dictionary."""
         # Determine the connector path based on technology
-        connector_path = ExecutionUtils.get_connector_path(technology)
+        connector_path = ExecutionUtils.get_connector_path(params.technology)
 
         # Get the user profile path - this should be just the subdirectory name within profiles
-        user_profile = ExecutionUtils.get_user_profile_name(test_case)
+        user_profile = ExecutionUtils.get_user_profile_name(params.test_case)
 
         # Make extract path relative to user-simulator directory
-        extract_path = os.path.relpath(results_path, user_simulator_dir)
+        extract_path = os.path.relpath(params.results_path, params.user_simulator_dir)
 
         # Build the run.yml configuration
         config_data = {
-            "project_folder": f"project_{project.id}",
+            "project_folder": f"project_{params.project.id}",
             "user_profile": user_profile,
-            "technology": technology,
+            "technology": params.technology,
             "connector": connector_path,
             "connector_parameters": {},
             "extract": extract_path,
@@ -121,14 +126,14 @@ class ExecutionUtils:
         }
 
         # If there's a link, it might contain connector parameters
-        if link:
+        if params.link:
             # Try to parse link as connector parameters if it's JSON-like
             try:
-                connector_params = json.loads(link)
+                connector_params = json.loads(params.link)
                 config_data["connector_parameters"] = connector_params
             except (json.JSONDecodeError, ValueError):
                 # If it's not JSON, it might be a URL that needs to be added to connector parameters
-                config_data["connector_parameters"] = {"api_url": link}
+                config_data["connector_parameters"] = {"api_url": params.link}
 
         return config_data
 

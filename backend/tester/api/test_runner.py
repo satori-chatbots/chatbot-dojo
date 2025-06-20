@@ -13,7 +13,7 @@ import psutil
 from tester.models import TestCase
 
 from .base import logger
-from .execution_utils import ExecutionUtils
+from .execution_utils import ExecutionUtils, RunYmlConfigParams
 from .results_processor import ResultsProcessor
 
 
@@ -152,12 +152,14 @@ class TestRunner:
 
         # Build config for command line arguments
         config_data = self.execution_utils.build_run_yml_config(
-            project,
-            test_case,
-            config.results_path,
-            config.technology,
-            config.link,
-            user_simulator_dir,
+            RunYmlConfigParams(
+                project=project,
+                test_case=test_case,
+                results_path=config.results_path,
+                technology=config.technology,
+                link=config.link,
+                user_simulator_dir=user_simulator_dir,
+            )
         )
 
         # Build command
