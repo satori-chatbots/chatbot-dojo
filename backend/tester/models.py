@@ -64,7 +64,7 @@ class UserAPIKey(models.Model):
 class CustomUserManager(BaseUserManager):
     """Custom user manager for the CustomUser model."""
 
-    def create_user(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":
+    def create_user(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":  # noqa: ANN401
         """Create and save a user with the given email and password."""
         if not email:
             raise ValueError(EMAIL_REQUIRED_ERROR)
@@ -75,7 +75,7 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":
+    def create_superuser(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":  # noqa: ANN401
         """Create and save a superuser with the given email and password."""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -159,7 +159,7 @@ class TestFile(models.Model):
         """Return the base name of the file."""
         return Path(self.file.name).name
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TestFile instance."""
         super().save(*args, **kwargs)
 
@@ -222,7 +222,7 @@ class TestFile(models.Model):
 
 
 @receiver(post_delete, sender=TestFile)
-def delete_file_from_media(_sender: type[TestFile], instance: TestFile, **_kwargs: Any) -> None:
+def delete_file_from_media(_sender: type[TestFile], instance: TestFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the file from the media directory when the TestFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
@@ -230,7 +230,7 @@ def delete_file_from_media(_sender: type[TestFile], instance: TestFile, **_kwarg
 
 # Use post_save signal to set name after the file is saved
 @receiver(post_save, sender=TestFile)
-def set_name(sender: type[TestFile], instance: TestFile, created: bool, **kwargs: Any) -> None:
+def set_name(sender: type[TestFile], instance: TestFile, created: bool, **kwargs: Any) -> None:  # noqa: ANN401
     """Set the name of the TestFile to the "test_name" field in the YAML file."""
 
 
@@ -319,7 +319,7 @@ class Project(models.Model):
 
 
 @receiver(post_delete, sender=Project)
-def delete_project_directory(_sender: type[Project], instance: Project, **_kwargs: Any) -> None:
+def delete_project_directory(_sender: type[Project], instance: Project, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the entire project directory when the Project is deleted."""
     project_path = instance.get_project_path()
     if Path(project_path).exists():
@@ -408,7 +408,7 @@ class TestCase(models.Model):
         """Return a string representation of the TestCase."""
         return f"TestCase {self.id}"
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TestCase instance."""
         # Save the test case, if given name is null, set it to TestCase <id>
         super().save(*args, **kwargs)
@@ -420,7 +420,7 @@ class TestCase(models.Model):
 
 # Delete test case directories when TestCase object is deleted from database
 @receiver(post_delete, sender=TestCase)
-def delete_test_case_directories(_sender: type[TestCase], instance: TestCase, **_kwargs: Any) -> None:
+def delete_test_case_directories(_sender: type[TestCase], instance: TestCase, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the test case directories when the TestCase is deleted."""
     try:
         # Get the user and project IDs
@@ -639,7 +639,7 @@ class PersonalityFile(models.Model):
         """Return the base name of the file."""
         return Path(self.file.name).name
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the PersonalityFile instance."""
         if not self.name:
             self.name = Path(self.file.name).stem
@@ -658,7 +658,7 @@ class RuleFile(models.Model):
         """Return the base name of the file."""
         return Path(self.file.name).name
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the RuleFile instance."""
         if not self.name:
             self.name = Path(self.file.name).stem
@@ -677,7 +677,7 @@ class TypeFile(models.Model):
         """Return the base name of the file."""
         return Path(self.file.name).name
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TypeFile instance."""
         if not self.name:
             self.name = Path(self.file.name).stem
@@ -702,7 +702,9 @@ class ProjectConfig(models.Model):
 
 @receiver(post_delete, sender=PersonalityFile)
 def delete_personality_file_from_media(
-    _sender: type[PersonalityFile], instance: PersonalityFile, **_kwargs: Any
+    _sender: type[PersonalityFile],
+    instance: PersonalityFile,
+    **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Delete the file from the media directory when the PersonalityFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
@@ -710,14 +712,14 @@ def delete_personality_file_from_media(
 
 
 @receiver(post_delete, sender=RuleFile)
-def delete_rule_file_from_media(_sender: type[RuleFile], instance: RuleFile, **_kwargs: Any) -> None:
+def delete_rule_file_from_media(_sender: type[RuleFile], instance: RuleFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the file from the media directory when the RuleFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
 
 
 @receiver(post_delete, sender=TypeFile)
-def delete_type_file_from_media(_sender: type[TypeFile], instance: TypeFile, **_kwargs: Any) -> None:
+def delete_type_file_from_media(_sender: type[TypeFile], instance: TypeFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the file from the media directory when the TypeFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
