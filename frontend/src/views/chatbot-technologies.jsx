@@ -333,7 +333,7 @@ const ChatbotTechnologies = () => {
                     name="technology"
                     selectedKeys={formData.technology ? [formData.technology] : []}
                     onSelectionChange={(keys) => {
-                      const selectedValue = Array.from(keys)[0];
+                      const selectedValue = [...keys][0];
                       setFormData((previous) => ({
                         ...previous,
                         technology: selectedValue,
@@ -505,7 +505,7 @@ const ChatbotTechnologies = () => {
                     name="technology"
                     selectedKeys={editData.technology ? [editData.technology] : []}
                     onSelectionChange={(keys) => {
-                      const selectedValue = Array.from(keys)[0];
+                      const selectedValue = [...keys][0];
                       setEditData((previous) => ({
                         ...previous,
                         technology: selectedValue,
