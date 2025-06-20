@@ -1,17 +1,23 @@
 """Reports API endpoints for Profile and Global reports."""
 
+from typing import Any
+
 from rest_framework import viewsets
+from rest_framework.request import Request
 from rest_framework.response import Response
 
-from ..models import GlobalReport, ProfileReport
-from ..serializers import GlobalReportSerializer, ProfileReportSerializer
+from tester.models import GlobalReport, ProfileReport
+from tester.serializers import GlobalReportSerializer, ProfileReportSerializer
 
 
 class ProfileReportViewSet(viewsets.ModelViewSet):
+    """API ViewSet for managing ProfileReports."""
+
     queryset = ProfileReport.objects.all()
     serializer_class = ProfileReportSerializer
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
+        """List ProfileReports, optionally filtered by GlobalReport IDs."""
         global_report_ids = request.query_params.get("global_report_ids", None)
         global_report_id = request.query_params.get("global_report_id", None)
 
@@ -31,10 +37,13 @@ class ProfileReportViewSet(viewsets.ModelViewSet):
 
 
 class GlobalReportViewSet(viewsets.ModelViewSet):
+    """API ViewSet for managing GlobalReports."""
+
     queryset = GlobalReport.objects.all()
     serializer_class = GlobalReportSerializer
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
+        """List GlobalReports, optionally filtered by TestCase IDs."""
         test_cases = request.query_params.get("test_cases_ids", None)
         test_case = request.query_params.get("test_case_id", None)
 
