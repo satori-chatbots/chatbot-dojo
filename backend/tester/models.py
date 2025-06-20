@@ -184,8 +184,6 @@ class TestFile(models.Model):
                     TestFile.objects.filter(pk=self.pk).update(is_valid=False)
                     return
 
-                # Get the file extension
-                ext = Path(self.file.name).suffix
                 # Create new filename and change the extension to yaml
                 # To avoid having yaml and yml files with the same name
                 new_filename = f"{test_name}.yaml"
@@ -224,7 +222,7 @@ class TestFile(models.Model):
 
 
 @receiver(post_delete, sender=TestFile)
-def delete_file_from_media(sender: type[TestFile], instance: TestFile, **kwargs: Any) -> None:
+def delete_file_from_media(_sender: type[TestFile], instance: TestFile, **_kwargs: Any) -> None:
     """Delete the file from the media directory when the TestFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
@@ -321,7 +319,7 @@ class Project(models.Model):
 
 
 @receiver(post_delete, sender=Project)
-def delete_project_directory(sender: type[Project], instance: Project, **kwargs: Any) -> None:
+def delete_project_directory(_sender: type[Project], instance: Project, **_kwargs: Any) -> None:
     """Delete the entire project directory when the Project is deleted."""
     project_path = instance.get_project_path()
     if Path(project_path).exists():
@@ -422,7 +420,7 @@ class TestCase(models.Model):
 
 # Delete test case directories when TestCase object is deleted from database
 @receiver(post_delete, sender=TestCase)
-def delete_test_case_directories(sender: type[TestCase], instance: TestCase, **kwargs: Any) -> None:
+def delete_test_case_directories(_sender: type[TestCase], instance: TestCase, **_kwargs: Any) -> None:
     """Delete the test case directories when the TestCase is deleted."""
     try:
         # Get the user and project IDs
@@ -703,21 +701,23 @@ class ProjectConfig(models.Model):
 
 
 @receiver(post_delete, sender=PersonalityFile)
-def delete_personality_file_from_media(sender: type[PersonalityFile], instance: PersonalityFile, **kwargs: Any) -> None:
+def delete_personality_file_from_media(
+    _sender: type[PersonalityFile], instance: PersonalityFile, **_kwargs: Any
+) -> None:
     """Delete the file from the media directory when the PersonalityFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
 
 
 @receiver(post_delete, sender=RuleFile)
-def delete_rule_file_from_media(sender: type[RuleFile], instance: RuleFile, **kwargs: Any) -> None:
+def delete_rule_file_from_media(_sender: type[RuleFile], instance: RuleFile, **_kwargs: Any) -> None:
     """Delete the file from the media directory when the RuleFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
 
 
 @receiver(post_delete, sender=TypeFile)
-def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **kwargs: Any) -> None:
+def delete_type_file_from_media(_sender: type[TypeFile], instance: TypeFile, **_kwargs: Any) -> None:
     """Delete the file from the media directory when the TypeFile is deleted."""
     if instance.file and Path(instance.file.path).is_file():
         Path(instance.file.path).unlink()
