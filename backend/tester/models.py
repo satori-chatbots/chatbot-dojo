@@ -20,8 +20,11 @@ from .validation_script import YamlValidator
 # Configure logger
 logger = logging.getLogger(__name__)
 
-# Load FERNET SECRET KEY (it was loaded in the settings.py before)
+# Error messages
 FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
+EMAIL_REQUIRED_ERROR = "Email is a required field"
+
+# Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
 if not FERNET_KEY:
     raise ValueError(FERNET_KEY_ERROR)
@@ -64,7 +67,7 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, email: str, password: str | None = None, **extra_fields: Any) -> "CustomUser":
         """Create and save a user with the given email and password."""
         if not email:
-            raise ValueError("Email is a required field")
+            raise ValueError(EMAIL_REQUIRED_ERROR)
 
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
@@ -313,8 +316,8 @@ class Project(models.Model):
             with Path(run_yml_path).open("w") as f:
                 yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
             logger.info("Updated run.yml at %s", run_yml_path)
-        except yaml.YAMLError as e:
-            logger.exception("Error creating run.yml: %s", e)
+        except yaml.YAMLError:
+            logger.exception("Error creating run.yml")
 
 
 @receiver(post_delete, sender=Project)
@@ -325,8 +328,8 @@ def delete_project_directory(sender: type[Project], instance: Project, **kwargs:
         try:
             shutil.rmtree(project_path)
             logger.info("Deleted project directory: %s", project_path)
-        except OSError as e:
-            logger.exception("Error deleting project directory %s: %s", project_path, e)
+        except OSError:
+            logger.exception("Error deleting project directory %s", project_path)
 
 
 TECHNOLOGY_CHOICES = [
@@ -451,19 +454,19 @@ def delete_test_case_directories(sender: type[TestCase], instance: TestCase, **k
             try:
                 shutil.rmtree(profiles_path)
                 logger.info("Deleted test case profiles directory: %s", profiles_path)
-            except OSError as e:
-                logger.exception("Error deleting test case profiles directory %s: %s", profiles_path, e)
+            except OSError:
+                logger.exception("Error deleting test case profiles directory %s", profiles_path)
 
         # Delete results directory if it exists
         if results_path.exists():
             try:
                 shutil.rmtree(results_path)
                 logger.info("Deleted test case results directory: %s", results_path)
-            except OSError as e:
-                logger.exception("Error deleting test case results directory %s: %s", results_path, e)
+            except OSError:
+                logger.exception("Error deleting test case results directory %s", results_path)
 
-    except Exception as e:
-        logger.exception("Error in delete_test_case_directories signal: %s", e)
+    except Exception:
+        logger.exception("Error in delete_test_case_directories signal")
 
 
 class GlobalReport(models.Model):
