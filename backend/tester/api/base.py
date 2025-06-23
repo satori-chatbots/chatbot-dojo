@@ -75,7 +75,7 @@ def get_available_models(request: Request) -> Response:
 
 
 @api_view(["GET"])
-def get_all_providers(request: Request) -> Response:  # noqa: ARG001
+def get_all_providers(request: Request) -> Response:
     """Get all available LLM providers."""
     providers = [
         {"id": "openai", "name": "OpenAI"},

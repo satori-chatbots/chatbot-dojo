@@ -80,6 +80,7 @@ select = [
     "ALL"
 ]
 ignore = [
+    "ARG001", # It gives false positives with Django
     "E501", # line too long
     # "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", # Common missing docstring rules
     "COM812", # Creates incompatibility with formatter
