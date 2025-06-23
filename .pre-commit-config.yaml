@@ -6,10 +6,10 @@ repos:
       # Run the linter
       - id: ruff
         args: [--fix]
-        files: ^backend/.*\.py$
+        files: ^(backend|scripts)/.*\.py$
       # Run the formatter
       - id: ruff-format
-        files: ^backend/.*\.py$
+        files: ^(backend|scripts)/.*\.py$
 
   # MyPy for Python type checking (backend only)
   - repo: https://github.com/pre-commit/mirrors-mypy

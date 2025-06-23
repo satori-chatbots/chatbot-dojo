@@ -28,10 +28,10 @@ jobs:
           uv add --dev ruff mypy
 
       - name: Run ruff linting
-        run: uv run ruff check .
+        run: uv run ruff check backend
 
       - name: Run ruff formatting check
-        run: uv run ruff format --check .
+        run: uv run ruff format --check backend
 
       - name: Run type checking with mypy
         run: uv run mypy backend --ignore-missing-imports --no-strict-optional
