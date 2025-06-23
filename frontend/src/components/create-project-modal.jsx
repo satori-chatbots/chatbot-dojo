@@ -88,7 +88,9 @@ const CreateProjectModal = ({
     }));
 
     // Find the selected API key to get its provider
-    const selectedApiKey = apiKeys.find((key) => key.id === parseInt(apiKeyId));
+    const selectedApiKey = apiKeys.find(
+      (key) => key.id === Number.parseInt(apiKeyId),
+    );
     if (selectedApiKey && selectedApiKey.provider) {
       setLoadingModels(true);
       try {

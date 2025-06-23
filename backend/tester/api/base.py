@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 # Get the latest version of the user model
@@ -60,7 +61,7 @@ LLM_MODELS = {
 
 
 @api_view(["GET"])
-def get_available_models(request):
+def get_available_models(request: Request) -> Response:
     """Get available LLM models for a specific provider."""
     provider = request.query_params.get("provider")
 
@@ -74,7 +75,7 @@ def get_available_models(request):
 
 
 @api_view(["GET"])
-def get_all_providers(request):
+def get_all_providers(request: Request) -> Response:  # noqa: ARG001
     """Get all available LLM providers."""
     providers = [
         {"id": "openai", "name": "OpenAI"},

@@ -39,7 +39,7 @@ class UserAPIKey(models.Model):
     It has a name, the encrypted API key and the user it belongs to
     """
 
-    PROVIDER_CHOICES = [
+    PROVIDER_CHOICES: ClassVar[list[tuple[str, str]]] = [
         ("openai", "OpenAI"),
         ("gemini", "Google Gemini"),
     ]

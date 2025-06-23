@@ -11,6 +11,31 @@ import {
 } from "@heroui/react";
 import { Edit, Trash, Check } from "lucide-react";
 
+// Helper function to get LLM model display info
+const getLLMModelDisplay = (project) => {
+  if (!project.api_key || !project.llm_model) {
+    return {
+      modelName: "⚠️ No model configured",
+      providerName: "",
+      isEmpty: true,
+    };
+  }
+
+  // You could fetch this from API if needed, but for now we'll infer from model name
+  const provider = project.llm_provider || "Unknown";
+  const providerDisplay =
+    provider === "openai"
+      ? "OpenAI"
+      : provider === "gemini"
+        ? "Google Gemini"
+        : provider;
+
+  // Get a user-friendly model name (we could also fetch this from the models API)
+  const modelName = project.llm_model;
+
+  return { modelName, providerName: providerDisplay, isEmpty: false };
+};
+
 const ProjectsList = ({
   projects,
   technologies,
@@ -33,31 +58,6 @@ const ProjectsList = ({
     column: "name",
     direction: "ascending",
   });
-
-  // Helper function to get LLM model display info
-  const getLLMModelDisplay = (project) => {
-    if (!project.api_key || !project.llm_model) {
-      return {
-        modelName: "⚠️ No model configured",
-        providerName: "",
-        isEmpty: true,
-      };
-    }
-
-    // You could fetch this from API if needed, but for now we'll infer from model name
-    const provider = project.llm_provider || "Unknown";
-    const providerDisplay =
-      provider === "openai"
-        ? "OpenAI"
-        : provider === "gemini"
-          ? "Google Gemini"
-          : provider;
-
-    // Get a user-friendly model name (we could also fetch this from the models API)
-    const modelName = project.llm_model;
-
-    return { modelName, providerName: providerDisplay, isEmpty: false };
-  };
 
   const sortedProjects = useMemo(() => {
     const { column, direction } = sortDescriptor;
