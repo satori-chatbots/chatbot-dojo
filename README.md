@@ -182,3 +182,47 @@ You can now access the webpage at [http://localhost:5173/](http://localhost:5173
 
 - Check that `.env` file exists in `backend` directory
 - Verify the file has the correct `FERNET_SECRET_KEY` format
+
+## Development Setup
+
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality and consistency. The hooks include:
+
+- **Ruff** for Python linting and formatting (backend only)
+- **ESLint** for JavaScript/TypeScript linting (frontend)
+- **General hooks** for trailing whitespace, end-of-file fixes, and merge conflict detection
+
+#### Installation
+
+1. Install pre-commit using UV:
+   ```bash
+   uv add --group dev pre-commit
+   ```
+
+2. Install the git hooks:
+   ```bash
+   uv run pre-commit install
+   ```
+
+3. Ensure frontend dependencies are installed:
+   ```bash
+   cd frontend && npm install
+   ```
+
+#### Usage
+
+Pre-commit hooks will run automatically on `git commit`. You can also run them manually:
+
+```bash
+# Run on all files
+uv run pre-commit run --all-files
+
+# Run on staged files only
+uv run pre-commit run
+```
+
+To skip pre-commit hooks temporarily (not recommended):
+```bash
+git commit --no-verify
+```

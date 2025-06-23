@@ -1,0 +1,33 @@
+repos:
+  # Ruff for Python linting and formatting (backend only)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        files: ^backend/.*\.py$
+      # Run the formatter
+      - id: ruff-format
+        files: ^backend/.*\.py$
+
+  # ESLint for JavaScript/TypeScript linting (using npm)
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+
+  # General hooks for all files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^frontend/package-lock\.json$
+      - id: end-of-file-fixer
+        exclude: ^frontend/package-lock\.json$
+      - id: check-merge-conflict
+      - id: check-added-large-files
