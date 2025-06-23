@@ -333,6 +333,12 @@ const EditProjectModal = ({
                   API Keys are optional but recommended for authentication.
                 </p>
               )}
+              {apiKeys.length > 0 && (
+                <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800 mt-2">
+                  ℹ️ <strong>Important:</strong> API provider must match the
+                  provider in your user profiles.
+                </div>
+              )}
             </div>
 
             {formData.apiKey && (
@@ -375,10 +381,9 @@ const EditProjectModal = ({
                   </p>
                 )}
                 {availableModels.length > 0 && (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800 mt-2">
-                    ℹ️ <strong>Important:</strong> API provider must match the
-                    provider in your user profiles.
-                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This model will be used for TRACER (profile generation).
+                  </p>
                 )}
               </div>
             )}
