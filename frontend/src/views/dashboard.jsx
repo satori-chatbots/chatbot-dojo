@@ -263,7 +263,9 @@ function Dashboard() {
           });
 
           // Update reports and errors if status changed
-          const runningTestCaseIds = new Set(runningTestCases.map((tc) => tc.id));
+          const runningTestCaseIds = new Set(
+            runningTestCases.map((tc) => tc.id),
+          );
           const newlyCompletedTestCases = updatedTestCases.filter(
             (tc) =>
               runningTestCaseIds.has(tc.id) &&
@@ -284,14 +286,18 @@ function Dashboard() {
                 await fetchTestErrorsByGlobalReports(globalReportIds);
 
               setGlobalReports((previous) => {
-                const updatedReportIds = new Set(fetchedReports.map((r) => r.id));
+                const updatedReportIds = new Set(
+                  fetchedReports.map((r) => r.id),
+                );
                 const filtered = previous.filter(
                   (r) => !updatedReportIds.has(r.id),
                 );
                 return [...filtered, ...fetchedReports];
               });
               setErrors((previous) => {
-                const updatedErrorIds = new Set(fetchedErrors.map((error_) => error_.id));
+                const updatedErrorIds = new Set(
+                  fetchedErrors.map((error_) => error_.id),
+                );
                 const filtered = previous.filter(
                   (error_) => !updatedErrorIds.has(error_.id),
                 );
@@ -414,7 +420,6 @@ function Dashboard() {
   /* ---------------------------------- */
   /* Conditional Rendering for Projects */
   /* ---------------------------------- */
-
 
   // Columns for the Test Cases Table
   const columns = [

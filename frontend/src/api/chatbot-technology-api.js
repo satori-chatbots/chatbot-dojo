@@ -30,9 +30,7 @@ export const createChatbotTechnology = async (data) => {
       const errorMessage = Object.entries(errorData)
         .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
         .join("; ");
-      throw new Error(
-        errorMessage || `HTTP error! status: ${response.status}`,
-      );
+      throw new Error(errorMessage || `HTTP error! status: ${response.status}`);
     }
     return await response.json();
   } catch (error) {
@@ -67,9 +65,7 @@ export const updateChatbotTechnology = async (id, data) => {
       const errorMessage = Object.entries(errorData)
         .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
         .join("; ");
-      throw new Error(
-        errorMessage || `HTTP error! status: ${response.status}`,
-      );
+      throw new Error(errorMessage || `HTTP error! status: ${response.status}`);
     }
     return await response.json();
   } catch (error) {

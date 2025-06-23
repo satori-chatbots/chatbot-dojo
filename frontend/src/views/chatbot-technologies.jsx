@@ -315,7 +315,10 @@ const ChatbotTechnologies = () => {
                       setFormData({ ...formData, name: event.target.value });
                       // Clear validation errors when user starts typing
                       if (validationErrors.name) {
-                        setValidationErrors({ ...validationErrors, name: undefined });
+                        setValidationErrors({
+                          ...validationErrors,
+                          name: undefined,
+                        });
                       }
                     }}
                     type="text"
@@ -331,7 +334,9 @@ const ChatbotTechnologies = () => {
                     labelPlacement="outside"
                     placeholder="Select Technology"
                     name="technology"
-                    selectedKeys={formData.technology ? [formData.technology] : []}
+                    selectedKeys={
+                      formData.technology ? [formData.technology] : []
+                    }
                     onSelectionChange={(keys) => {
                       const selectedValue = [...keys][0];
                       setFormData((previous) => ({
@@ -490,7 +495,10 @@ const ChatbotTechnologies = () => {
                       setEditData({ ...editData, name: event.target.value });
                       // Clear validation errors when user starts typing
                       if (validationErrors.name) {
-                        setValidationErrors({ ...validationErrors, name: undefined });
+                        setValidationErrors({
+                          ...validationErrors,
+                          name: undefined,
+                        });
                       }
                     }}
                     type="text"
@@ -503,7 +511,9 @@ const ChatbotTechnologies = () => {
                     isDisabled={loadingValidation}
                     placeholder="Select a new Technology"
                     name="technology"
-                    selectedKeys={editData.technology ? [editData.technology] : []}
+                    selectedKeys={
+                      editData.technology ? [editData.technology] : []
+                    }
                     onSelectionChange={(keys) => {
                       const selectedValue = [...keys][0];
                       setEditData((previous) => ({
