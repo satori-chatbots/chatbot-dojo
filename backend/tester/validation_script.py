@@ -1390,7 +1390,7 @@ class YamlValidator:
             errors.append(ValidationError(f"Random steps cannot exceed {MAX_RANDOM_STEPS}", path))
         return errors
 
-    def _validate_goal_style_max_cost(self, cost: float, path: str) -> list[ValidationError]:
+    def _validate_goal_style_max_cost(self, cost: int | float, path: str) -> list[ValidationError]:
         """Validate the 'max_cost' value within 'goal_style'.
 
         Args:
