@@ -95,6 +95,7 @@ indent-style = "space"
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
+    "mypy>=1.0.0",
 ]
 
 # Alternatively, for more complex scenarios or finer control (e.g., multiple top-level package directories for sensei-web):
