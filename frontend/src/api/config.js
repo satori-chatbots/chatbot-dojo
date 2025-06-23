@@ -24,6 +24,8 @@ export const ENDPOINTS = {
   UPDATE_PROFILE: "/update-profile/",
   FETCH_FILE: "/fetch-file/",
   VALIDATE_YAML: "/validate-yaml/",
+  LLM_MODELS: "/llm-models/",
+  LLM_PROVIDERS: "/llm-providers/",
 };
 
 export default API_BASE_URL;

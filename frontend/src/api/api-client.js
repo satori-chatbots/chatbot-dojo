@@ -1,3 +1,5 @@
+import API_BASE_URL, { ENDPOINTS } from "./config";
+
 const apiClient = async (url, options = {}) => {
   const token = localStorage.getItem("token");
   const defaultHeaders = {
@@ -46,7 +48,7 @@ export default apiClient;
 
 export const fetchLLMProviders = async () => {
   try {
-    const response = await apiClient(`${API_BASE_URL}/llm-providers/`);
+    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.LLM_PROVIDERS}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch LLM providers: ${response.status}`);
     }
@@ -61,7 +63,7 @@ export const fetchLLMProviders = async () => {
 export const fetchLLMModels = async (provider) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/llm-models/?provider=${provider}`,
+      `${API_BASE_URL}${ENDPOINTS.LLM_MODELS}?provider=${provider}`,
     );
     if (!response.ok) {
       throw new Error(

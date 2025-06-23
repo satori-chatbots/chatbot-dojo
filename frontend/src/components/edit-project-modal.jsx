@@ -15,6 +15,7 @@ import {
 import { updateProject, checkProjectName } from "../api/project-api";
 import { RotateCcw, Save, Settings } from "lucide-react";
 import { getUserApiKeys } from "../api/authentication-api";
+import { fetchLLMModels } from "../api/api-client";
 import { useNavigate } from "react-router-dom";
 
 const EditProjectModal = ({
@@ -29,12 +30,15 @@ const EditProjectModal = ({
     name: project?.name || "",
     technology: project?.chatbot_technology || "",
     apiKey: project?.api_key || undefined,
+    llmModel: project?.llm_model || "",
     public: project?.public || false,
   });
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [apiKeys, setApiKeys] = useState([]);
   const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   const handleNavigateToTechnologies = () => {
     onOpenChange(false);
@@ -53,6 +57,7 @@ const EditProjectModal = ({
         name: project.name,
         technology: project.chatbot_technology,
         apiKey: project.api_key || undefined,
+        llmModel: project.llm_model || "",
         public: project.public || false,
       });
       //console.log('Project:', project);
@@ -67,6 +72,23 @@ const EditProjectModal = ({
           const keys = await getUserApiKeys();
           setApiKeys(keys);
           //console.log('API Keys:', keys);
+
+          // Load models if project has an API key
+          if (project?.api_key) {
+            const selectedApiKey = keys.find(key => key.id === project.api_key);
+            if (selectedApiKey && selectedApiKey.provider) {
+              setLoadingModels(true);
+              try {
+                const models = await fetchLLMModels(selectedApiKey.provider);
+                setAvailableModels(models);
+              } catch (error) {
+                console.error("Error fetching models:", error);
+                setAvailableModels([]);
+              } finally {
+                setLoadingModels(false);
+              }
+            }
+          }
         } catch (error) {
           console.error("Error fetching API keys:", error);
         } finally {
@@ -76,7 +98,7 @@ const EditProjectModal = ({
 
       loadApiKeys();
     }
-  }, [isOpen]);
+  }, [isOpen, project?.api_key]);
 
   const handleFormValidation = async (event, name, technology) => {
     event.preventDefault();
@@ -120,6 +142,7 @@ const EditProjectModal = ({
         name: formData.name,
         chatbot_technology: formData.technology,
         api_key: formData.apiKey,
+        llm_model: formData.llmModel,
         public: formData.public,
       });
       onOpenChange(false);
@@ -141,6 +164,7 @@ const EditProjectModal = ({
       name: project.name,
       technology: project.chatbot_technology,
       apiKey: project.api_key || undefined,
+      llmModel: project.llm_model || "",
       public: project.public || false,
     });
     setValidationErrors({});
@@ -150,8 +174,30 @@ const EditProjectModal = ({
     setFormData((previous) => ({ ...previous, name: event.target.value }));
   };
 
-  const handleApiKeyChange = (event) => {
-    setFormData((previous) => ({ ...previous, apiKey: event.target.value }));
+  const handleApiKeyChange = async (event) => {
+    const apiKeyId = event.target.value;
+    setFormData((previous) => ({ ...previous, apiKey: apiKeyId, llmModel: "" }));
+
+    // Find the selected API key to get its provider
+    const selectedApiKey = apiKeys.find(key => key.id === parseInt(apiKeyId));
+    if (selectedApiKey && selectedApiKey.provider) {
+      setLoadingModels(true);
+      try {
+        const models = await fetchLLMModels(selectedApiKey.provider);
+        setAvailableModels(models);
+      } catch (error) {
+        console.error("Error fetching models:", error);
+        setAvailableModels([]);
+      } finally {
+        setLoadingModels(false);
+      }
+    } else {
+      setAvailableModels([]);
+    }
+  };
+
+  const handleModelChange = (event) => {
+    setFormData((previous) => ({ ...previous, llmModel: event.target.value }));
   };
 
   const handlePublicChange = (value) => {
@@ -280,6 +326,41 @@ const EditProjectModal = ({
                 </p>
               )}
             </div>
+
+            {formData.apiKey && (
+              <div className="w-full">
+                <label htmlFor="edit-project-llm-model" className="text-sm mb-2 block">
+                  LLM Model
+                </label>
+                <Select
+                  id="edit-project-llm-model"
+                  placeholder={
+                    loadingModels
+                      ? "Loading models..."
+                      : availableModels.length === 0
+                      ? "No models available"
+                      : "Select LLM model"
+                  }
+                  fullWidth
+                  labelPlacement="outside"
+                  onChange={handleModelChange}
+                  value={formData.llmModel}
+                  selectedKeys={formData.llmModel ? [formData.llmModel] : []}
+                  isDisabled={loadingValidation || loadingModels || availableModels.length === 0}
+                >
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </Select>
+                {availableModels.length === 0 && !loadingModels && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    No models available for the selected API key provider.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex w-full justify-between items-center">
               <label htmlFor="edit-project-public" className="text-sm">
