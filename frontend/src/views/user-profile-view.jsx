@@ -16,6 +16,7 @@ import {
   Select,
   SelectItem,
 } from "@heroui/react";
+import { PROVIDER_OPTIONS } from "../constants/providers";
 import { useAuth } from "../contexts/auth-context";
 import { ApiKeyItem } from "../components/api-key-item";
 import {
@@ -270,12 +271,11 @@ const UserProfileView = () => {
               variant="bordered"
               selectedKeys={[newApiKey.provider]}
             >
-              <SelectItem key="openai" value="openai">
-                OpenAI
-              </SelectItem>
-              <SelectItem key="gemini" value="gemini">
-                Google Gemini
-              </SelectItem>
+              {PROVIDER_OPTIONS.map((provider) => (
+                <SelectItem key={provider.key} value={provider.value}>
+                  {provider.label}
+                </SelectItem>
+              ))}
             </Select>
             <div className="relative">
               <Input

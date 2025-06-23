@@ -9,6 +9,10 @@ import {
   Select,
   SelectItem,
 } from "@heroui/react";
+import {
+  PROVIDER_OPTIONS,
+  getProviderDisplayName,
+} from "../constants/providers";
 
 export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -55,12 +59,11 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                 variant="bordered"
                 selectedKeys={[newProvider]}
               >
-                <SelectItem key="openai" value="openai">
-                  OpenAI
-                </SelectItem>
-                <SelectItem key="gemini" value="gemini">
-                  Google Gemini
-                </SelectItem>
+                {PROVIDER_OPTIONS.map((provider) => (
+                  <SelectItem key={provider.key} value={provider.value}>
+                    {provider.label}
+                  </SelectItem>
+                ))}
               </Select>
               <div className="relative">
                 <Input
@@ -110,7 +113,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
               <div className="flex items-center gap-2">
                 <h3 className="font-medium">{apiKey.name}</h3>
                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  {apiKey.provider === "openai" ? "OpenAI" : "Google Gemini"}
+                  {getProviderDisplayName(apiKey.provider)}
                 </span>
               </div>
               <code className="text-sm text-gray-500 break-all">

@@ -10,6 +10,7 @@ import {
   Spinner,
 } from "@heroui/react";
 import { Edit, Trash, Check } from "lucide-react";
+import { getProviderDisplayName } from "../constants/providers";
 
 // Helper function to get LLM model display info
 const getLLMModelDisplay = (project) => {
@@ -21,17 +22,9 @@ const getLLMModelDisplay = (project) => {
     };
   }
 
-  // You could fetch this from API if needed, but for now we'll infer from model name
-  const provider = project.llm_provider || "Unknown";
-  const providerDisplay =
-    provider === "openai"
-      ? "OpenAI"
-      : provider === "gemini"
-        ? "Google Gemini"
-        : provider;
-
   // Get a user-friendly model name (we could also fetch this from the models API)
   const modelName = project.llm_model;
+  const providerDisplay = getProviderDisplayName(project.llm_provider);
 
   return { modelName, providerName: providerDisplay, isEmpty: false };
 };

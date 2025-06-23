@@ -8,6 +8,7 @@ import EditProjectModal from "../components/edit-project-modal";
 import useSelectedProject from "../hooks/use-selected-projects";
 import ProjectsList from "../components/project-list";
 import { Plus } from "lucide-react";
+import { getProviderDisplayName } from "../constants/providers";
 
 const ProjectsDashboard = () => {
   const [loading, setLoading] = useState(false);
@@ -80,13 +81,7 @@ const ProjectsDashboard = () => {
               <span className="font-medium">
                 {selectedProject.llm_model}
                 <span className="text-xs text-gray-500 ml-1">
-                  (
-                  {selectedProject.llm_provider === "openai"
-                    ? "OpenAI"
-                    : selectedProject.llm_provider === "gemini"
-                      ? "Gemini"
-                      : selectedProject.llm_provider || "Unknown"}
-                  )
+                  ({getProviderDisplayName(selectedProject.llm_provider)})
                 </span>
               </span>
             ) : (

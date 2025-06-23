@@ -41,6 +41,7 @@ import ProjectsList from "../components/project-list";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
+import { getProviderDisplayName } from "../constants/providers";
 
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
@@ -537,12 +538,7 @@ function Home() {
                         {selectedProject.llm_model}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {selectedProject.llm_provider === "openai"
-                          ? "OpenAI"
-                          : selectedProject.llm_provider === "gemini"
-                            ? "Google Gemini"
-                            : selectedProject.llm_provider ||
-                              "Unknown Provider"}
+                        {getProviderDisplayName(selectedProject.llm_provider)}
                       </span>
                     </>
                   ) : (
