@@ -229,8 +229,12 @@ def delete_file_from_media(sender: type[TestFile], instance: TestFile, **_kwargs
         if instance.file and Path(instance.file.path).exists():
             Path(instance.file.path).unlink()
             logger.info("Deleted file %s from media.", instance.file.path)
-    except Exception:
-        logger.exception("Error deleting file %s from media.", instance.file.path)
+    except FileNotFoundError:
+        logger.warning("File %s not found. It may have already been deleted.", instance.file.path)
+    except PermissionError:
+        logger.error("Permission denied while trying to delete file %s.", instance.file.path)
+    except OSError as e:
+        logger.exception("OS error occurred while deleting file %s: %s", instance.file.path, e)
 
 
 # Use post_save signal to set name after the file is saved
