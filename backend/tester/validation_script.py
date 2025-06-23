@@ -319,7 +319,7 @@ class YamlValidator:
             if not isinstance(temp, float) or not (0 <= temp <= 1):
                 errors.append(
                     ValidationError(
-                        "Temperature must be a float between 0 and 1, got {temp}",
+                        f"Temperature must be a float between 0 and 1, got {temp}",
                         "/llm/temperature",
                     ),
                 )
