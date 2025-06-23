@@ -1271,7 +1271,7 @@ class YamlValidator:
             errors.append(ValidationError(allowed_msg, path))
         return errors
 
-    def _validate_conversation_max_cost(self, cost_val: float) -> list[ValidationError]:
+    def _validate_conversation_max_cost(self, cost_val: int | float) -> list[ValidationError]:
         """Validate the optional 'conversation.max_cost' field.
 
         Args:
