@@ -1,7 +1,7 @@
 repos:
   # Ruff for Python linting and formatting (backend only)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.4
+    rev: v0.12.0
     hooks:
       # Run the linter
       - id: ruff
@@ -11,6 +11,15 @@ repos:
       - id: ruff-format
         files: ^backend/.*\.py$
 
+  # MyPy for Python type checking (backend only)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
+    hooks:
+      - id: mypy
+        files: ^backend/.*\.py$
+        args: [--ignore-missing-imports, --no-strict-optional]
+        additional_dependencies: [types-requests, types-PyYAML]
+
   # ESLint for JavaScript/TypeScript linting (using npm)
   - repo: local
     hooks:
@@ -19,6 +28,16 @@ repos:
         entry: bash -c 'cd frontend && npm run lint'
         language: system
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+
+  # Prettier for JavaScript/TypeScript formatting (using npm)
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd frontend && npm run format:check'
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|json|css|md)$
         pass_filenames: false
 
   # General hooks for all files
@@ -31,3 +50,14 @@ repos:
         exclude: ^frontend/package-lock\.json$
       - id: check-merge-conflict
       - id: check-added-large-files
+      # File format validation
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      # Python-specific checks
+      - id: debug-statements
+        files: ^backend/.*\.py$
+      - id: check-docstring-first
+        files: ^backend/.*\.py$
+      # Case sensitivity issues
+      - id: check-case-conflict

@@ -28,6 +28,8 @@ User = get_user_model()
 class FileURLMixin:
     """Mixin to provide file URL generation functionality for serializers."""
 
+    context: dict  # Add type annotation for context attribute
+
     def get_file_url(
         self,
         obj: TestFile | PersonalityFile | RuleFile | TypeFile,

@@ -1,10 +1,11 @@
 """Results processing and report generation functionality."""
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
-from tester.models import Conversation, GlobalReport, ProfileReport, TestError
+from tester.models import Conversation, GlobalReport, ProfileReport, TestCase, TestError
 
 from .base import logger
 
@@ -12,7 +13,7 @@ from .base import logger
 class ResultsProcessor:
     """Handles processing of test results and creation of database reports."""
 
-    def process_test_results(self, test_case: object, results_path: str) -> None:
+    def process_test_results(self, test_case: TestCase, results_path: str) -> None:
         """Process test results and create reports."""
         try:
             logger.info(f"Processing results for test case {test_case.id}")
@@ -25,7 +26,7 @@ class ResultsProcessor:
                 test_case.save()
                 return
 
-            report_file: str | None = None
+            report_file = None
             try:
                 for file in report_path.iterdir():
                     if file.name.startswith("report_") and file.name.endswith(".yml"):
@@ -44,9 +45,9 @@ class ResultsProcessor:
                 return
 
             # In the documents there is a global, and then a profile_report for each test_case
-            documents = []
-            with (report_path / report_file).open() as file:
-                documents = list(yaml.safe_load_all(file))
+            documents: list[Any] = []
+            with (report_path / report_file).open() as f:
+                documents = list(yaml.safe_load_all(f))
 
             # Process global report
             global_report_instance = self._process_global_report(documents[0], test_case)
@@ -63,7 +64,7 @@ class ResultsProcessor:
             test_case.error_message = f"Error processing results: {e!s}"
             test_case.save()
 
-    def _process_global_report(self, global_report: dict[str, object], test_case: object) -> GlobalReport:
+    def _process_global_report(self, global_report: dict[str, Any], test_case: TestCase) -> GlobalReport:
         """Process global report and create GlobalReport instance."""
         global_avg_response_time = global_report["Global report"]["Average assistant response time"]
         global_min_response_time = global_report["Global report"]["Minimum assistant response time"]
@@ -97,7 +98,7 @@ class ResultsProcessor:
         return global_report_instance
 
     def _process_profile_reports(
-        self, profile_reports: list[dict[str, object]], global_report_instance: GlobalReport, results_path: str
+        self, profile_reports: list[dict[str, Any]], global_report_instance: GlobalReport, results_path: str
     ) -> None:
         """Process profile reports and create ProfileReport instances."""
         # Profile reports are in the documents from 1 to n
@@ -172,7 +173,7 @@ class ResultsProcessor:
                     profile_report=profile_report_instance,
                 )
 
-    def _process_profile_report_from_conversation(self, conversation_file_path: Path) -> dict[str, object]:
+    def _process_profile_report_from_conversation(self, conversation_file_path: Path) -> dict[str, Any]:
         """Read common fields from first conversation file."""
         with conversation_file_path.open() as file:
             data = yaml.safe_load_all(file)
@@ -180,7 +181,7 @@ class ResultsProcessor:
 
             # Extract conversation specs
             conv_specs = first_doc.get("conversation", {})
-            interaction_style = next(
+            interaction_style: dict[str, Any] = next(
                 (item["interaction_style"] for item in conv_specs if "interaction_style" in item),
                 {},
             )
@@ -188,7 +189,7 @@ class ResultsProcessor:
             steps = next((item["steps"] for item in conv_specs if "steps" in item), None)
             # Extract all_answered with limit if present
             all_answered_item = next((item for item in conv_specs if "all_answered" in item), None)
-            all_answered = None
+            all_answered: dict[str, Any] | None = None
             if all_answered_item:
                 if isinstance(all_answered_item["all_answered"], dict):
                     all_answered = all_answered_item["all_answered"]
@@ -197,7 +198,7 @@ class ResultsProcessor:
 
             return {
                 "serial": first_doc.get("serial"),
-                "language": first_doc.get("language"),
+                "language": first_doc.get("language", ""),
                 "personality": next(
                     (
                         item["personality"]
@@ -217,7 +218,7 @@ class ResultsProcessor:
                 "all_answered": all_answered,
             }
 
-    def _process_conversation(self, conversation_file_path: Path) -> dict[str, object]:
+    def _process_conversation(self, conversation_file_path: Path) -> dict[str, Any]:
         """Process individual conversation file."""
         # File name without extension
         name = conversation_file_path.stem

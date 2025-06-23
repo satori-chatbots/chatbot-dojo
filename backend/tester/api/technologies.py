@@ -3,6 +3,7 @@
 from django.http import JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from tester.models import TECHNOLOGY_CHOICES, ChatbotTechnology
@@ -21,7 +22,7 @@ class ChatbotTechnologyViewSet(viewsets.ModelViewSet):
     serializer_class = ChatbotTechnologySerializer
 
     @action(detail=False, methods=["get"], url_path="check-name")
-    def check_name(self, request: object) -> Response:
+    def check_name(self, request: Request) -> Response:
         """Check if a technology name is already used. It can't be none or empty."""
         name = request.query_params.get("chatbot_name", None)
         if name is None or not name.strip():

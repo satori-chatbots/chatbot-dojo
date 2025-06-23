@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 import yaml
 
@@ -301,7 +302,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
 
         # Check for unexpected fields in the llm section
 
@@ -363,7 +364,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
 
         # Validate context structure (required field checked elsewhere)
         if "context" in user:
@@ -393,7 +394,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if not isinstance(context, list):
             errors.append(ValidationError("User context must be a list", "/user/context"))
             return errors  # Stop further context validation if it's not a list
@@ -451,7 +452,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if not isinstance(goals, list):
             errors.append(ValidationError("User goals must be a list", "/user/goals"))
             return errors  # Stop further goals validation if it's not a list
@@ -712,7 +713,7 @@ class YamlValidator:
         # If none of the above, the parameter is a valid reference to another defined variable
         return errors
 
-    def _validate_variable_data(self, data: any, var_type: str | None, path: str) -> list[ValidationError]:
+    def _validate_variable_data(self, data: Any, var_type: str | None, path: str) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'data' field within a variable definition based on its 'type'.
 
         Args:
@@ -723,7 +724,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
 
         # If type is missing or invalid, we cannot reliably validate data structure
         if var_type not in self.valid_variable_types:
@@ -773,7 +774,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
 
         # Validate min/max presence and relationship
         errors.extend(self._validate_range_min_max(data, path))
@@ -801,7 +802,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects related to min/max.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if "min" not in data:
             errors.append(ValidationError("Missing 'min' in numeric range definition", path))
         if "max" not in data:
@@ -840,7 +841,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects related to step/linspace.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if var_type == "float":
             has_step = "step" in data
             has_linspace = "linspace" in data
@@ -909,7 +910,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         for j, item in enumerate(data):
             item_path = f"{path}/{j}"
             if isinstance(item, str):
@@ -951,7 +952,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if "function_name" not in data:
             errors.append(ValidationError("Custom function data must include 'function_name'", path))
         elif not isinstance(data["function_name"], str) or data["function_name"].strip() == "":
@@ -994,7 +995,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects related to forward dependencies.
         """
-        errors = []
+        errors: list[ValidationError] = []
         forward_dependencies = {}  # Maps var_name -> referenced_var_name
 
         # Build the dependency map and perform initial checks
@@ -1038,7 +1039,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects if cycles are detected.
         """
-        errors = []
+        errors: list[ValidationError] = []
         path_set = set()
         visited = set()
         cycles_found = []  # Store descriptions of cycles found
@@ -1084,7 +1085,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
 
         # Validate is_starter (required field checked elsewhere)
         if "is_starter" in chatbot:
@@ -1125,7 +1126,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         for i, output_item in enumerate(output_list):
             path = f"/chatbot/output/{i}"
             if not isinstance(output_item, dict):
@@ -1164,7 +1165,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         # Check required fields within output definition
 
         errors.extend(
@@ -1213,7 +1214,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
 
         # Validate 'number' field (required field checked elsewhere)
         if "number" in conversation:
@@ -1233,7 +1234,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_conversation_number(self, num_val: any) -> list[ValidationError]:
+    def _validate_conversation_number(self, num_val: Any) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'conversation.number' field.
 
         Args:
@@ -1242,7 +1243,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         path = "/conversation/number"
         allowed_msg = "Number must be a positive integer, 'all_combinations', or sample(0.0-1.0)"
 
@@ -1281,7 +1282,7 @@ class YamlValidator:
             A list of ValidationError objects.
         """
         try:
-            errors = []
+            errors: list[ValidationError] = []
             path = "/conversation/max_cost"
             if not isinstance(cost_val, int | float) or cost_val <= 0:
                 errors.append(ValidationError(f"Max cost must be a positive number, got '{cost_val}'", path))
@@ -1290,7 +1291,7 @@ class YamlValidator:
         else:
             return errors
 
-    def _validate_conversation_goal_style(self, goal_style: any) -> list[ValidationError]:
+    def _validate_conversation_goal_style(self, goal_style: Any) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'conversation.goal_style' field.
 
         Args:
@@ -1299,7 +1300,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         path = "/conversation/goal_style"
 
         if isinstance(goal_style, str):
@@ -1324,7 +1325,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         # Check for invalid goal style option keys first
 
         errors.extend(
@@ -1359,7 +1360,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_goal_style_steps(self, steps: any, path: str) -> list[ValidationError]:
+    def _validate_goal_style_steps(self, steps: Any, path: str) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'steps' value within 'goal_style'.
 
         Args:
@@ -1373,7 +1374,7 @@ class YamlValidator:
             return [ValidationError("Steps must be a positive integer", path)]
         return []
 
-    def _validate_goal_style_random_steps(self, random_steps: any, path: str) -> list[ValidationError]:
+    def _validate_goal_style_random_steps(self, random_steps: Any, path: str) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'random_steps' value within 'goal_style'.
 
         Args:
@@ -1383,7 +1384,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if not isinstance(random_steps, int) or random_steps <= 0:
             errors.append(ValidationError("Random steps must be a positive integer", path))
         elif random_steps > MAX_RANDOM_STEPS:
@@ -1404,7 +1405,7 @@ class YamlValidator:
             return [ValidationError("Goal style max_cost must be a positive number", path)]
         return []
 
-    def _validate_goal_style_all_answered(self, all_answered: any, path: str) -> list[ValidationError]:
+    def _validate_goal_style_all_answered(self, all_answered: Any, path: str) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'all_answered' sub-field within 'goal_style'.
 
         Args:
@@ -1414,7 +1415,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if isinstance(all_answered, bool):
             pass  # Boolean value is fine
         elif isinstance(all_answered, dict):
@@ -1449,7 +1450,7 @@ class YamlValidator:
             )
         return errors
 
-    def _validate_conversation_interaction_style(self, interaction_style: any) -> list[ValidationError]:
+    def _validate_conversation_interaction_style(self, interaction_style: Any) -> list[ValidationError]:  # noqa: ANN401
         """Validate the 'conversation.interaction_style' field.
 
         Args:
@@ -1458,7 +1459,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         path = "/conversation/interaction_style"
 
         if not isinstance(interaction_style, list):
@@ -1507,7 +1508,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if len(style_dict) != 1:
             errors.append(
                 ValidationError(
@@ -1533,7 +1534,7 @@ class YamlValidator:
 
         return errors
 
-    def _validate_interaction_style_random(self, random_list: any, path: str) -> list[ValidationError]:
+    def _validate_interaction_style_random(self, random_list: Any, path: str) -> list[ValidationError]:  # noqa: ANN401
         """Validate the list associated with the 'random' interaction style.
 
         Args:
@@ -1543,7 +1544,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if not isinstance(random_list, list):
             errors.append(
                 ValidationError(
@@ -1592,7 +1593,7 @@ class YamlValidator:
                 )
         return errors
 
-    def _validate_interaction_style_change_language(self, lang_list: any, path: str) -> list[ValidationError]:
+    def _validate_interaction_style_change_language(self, lang_list: Any, path: str) -> list[ValidationError]:  # noqa: ANN401
         """Validate the list associated with the 'change language' interaction style.
 
         Args:
@@ -1602,7 +1603,7 @@ class YamlValidator:
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
+        errors: list[ValidationError] = []
         if not isinstance(lang_list, list):
             errors.append(
                 ValidationError(

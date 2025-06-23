@@ -98,7 +98,8 @@ class CustomUser(AbstractUser):
 
     def set_api_key(self) -> None:
         """Encrypt and store the API Key."""
-        encrypted_key = cipher_suite.encrypt(self.api_key.encode())
+        api_key: str = self.api_key  # type: ignore[assignment,has-type]
+        encrypted_key = cipher_suite.encrypt(api_key.encode())
         self.api_key = encrypted_key.decode()
         self.save()
 
@@ -276,7 +277,7 @@ class Project(models.Model):
 
     def update_run_yml(self) -> None:
         """Update the run.yml file with current project configuration."""
-        config_data = {
+        config_data: dict[str, Any] = {
             "project_folder": f"project_{self.id}",
             "user_profile": "",
             "technology": self.chatbot_technology.technology if self.chatbot_technology else "",
