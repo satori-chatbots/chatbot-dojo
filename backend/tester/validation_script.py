@@ -316,10 +316,10 @@ class YamlValidator:
         # Check that temperature is a number between 0 and 1
         if "temperature" in llm:
             temp = llm["temperature"]
-            if not isinstance(temp, (int, float)) or not (0 <= temp <= 1):
+            if not isinstance(temp, float) or not (0 <= temp <= 1):
                 errors.append(
                     ValidationError(
-                        "Temperature must be a number between 0 and 1 (inclusive)",
+                        f"Temperature must be a float between 0 and 1, got {temp}",
                         "/llm/temperature",
                     ),
                 )
@@ -847,7 +847,7 @@ class YamlValidator:
 
             if not has_step and not has_linspace:
                 errors.append(ValidationError("Float range must define either 'step' or 'linspace'", path))
-            if has_step and not isinstance(data["step"], (int, float)):
+            if has_step and not isinstance(data["step"], int | float):
                 errors.append(
                     ValidationError(f"Range 'step' must be a number, got {type(data['step']).__name__}", f"{path}/step")
                 )
@@ -887,7 +887,7 @@ class YamlValidator:
         errors = []
         for j, item in enumerate(data):
             item_path = f"{path}/{j}"
-            if not isinstance(item, (int, float)):
+            if not isinstance(item, int | float):
                 errors.append(
                     ValidationError(
                         f"Invalid data list item type: {type(item).__name__}. Expected {var_type}", item_path
@@ -932,10 +932,10 @@ class YamlValidator:
                     elif item.count("(") != item.count(")"):
                         errors.append(ValidationError(f"Unbalanced parentheses in any() function: '{item}'", item_path))
                 # Allow empty strings in the list ""
-            elif not isinstance(item, (str, int, float, bool)):  # Allow primitives to be stringified
+            elif not isinstance(item, str | int | float | bool):  # Allow primitives to be stringified
                 errors.append(
                     ValidationError(
-                        f"Invalid data list item type: {type(item).__name__}. Must be a primitive value (string, int, float, bool) or any() function string",
+                        f"List must only contain strings or primitives, got {type(item).__name__}",
                         item_path,
                     ),
                 )
@@ -961,7 +961,7 @@ class YamlValidator:
 
         if "args" not in data:
             errors.append(ValidationError("Custom function data must include 'args' (can be an empty list/dict)", path))
-        elif not isinstance(data["args"], (list, dict)):
+        elif not isinstance(data["args"], list | dict):
             errors.append(
                 ValidationError(
                     f"Custom function 'args' must be a list or dictionary, got {type(data['args']).__name__}",
@@ -1271,20 +1271,24 @@ class YamlValidator:
             errors.append(ValidationError(allowed_msg, path))
         return errors
 
-    def _validate_conversation_max_cost(self, cost_val: any) -> list[ValidationError]:
+    def _validate_conversation_max_cost(self, cost_val: int | float) -> list[ValidationError]:
         """Validate the optional 'conversation.max_cost' field.
 
         Args:
-            cost_val: The value of the 'conversation.max_cost' field.
+            cost_val: The value of 'conversation.max_cost'.
 
         Returns:
             A list of ValidationError objects.
         """
-        errors = []
-        path = "/conversation/max_cost"
-        if not isinstance(cost_val, (int, float)) or cost_val <= 0:
-            errors.append(ValidationError(f"Max cost must be a positive number, got '{cost_val}'", path))
-        return errors
+        try:
+            errors = []
+            path = "/conversation/max_cost"
+            if not isinstance(cost_val, int | float) or cost_val <= 0:
+                errors.append(ValidationError(f"Max cost must be a positive number, got '{cost_val}'", path))
+        except TypeError as e:
+            return [ValidationError(f"Invalid type for 'max_cost', must be a number. Got error: {e}", path)]
+        else:
+            return errors
 
     def _validate_conversation_goal_style(self, goal_style: any) -> list[ValidationError]:
         """Validate the 'conversation.goal_style' field.
@@ -1386,17 +1390,17 @@ class YamlValidator:
             errors.append(ValidationError(f"Random steps cannot exceed {MAX_RANDOM_STEPS}", path))
         return errors
 
-    def _validate_goal_style_max_cost(self, cost: any, path: str) -> list[ValidationError]:
+    def _validate_goal_style_max_cost(self, cost: int | float, path: str) -> list[ValidationError]:
         """Validate the 'max_cost' value within 'goal_style'.
 
         Args:
-            cost: The value of the 'max_cost' field.
-            path: The JSON path to the 'max_cost' field.
+            cost (any): The 'max_cost' value to validate.
+            path (str): The JSON path to the 'max_cost' field for error reporting.
 
         Returns:
             A list of ValidationError objects.
         """
-        if not isinstance(cost, (int, float)) or cost <= 0:
+        if not isinstance(cost, int | float) or cost <= 0:
             return [ValidationError("Goal style max_cost must be a positive number", path)]
         return []
 

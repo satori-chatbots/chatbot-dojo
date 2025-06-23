@@ -16,3 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Homepage no longer reloads constantly.
 
 ## [Unreleased]
+
+### Added
+- Pre-commit hooks configuration with ruff (check and format) for backend Python code and ESLint for frontend JavaScript/TypeScript (using npm)

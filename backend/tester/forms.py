@@ -31,10 +31,10 @@ class MultipleFileField(forms.FileField):
         """
         logger.debug("MultipleFileField.clean called with data=%s, initial=%s", data, initial)
         single_file_clean = super().clean
-        if isinstance(data, (list, tuple)):
+        if isinstance(data, list | tuple):
             result = [single_file_clean(d, initial) for d in data]
         else:
-            result = [single_file_clean(data, initial)]
+            result = single_file_clean(data, initial)
         return result
 
 
