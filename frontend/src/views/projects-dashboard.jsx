@@ -53,6 +53,21 @@ const ProjectsDashboard = () => {
     }
   };
 
+  const handleProjectUpdated = async () => {
+    await reloadProjects();
+
+    // If the edited project is the currently selected project, fetch fresh data
+    if (selectedProject && editProjectId === selectedProject.id) {
+      try {
+        const { fetchProject } = await import("../api/project-api");
+        const updatedProject = await fetchProject(editProjectId);
+        setSelectedProject(updatedProject);
+      } catch (error) {
+        console.error("Error fetching updated project:", error);
+      }
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
       <CreateProjectModal
@@ -119,7 +134,7 @@ const ProjectsDashboard = () => {
             : undefined
         }
         technologies={technologies}
-        onProjectUpdated={reloadProjects}
+        onProjectUpdated={handleProjectUpdated}
       />
     </div>
   );

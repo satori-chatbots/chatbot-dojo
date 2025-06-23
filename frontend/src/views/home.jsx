@@ -253,6 +253,21 @@ function Home() {
     setIsEditOpen(true);
   };
 
+  const handleProjectUpdated = async () => {
+    await reloadProjects();
+
+    // If the edited project is the currently selected project, fetch fresh data
+    if (selectedProject && editProjectId === selectedProject.id) {
+      try {
+        const { fetchProject } = await import("../api/project-api");
+        const updatedProject = await fetchProject(editProjectId);
+        setSelectedProject(updatedProject);
+      } catch (error) {
+        console.error("Error fetching updated project:", error);
+      }
+    }
+  };
+
   // Delete confirm modal
   const [deleteConfirmModal, setDeleteConfirmModal] = useState({
     isOpen: false,
@@ -994,7 +1009,7 @@ function Home() {
             : undefined
         }
         technologies={availableTechnologies}
-        onProjectUpdated={reloadProjects}
+        onProjectUpdated={handleProjectUpdated}
       />
     </div>
   );
