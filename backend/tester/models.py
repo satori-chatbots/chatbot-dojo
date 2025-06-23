@@ -39,14 +39,20 @@ class UserAPIKey(models.Model):
     It has a name, the encrypted API key and the user it belongs to
     """
 
+    PROVIDER_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("openai", "OpenAI"),
+        ("gemini", "Google Gemini"),
+    ]
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys")
     name = models.CharField(max_length=255)
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, default="openai")
     api_key_encrypted = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         """Return a string representation of the UserAPIKey."""
-        return self.name
+        return f"{self.name} ({self.get_provider_display()})"
 
     def set_api_key(self, api_key: str) -> None:
         """Encrypt and store the provided API key."""
@@ -271,9 +277,21 @@ class Project(models.Model):
         null=True,
     )
 
+    # LLM Model to use for this project (provider comes from the API key)
+    llm_model = models.CharField(
+        max_length=100, blank=True, help_text="LLM model to use (e.g., gpt-4o-mini, gemini-2.0-flash)"
+    )
+
     def __str__(self) -> str:
         """Return the name of the project."""
         return self.name
+
+    @property
+    def llm_provider(self) -> str | None:
+        """Get the LLM provider from the associated API key."""
+        if self.api_key:
+            return self.api_key.provider
+        return None
 
     def get_project_path(self) -> str:
         """Get the full filesystem path to the project folder."""
@@ -395,6 +413,10 @@ class TestCase(models.Model):
     process_id = models.IntegerField(blank=True, null=True)
     # Technology used
     technology = models.CharField(max_length=255, blank=True)
+
+    # LLM Model information used for this test execution (snapshot at time of execution)
+    llm_model = models.CharField(max_length=100, blank=True, help_text="LLM model used for this test execution")
+    llm_provider = models.CharField(max_length=20, blank=True, help_text="LLM provider used for this test execution")
 
     # To be able to track the progress of the execution
     # Name of the profiles so we can access the directories

@@ -15,6 +15,7 @@ import {
 import { createProject, checkProjectName } from "../api/project-api";
 import { RotateCcw, Plus, Settings } from "lucide-react";
 import { getUserApiKeys } from "../api/authentication-api";
+import { fetchLLMModels } from "../api/api-client";
 import { useNavigate } from "react-router-dom";
 
 const CreateProjectModal = ({
@@ -29,12 +30,15 @@ const CreateProjectModal = ({
     name: "",
     technology: "",
     apiKey: undefined,
+    llmModel: "",
     public: false,
   });
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [apiKeys, setApiKeys] = useState([]);
   const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   const handleNavigateToTechnologies = () => {
     onOpenChange(false);
@@ -75,8 +79,36 @@ const CreateProjectModal = ({
     }));
   };
 
-  const handleApiKeyChange = (event) => {
-    setFormData((previous) => ({ ...previous, apiKey: event.target.value }));
+  const handleApiKeyChange = async (event) => {
+    const apiKeyId = event.target.value;
+    setFormData((previous) => ({
+      ...previous,
+      apiKey: apiKeyId,
+      llmModel: "",
+    }));
+
+    // Find the selected API key to get its provider
+    const selectedApiKey = apiKeys.find(
+      (key) => key.id === Number.parseInt(apiKeyId),
+    );
+    if (selectedApiKey && selectedApiKey.provider) {
+      setLoadingModels(true);
+      try {
+        const models = await fetchLLMModels(selectedApiKey.provider);
+        setAvailableModels(models);
+      } catch (error) {
+        console.error("Error fetching models:", error);
+        setAvailableModels([]);
+      } finally {
+        setLoadingModels(false);
+      }
+    } else {
+      setAvailableModels([]);
+    }
+  };
+
+  const handleModelChange = (event) => {
+    setFormData((previous) => ({ ...previous, llmModel: event.target.value }));
   };
 
   const handlePublicChange = (value) => {
@@ -88,9 +120,11 @@ const CreateProjectModal = ({
       name: "",
       technology: "",
       apiKey: undefined,
+      llmModel: "",
       public: false,
     });
     setValidationErrors({});
+    setAvailableModels([]);
   };
 
   const handleFormValidation = async (event) => {
@@ -129,6 +163,7 @@ const CreateProjectModal = ({
         name: formData.name,
         chatbot_technology: formData.technology,
         api_key: formData.apiKey,
+        llm_model: formData.llmModel,
         public: formData.public,
       });
       handleFormReset();
@@ -266,7 +301,59 @@ const CreateProjectModal = ({
                       API Keys are optional but recommended for authentication.
                     </p>
                   )}
+                  {apiKeys.length > 0 && (
+                    <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800 mt-2">
+                      ℹ️ <strong>Important:</strong> API provider must match the
+                      provider in your user profiles.
+                    </div>
+                  )}
                 </div>
+
+                {formData.apiKey && (
+                  <div className="w-full">
+                    <label
+                      htmlFor="project-llm-model"
+                      className="text-sm mb-2 block"
+                    >
+                      LLM Model
+                    </label>
+                    <Select
+                      id="project-llm-model"
+                      placeholder={
+                        loadingModels
+                          ? "Loading models..."
+                          : availableModels.length === 0
+                            ? "No models available"
+                            : "Select LLM model"
+                      }
+                      fullWidth
+                      labelPlacement="outside"
+                      onChange={handleModelChange}
+                      value={formData.llmModel}
+                      isDisabled={
+                        loadingValidation ||
+                        loadingModels ||
+                        availableModels.length === 0
+                      }
+                    >
+                      {availableModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    {availableModels.length === 0 && !loadingModels && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        No models available for the selected API key provider.
+                      </p>
+                    )}
+                    {availableModels.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        This model will be used for TRACER (profile generation).
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex w-full justify-between items-center">
                   <label htmlFor="project-public" className="text-sm">

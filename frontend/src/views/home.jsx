@@ -41,6 +41,7 @@ import ProjectsList from "../components/project-list";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
+import { getProviderDisplayName } from "../constants/providers";
 
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
@@ -250,6 +251,21 @@ function Home() {
   const handleEditClick = (project) => {
     setEditProjectId(project.id);
     setIsEditOpen(true);
+  };
+
+  const handleProjectUpdated = async () => {
+    await reloadProjects();
+
+    // If the edited project is the currently selected project, fetch fresh data
+    if (selectedProject && editProjectId === selectedProject.id) {
+      try {
+        const { fetchProject } = await import("../api/project-api");
+        const updatedProject = await fetchProject(editProjectId);
+        setSelectedProject(updatedProject);
+      } catch (error) {
+        console.error("Error fetching updated project:", error);
+      }
+    }
   };
 
   // Delete confirm modal
@@ -519,6 +535,44 @@ function Home() {
           <h1 className="text-3xl font-bold text-center">
             {selectedProject.name}
           </h1>
+
+          {/* LLM Model Information */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col space-y-2">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                LLM Configuration
+              </h3>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Model:
+                </span>
+                <div className="flex flex-col items-end">
+                  {selectedProject.api_key && selectedProject.llm_model ? (
+                    <>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {selectedProject.llm_model}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {getProviderDisplayName(selectedProject.llm_provider)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-red-500 text-sm font-medium">
+                      ⚠️ No model configured
+                    </span>
+                  )}
+                </div>
+              </div>
+              {selectedProject.api_key && selectedProject.llm_model && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+                  💡 <strong>Important:</strong> API provider (
+                  {getProviderDisplayName(selectedProject.llm_provider)}) must
+                  match the provider in your profiles. Check costs before
+                  running tests.
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Project Dropdown */}
           <div className="flex flex-col space-y-4">
@@ -957,7 +1011,7 @@ function Home() {
             : undefined
         }
         technologies={availableTechnologies}
-        onProjectUpdated={reloadProjects}
+        onProjectUpdated={handleProjectUpdated}
       />
     </div>
   );
