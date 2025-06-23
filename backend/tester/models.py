@@ -223,7 +223,7 @@ class TestFile(models.Model):
 
 
 @receiver(post_delete, sender=TestFile)
-def delete_file_from_media(instance: TestFile, **_kwargs: Any) -> None:  # noqa: ANN401
+def delete_file_from_media(sender: type[TestFile], instance: TestFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the file from media when the TestFile is deleted."""
     try:
         if instance.file and Path(instance.file.path).exists():
@@ -324,7 +324,7 @@ class Project(models.Model):
 
 
 @receiver(post_delete, sender=Project)
-def delete_project_directory(instance: Project, **_kwargs: Any) -> None:  # noqa: ANN401
+def delete_project_directory(sender: type[Project], instance: Project, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the entire project directory when the Project is deleted."""
     project_path = instance.get_project_path()
     if Path(project_path).exists():
@@ -425,7 +425,7 @@ class TestCase(models.Model):
 
 # Delete test case directories when TestCase object is deleted from database
 @receiver(post_delete, sender=TestCase)
-def delete_test_case_directories(instance: TestCase, **_kwargs: Any) -> None:  # noqa: ANN401
+def delete_test_case_directories(sender: type[TestCase], instance: TestCase, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the test case directories when the TestCase is deleted."""
     try:
         # Get the user and project IDs
@@ -707,6 +707,7 @@ class ProjectConfig(models.Model):
 
 @receiver(post_delete, sender=PersonalityFile)
 def delete_personality_file_from_media(
+    sender: type[PersonalityFile],
     instance: PersonalityFile,
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
@@ -715,12 +716,12 @@ def delete_personality_file_from_media(
 
 
 @receiver(post_delete, sender=RuleFile)
-def delete_rule_file_from_media(instance: RuleFile, **_kwargs: Any) -> None:  # noqa: ANN401
+def delete_rule_file_from_media(sender: type[RuleFile], instance: RuleFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the rule file from media when the RuleFile is deleted."""
     instance.file.delete(save=False)
 
 
 @receiver(post_delete, sender=TypeFile)
-def delete_type_file_from_media(instance: TypeFile, **_kwargs: Any) -> None:  # noqa: ANN401
+def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the type file from media when the TypeFile is deleted."""
     instance.file.delete(save=False)
