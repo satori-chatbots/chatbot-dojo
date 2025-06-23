@@ -136,7 +136,13 @@ class ExecuteSelectedAPIView(APIView):
             technology = project.chatbot_technology.technology
             link = project.chatbot_technology.link if project.chatbot_technology else None
 
-            test_case = TestCase.objects.create(project=project, name=test_name, technology=technology)
+            test_case = TestCase.objects.create(
+                project=project,
+                name=test_name,
+                technology=technology,
+                llm_model=project.llm_model or "",
+                llm_provider=project.llm_provider or "",
+            )
             test_case.status = "RUNNING"
 
             results_path = (

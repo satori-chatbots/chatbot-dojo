@@ -406,6 +406,10 @@ class TestCase(models.Model):
     # Technology used
     technology = models.CharField(max_length=255, blank=True)
 
+    # LLM Model information used for this test execution (snapshot at time of execution)
+    llm_model = models.CharField(max_length=100, blank=True, help_text="LLM model used for this test execution")
+    llm_provider = models.CharField(max_length=20, blank=True, help_text="LLM provider used for this test execution")
+
     # To be able to track the progress of the execution
     # Name of the profiles so we can access the directories
     profiles_names = models.JSONField(blank=True, null=True)

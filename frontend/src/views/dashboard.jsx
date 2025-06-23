@@ -40,6 +40,7 @@ import { useAuth } from "../contexts/auth-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { Eye, Search, Trash, XCircle } from "lucide-react";
 import { fetchPaginatedTestCases } from "../api/test-cases-api";
+import { getProviderDisplayName } from "../constants/providers";
 
 const statusOptions = [
   { label: "All", value: "ALL" },
@@ -459,6 +460,11 @@ function Dashboard() {
       sortable: true,
     },
     {
+      name: "LLM Model",
+      key: "llm_model",
+      sortable: true,
+    },
+    {
       name: "Project",
       key: "project",
       sortable: true,
@@ -743,6 +749,24 @@ function Dashboard() {
                 </TableCell>
                 <TableCell>
                   {formatCost(testCase.total_cost, testCase.status)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    {testCase.llm_model ? (
+                      <>
+                        <span className="font-medium text-sm">
+                          {testCase.llm_model}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {getProviderDisplayName(testCase.llm_provider)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-gray-500 italic text-sm">
+                        No model recorded
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {
