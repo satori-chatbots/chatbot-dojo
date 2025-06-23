@@ -48,7 +48,9 @@ export default apiClient;
 
 export const fetchLLMProviders = async () => {
   try {
-    const response = await apiClient(`${API_BASE_URL}${ENDPOINTS.LLM_PROVIDERS}`);
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.LLM_PROVIDERS}`,
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch LLM providers: ${response.status}`);
     }

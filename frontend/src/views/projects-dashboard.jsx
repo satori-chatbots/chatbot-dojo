@@ -68,9 +68,32 @@ const ProjectsDashboard = () => {
         My Projects:
       </h2>
 
-      <div className="flex items-center justify-center gap-2">
-        <span className="font-semibold">Selected Project:</span>
-        <span>{selectedProject?.name || "None"}</span>
+      <div className="flex flex-col items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Selected Project:</span>
+          <span>{selectedProject?.name || "None"}</span>
+        </div>
+        {selectedProject && (
+          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <span>Model:</span>
+            {selectedProject.api_key && selectedProject.llm_model ? (
+              <span className="font-medium">
+                {selectedProject.llm_model}
+                <span className="text-xs text-gray-500 ml-1">
+                  (
+                  {selectedProject.llm_provider === "openai"
+                    ? "OpenAI"
+                    : selectedProject.llm_provider === "gemini"
+                      ? "Gemini"
+                      : selectedProject.llm_provider || "Unknown"}
+                  )
+                </span>
+              </span>
+            ) : (
+              <span className="text-red-500">Not configured</span>
+            )}
+          </div>
+        )}
       </div>
 
       <ProjectsList

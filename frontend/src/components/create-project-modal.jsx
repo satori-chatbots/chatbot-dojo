@@ -81,10 +81,14 @@ const CreateProjectModal = ({
 
   const handleApiKeyChange = async (event) => {
     const apiKeyId = event.target.value;
-    setFormData((previous) => ({ ...previous, apiKey: apiKeyId, llmModel: "" }));
+    setFormData((previous) => ({
+      ...previous,
+      apiKey: apiKeyId,
+      llmModel: "",
+    }));
 
     // Find the selected API key to get its provider
-    const selectedApiKey = apiKeys.find(key => key.id === parseInt(apiKeyId));
+    const selectedApiKey = apiKeys.find((key) => key.id === parseInt(apiKeyId));
     if (selectedApiKey && selectedApiKey.provider) {
       setLoadingModels(true);
       try {
@@ -299,7 +303,10 @@ const CreateProjectModal = ({
 
                 {formData.apiKey && (
                   <div className="w-full">
-                    <label htmlFor="project-llm-model" className="text-sm mb-2 block">
+                    <label
+                      htmlFor="project-llm-model"
+                      className="text-sm mb-2 block"
+                    >
                       LLM Model
                     </label>
                     <Select
@@ -308,14 +315,18 @@ const CreateProjectModal = ({
                         loadingModels
                           ? "Loading models..."
                           : availableModels.length === 0
-                          ? "No models available"
-                          : "Select LLM model"
+                            ? "No models available"
+                            : "Select LLM model"
                       }
                       fullWidth
                       labelPlacement="outside"
                       onChange={handleModelChange}
                       value={formData.llmModel}
-                      isDisabled={loadingValidation || loadingModels || availableModels.length === 0}
+                      isDisabled={
+                        loadingValidation ||
+                        loadingModels ||
+                        availableModels.length === 0
+                      }
                     >
                       {availableModels.map((model) => (
                         <SelectItem key={model.id} value={model.id}>

@@ -520,6 +520,47 @@ function Home() {
             {selectedProject.name}
           </h1>
 
+          {/* LLM Model Information */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col space-y-2">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                LLM Configuration
+              </h3>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Model:
+                </span>
+                <div className="flex flex-col items-end">
+                  {selectedProject.api_key && selectedProject.llm_model ? (
+                    <>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {selectedProject.llm_model}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {selectedProject.llm_provider === "openai"
+                          ? "OpenAI"
+                          : selectedProject.llm_provider === "gemini"
+                            ? "Google Gemini"
+                            : selectedProject.llm_provider ||
+                              "Unknown Provider"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-red-500 text-sm font-medium">
+                      ⚠️ No model configured
+                    </span>
+                  )}
+                </div>
+              </div>
+              {selectedProject.api_key && selectedProject.llm_model && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+                  💡 <strong>Note:</strong> This model will be used for test
+                  execution. Check costs before running large test suites.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Project Dropdown */}
           <div className="flex flex-col space-y-4">
             <Button
