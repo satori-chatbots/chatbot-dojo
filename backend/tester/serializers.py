@@ -129,6 +129,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     test_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     chatbot_technology = serializers.PrimaryKeyRelatedField(queryset=ChatbotTechnology.objects.all())
     is_owner = serializers.SerializerMethodField()
+    llm_provider = serializers.ReadOnlyField()  # Derived from API key
     # Add the API key field to the serializer
     api_key = serializers.PrimaryKeyRelatedField(queryset=UserAPIKey.objects.all(), required=False, allow_null=True)
 
@@ -190,7 +191,7 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
         """Meta class for UserAPIKeySerializer."""
 
         model = UserAPIKey
-        fields: ClassVar[list[str]] = ["id", "name", "api_key", "created_at", "decrypted_api_key"]
+        fields: ClassVar[list[str]] = ["id", "name", "provider", "api_key", "created_at", "decrypted_api_key"]
         read_only_fields: ClassVar[list[str]] = ["id", "created_at", "decrypted_api_key"]
 
     def create(self, validated_data: dict[str, Any]) -> UserAPIKey:
@@ -210,8 +211,9 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
         # Update the API key if it is provided
         if api_key_plain is not None:
             instance.set_api_key(api_key_plain)
-        # Update the name
+        # Update the name and provider
         instance.name = validated_data.get("name", instance.name)
+        instance.provider = validated_data.get("provider", instance.provider)
         instance.save()
         return instance
 

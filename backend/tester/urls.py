@@ -4,6 +4,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from . import api
+from .api.base import get_all_providers, get_available_models
 
 router = routers.DefaultRouter()
 router.register(r"testcases", api.TestCaseViewSet, basename="testcase")
@@ -74,6 +75,16 @@ urlpatterns = [
         "ongoing-generation/<int:project_id>/",
         api.check_ongoing_generation,
         name="check-ongoing-generation",
+    ),
+    path(
+        "llm-models/",
+        get_available_models,
+        name="llm-models",
+    ),
+    path(
+        "llm-providers/",
+        get_all_providers,
+        name="llm-providers",
     ),
     # Then Include Router URLs
     path("", include(router.urls)),

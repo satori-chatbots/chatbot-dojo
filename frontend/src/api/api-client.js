@@ -43,3 +43,35 @@ const apiClient = async (url, options = {}) => {
 };
 
 export default apiClient;
+
+export const fetchLLMProviders = async () => {
+  try {
+    const response = await apiClient(`${API_BASE_URL}/llm-providers/`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch LLM providers: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.providers;
+  } catch (error) {
+    console.error("Error fetching LLM providers:", error);
+    throw error;
+  }
+};
+
+export const fetchLLMModels = async (provider) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/llm-models/?provider=${provider}`,
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch LLM models for ${provider}: ${response.status}`,
+      );
+    }
+    const data = await response.json();
+    return data.models;
+  } catch (error) {
+    console.error("Error fetching LLM models:", error);
+    throw error;
+  }
+};

@@ -1,17 +1,26 @@
 import React, { useState } from "react";
 import { Pencil, Trash2, Eye, EyeOff, Check, X } from "lucide-react";
-import { Card, CardBody, Button, Input, Form } from "@heroui/react";
+import {
+  Card,
+  CardBody,
+  Button,
+  Input,
+  Form,
+  Select,
+  SelectItem,
+} from "@heroui/react";
 
 export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(apiKey.name);
   const [newApiKey, setNewApiKey] = useState(apiKey.decrypted_api_key);
+  const [newProvider, setNewProvider] = useState(apiKey.provider || "openai");
   const [showKey, setShowKey] = useState(false);
 
   const handleSave = (event) => {
     event.preventDefault();
     if (newName.trim()) {
-      onUpdate(apiKey.id, newName, newApiKey);
+      onUpdate(apiKey.id, newName, newApiKey, newProvider);
       setIsEditing(false);
     }
   };
@@ -19,6 +28,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
   const handleCancel = () => {
     setNewName(apiKey.name);
     setNewApiKey(apiKey.decrypted_api_key);
+    setNewProvider(apiKey.provider || "openai");
     setIsEditing(false);
   };
 
@@ -38,6 +48,20 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
                 onChange={(event) => setNewName(event.target.value)}
                 variant="bordered"
               />
+              <Select
+                label="Provider"
+                value={newProvider}
+                onChange={(event) => setNewProvider(event.target.value)}
+                variant="bordered"
+                selectedKeys={[newProvider]}
+              >
+                <SelectItem key="openai" value="openai">
+                  OpenAI
+                </SelectItem>
+                <SelectItem key="gemini" value="gemini">
+                  Google Gemini
+                </SelectItem>
+              </Select>
               <div className="relative">
                 <Input
                   label="API Key"
@@ -83,7 +107,12 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
         ) : (
           <>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium">{apiKey.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">{apiKey.name}</h3>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                  {apiKey.provider === "openai" ? "OpenAI" : "Google Gemini"}
+                </span>
+              </div>
               <code className="text-sm text-gray-500 break-all">
                 {showKey ? apiKey.decrypted_api_key : "•".repeat(20)}
               </code>

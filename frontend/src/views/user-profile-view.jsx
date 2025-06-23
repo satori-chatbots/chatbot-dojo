@@ -13,6 +13,8 @@ import {
   ModalBody,
   ModalFooter,
   Form,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import { useAuth } from "../contexts/auth-context";
 import { ApiKeyItem } from "../components/api-key-item";
@@ -30,7 +32,11 @@ const UserProfileView = () => {
   const [loading, setLoading] = useState(false);
   const [apiKeys, setApiKeys] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newApiKey, setNewApiKey] = useState({ name: "", api_key: "" });
+  const [newApiKey, setNewApiKey] = useState({
+    name: "",
+    api_key: "",
+    provider: "openai",
+  });
   const [showKey, setShowKey] = useState(false);
   const { showToast } = useMyCustomToast();
 
@@ -82,12 +88,16 @@ const UserProfileView = () => {
   };
 
   const handleAddApiKey = async () => {
-    if (newApiKey.name.trim() && newApiKey.api_key.trim()) {
+    if (
+      newApiKey.name.trim() &&
+      newApiKey.api_key.trim() &&
+      newApiKey.provider
+    ) {
       setLoading(true);
       try {
         await createApiKey(newApiKey);
         await loadApiKeys();
-        setNewApiKey({ name: "", api_key: "" });
+        setNewApiKey({ name: "", api_key: "", provider: "openai" });
         setIsModalOpen(false);
         showToast("success", "API Key created successfully");
       } catch (error) {
@@ -98,10 +108,19 @@ const UserProfileView = () => {
     }
   };
 
-  const handleUpdateApiKey = async (id, newName, newApiKeyValue) => {
+  const handleUpdateApiKey = async (
+    id,
+    newName,
+    newApiKeyValue,
+    newProvider,
+  ) => {
     setLoading(true);
     try {
-      await updateApiKey(id, { name: newName, api_key: newApiKeyValue });
+      await updateApiKey(id, {
+        name: newName,
+        api_key: newApiKeyValue,
+        provider: newProvider,
+      });
       await loadApiKeys();
       showToast("success", "API Key updated successfully");
     } catch (error) {
@@ -220,7 +239,7 @@ const UserProfileView = () => {
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
-          setNewApiKey({ name: "", api_key: "" });
+          setNewApiKey({ name: "", api_key: "", provider: "openai" });
         }}
       >
         <ModalContent>
@@ -238,6 +257,26 @@ const UserProfileView = () => {
               }
               variant="bordered"
             />
+            <Select
+              label="Provider"
+              placeholder="Select a provider"
+              value={newApiKey.provider}
+              onChange={(event) =>
+                setNewApiKey((previous) => ({
+                  ...previous,
+                  provider: event.target.value,
+                }))
+              }
+              variant="bordered"
+              selectedKeys={[newApiKey.provider]}
+            >
+              <SelectItem key="openai" value="openai">
+                OpenAI
+              </SelectItem>
+              <SelectItem key="gemini" value="gemini">
+                Google Gemini
+              </SelectItem>
+            </Select>
             <div className="relative">
               <Input
                 label="API Key Value"
