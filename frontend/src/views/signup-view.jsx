@@ -72,6 +72,7 @@ function SignupView() {
               onChange={handleChange}
               isRequired
               fullWidth
+              labelPlacement="outside"
             />
             <Input
               label="Last Name"
@@ -103,6 +104,7 @@ function SignupView() {
                 className="focus:outline-none"
                 type="button"
                 onClick={toggleVisibility}
+                tabIndex="-1"
               >
                 {isVisible ? (
                   <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
@@ -127,6 +129,7 @@ function SignupView() {
                 className="focus:outline-none"
                 type="button"
                 onClick={toggleConfirmVisibility}
+                tabIndex="-1"
               >
                 {isConfirmVisible ? (
                   <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
