@@ -374,6 +374,12 @@ const EditProjectModal = ({
                     No models available for the selected API key provider.
                   </p>
                 )}
+                {availableModels.length > 0 && (
+                  <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800 mt-2">
+                    ℹ️ <strong>Important:</strong> API provider must match the
+                    provider in your user profiles.
+                  </div>
+                )}
               </div>
             )}
 

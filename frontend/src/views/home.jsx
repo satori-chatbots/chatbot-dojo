@@ -565,8 +565,10 @@ function Home() {
               </div>
               {selectedProject.api_key && selectedProject.llm_model && (
                 <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
-                  💡 <strong>Note:</strong> This model will be used for test
-                  execution. Check costs before running large test suites.
+                  💡 <strong>Important:</strong> API provider (
+                  {getProviderDisplayName(selectedProject.llm_provider)}) must
+                  match the provider in your profiles. Check costs before
+                  running tests.
                 </div>
               )}
             </div>
