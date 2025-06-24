@@ -23,35 +23,11 @@ import { fetchConversationsByProfileReport } from "../api/conversations-api";
 import { format } from "date-fns";
 import { fetchProject } from "../api/project-api";
 import { getProviderDisplayName } from "../constants/providers";
-
-const calculateElapsedTime = (startDate) => {
-  const now = new Date();
-  return Math.floor((now - startDate) / 1000);
-};
-
-const formatExecutionTime = (time) => {
-  if (time < 60) {
-    return `${time.toFixed(2)}s`;
-  }
-  if (time < 3600) {
-    const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
-    return `${minutes}m ${seconds.toFixed(2)}s`;
-  }
-  const hours = Math.floor(time / 3600);
-  const minutes = Math.floor((time % 3600) / 60);
-  const seconds = time % 60;
-  return `${hours}h ${minutes}m ${seconds.toFixed(2)}s`;
-};
-
-const formatTime = (seconds) => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes
-    .toString()
-    .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-};
+import {
+  formatExecutionTime,
+  formatTime,
+  calculateElapsedTime,
+} from "../utils/time-utils";
 
 function TestCase() {
   const { id } = useParams();
@@ -351,7 +327,7 @@ function TestCase() {
                       Total Time:
                     </p>
                     <p className="text-2xl font-bold">
-                      {testCase[0].execution_time.toFixed(2)}s
+                      {formatExecutionTime(testCase[0].execution_time)}
                     </p>
                   </div>
                 </div>
@@ -832,10 +808,9 @@ function TestCase() {
                                               Total Time
                                             </TableCell>
                                             <TableCell>
-                                              {conversation.conversation_time.toFixed(
-                                                2,
+                                              {formatExecutionTime(
+                                                conversation.conversation_time,
                                               )}
-                                              s
                                             </TableCell>
                                           </TableRow>
                                           <TableRow>

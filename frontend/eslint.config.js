@@ -44,6 +44,9 @@ export default [
       ...pluginJsxA11y.configs.recommended.rules,
       ...pluginUnicorn.configs.recommended.rules,
 
+      // Disable the unicorn/prevent-abbreviations rule
+      "unicorn/prevent-abbreviations": "off",
+
       // A couple of very common and useful overrides for modern React
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
