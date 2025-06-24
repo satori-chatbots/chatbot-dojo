@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route, Link, useNavigate, useHref } from "react-router-dom";
 import Home from "./views/home";
 import Dashboard from "./views/dashboard";
-import ChatbotTechnologies from "./views/chatbot-technologies";
+import ChatbotConnectors from "./views/chatbot-connectors";
 import ProjectsDashboard from "./views/projects-dashboard";
 import TestCase from "./views/test-case";
 import LoginView from "./views/login-view";
@@ -117,11 +117,9 @@ function AppContent() {
                 Results
               </Link>
             </NavbarItem>
-            <NavbarItem
-              isActive={location.pathname === "/chatbot-technologies"}
-            >
-              <Link to="/chatbot-technologies" className="hover:underline">
-                Chatbot Technologies
+            <NavbarItem isActive={location.pathname === "/chatbot-connectors"}>
+              <Link to="/chatbot-connectors" className="hover:underline">
+                Chatbot Connectors
               </Link>
             </NavbarItem>
             {user && (
@@ -234,14 +232,14 @@ function AppContent() {
               </Link>
             </NavbarMenuItem>
             <NavbarMenuItem
-              isActive={location.pathname === "/chatbot-technologies"}
+              isActive={location.pathname === "/chatbot-connectors"}
             >
               <Link
-                to="/chatbot-technologies"
+                to="/chatbot-connectors"
                 className="hover:underline"
                 onClick={handleLinkClick}
               >
-                Chatbot Technologies
+                Chatbot Connectors
               </Link>
             </NavbarMenuItem>
             <NavbarMenuItem isActive={location.pathname === "/projects"}>
@@ -300,10 +298,7 @@ function AppContent() {
               }
             />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route
-              path="/chatbot-technologies"
-              element={<ChatbotTechnologies />}
-            />
+            <Route path="/chatbot-connectors" element={<ChatbotConnectors />} />
             <Route
               path="/projects"
               element={

@@ -250,14 +250,14 @@ def set_name(sender: type[TestFile], instance: TestFile, *, created: bool, **kwa
 
 
 class Project(models.Model):
-    """A Project is a collection of test cases, it uses one chatbot technology."""
+    """A Project is a collection of test cases, it uses one chatbot connector."""
 
     # Name of the project, must be unique for the user
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # A project can only have one chatbot technology, but a technology can be used in multiple projects
-    chatbot_technology = models.ForeignKey("ChatbotTechnology", related_name="projects", on_delete=models.CASCADE)
+    # A project can only have one chatbot connector, but a connector can be used in multiple projects
+    chatbot_connector = models.ForeignKey("ChatbotConnector", related_name="projects", on_delete=models.CASCADE)
 
     # Owner of the project
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="projects", on_delete=models.CASCADE)
@@ -306,8 +306,8 @@ class Project(models.Model):
         config_data: dict[str, Any] = {
             "project_folder": f"project_{self.id}",
             "user_profile": "",
-            "technology": self.chatbot_technology.technology if self.chatbot_technology else "",
-            "connector": self.chatbot_technology.link if self.chatbot_technology else "",
+            "technology": self.chatbot_connector.technology if self.chatbot_connector else "",
+            "connector": self.chatbot_connector.link if self.chatbot_connector else "",
             "connector_parameters": {},
             "extract": "",
             "#execution_parameters": [
@@ -357,7 +357,7 @@ def delete_project_directory(sender: type[Project], instance: Project, **_kwargs
             logger.exception("Error deleting project directory %s", project_path)
 
 
-TECHNOLOGY_CHOICES = [
+CONNECTOR_CHOICES = [
     ("rasa", "Rasa"),
     ("taskyto", "Taskyto"),
     ("ada-uam", "Ada UAM"),
@@ -372,19 +372,19 @@ TECHNOLOGY_CHOICES = [
 ]
 
 
-class ChatbotTechnology(models.Model):
+class ChatbotConnector(models.Model):
     """Information about the technology of the chatbot used, it can be used by multiple projects.
 
     Contains the used technology and the link to access the chatbot, also a name to identify it
     """
 
-    # Name of the chatbot technology, must be unique
+    # Name of the chatbot connector, must be unique
     name = models.CharField(max_length=255, unique=True)
-    technology = models.CharField(max_length=255, choices=TECHNOLOGY_CHOICES)
+    technology = models.CharField(max_length=255, choices=CONNECTOR_CHOICES)
     link = models.URLField(blank=True)
 
     def __str__(self) -> str:
-        """Return the name of the chatbot technology."""
+        """Return the name of the chatbot connector."""
         return self.name
 
 

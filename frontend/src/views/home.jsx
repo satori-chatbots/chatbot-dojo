@@ -30,7 +30,7 @@ import {
   checkOngoingGeneration,
 } from "../api/file-api";
 import { deleteProject } from "../api/project-api";
-import { fetchChatbotTechnologies } from "../api/chatbot-technology-api";
+import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import useFetchFiles from "../hooks/use-fetch-files";
 import { executeTest, checkTestCaseName } from "../api/test-cases-api";
@@ -49,9 +49,9 @@ const preventDefault = (event) => event.preventDefault();
 function Home() {
   const { showToast } = useMyCustomToast();
 
-  // List of available chatbot technologies (eg Taskyto, Rasa, etc.)
-  const [availableTechnologies, setAvailableTechnologies] = useState([]);
-  const [loadingTechnologies, setLoadingTechnologies] = useState(true);
+  // List of available chatbot connectors (eg Taskyto, Rasa, etc.)
+  const [availableConnectors, setAvailableConnectors] = useState([]);
+  const [loadingConnectors, setLoadingConnectors] = useState(true);
 
   // Fetch the list of projects
   const { projects, loadingProjects, reloadProjects } =
@@ -274,18 +274,18 @@ function Home() {
     isLoading: false,
   });
 
-  // Initialize with the available technologies
+  // Initialize with the available connectors
   useEffect(() => {
     const loadData = async () => {
-      setLoadingTechnologies(true);
+      setLoadingConnectors(true);
       try {
-        const technologies = await fetchChatbotTechnologies();
-        setAvailableTechnologies(technologies);
+        const connectors = await fetchChatbotConnectors();
+        setAvailableConnectors(connectors);
       } catch (error) {
         console.error("Error loading data:", error);
-        showToast("error", "Error loading technologies.");
+        showToast("error", "Error loading connectors.");
       } finally {
-        setLoadingTechnologies(false);
+        setLoadingConnectors(false);
       }
     };
     loadData();
@@ -814,8 +814,8 @@ function Home() {
           <h2 className="text-xl font-bold text-center">Select a Project</h2>
           <ProjectsList
             projects={projects}
-            technologies={availableTechnologies}
-            loading={loadingProjects || loadingTechnologies}
+            connectors={availableConnectors}
+            loading={loadingProjects || loadingConnectors}
             selectedProject={selectedProject}
             onSelectProject={setSelectedProject}
             onEditProject={handleEditClick}
@@ -891,7 +891,7 @@ function Home() {
       <CreateProjectModal
         isOpen={isOpen}
         onOpenChange={onOpenChange}
-        technologies={availableTechnologies}
+        connectors={availableConnectors}
         onProjectCreated={async (newProject) => {
           await reloadProjects();
           setSelectedProject(newProject);
@@ -1010,7 +1010,7 @@ function Home() {
             ? projects.find((p) => p.id === editProjectId)
             : undefined
         }
-        technologies={availableTechnologies}
+        connectors={availableConnectors}
         onProjectUpdated={handleProjectUpdated}
       />
     </div>

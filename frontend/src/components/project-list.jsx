@@ -31,7 +31,7 @@ const getLLMModelDisplay = (project) => {
 
 const ProjectsList = ({
   projects,
-  technologies,
+  connectors,
   loading,
   selectedProject,
   onSelectProject,
@@ -42,9 +42,9 @@ const ProjectsList = ({
 
   const columns = [
     { name: "Name", key: "name", sortable: true },
-    { name: "Technology", key: "technology", sortable: true },
+    { name: "Connector", key: "connector", sortable: true },
     { name: "LLM Model", key: "llm_model", sortable: true },
-    { name: "Actions", key: "actions" },
+    { name: "Actions", key: "actions", sortable: false },
   ];
 
   const [sortDescriptor, setSortDescriptor] = useState({
@@ -57,23 +57,37 @@ const ProjectsList = ({
     return [...projects].sort((a, b) => {
       let first, second;
 
-      if (column === "technology") {
-        first =
-          technologies.find((t) => t.id === a.chatbot_technology)?.name ?? "";
-        second =
-          technologies.find((t) => t.id === b.chatbot_technology)?.name ?? "";
-      } else if (column === "llm_model") {
-        first = getLLMModelDisplay(a).modelName;
-        second = getLLMModelDisplay(b).modelName;
-      } else {
-        first = a[column] ?? "";
-        second = b[column] ?? "";
+      switch (column) {
+        case "name": {
+          first = a.name;
+          second = b.name;
+
+          break;
+        }
+        case "connector": {
+          first =
+            connectors.find((t) => t.id === a.chatbot_connector)?.name ?? "";
+          second =
+            connectors.find((t) => t.id === b.chatbot_connector)?.name ?? "";
+
+          break;
+        }
+        case "llm_model": {
+          first = getLLMModelDisplay(a).modelName;
+          second = getLLMModelDisplay(b).modelName;
+
+          break;
+        }
+        default: {
+          first = a[column] ?? "";
+          second = b[column] ?? "";
+        }
       }
 
       const cmp = first < second ? -1 : first > second ? 1 : 0;
       return direction === "descending" ? -cmp : cmp;
     });
-  }, [projects, technologies, sortDescriptor]);
+  }, [projects, connectors, sortDescriptor]);
 
   return (
     <Table
@@ -103,7 +117,7 @@ const ProjectsList = ({
               <TableCell>{project.name}</TableCell>
               <TableCell>
                 {
-                  technologies.find((t) => t.id === project.chatbot_technology)
+                  connectors.find((t) => t.id === project.chatbot_connector)
                     ?.name
                 }
               </TableCell>

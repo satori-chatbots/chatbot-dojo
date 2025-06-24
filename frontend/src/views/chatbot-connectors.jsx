@@ -22,16 +22,16 @@ import {
   TableCell,
 } from "@heroui/react";
 import {
-  fetchChatbotTechnologies,
-  createChatbotTechnology,
+  fetchChatbotConnectors,
+  createChatbotConnector,
   fetchTechnologyChoices,
-  updateChatbotTechnology,
-  deleteChatbotTechnology,
-  checkChatbotTechnologyName,
-} from "../api/chatbot-technology-api";
+  updateChatbotConnector,
+  deleteChatbotConnector,
+  checkChatbotConnectorName,
+} from "../api/chatbot-connector-api";
 import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
 
-const ChatbotTechnologies = () => {
+const ChatbotConnectors = () => {
   const [editData, setEditData] = useState({
     name: "",
     technology: "",
@@ -48,7 +48,7 @@ const ChatbotTechnologies = () => {
     setIsEditOpen(true);
   };
 
-  const [technologies, setTechnologies] = useState([]);
+  const [connectors, setConnectors] = useState([]);
   const [technologyChoices, setTechnologyChoices] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -57,7 +57,7 @@ const ChatbotTechnologies = () => {
     link: "",
   });
 
-  // State of the modal to create new technology
+  // State of the modal to create new connector
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   // Loading state for the serverside validation
@@ -71,21 +71,21 @@ const ChatbotTechnologies = () => {
 
   useEffect(() => {
     try {
-      loadTechnologies();
+      loadConnectors();
       loadTechnologyChoices();
     } catch (error) {
-      console.error("Error loading chatbot technologies:", error);
+      console.error("Error loading chatbot connectors:", error);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const loadTechnologies = async () => {
+  const loadConnectors = async () => {
     try {
-      const data = await fetchChatbotTechnologies();
-      setTechnologies(data);
+      const data = await fetchChatbotConnectors();
+      setConnectors(data);
     } catch (error) {
-      console.error("Error fetching chatbot technologies:", error);
+      console.error("Error fetching chatbot connectors:", error);
     }
   };
 
@@ -137,7 +137,7 @@ const ChatbotTechnologies = () => {
       }
 
       // Otherwise, check if the name exists
-      const existsResponse = await checkChatbotTechnologyName(data.name);
+      const existsResponse = await checkChatbotConnectorName(data.name);
       if (existsResponse.exists) {
         setValidationErrors({ name: "Name already exists" });
         setLoadingValidation(false);
@@ -166,19 +166,19 @@ const ChatbotTechnologies = () => {
     if (!isValid) return;
 
     try {
-      await createChatbotTechnology(data);
+      await createChatbotConnector(data);
       // Reset form
       setFormData({
         name: "",
         technology: technologyChoices[0]?.[0] || "",
         link: "",
       });
-      loadTechnologies();
+      loadConnectors();
       // Close modal
       onOpenChange(false);
     } catch (error) {
-      console.log("Error creating chatbot technology:", error);
-      alert(`Error creating chatbot technology: ${error.message}`);
+      console.log("Error creating chatbot connector:", error);
+      alert(`Error creating chatbot connector: ${error.message}`);
     } finally {
       setLoadingValidation(false);
     }
@@ -204,7 +204,7 @@ const ChatbotTechnologies = () => {
     setValidationErrors({});
   };
 
-  // Update technology
+  // Update connector
   const handleUpdate = async (event) => {
     event.preventDefault();
     const data = {
@@ -218,23 +218,23 @@ const ChatbotTechnologies = () => {
     if (!isValid) return;
 
     try {
-      await updateChatbotTechnology(editData.id, data);
+      await updateChatbotConnector(editData.id, data);
       setIsEditOpen(false);
-      await loadTechnologies();
+      await loadConnectors();
     } catch (error) {
-      alert(`Error updating chatbot technology: ${error.message}`);
+      alert(`Error updating chatbot connector: ${error.message}`);
     }
   };
 
-  // Delete existing technology
+  // Delete existing connector
   const handleDelete = async (id) => {
-    if (!globalThis.confirm("Are you sure you want to delete this technology?"))
+    if (!globalThis.confirm("Are you sure you want to delete this connector?"))
       return;
     try {
-      await deleteChatbotTechnology(id);
-      await loadTechnologies();
+      await deleteChatbotConnector(id);
+      await loadConnectors();
     } catch (error) {
-      alert(`Error deleting chatbot technology: ${error.message}`);
+      alert(`Error deleting chatbot connector: ${error.message}`);
     }
   };
 
@@ -251,9 +251,9 @@ const ChatbotTechnologies = () => {
     direction: "ascending",
   });
 
-  const sortedChatbotTechnologies = useMemo(() => {
+  const sortedChatbotConnectors = useMemo(() => {
     const { column, direction } = sortDescriptor;
-    return [...technologies].sort((a, b) => {
+    return [...connectors].sort((a, b) => {
       const first =
         column === "name"
           ? a.name
@@ -270,7 +270,7 @@ const ChatbotTechnologies = () => {
         ? first.localeCompare(second)
         : second.localeCompare(first);
     });
-  }, [technologies, sortDescriptor]);
+  }, [connectors, sortDescriptor]);
 
   return (
     <div
@@ -284,16 +284,16 @@ const ChatbotTechnologies = () => {
             p-4 sm:p-6 lg:p-8"
     >
       <h1 className="text-2xl sm:text-3xl font-bold text-center">
-        Chatbot Technologies
+        Chatbot Connectors
       </h1>
 
-      {/* Modal to create new technology */}
+      {/* Modal to create new connector */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
         <ModalContent>
           {() => (
             <>
               <ModalHeader className="flex flex-col gap-1 items-center">
-                Create New Technology
+                Create New Connector
               </ModalHeader>
               <ModalBody className="flex flex-col gap-4 items-center">
                 <Form
@@ -309,7 +309,7 @@ const ChatbotTechnologies = () => {
                     isDisabled={loadingValidation}
                     labelPlacement="outside"
                     name="name"
-                    placeholder="Enter a name to identify the technology"
+                    placeholder="Enter a name to identify the connector"
                     value={formData.name}
                     onChange={(event) => {
                       setFormData({ ...formData, name: event.target.value });
@@ -359,7 +359,7 @@ const ChatbotTechnologies = () => {
                     label="URL (optional)"
                     labelPlacement="outside"
                     name="link"
-                    placeholder="Enter a URL to the technology"
+                    placeholder="Enter a URL to the connector"
                     value={formData.link}
                     onChange={(event) =>
                       setFormData({ ...formData, link: event.target.value })
@@ -396,12 +396,12 @@ const ChatbotTechnologies = () => {
       </Modal>
 
       <h2 className="text-xl sm:text-2xl font-bold text-center">
-        Existing Technologies
+        Existing Connectors
       </h2>
 
-      {/* Table of existing technologies */}
+      {/* Table of existing connectors */}
       <Table
-        aria-label="Chatbot Technologies Table"
+        aria-label="Chatbot Connectors Table"
         className="max-h-[60vh] sm:max-h-[50vh] overflow-y-auto"
         sortDescriptor={sortDescriptor}
         onSortChange={setSortDescriptor}
@@ -416,15 +416,21 @@ const ChatbotTechnologies = () => {
         <TableBody
           isLoading={loading}
           loadingContent={<Spinner label="Loading..." />}
-          emptyContent="Create a new technology to get started."
+          emptyContent="Create a new connector to get started."
         >
-          {sortedChatbotTechnologies.map((tech) => (
-            <TableRow key={tech.id}>
-              <TableCell className="px-2 sm:px-4">{tech.name}</TableCell>
-              <TableCell className="px-2 sm:px-4">{tech.technology}</TableCell>
+          {sortedChatbotConnectors.map((connector) => (
+            <TableRow key={connector.id}>
+              <TableCell className="px-2 sm:px-4">{connector.name}</TableCell>
               <TableCell className="px-2 sm:px-4">
-                <a href={tech.link} target="_blank" rel="noopener noreferrer">
-                  {tech.link}
+                {connector.technology}
+              </TableCell>
+              <TableCell className="px-2 sm:px-4">
+                <a
+                  href={connector.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {connector.link}
                 </a>
               </TableCell>
               <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
@@ -433,7 +439,7 @@ const ChatbotTechnologies = () => {
                   color="secondary"
                   variant="flat"
                   endContent={<Edit className="w-3 h-3" />}
-                  onPress={() => handleEdit(tech)}
+                  onPress={() => handleEdit(connector)}
                 >
                   Edit
                 </Button>
@@ -442,7 +448,7 @@ const ChatbotTechnologies = () => {
                   color="danger"
                   variant="flat"
                   endContent={<Trash className="w-3 h-3" />}
-                  onPress={() => handleDelete(tech.id)}
+                  onPress={() => handleDelete(connector.id)}
                 >
                   Delete
                 </Button>
@@ -459,7 +465,7 @@ const ChatbotTechnologies = () => {
         className="w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
         startContent={<Plus className="w-4 h-4 mr-1" />}
       >
-        Create New Technology
+        Create New Connector
       </Button>
 
       {/* Modal for editing */}
@@ -475,7 +481,7 @@ const ChatbotTechnologies = () => {
           {() => (
             <>
               <ModalHeader className="flex flex-col gap-1 items-center">
-                Edit Technology
+                Edit Connector
               </ModalHeader>
               <ModalBody className="flex flex-col gap-4 items-center">
                 <Form
@@ -565,4 +571,4 @@ const ChatbotTechnologies = () => {
   );
 };
 
-export default ChatbotTechnologies;
+export default ChatbotConnectors;

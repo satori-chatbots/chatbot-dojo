@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import (
-    ChatbotTechnology,
+    ChatbotConnector,
     Conversation,
     GlobalReport,
     PersonalityFile,
@@ -110,16 +110,16 @@ class TestFileSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = TestFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["project"]
 
 
-class ChatbotTechnologySerializer(serializers.ModelSerializer):
-    """Serializer for the ChatbotTechnology model."""
+class ChatbotConnectorSerializer(serializers.ModelSerializer):
+    """Serializer for the ChatbotConnector model."""
 
     class Meta:
-        """Meta class for ChatbotTechnologySerializer."""
+        """Meta class for ChatbotConnectorSerializer."""
 
-        model = ChatbotTechnology
+        model = ChatbotConnector
         fields = "__all__"
 
 
@@ -127,7 +127,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     """Serializer for the Project model."""
 
     test_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    chatbot_technology = serializers.PrimaryKeyRelatedField(queryset=ChatbotTechnology.objects.all())
+    chatbot_connector = serializers.PrimaryKeyRelatedField(queryset=ChatbotConnector.objects.all())
     is_owner = serializers.SerializerMethodField()
     llm_provider = serializers.ReadOnlyField()  # Derived from API key
     # Add the API key field to the serializer

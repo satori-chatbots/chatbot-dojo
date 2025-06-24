@@ -1,9 +1,9 @@
 import API_BASE_URL, { ENDPOINTS } from "./config";
 
-const API_URL = `${API_BASE_URL}${ENDPOINTS.CHATBOTTECHNOLOGIES}`;
-const CHOICES_URL = `${API_BASE_URL}${ENDPOINTS.TECHNOLOGIES_CHOICES}`;
+const API_URL = `${API_BASE_URL}${ENDPOINTS.CHATBOTCONNECTOR}`;
+const CHOICES_URL = `${API_BASE_URL}${ENDPOINTS.CONNECTORS_CHOICES}`;
 
-export const fetchChatbotTechnologies = async () => {
+export const fetchChatbotConnectors = async () => {
   try {
     const response = await fetch(API_URL);
     if (!response.ok) {
@@ -11,12 +11,12 @@ export const fetchChatbotTechnologies = async () => {
     }
     return await response.json();
   } catch (error) {
-    console.error("Error fetching chatbot technologies:", error);
+    console.error("Error fetching chatbot connectors:", error);
     throw error;
   }
 };
 
-export const createChatbotTechnology = async (data) => {
+export const createChatbotConnector = async (data) => {
   try {
     const response = await fetch(API_URL, {
       method: "POST",
@@ -34,7 +34,7 @@ export const createChatbotTechnology = async (data) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("Error creating chatbot technology:", error);
+    console.error("Error creating chatbot connector:", error);
     throw error;
   }
 };
@@ -53,7 +53,7 @@ export const fetchTechnologyChoices = async () => {
   }
 };
 
-export const updateChatbotTechnology = async (id, data) => {
+export const updateChatbotConnector = async (id, data) => {
   try {
     const response = await fetch(`${API_URL}${id}/`, {
       method: "PUT",
@@ -69,12 +69,12 @@ export const updateChatbotTechnology = async (id, data) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("Error updating chatbot technology:", error);
+    console.error("Error updating chatbot connector:", error);
     throw error;
   }
 };
 
-export const deleteChatbotTechnology = async (id) => {
+export const deleteChatbotConnector = async (id) => {
   try {
     const response = await fetch(`${API_URL}${id}/`, {
       method: "DELETE",
@@ -88,12 +88,12 @@ export const deleteChatbotTechnology = async (id) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("Error deleting chatbot technology:", error);
+    console.error("Error deleting chatbot connector:", error);
     throw error;
   }
 };
 
-export const checkChatbotTechnologyName = async (name) => {
+export const checkChatbotConnectorName = async (name) => {
   try {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.CHECK_CHATBOT_NAME}?chatbot_name=${name}`,
@@ -103,7 +103,7 @@ export const checkChatbotTechnologyName = async (name) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("Error checking chatbot technology name:", error);
+    console.error("Error checking chatbot connector name:", error);
     throw error;
   }
 };

@@ -22,13 +22,13 @@ const EditProjectModal = ({
   isOpen,
   onOpenChange,
   project,
-  technologies,
+  connectors,
   onProjectUpdated,
 }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: project?.name || "",
-    technology: project?.chatbot_technology || "",
+    connector: project?.chatbot_connector || "",
     apiKey: project?.api_key || undefined,
     llmModel: project?.llm_model || "",
     public: project?.public || false,
@@ -40,9 +40,9 @@ const EditProjectModal = ({
   const [availableModels, setAvailableModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
 
-  const handleNavigateToTechnologies = () => {
+  const handleNavigateToConnectors = () => {
     onOpenChange(false);
-    navigate("/chatbot-technologies");
+    navigate("/chatbot-connectors");
   };
 
   const handleNavigateToProfile = () => {
@@ -55,7 +55,7 @@ const EditProjectModal = ({
     if (project) {
       setFormData({
         name: project.name,
-        technology: project.chatbot_technology,
+        connector: project.chatbot_connector,
         apiKey: project.api_key || undefined,
         llmModel: project.llm_model || "",
         public: project.public || false,
@@ -102,11 +102,11 @@ const EditProjectModal = ({
     }
   }, [isOpen, project?.api_key]);
 
-  const handleFormValidation = async (event, name, technology) => {
+  const handleFormValidation = async (event, name, connector) => {
     event.preventDefault();
     setLoadingValidation(true);
 
-    if (!name.trim() || !technology) {
+    if (!name.trim() || !connector) {
       setLoadingValidation(false);
       return false;
     }
@@ -135,14 +135,14 @@ const EditProjectModal = ({
     const isValid = await handleFormValidation(
       event,
       formData.name,
-      formData.technology,
+      formData.connector,
     );
     if (!isValid) return;
 
     try {
       await updateProject(project.id, {
         name: formData.name,
-        chatbot_technology: formData.technology,
+        chatbot_connector: formData.connector,
         api_key: formData.apiKey,
         llm_model: formData.llmModel,
         public: formData.public,
@@ -164,7 +164,7 @@ const EditProjectModal = ({
   const handleReset = () => {
     setFormData({
       name: project.name,
-      technology: project.chatbot_technology,
+      connector: project.chatbot_connector,
       apiKey: project.api_key || undefined,
       llmModel: project.llm_model || "",
       public: project.public || false,
@@ -246,49 +246,49 @@ const EditProjectModal = ({
             />
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label htmlFor="edit-project-technology" className="text-sm">
-                  Technology
+                <label htmlFor="edit-project-connector" className="text-sm">
+                  Connector
                 </label>
                 <Button
                   size="sm"
                   variant="light"
                   color="primary"
-                  onPress={handleNavigateToTechnologies}
+                  onPress={handleNavigateToConnectors}
                   startContent={<Settings className="w-3 h-3 mr-1" />}
                 >
-                  {technologies.length === 0
-                    ? "Create Technology"
-                    : "Manage Technologies"}
+                  {connectors.length === 0
+                    ? "Create Connector"
+                    : "Manage Connectors"}
                 </Button>
               </div>
               <Select
-                id="edit-project-technology"
+                id="edit-project-connector"
                 isRequired
                 labelPlacement="outside"
                 placeholder={
-                  technologies.length === 0
-                    ? "No technologies available"
-                    : "Select Technology"
+                  connectors.length === 0
+                    ? "No connectors available"
+                    : "Select Connector"
                 }
-                name="technology"
-                selectedKeys={[String(formData.technology)]}
+                name="connector"
+                selectedKeys={[String(formData.connector)]}
                 onChange={(event) =>
                   setFormData((previous) => ({
                     ...previous,
-                    technology: event.target.value,
+                    connector: event.target.value,
                   }))
                 }
-                isDisabled={loadingValidation || technologies.length === 0}
+                isDisabled={loadingValidation || connectors.length === 0}
               >
-                {technologies.map((tech) => (
+                {connectors.map((tech) => (
                   <SelectItem key={String(tech.id)} value={String(tech.id)}>
                     {tech.name}
                   </SelectItem>
                 ))}
               </Select>
-              {technologies.length === 0 && (
+              {connectors.length === 0 && (
                 <p className="text-xs text-danger mt-1">
-                  You need to create a technology before updating this project.
+                  You need to create a connector before updating this project.
                 </p>
               )}
             </div>
@@ -412,10 +412,10 @@ const EditProjectModal = ({
               <Button
                 color="primary"
                 type="submit"
-                isDisabled={!formData.name.trim() || !formData.technology}
+                isDisabled={!formData.name.trim() || !formData.connector}
                 startContent={<Save className="w-4 h-4 mr-1" />}
               >
-                Update
+                Save
               </Button>
             </ModalFooter>
           </Form>
