@@ -1,3 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Dark mode input text fix */
+@layer components {
+  /* Ensure input text is visible in dark mode */
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="password"],
+  .dark input[type="number"],
+  .dark input[type="url"],
+  .dark textarea {
+    color: #e2e8f0 !important;
+    background-color: #27272a !important;
+    border-color: #52525b !important;
+  }
+
+  .dark input[type="text"]:disabled,
+  .dark input[type="email"]:disabled,
+  .dark input[type="password"]:disabled,
+  .dark input[type="number"]:disabled,
+  .dark input[type="url"]:disabled,
+  .dark textarea:disabled {
+    color: #94a3b8 !important;
+    background-color: #1f1f23 !important;
+  }
+
+  /* Fix placeholder text visibility in dark mode */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
+  }
+
+  /* Fix HeroUI select text in dark mode */
+  .dark [data-slot="trigger"] {
+    color: #e2e8f0 !important;
+    background-color: #27272a !important;
+  }
+
+  /* Fix HeroUI input value text in dark mode */
+  .dark [data-slot="input"] input {
+    color: #e2e8f0 !important;
+  }
+
+  /* Fix HeroUI select dropdown text */
+  .dark [data-slot="listbox"] {
+    background-color: #27272a !important;
+  }
+
+  .dark [data-slot="listbox"] [role="option"] {
+    color: #e2e8f0 !important;
+  }
+
+  /* Fix HeroUI input wrapper */
+  .dark [data-slot="input-wrapper"] {
+    background-color: #27272a !important;
+    border-color: #52525b !important;
+  }
+
+  /* Fix labels in dark mode */
+  .dark [data-slot="label"] {
+    color: #e2e8f0 !important;
+  }
+
+  /* Fix select trigger text */
+  .dark [data-slot="trigger"] [data-slot="placeholder"] {
+    color: #94a3b8 !important;
+  }
+}

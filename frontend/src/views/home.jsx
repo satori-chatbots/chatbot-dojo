@@ -765,7 +765,7 @@ function Home() {
                               onPress={() =>
                                 navigate(`/yaml-editor/${file.id}`)
                               }
-                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
+                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-primary hover:underline text-left"
                             >
                               {file.name}
                             </Link>

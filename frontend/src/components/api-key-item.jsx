@@ -59,7 +59,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
 
   return (
     <>
-      <Card className="shadow-sm">
+      <Card className="shadow-sm bg-content1 dark:bg-content1">
         <CardBody className="flex flex-row gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

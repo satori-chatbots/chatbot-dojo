@@ -246,7 +246,10 @@ const EditProjectModal = ({
             />
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label htmlFor="edit-project-connector" className="text-sm">
+                <label
+                  htmlFor="edit-project-connector"
+                  className="text-sm text-foreground dark:text-foreground-dark"
+                >
                   Connector
                 </label>
                 <Button
@@ -295,7 +298,10 @@ const EditProjectModal = ({
 
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label htmlFor="edit-project-api-key" className="text-sm">
+                <label
+                  htmlFor="edit-project-api-key"
+                  className="text-sm text-foreground dark:text-foreground-dark"
+                >
                   API Key
                 </label>
                 <Button
@@ -389,7 +395,10 @@ const EditProjectModal = ({
             )}
 
             <div className="flex w-full justify-between items-center">
-              <label htmlFor="edit-project-public" className="text-sm">
+              <label
+                htmlFor="edit-project-public"
+                className="text-sm text-foreground dark:text-foreground-dark"
+              >
                 Make Project Public
               </label>
               <Switch

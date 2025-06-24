@@ -476,11 +476,11 @@ function Dashboard() {
                 p-4 sm:p-6 lg:p-8"
     >
       {publicView ? (
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
           Public Projects
         </h1>
       ) : (
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
           My Projects
         </h1>
       )}
@@ -729,7 +729,11 @@ function Dashboard() {
                   ) : (
                     <Accordion isCompact>
                       <AccordionItem
-                        title={<span className="text-sm">No errors</span>}
+                        title={
+                          <span className="text-sm text-foreground dark:text-foreground-dark">
+                            No errors
+                          </span>
+                        }
                       />
                     </Accordion>
                   )}

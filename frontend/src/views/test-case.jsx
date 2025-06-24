@@ -158,7 +158,7 @@ function TestCase() {
             <Spinner size="sm" className="mb-4" />
           </CardHeader>
           <CardBody className="space-y-4">
-            <p className="text-foreground/70 dark:text-foreground-dark/70 dark:text-gray-300 mt-2">
+            <p className="text-foreground/70 dark:text-foreground-dark/70 mt-2">
               Please wait while the test case completes...
             </p>
             <div className="mt-6">
@@ -203,7 +203,7 @@ function TestCase() {
             </h2>
           </CardHeader>
           <CardBody>
-            <p className="text-xl font-bold dark:text-gray-200">
+            <p className="text-xl font-bold text-foreground dark:text-foreground-dark">
               Error Output:
             </p>
             <pre className="whitespace-pre-wrap text-left p-4 rounded-lg mt-4 bg-red-200 dark:bg-red-600">

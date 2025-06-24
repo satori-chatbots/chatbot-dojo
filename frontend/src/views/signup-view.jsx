@@ -159,7 +159,7 @@ function SignupView() {
         </Form>
         <div className="text-center text-sm text-foreground/60 dark:text-foreground-dark/60">
           Already have an account?{" "}
-          <Link to="/login" className="text-primary-500">
+          <Link to="/login" className="text-primary">
             Log in
           </Link>
         </div>
