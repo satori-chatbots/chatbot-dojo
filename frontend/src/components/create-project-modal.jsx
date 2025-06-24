@@ -15,7 +15,7 @@ import {
 import { createProject, checkProjectName } from "../api/project-api";
 import { RotateCcw, Plus, Settings } from "lucide-react";
 import { getUserApiKeys } from "../api/authentication-api";
-import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
+import { fetchLLMModels } from "../api/api-client";
 import { useNavigate } from "react-router-dom";
 
 const CreateProjectModal = ({
@@ -91,7 +91,7 @@ const CreateProjectModal = ({
     if (selectedApiKey && selectedApiKey.provider) {
       setLoadingModels(true);
       try {
-        const models = await fetchChatbotConnectors(selectedApiKey.provider);
+        const models = await fetchLLMModels(selectedApiKey.provider);
         setAvailableModels(models);
       } catch (error) {
         console.error("Error fetching models:", error);
