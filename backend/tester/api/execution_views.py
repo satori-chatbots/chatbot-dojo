@@ -133,8 +133,8 @@ class ExecuteSelectedAPIView(APIView):
         project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{request.user.id}" / f"project_{project.id}"
 
         with transaction.atomic():
-            technology = project.chatbot_technology.technology
-            link = project.chatbot_technology.link if project.chatbot_technology else None
+            technology = project.chatbot_connector.technology
+            link = project.chatbot_connector.link if project.chatbot_connector else None
 
             test_case = TestCase.objects.create(
                 project=project,
@@ -207,7 +207,7 @@ def generate_profiles(request: Request) -> Response:
     profile_generator = ProfileGenerator()
     threading.Thread(
         target=profile_generator.run_async_profile_generation,
-        args=(task.id, project.chatbot_technology.technology, conversations, turns, request.user.id),
+        args=(task.id, project.chatbot_connector.technology, conversations, turns, request.user.id),
     ).start()
 
     return Response(

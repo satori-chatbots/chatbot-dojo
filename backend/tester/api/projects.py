@@ -17,8 +17,8 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from tester.models import ChatbotTechnology, Project, TestFile
-from tester.serializers import ChatbotTechnologySerializer, ProjectSerializer
+from tester.models import ChatbotConnector, Project, TestFile
+from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer
 from tester.validation_script import YamlValidator
 
 
@@ -120,11 +120,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return obj
 
-    @action(detail=False, methods=["get"], url_path="technologies")
-    def list_technologies(self, _request: Request) -> Response:
-        """List all available Chatbot Technologies."""
-        technologies = ChatbotTechnology.objects.all()
-        serializer = ChatbotTechnologySerializer(technologies, many=True)
+    @action(detail=False, methods=["get"], url_path="connectors")
+    def list_connectors(self, _request: Request) -> Response:
+        """List all available Chatbot Connectors."""
+        connectors = ChatbotConnector.objects.all()
+        serializer = ChatbotConnectorSerializer(connectors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"], url_path="check-name")

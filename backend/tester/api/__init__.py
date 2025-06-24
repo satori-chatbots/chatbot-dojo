@@ -12,6 +12,7 @@ from .auth import (
     UserAPIKeyViewSet,
     validate_token,
 )
+from .connectors import ChatbotConnectorViewSet, get_technology_choices
 from .conversations import ConversationViewSet
 from .errors import TestErrorViewSet
 from .execution_views import (
@@ -29,12 +30,11 @@ from .project_files import (
 )
 from .projects import ProjectViewSet, fetch_file_content, validate_yaml
 from .reports import GlobalReportViewSet, ProfileReportViewSet
-from .technologies import ChatbotTechnologyViewSet, get_technology_choices
 from .test_cases import TestCaseViewSet
 from .test_files import TestFileViewSet
 
 __all__ = [
-    "ChatbotTechnologyViewSet",
+    "ChatbotConnectorViewSet",
     "ConversationViewSet",
     "ExecuteSelectedAPIView",
     "GlobalReportViewSet",

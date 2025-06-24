@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@heroui/react";
 import CreateProjectModal from "../components/create-project-modal";
 import useFetchProjects from "../hooks/use-fetch-projects";
-import { fetchChatbotTechnologies } from "../api/chatbot-technology-api";
+import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
 import { deleteProject } from "../api/project-api";
 import EditProjectModal from "../components/edit-project-modal";
 import useSelectedProject from "../hooks/use-selected-projects";
@@ -16,23 +16,23 @@ const ProjectsDashboard = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const { projects, loadingProjects, reloadProjects } =
     useFetchProjects("owned");
-  const [technologies, setTechnologies] = useState([]);
+  const [connectors, setConnectors] = useState([]);
   const [editProjectId, setEditProjectId] = useState();
   const [selectedProject, setSelectedProject] = useSelectedProject();
 
   useEffect(() => {
-    const loadTechnologies = async () => {
+    const loadConnectors = async () => {
       try {
         setLoading(true);
-        const techData = await fetchChatbotTechnologies();
-        setTechnologies(techData);
+        const techData = await fetchChatbotConnectors();
+        setConnectors(techData);
       } catch (error) {
-        console.error("Error fetching technologies:", error);
+        console.error("Error fetching connectors:", error);
       } finally {
         setLoading(false);
       }
     };
-    loadTechnologies();
+    loadConnectors();
   }, []);
 
   const handleEditClick = (project) => {
@@ -73,7 +73,7 @@ const ProjectsDashboard = () => {
       <CreateProjectModal
         isOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        technologies={technologies}
+        connectors={connectors}
         onProjectCreated={async (newProject) => {
           await reloadProjects();
           setSelectedProject(newProject);
@@ -108,7 +108,7 @@ const ProjectsDashboard = () => {
 
       <ProjectsList
         projects={projects}
-        technologies={technologies}
+        connectors={connectors}
         loading={loading || loadingProjects}
         selectedProject={selectedProject}
         onSelectProject={setSelectedProject}
@@ -133,7 +133,7 @@ const ProjectsDashboard = () => {
             ? projects.find((p) => p.id === editProjectId)
             : undefined
         }
-        technologies={technologies}
+        connectors={connectors}
         onProjectUpdated={handleProjectUpdated}
       />
     </div>

@@ -15,20 +15,20 @@ import {
 import { createProject, checkProjectName } from "../api/project-api";
 import { RotateCcw, Plus, Settings } from "lucide-react";
 import { getUserApiKeys } from "../api/authentication-api";
-import { fetchLLMModels } from "../api/api-client";
+import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
 import { useNavigate } from "react-router-dom";
 
 const CreateProjectModal = ({
   isOpen,
   onOpenChange,
-  technologies,
+  connectors,
   onProjectCreated,
 }) => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: "",
-    technology: "",
+    connector: "",
     apiKey: undefined,
     llmModel: "",
     public: false,
@@ -40,9 +40,9 @@ const CreateProjectModal = ({
   const [availableModels, setAvailableModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
 
-  const handleNavigateToTechnologies = () => {
+  const handleNavigateToConnectors = () => {
     onOpenChange(false);
-    navigate("/chatbot-technologies");
+    navigate("/chatbot-connectors");
   };
 
   const handleNavigateToProfile = () => {
@@ -72,29 +72,26 @@ const CreateProjectModal = ({
     setFormData((previous) => ({ ...previous, name: event.target.value }));
   };
 
-  const handleTechnologyChange = (event) => {
-    setFormData((previous) => ({
-      ...previous,
-      technology: event.target.value,
-    }));
+  const handleConnectorChange = (event) => {
+    setFormData((previous) => ({ ...previous, connector: event.target.value }));
   };
 
   const handleApiKeyChange = async (event) => {
-    const apiKeyId = event.target.value;
+    const selectedKeyId = event.target.value;
     setFormData((previous) => ({
       ...previous,
-      apiKey: apiKeyId,
+      apiKey: selectedKeyId,
       llmModel: "",
     }));
 
     // Find the selected API key to get its provider
     const selectedApiKey = apiKeys.find(
-      (key) => key.id === Number.parseInt(apiKeyId),
+      (key) => key.id === Number.parseInt(selectedKeyId),
     );
     if (selectedApiKey && selectedApiKey.provider) {
       setLoadingModels(true);
       try {
-        const models = await fetchLLMModels(selectedApiKey.provider);
+        const models = await fetchChatbotConnectors(selectedApiKey.provider);
         setAvailableModels(models);
       } catch (error) {
         console.error("Error fetching models:", error);
@@ -118,7 +115,7 @@ const CreateProjectModal = ({
   const handleFormReset = () => {
     setFormData({
       name: "",
-      technology: "",
+      connector: "",
       apiKey: undefined,
       llmModel: "",
       public: false,
@@ -131,7 +128,7 @@ const CreateProjectModal = ({
     event.preventDefault();
     setLoadingValidation(true);
 
-    if (!formData.name.trim() || !formData.technology) {
+    if (!formData.name.trim() || !formData.connector) {
       setLoadingValidation(false);
       return false;
     }
@@ -161,7 +158,7 @@ const CreateProjectModal = ({
     try {
       const newProject = await createProject({
         name: formData.name,
-        chatbot_technology: formData.technology,
+        chatbot_connector: formData.connector,
         api_key: formData.apiKey,
         llm_model: formData.llmModel,
         public: formData.public,
@@ -218,44 +215,44 @@ const CreateProjectModal = ({
 
                 <div className="w-full">
                   <div className="flex w-full justify-between mb-2">
-                    <label htmlFor="project-technology" className="text-sm">
-                      Technology
+                    <label htmlFor="project-connector" className="text-sm">
+                      Connector
                     </label>
                     <Button
                       size="sm"
                       variant="light"
                       color="primary"
-                      onPress={handleNavigateToTechnologies}
+                      onPress={handleNavigateToConnectors}
                       startContent={<Settings className="w-3 h-3 mr-1" />}
                     >
-                      {technologies.length === 0
-                        ? "Create Technology"
-                        : "Manage Technologies"}
+                      {connectors.length === 0
+                        ? "Create Connector"
+                        : "Manage Connectors"}
                     </Button>
                   </div>
                   <Select
-                    id="project-technology"
+                    id="project-connector"
                     placeholder={
-                      technologies.length === 0
-                        ? "No technologies available"
-                        : "Select chatbot technology"
+                      connectors.length === 0
+                        ? "No connectors available"
+                        : "Select chatbot connector"
                     }
                     fullWidth
                     labelPlacement="outside"
-                    onChange={handleTechnologyChange}
+                    onChange={handleConnectorChange}
                     isRequired
-                    value={formData.technology}
-                    isDisabled={loadingValidation || technologies.length === 0}
+                    value={formData.connector}
+                    isDisabled={loadingValidation || connectors.length === 0}
                   >
-                    {technologies.map((tech) => (
+                    {connectors.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
                         {tech.name}
                       </SelectItem>
                     ))}
                   </Select>
-                  {technologies.length === 0 && (
+                  {connectors.length === 0 && (
                     <p className="text-xs text-danger mt-1">
-                      You need to create a technology before creating a project.
+                      You need to create a connector before creating a project.
                     </p>
                   )}
                 </div>
@@ -379,7 +376,7 @@ const CreateProjectModal = ({
                   <Button
                     type="submit"
                     color="primary"
-                    isDisabled={!formData.name.trim() || !formData.technology}
+                    isDisabled={!formData.name.trim() || !formData.connector}
                     startContent={<Plus className="w-4 h-4 mr-1" />}
                   >
                     Create

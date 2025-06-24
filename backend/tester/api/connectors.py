@@ -6,30 +6,30 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from tester.models import TECHNOLOGY_CHOICES, ChatbotTechnology
-from tester.serializers import ChatbotTechnologySerializer
+from tester.models import CONNECTOR_CHOICES, ChatbotConnector
+from tester.serializers import ChatbotConnectorSerializer
 
 
 def get_technology_choices(_request: object) -> JsonResponse:
     """Return available technology choices."""
-    return JsonResponse({"technology_choices": TECHNOLOGY_CHOICES})
+    return JsonResponse({"technology_choices": CONNECTOR_CHOICES})
 
 
-class ChatbotTechnologyViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing chatbot technologies."""
+class ChatbotConnectorViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing chatbot connectors."""
 
-    queryset = ChatbotTechnology.objects.all()
-    serializer_class = ChatbotTechnologySerializer
+    queryset = ChatbotConnector.objects.all()
+    serializer_class = ChatbotConnectorSerializer
 
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request: Request) -> Response:
-        """Check if a technology name is already used. It can't be none or empty."""
+        """Check if a connector name is already used. It can't be none or empty."""
         name = request.query_params.get("chatbot_name", None)
         if name is None or not name.strip():
             return Response(
-                {"error": "No technology name provided."},
+                {"error": "No connector name provided."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        exists = ChatbotTechnology.objects.filter(name=name).exists()
+        exists = ChatbotConnector.objects.filter(name=name).exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)

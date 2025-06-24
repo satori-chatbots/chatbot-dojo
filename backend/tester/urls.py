@@ -14,7 +14,7 @@ router.register(r"personalityfiles", api.PersonalityFileViewSet, basename="perso
 router.register(r"rulefiles", api.RuleFileViewSet, basename="rulefile")
 router.register(r"typefiles", api.TypeFileViewSet, basename="typefile")
 router.register(r"projectconfigs", api.ProjectConfigViewSet, basename="projectconfig")
-router.register(r"chatbottechnologies", api.ChatbotTechnologyViewSet, basename="chatbottechnology")
+router.register(r"chatbotconnectors", api.ChatbotConnectorViewSet, basename="chatbotconnector")
 router.register(r"globalreports", api.GlobalReportViewSet, basename="globalreport")
 router.register(r"testerrors", api.TestErrorViewSet, basename="testerror")
 router.register(r"profilereports", api.ProfileReportViewSet, basename="profilereport")
@@ -32,9 +32,9 @@ urlpatterns = [
         name="execute-selected",
     ),
     path(
-        "chatbottechnologies/choices/",
+        "chatbotconnectors/choices/",
         api.get_technology_choices,
-        name="chatbot-technologies-choices",
+        name="chatbot-connectors-choices",
     ),
     path(
         "test-cases-stop/",

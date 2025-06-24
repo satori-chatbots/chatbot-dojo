@@ -5,7 +5,7 @@ from typing import ClassVar
 from django.contrib import admin
 
 from .models import (
-    ChatbotTechnology,
+    ChatbotConnector,
     Conversation,
     CustomUser,
     GlobalReport,
@@ -38,14 +38,14 @@ class TestFileInline(admin.TabularInline):
 class ProjectAdmin(admin.ModelAdmin):
     """Admin configuration for Project model."""
 
-    list_display = ("name", "created_at", "chatbot_technology")
+    list_display = ("name", "created_at", "chatbot_connector")
     search_fields = ("name",)
     inlines: ClassVar[list] = [TestFileInline]
 
 
-@admin.register(ChatbotTechnology)
-class ChatbotTechnologyAdmin(admin.ModelAdmin):
-    """Admin configuration for ChatbotTechnology model."""
+@admin.register(ChatbotConnector)
+class ChatbotConnectorAdmin(admin.ModelAdmin):
+    """Admin configuration for ChatbotConnector model."""
 
     list_display = ("name", "technology", "link")
     search_fields = ("name", "technology")

@@ -310,7 +310,7 @@ function TestCase() {
 
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Total Cost and Time</h2>
+                <h2 className="text-2xl font-bold">Cost and LLM</h2>
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
@@ -328,40 +328,6 @@ function TestCase() {
                     </p>
                     <p className="text-2xl font-bold">
                       {formatExecutionTime(testCase[0].execution_time)}
-                    </p>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-
-            <Card shadow="sm">
-              <CardHeader>
-                <h2 className="text-2xl font-bold">Technology and Others</h2>
-              </CardHeader>
-              <CardBody>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Technology:
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {testCase[0].technology}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Project:
-                    </p>
-                    <p className="text-2xl font-bold">{projectName}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Number of Profiles:
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {profileReports.length}
                     </p>
                   </div>
                   <div>
@@ -382,6 +348,48 @@ function TestCase() {
                         No model recorded
                       </p>
                     )}
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card shadow="sm">
+              <CardHeader>
+                <h2 className="text-2xl font-bold">Connector Information</h2>
+              </CardHeader>
+              <CardBody>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Technology:
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {testCase[0].technology}
+                    </p>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card shadow="sm">
+              <CardHeader>
+                <h2 className="text-2xl font-bold">Project Details</h2>
+              </CardHeader>
+              <CardBody>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Project Name:
+                    </p>
+                    <p className="text-2xl font-bold">{projectName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Number of Profiles:
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {profileReports.length}
+                    </p>
                   </div>
                 </div>
               </CardBody>
