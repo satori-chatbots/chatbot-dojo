@@ -1,5 +1,6 @@
 import React from "react";
 import { MEDIA_URL } from "../api/config";
+import { formatExecutionTime } from "../utils/time-utils";
 
 function TestCasesList({ testCases }) {
   return (
@@ -16,8 +17,8 @@ function TestCasesList({ testCases }) {
                 {new Date(testCase.executed_at).toLocaleString()}
               </p>
               <p>
-                <strong>Execution Time:</strong> {testCase.execution_time}{" "}
-                seconds
+                <strong>Execution Time:</strong>{" "}
+                {formatExecutionTime(testCase.execution_time)}
               </p>
               <p>
                 <strong>User Profiles Used:</strong>

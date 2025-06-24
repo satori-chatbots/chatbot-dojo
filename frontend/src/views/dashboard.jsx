@@ -41,6 +41,7 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { Eye, Search, Trash, XCircle } from "lucide-react";
 import { fetchPaginatedTestCases } from "../api/test-cases-api";
 import { getProviderDisplayName } from "../constants/providers";
+import { formatExecutionTime as sharedFormatExecutionTime } from "../utils/time-utils";
 
 const statusOptions = [
   { label: "All", value: "ALL" },
@@ -51,27 +52,13 @@ const statusOptions = [
 ];
 
 const formatExecutionTime = (seconds, status) => {
-  // Check if it was stopped
   if (status === "STOPPED") {
     return "Stopped";
   }
-
-  // Check if it is still running
   if (seconds === null) {
     return "Running";
   }
-
-  if (seconds >= 3600) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = ((seconds % 3600) / 60).toFixed(2);
-    return `${hours}h ${minutes}m`;
-  } else if (seconds >= 60) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = (seconds % 60).toFixed(0);
-    return `${minutes}m ${remainingSeconds}s`;
-  } else {
-    return `${seconds.toFixed(2)}s`;
-  }
+  return sharedFormatExecutionTime(seconds);
 };
 
 const formatCost = (cost, status) => {

@@ -268,7 +268,9 @@ class TestRunner:
     ) -> None:
         """Process the execution results and update test case status."""
         end_time = time.time()
-        start_time = end_time - (getattr(test_case, "_start_time", 0) or time.time())
+
+        # Use the executed_at field as the start time (when test case was created and started)
+        start_time = test_case.executed_at.timestamp()
         execution_time = end_time - start_time
 
         # Check if the test was stopped
