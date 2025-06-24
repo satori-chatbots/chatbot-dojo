@@ -530,7 +530,7 @@ function Home() {
   return (
     <div className="flex flex-col items-center justify-center p-6 w-full">
       {selectedProject ? (
-        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-background-paper dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header */}
           <h1 className="text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
             {selectedProject.name}

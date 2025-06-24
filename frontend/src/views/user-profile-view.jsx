@@ -150,7 +150,7 @@ const UserProfileView = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
       <div className="max-w-4xl mx-auto space-y-6">
-        <Card className="bg-background-paper dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <Card className="bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           <CardHeader>
             <h1 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
               Profile Settings
@@ -208,7 +208,7 @@ const UserProfileView = () => {
           </CardBody>
         </Card>
 
-        <Card className="bg-background-paper dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <Card className="bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           <CardHeader className="flex justify-between">
             <h2 className="text-xl font-bold text-foreground dark:text-foreground-dark">
               API Keys

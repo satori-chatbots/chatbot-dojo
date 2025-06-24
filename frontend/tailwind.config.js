@@ -90,10 +90,13 @@ export default {
               DEFAULT: "#22223b",
             },
             content1: {
-              DEFAULT: "#ffffffcc", // for cards/inputs background
+              DEFAULT: "#ffffff", // solid white for modals/inputs
             },
             content2: {
               DEFAULT: "#f4f6fa", // for subtle backgrounds
+            },
+            content3: {
+              DEFAULT: "#ffffffcc", // frosted white for glass cards
             },
           },
         },
@@ -106,10 +109,13 @@ export default {
               DEFAULT: "#e2e8f0", // your light gray for dark mode text
             },
             content1: {
-              DEFAULT: "rgba(24,24,27,0.8)", // for cards/inputs background
+              DEFAULT: "#18181b", // solid dark gray for modals/inputs
             },
             content2: {
-              DEFAULT: "rgba(39,39,42,0.8)", // for subtle backgrounds
+              DEFAULT: "#27272a", // for subtle backgrounds
+            },
+            content3: {
+              DEFAULT: "rgba(24,24,27,0.8)", // transparent for glass cards
             },
           },
         },
