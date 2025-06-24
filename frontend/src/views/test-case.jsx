@@ -158,13 +158,13 @@ function TestCase() {
             <Spinner size="sm" className="mb-4" />
           </CardHeader>
           <CardBody className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-300 mt-2">
+            <p className="text-foreground/70 dark:text-foreground-dark/70 dark:text-gray-300 mt-2">
               Please wait while the test case completes...
             </p>
             <div className="mt-6">
               <h3 className="text-sm font-medium mb-2">Progress</h3>
               <Progress value={progress} />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50 mt-2">
                 {progress.toFixed(0)}% - {testCase[0].executed_conversations} of{" "}
                 {testCase[0].total_conversations} conversations completed
               </p>
@@ -172,13 +172,13 @@ function TestCase() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium mb-1">Started at</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                   {startTime && format(startTime, "PPpp")}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium mb-1">Running time</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                   {formatTime(elapsedTime)}
                 </p>
               </div>
@@ -247,7 +247,7 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Average:
                     </p>
                     <p className="text-2xl font-bold">
@@ -255,7 +255,7 @@ function TestCase() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Max:
                     </p>
                     <p className="text-2xl font-bold">
@@ -263,7 +263,7 @@ function TestCase() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Min:
                     </p>
                     <p className="text-2xl font-bold">
@@ -315,7 +315,7 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Total Cost:
                     </p>
                     <p className="text-2xl font-bold">
@@ -323,7 +323,7 @@ function TestCase() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Total Time:
                     </p>
                     <p className="text-2xl font-bold">
@@ -331,7 +331,7 @@ function TestCase() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       LLM Model Used:
                     </p>
                     {testCase[0].llm_model ? (
@@ -339,12 +339,12 @@ function TestCase() {
                         <p className="text-2xl font-bold">
                           {testCase[0].llm_model}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-foreground/70 dark:text-foreground-dark/70 dark:text-foreground/50 dark:text-foreground-dark/50">
                           {getProviderDisplayName(testCase[0].llm_provider)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-2xl font-bold text-gray-500 dark:text-gray-400 italic">
+                      <p className="text-2xl font-bold text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50 italic">
                         No model recorded
                       </p>
                     )}
@@ -360,7 +360,7 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Technology:
                     </p>
                     <p className="text-2xl font-bold">
@@ -378,13 +378,13 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Project Name:
                     </p>
                     <p className="text-2xl font-bold">{projectName}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                       Number of Profiles:
                     </p>
                     <p className="text-2xl font-bold">
@@ -428,7 +428,7 @@ function TestCase() {
                       <CardBody>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                               Avg Execution Time:
                             </p>
                             <p className="text-2xl font-bold">
@@ -436,7 +436,7 @@ function TestCase() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                               Total Cost:
                             </p>
                             <p className="text-2xl font-bold">
@@ -444,7 +444,7 @@ function TestCase() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                               Total Errors:
                             </p>
                             <p className="text-2xl font-bold">
@@ -467,7 +467,7 @@ function TestCase() {
                       <CardBody>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                               Average:
                             </p>
                             <p className="text-2xl font-bold">
@@ -475,7 +475,7 @@ function TestCase() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                               Max:
                             </p>
                             <p className="text-2xl font-bold">
@@ -483,7 +483,7 @@ function TestCase() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
                               Min:
                             </p>
                             <p className="text-2xl font-bold">

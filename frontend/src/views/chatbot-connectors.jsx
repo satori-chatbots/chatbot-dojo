@@ -283,7 +283,7 @@ const ChatbotConnectors = () => {
             max-h-[90vh]
             p-4 sm:p-6 lg:p-8"
     >
-      <h1 className="text-2xl sm:text-3xl font-bold text-center">
+      <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
         Chatbot Connectors
       </h1>
 
@@ -395,7 +395,7 @@ const ChatbotConnectors = () => {
         </ModalContent>
       </Modal>
 
-      <h2 className="text-xl sm:text-2xl font-bold text-center">
+      <h2 className="text-xl sm:text-2xl font-bold text-center text-foreground dark:text-foreground-dark">
         Existing Connectors
       </h2>
 

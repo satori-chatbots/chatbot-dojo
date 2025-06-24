@@ -150,9 +150,11 @@ const UserProfileView = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
       <div className="max-w-4xl mx-auto space-y-6">
-        <Card>
+        <Card className="bg-background-paper dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           <CardHeader>
-            <h1 className="text-2xl font-bold">Profile Settings</h1>
+            <h1 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+              Profile Settings
+            </h1>
           </CardHeader>
           <Divider />
           <CardBody className="space-y-6">
@@ -206,9 +208,11 @@ const UserProfileView = () => {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="bg-background-paper dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           <CardHeader className="flex justify-between">
-            <h2 className="text-xl font-bold">API Keys</h2>
+            <h2 className="text-xl font-bold text-foreground dark:text-foreground-dark">
+              API Keys
+            </h2>
             <Button
               onPress={() => setIsModalOpen(true)}
               color="primary"
@@ -228,7 +232,7 @@ const UserProfileView = () => {
               />
             ))}
             {apiKeys.length === 0 && (
-              <div className="text-center text-gray-500 py-4">
+              <div className="text-center text-foreground/60 dark:text-foreground-dark/60 py-4">
                 No API keys yet. Click Add API Key to create one.
               </div>
             )}

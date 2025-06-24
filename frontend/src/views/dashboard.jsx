@@ -694,7 +694,7 @@ function Dashboard() {
                           <Link
                             color="foreground"
                             href={`${MEDIA_URL}${file.path}`}
-                            className="text-sm"
+                            className="text-sm text-foreground/100 dark:text-foreground-dark/100"
                           >
                             {file.name}
                           </Link>
@@ -714,7 +714,7 @@ function Dashboard() {
                     <Accordion isCompact>
                       <AccordionItem
                         title={
-                          <span className="text-sm">{`${testCase.num_errors} errors`}</span>
+                          <span className="text-sm text-foreground/100 dark:text-foreground-dark/100">{`${testCase.num_errors} errors`}</span>
                         }
                       >
                         <ul>
@@ -744,12 +744,12 @@ function Dashboard() {
                         <span className="font-medium text-sm">
                           {testCase.llm_model}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
                           {getProviderDisplayName(testCase.llm_provider)}
                         </span>
                       </>
                     ) : (
-                      <span className="text-gray-500 italic text-sm">
+                      <span className="text-foreground/60 dark:text-foreground-dark/60 italic text-sm">
                         No model recorded
                       </span>
                     )}

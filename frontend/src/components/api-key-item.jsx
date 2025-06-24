@@ -63,12 +63,14 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
         <CardBody className="flex flex-row gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-medium">{apiKey.name}</h3>
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+              <h3 className="font-medium text-foreground dark:text-foreground-dark">
+                {apiKey.name}
+              </h3>
+              <span className="text-xs bg-muted dark:bg-muted-dark text-foreground/70 dark:text-foreground-dark/70 px-2 py-1 rounded-full">
                 {getProviderDisplayName(apiKey.provider)}
               </span>
             </div>
-            <code className="text-sm text-gray-500 break-all">
+            <code className="text-sm text-foreground/60 dark:text-foreground-dark/60 break-all">
               {showKey ? apiKey.decrypted_api_key : "•".repeat(20)}
             </code>
           </div>

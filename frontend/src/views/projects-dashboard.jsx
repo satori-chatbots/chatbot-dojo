@@ -90,12 +90,12 @@ const ProjectsDashboard = () => {
           <span>{selectedProject?.name || "None"}</span>
         </div>
         {selectedProject && (
-          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <div className="text-sm text-foreground/70 dark:text-foreground-dark/70 dark:text-foreground/50 dark:text-foreground-dark/50 flex items-center gap-2">
             <span>Model:</span>
             {selectedProject.api_key && selectedProject.llm_model ? (
               <span className="font-medium">
                 {selectedProject.llm_model}
-                <span className="text-xs text-gray-500 ml-1">
+                <span className="text-xs text-foreground/60 dark:text-foreground-dark/60 ml-1">
                   ({getProviderDisplayName(selectedProject.llm_provider)})
                 </span>
               </span>

@@ -95,8 +95,8 @@ function LoginView() {
 
   return (
     <div className="flex flex-col items-center justify-center p-6 w-full">
-      <Card className="p-6 sm:p-8 w-full max-w-md space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">
+      <Card className="p-6 sm:p-8 w-full max-w-md space-y-6 bg-background-paper dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
           Welcome Back
         </h1>
         <Form
@@ -151,7 +151,7 @@ function LoginView() {
             {loading ? <Spinner size="sm" /> : "Log In"}
           </Button>
         </Form>
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-foreground/60 dark:text-foreground-dark/60">
           Don&apos;t have an account?{" "}
           <Link to="/signup" className="text-primary-500">
             Sign Up
