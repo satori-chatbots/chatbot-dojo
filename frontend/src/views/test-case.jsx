@@ -158,13 +158,13 @@ function TestCase() {
             <Spinner size="sm" className="mb-4" />
           </CardHeader>
           <CardBody className="space-y-4">
-            <p className="text-foreground/70 dark:text-foreground-dark/70 mt-2">
+            <p className="text-foreground/70 mt-2">
               Please wait while the test case completes...
             </p>
             <div className="mt-6">
               <h3 className="text-sm font-medium mb-2">Progress</h3>
               <Progress value={progress} />
-              <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50 mt-2">
+              <p className="text-sm text-default-500 mt-2">
                 {progress.toFixed(0)}% - {testCase[0].executed_conversations} of{" "}
                 {testCase[0].total_conversations} conversations completed
               </p>
@@ -172,13 +172,13 @@ function TestCase() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium mb-1">Started at</h3>
-                <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                <p className="text-sm text-default-500">
                   {startTime && format(startTime, "PPpp")}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium mb-1">Running time</h3>
-                <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                <p className="text-sm text-default-500">
                   {formatTime(elapsedTime)}
                 </p>
               </div>
@@ -203,9 +203,7 @@ function TestCase() {
             </h2>
           </CardHeader>
           <CardBody>
-            <p className="text-xl font-bold text-foreground dark:text-foreground-dark">
-              Error Output:
-            </p>
+            <p className="text-xl font-bold text-foreground">Error Output:</p>
             <pre className="whitespace-pre-wrap text-left p-4 rounded-lg mt-4 bg-red-200 dark:bg-red-600">
               {testCase[0].result}
             </pre>
@@ -247,26 +245,22 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       Average:
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       {formatExecutionTime(globalReport.avg_execution_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
-                      Max:
-                    </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-sm font-medium text-default-500">Max:</p>
+                    <p className="text-2xl font-bold text-foreground">
                       {formatExecutionTime(globalReport.max_execution_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
-                      Min:
-                    </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-sm font-medium text-default-500">Min:</p>
+                    <p className="text-2xl font-bold text-foreground">
                       {formatExecutionTime(globalReport.min_execution_time)}
                     </p>
                   </div>
@@ -292,12 +286,18 @@ function TestCase() {
                   >
                     {globalErrors.map((error) => (
                       <TableRow key={error.id}>
-                        <TableCell className="w-1/3">{error.code}</TableCell>
-                        <TableCell className="w-1/3">{error.count}</TableCell>
-                        <TableCell className="w-1/3">
+                        <TableCell className="w-1/3 text-foreground">
+                          {error.code}
+                        </TableCell>
+                        <TableCell className="w-1/3 text-foreground">
+                          {error.count}
+                        </TableCell>
+                        <TableCell className="w-1/3 text-foreground">
                           <ul>
                             {error.conversations.map((conv, index) => (
-                              <li key={index}>{conv}</li>
+                              <li key={index} className="text-foreground">
+                                {conv}
+                              </li>
                             ))}
                           </ul>
                         </TableCell>
@@ -315,36 +315,36 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       Total Cost:
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       ${globalReport.total_cost}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       Total Time:
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       {formatExecutionTime(testCase[0].execution_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       LLM Model Used:
                     </p>
                     {testCase[0].llm_model ? (
                       <div className="flex flex-col">
-                        <p className="text-2xl font-bold">
+                        <p className="text-2xl font-bold text-foreground">
                           {testCase[0].llm_model}
                         </p>
-                        <p className="text-sm text-foreground/70 dark:text-foreground-dark/70 dark:text-foreground/50 dark:text-foreground-dark/50">
+                        <p className="text-sm text-default-500">
                           {getProviderDisplayName(testCase[0].llm_provider)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-2xl font-bold text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50 italic">
+                      <p className="text-2xl font-bold text-default-500 italic">
                         No model recorded
                       </p>
                     )}
@@ -360,10 +360,10 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       Technology:
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       {testCase[0].technology}
                     </p>
                   </div>
@@ -378,16 +378,18 @@ function TestCase() {
               <CardBody>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       Project Name:
                     </p>
-                    <p className="text-2xl font-bold">{projectName}</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {projectName}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                    <p className="text-sm font-medium text-default-500">
                       Number of Profiles:
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       {profileReports.length}
                     </p>
                   </div>
@@ -428,26 +430,26 @@ function TestCase() {
                       <CardBody>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                            <p className="text-sm font-medium text-default-500">
                               Avg Execution Time:
                             </p>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-foreground">
                               {formatExecutionTime(report.avg_execution_time)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                            <p className="text-sm font-medium text-default-500">
                               Total Cost:
                             </p>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-foreground">
                               ${report.total_cost}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                            <p className="text-sm font-medium text-default-500">
                               Total Errors:
                             </p>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-foreground">
                               {report.errors.reduce(
                                 (sum, error) => sum + error.count,
                                 0,
@@ -467,26 +469,26 @@ function TestCase() {
                       <CardBody>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                            <p className="text-sm font-medium text-default-500">
                               Average:
                             </p>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-foreground">
                               {formatExecutionTime(report.avg_execution_time)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                            <p className="text-sm font-medium text-default-500">
                               Max:
                             </p>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-foreground">
                               {formatExecutionTime(report.max_execution_time)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground/60 dark:text-foreground-dark/60 dark:text-foreground/50 dark:text-foreground-dark/50">
+                            <p className="text-sm font-medium text-default-500">
                               Min:
                             </p>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-foreground">
                               {formatExecutionTime(report.min_execution_time)}
                             </p>
                           </div>
@@ -513,17 +515,22 @@ function TestCase() {
                             {report.errors &&
                               report.errors.map((error) => (
                                 <TableRow key={error.id}>
-                                  <TableCell className="w-1/3">
+                                  <TableCell className="w-1/3 text-foreground">
                                     {error.code}
                                   </TableCell>
-                                  <TableCell className="w-1/3">
+                                  <TableCell className="w-1/3 text-foreground">
                                     {error.count}
                                   </TableCell>
-                                  <TableCell className="w-1/3">
+                                  <TableCell className="w-1/3 text-foreground">
                                     <ul>
                                       {error.conversations?.map(
                                         (conv, index) => (
-                                          <li key={index}>{conv}</li>
+                                          <li
+                                            key={index}
+                                            className="text-foreground"
+                                          >
+                                            {conv}
+                                          </li>
                                         ),
                                       )}
                                     </ul>
@@ -550,29 +557,40 @@ function TestCase() {
                               <TableCell className="font-medium w-1/3">
                                 Serial
                               </TableCell>
-                              <TableCell>{report.serial}</TableCell>
+                              <TableCell className="text-foreground">
+                                {report.serial}
+                              </TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell className="font-medium w-1/3">
                                 Language
                               </TableCell>
-                              <TableCell>{report.language}</TableCell>
+                              <TableCell className="text-foreground">
+                                {report.language}
+                              </TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell className="font-medium w-1/3">
                                 Personality
                               </TableCell>
-                              <TableCell>{report.personality}</TableCell>
+                              <TableCell className="text-foreground">
+                                {report.personality}
+                              </TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell className="font-medium w-1/3">
                                 Context
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-foreground">
                                 <ul>
                                   {report.context_details?.map(
                                     (context, index) => (
-                                      <li key={index}>{context}</li>
+                                      <li
+                                        key={index}
+                                        className="text-foreground"
+                                      >
+                                        {context}
+                                      </li>
                                     ),
                                   )}
                                 </ul>
@@ -582,11 +600,16 @@ function TestCase() {
                               <TableCell className="font-medium w-1/3">
                                 Interaction Style
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-foreground">
                                 <ul>
                                   {report.interaction_style?.map(
                                     (style, index) => (
-                                      <li key={index}>{style}</li>
+                                      <li
+                                        key={index}
+                                        className="text-foreground"
+                                      >
+                                        {style}
+                                      </li>
                                     ),
                                   )}
                                 </ul>
@@ -596,7 +619,7 @@ function TestCase() {
                               <TableCell className="font-medium w-1/3">
                                 Number of Conversations
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-foreground">
                                 {report.number_conversations}
                               </TableCell>
                             </TableRow>
@@ -605,7 +628,9 @@ function TestCase() {
                                 <TableCell className="font-medium w-1/3">
                                   Steps
                                 </TableCell>
-                                <TableCell>{report.steps}</TableCell>
+                                <TableCell className="text-foreground">
+                                  {report.steps}
+                                </TableCell>
                               </TableRow>
                             )}
                             {report.all_answered && (
@@ -613,10 +638,13 @@ function TestCase() {
                                 <TableCell className="font-medium w-1/3">
                                   All Answered
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="text-foreground">
                                   {Object.entries(report.all_answered).map(
                                     ([key, value]) => (
-                                      <div key={key} className="flex gap-2">
+                                      <div
+                                        key={key}
+                                        className="flex gap-2 text-foreground"
+                                      >
                                         <span>{key}:</span>
                                         <span>{value}</span>
                                       </div>
@@ -700,7 +728,7 @@ function TestCase() {
                                                     <TableCell className="font-medium w-1/3">
                                                       {key}
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="text-foreground">
                                                       {Array.isArray(value)
                                                         ? value.join(", ")
                                                         : value}
@@ -740,7 +768,7 @@ function TestCase() {
                                                 <TableCell className="font-medium w-1/3">
                                                   {Object.keys(item)[0]}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="text-foreground">
                                                   {Object.values(item)[0] ??
                                                     "None"}
                                                 </TableCell>
@@ -780,7 +808,7 @@ function TestCase() {
                                                 <TableCell className="font-medium w-1/3">
                                                   {Object.keys(error)[0]}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="text-foreground">
                                                   {Object.values(error)[0]}
                                                 </TableCell>
                                               </TableRow>
@@ -815,7 +843,7 @@ function TestCase() {
                                             <TableCell className="font-medium w-1/3">
                                               Total Time
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-foreground">
                                               {formatExecutionTime(
                                                 conversation.conversation_time,
                                               )}
@@ -825,7 +853,7 @@ function TestCase() {
                                             <TableCell className="font-medium w-1/3">
                                               Total Cost
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-foreground">
                                               $
                                               {conversation.total_cost.toFixed(
                                                 6,
@@ -861,7 +889,7 @@ function TestCase() {
                                             <TableCell className="font-medium w-1/3">
                                               Average
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-foreground">
                                               {conversation.response_time_avg.toFixed(
                                                 2,
                                               )}
@@ -872,7 +900,7 @@ function TestCase() {
                                             <TableCell className="font-medium w-1/3">
                                               Maximum
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-foreground">
                                               {conversation.response_time_max.toFixed(
                                                 2,
                                               )}
@@ -883,7 +911,7 @@ function TestCase() {
                                             <TableCell className="font-medium w-1/3">
                                               Minimum
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-foreground">
                                               {conversation.response_time_min.toFixed(
                                                 2,
                                               )}
