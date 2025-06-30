@@ -90,101 +90,102 @@ const ProjectsList = ({
   }, [projects, connectors, sortDescriptor]);
 
   return (
-    <Table
-      key={selectedProject?.id}
-      aria-label="Projects Table"
-      className="max-h-[60vh] sm:max-h-[50vh] overflow-y-auto"
-      sortDescriptor={sortDescriptor}
-      onSortChange={setSortDescriptor}
-    >
-      <TableHeader columns={columns}>
-        {(column) => (
-          <TableColumn key={column.key} allowsSorting={column.sortable}>
-            {column.name}
-          </TableColumn>
-        )}
-      </TableHeader>
-      <TableBody
-        emptyContent="Create a new project to get started."
-        isLoading={isLoading}
-        loadingContent={<Spinner label="Loading Projects..." />}
-        items={sortedProjects}
+    <div className="flex-1 min-h-0 overflow-auto w-full mx-auto">
+      <Table
+        key={selectedProject?.id}
+        aria-label="Projects Table"
+        sortDescriptor={sortDescriptor}
+        onSortChange={setSortDescriptor}
       >
-        {sortedProjects.map((project) => {
-          const modelInfo = getLLMModelDisplay(project);
-          return (
-            <TableRow key={project.id}>
-              <TableCell>
-                <span className="text-foreground dark:text-foreground-dark font-medium">
-                  {project.name}
-                </span>
-              </TableCell>
-              <TableCell>
-                <span className="text-foreground dark:text-foreground-dark">
-                  {
-                    connectors.find((t) => t.id === project.chatbot_connector)
-                      ?.name
-                  }
-                </span>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span
-                    className={
-                      modelInfo.isEmpty
-                        ? "text-foreground/60 dark:text-foreground-dark/60 italic"
-                        : "font-medium text-foreground dark:text-foreground-dark"
+        <TableHeader columns={columns}>
+          {(column) => (
+            <TableColumn key={column.key} allowsSorting={column.sortable}>
+              {column.name}
+            </TableColumn>
+          )}
+        </TableHeader>
+        <TableBody
+          emptyContent="Create a new project to get started."
+          isLoading={isLoading}
+          loadingContent={<Spinner label="Loading Projects..." />}
+          items={sortedProjects}
+        >
+          {sortedProjects.map((project) => {
+            const modelInfo = getLLMModelDisplay(project);
+            return (
+              <TableRow key={project.id}>
+                <TableCell>
+                  <span className="text-foreground dark:text-foreground-dark font-medium">
+                    {project.name}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-foreground dark:text-foreground-dark">
+                    {
+                      connectors.find((t) => t.id === project.chatbot_connector)
+                        ?.name
+                    }
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span
+                      className={
+                        modelInfo.isEmpty
+                          ? "text-foreground/60 dark:text-foreground-dark/60 italic"
+                          : "font-medium text-foreground dark:text-foreground-dark"
+                      }
+                    >
+                      {modelInfo.modelName}
+                    </span>
+                    {modelInfo.providerName && (
+                      <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
+                        {modelInfo.providerName}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="flat"
+                    onPress={() => onSelectProject(project)}
+                    isDisabled={selectedProject?.id === project.id}
+                    className="w-[100px]"
+                    endContent={
+                      selectedProject?.id === project.id ? (
+                        <Check className="w-3 h-3" />
+                      ) : undefined
                     }
                   >
-                    {modelInfo.modelName}
-                  </span>
-                  {modelInfo.providerName && (
-                    <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
-                      {modelInfo.providerName}
-                    </span>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
-                <Button
-                  size="sm"
-                  color="primary"
-                  variant="flat"
-                  onPress={() => onSelectProject(project)}
-                  isDisabled={selectedProject?.id === project.id}
-                  className="w-[100px]"
-                  endContent={
-                    selectedProject?.id === project.id ? (
-                      <Check className="w-3 h-3" />
-                    ) : undefined
-                  }
-                >
-                  {selectedProject?.id === project.id ? "Selected" : "Select"}
-                </Button>
-                <Button
-                  size="sm"
-                  color="secondary"
-                  variant="flat"
-                  onPress={() => onEditProject(project)}
-                  endContent={<Edit className="w-3 h-3" />}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  color="danger"
-                  variant="flat"
-                  onPress={() => onDeleteProject(project.id)}
-                  endContent={<Trash className="w-3 h-3" />}
-                >
-                  Delete
-                </Button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                    {selectedProject?.id === project.id ? "Selected" : "Select"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    color="secondary"
+                    variant="flat"
+                    onPress={() => onEditProject(project)}
+                    endContent={<Edit className="w-3 h-3" />}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    color="danger"
+                    variant="flat"
+                    onPress={() => onDeleteProject(project.id)}
+                    endContent={<Trash className="w-3 h-3" />}
+                  >
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 

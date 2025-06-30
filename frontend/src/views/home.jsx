@@ -42,6 +42,7 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { getProviderDisplayName } from "../constants/providers";
+import SetupStatusDashboard from "../components/setup-status-dashboard";
 
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
@@ -528,9 +529,14 @@ function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 w-full">
+    <div className="flex flex-col items-center space-y-6 p-4 sm:p-6 lg:p-8 w-full max-w-5xl mx-auto my-auto">
+      {/* Setup Status Dashboard */}
+      <div className="w-full">
+        <SetupStatusDashboard compact={true} showTitle={true} />
+      </div>
+
       {selectedProject ? (
-        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <Card className="p-6 flex-col space-y-6 max-w-md sm:max-w-lg lg:max-w-xl mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header */}
           <h1 className="text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
             {selectedProject.name}
@@ -765,7 +771,7 @@ function Home() {
                               onPress={() =>
                                 navigate(`/yaml-editor/${file.id}`)
                               }
-                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-primary hover:underline text-left"
+                              className="flex-1 break-words max-w-xs sm:max-w-sm text-primary hover:underline text-left truncate"
                             >
                               {file.name}
                             </Link>
@@ -812,7 +818,7 @@ function Home() {
           </div>
         </Card>
       ) : (
-        <div className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-4 w-full max-w-3xl mx-auto">
           <h2 className="text-xl font-bold text-center text-foreground dark:text-foreground-dark">
             Select a Project
           </h2>

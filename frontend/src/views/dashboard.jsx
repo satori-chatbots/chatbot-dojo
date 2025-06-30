@@ -42,6 +42,7 @@ import { Eye, Search, Trash, XCircle } from "lucide-react";
 import { fetchPaginatedTestCases } from "../api/test-cases-api";
 import { getProviderDisplayName } from "../constants/providers";
 import { formatExecutionTime as sharedFormatExecutionTime } from "../utils/time-utils";
+import SetupStatusDashboard from "../components/setup-status-dashboard";
 
 const statusOptions = [
   { label: "All", value: "ALL" },
@@ -464,348 +465,336 @@ function Dashboard() {
   ];
 
   return (
-    <div
-      className="
-                flex flex-col
-                items-center
-                space-y-4 sm:space-y-6 lg:space-y-8
-                w-full sm:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl
-                mx-auto
-                my-auto
-                max-h-[88vh]
-                p-4 sm:p-6 lg:p-8"
-    >
-      {publicView ? (
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-          Public Projects
-        </h1>
-      ) : (
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-          My Projects
-        </h1>
-      )}
+    <div className="flex flex-col items-center space-y-4 sm:space-y-6 lg:space-y-8 w-full max-w-5xl mx-auto my-auto max-h-[88vh] p-4 sm:p-6 lg:p-8">
+      {/* Setup Status Dashboard */}
+      <div className="w-full">
+        <SetupStatusDashboard compact={true} showTitle={false} />
+      </div>
 
-      {/* Project Selector */}
-      <Form
-        className="
-                        flex flex-col lg:flex-row
-                        items-center
-                        justify-center
-                        gap-4
-                        w-full
-                        max-w-[1200px]
-                        mx-auto
-                        mb-4
-                    "
-        onSubmit={handleFilterProjects}
-        validationBehavior="native"
-      >
-        {/* Search input */}
-        <div className="w-full lg:w-1/4 flex justify-center">
-          <Input
-            type="search"
-            label="Search test cases:"
-            placeholder="Type to search..."
-            className="w-full h-12"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            startContent={<Search className="text-default-400" size={18} />}
-            isClearable
-            // So that it looks like the selectors
-            radius="sm"
-            onClear={() => setSearchTerm("")}
-          />
-        </div>
+      <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
+        {publicView ? (
+          <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
+            Public Projects
+          </h1>
+        ) : (
+          <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
+            My Projects
+          </h1>
+        )}
 
-        {/* Projects selector */}
-        <div className="w-full lg:w-1/3 flex justify-center">
-          <Select
-            label={publicView ? "Filter Public Projects:" : "Filter Projects:"}
-            className="w-full"
-            size="sm"
-            isRequired
-            errorMessage="Please select at least one project."
-            selectionMode="multiple"
-            selectedKeys={new Set(selectedProjects)}
-            onSelectionChange={handleProjectChange}
-            isDisabled={loadingProjects || !!errorProjects}
-          >
-            {loadingProjects ? (
-              <SelectItem key="loading" isDisabled>
-                Loading projects...
-              </SelectItem>
-            ) : errorProjects ? (
-              <SelectItem key="error" isDisabled>
-                Error: {errorProjects}
-              </SelectItem>
-            ) : (
-              <>
-                <SelectItem key="all" className="text-primary">
-                  All Projects
-                </SelectItem>
-                {projects.length > 0 ? (
-                  projects.map((project) => (
-                    <SelectItem
-                      key={project.id}
-                      value={String(project.id)}
-                      textValue={project.name}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span>{project.name}</span>
-                        {project.public && (
-                          <span className="text-default-400">(Public)</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem key="no-projects" isDisabled>
-                    No Projects Available
-                  </SelectItem>
-                )}
-              </>
-            )}
-          </Select>
-        </div>
-
-        {/* Status selector */}
-        <div className="w-full lg:w-1/4 flex justify-center">
-          <Select
-            label="Filter by Status:"
-            className="w-full"
-            size="sm"
-            selectedKeys={new Set([selectedStatus])}
-            selectionMode="single"
-            onSelectionChange={(keys) => {
-              const value = [...keys][0];
-              setSelectedStatus(value);
-            }}
-            renderValue={() => {
-              return (
-                <div className="flex items-center gap-2">
-                  {selectedStatus === "ALL" ? (
-                    "All Statuses"
-                  ) : (
-                    <span className={`text-${statusColorMap[selectedStatus]}`}>
-                      {selectedStatus}
-                    </span>
-                  )}
-                </div>
-              );
-            }}
-          >
-            <SelectItem key="ALL" className="text-primary">
-              All Statuses
-            </SelectItem>
-            {statusOptions
-              .filter((opt) => opt.value !== "ALL")
-              .map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  <div className="flex items-center gap-2">
-                    <Chip
-                      color={statusColorMap[opt.value]}
-                      size="sm"
-                      variant="flat"
-                    >
-                      {opt.value}
-                    </Chip>
-                  </div>
-                </SelectItem>
-              ))}
-          </Select>
-        </div>
-
-        {/* Filter button */}
-        <div className="w-full lg:w-auto flex justify-center">
-          <Button color="primary" className="w-full h-12" type="submit">
-            Filter
-          </Button>
-        </div>
-      </Form>
-
-      <div
-        className="
-                        flex-1
-                        min-h-0
-                        overflow-auto
-                        w-full
-                        max-w-[1200px]
-                        mx-auto
-                "
-      >
-        <Table
-          aria-label="Test Cases Table"
-          isStriped
-          sortDescriptor={sortDescriptor}
-          onSortChange={(descriptor) => {
-            setSortDescriptor(descriptor);
-            fetchPagedTestCases(page, descriptor.column, descriptor.direction);
-          }}
+        {/* Project Selector */}
+        <Form
+          className="flex flex-col lg:flex-row items-center justify-center gap-4 w-full mx-auto mb-4"
+          onSubmit={handleFilterProjects}
+          validationBehavior="native"
         >
-          <TableHeader>
-            {columns.map((column) => (
-              <TableColumn key={column.key} allowsSorting={column.sortable}>
-                {column.name}
-              </TableColumn>
-            ))}
-          </TableHeader>
-          <TableBody
-            items={sortedTestCases}
-            isLoading={loading}
-            loadingContent={<Spinner label="Loading Test Cases..." />}
-            emptyContent={"No Test Cases to display."}
-          >
-            {(testCase) => (
-              <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
-                <TableCell>{testCase.displayName}</TableCell>
-                <TableCell>
-                  <Chip
-                    color={statusColorMap[testCase.status]}
-                    size="sm"
-                    variant="flat"
-                  >
-                    {testCase.status}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  {new Date(testCase.executed_at).toLocaleString()}
-                </TableCell>
-                <TableCell>
-                  {testCase.copied_files.length > 3 ? (
-                    <Accordion isCompact={true}>
-                      <AccordionItem
-                        title={`View ${testCase.copied_files.length} files`}
-                        isCompact={true}
-                        classNames={{ title: "text-sm mx-0" }}
+          {/* Search input */}
+          <div className="w-full lg:w-1/4 flex justify-center">
+            <Input
+              type="search"
+              label="Search test cases:"
+              placeholder="Type to search..."
+              className="w-full h-12"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              startContent={<Search className="text-default-400" size={18} />}
+              isClearable
+              // So that it looks like the selectors
+              radius="sm"
+              onClear={() => setSearchTerm("")}
+            />
+          </div>
+
+          {/* Projects selector */}
+          <div className="w-full lg:w-1/3 flex justify-center">
+            <Select
+              label={
+                publicView ? "Filter Public Projects:" : "Filter Projects:"
+              }
+              className="w-full"
+              size="sm"
+              isRequired
+              errorMessage="Please select at least one project."
+              selectionMode="multiple"
+              selectedKeys={new Set(selectedProjects)}
+              onSelectionChange={handleProjectChange}
+              isDisabled={loadingProjects || !!errorProjects}
+            >
+              {loadingProjects ? (
+                <SelectItem key="loading" isDisabled>
+                  Loading projects...
+                </SelectItem>
+              ) : errorProjects ? (
+                <SelectItem key="error" isDisabled>
+                  Error: {errorProjects}
+                </SelectItem>
+              ) : (
+                <>
+                  <SelectItem key="all" className="text-primary">
+                    All Projects
+                  </SelectItem>
+                  {projects.length > 0 ? (
+                    projects.map((project) => (
+                      <SelectItem
+                        key={project.id}
+                        value={String(project.id)}
+                        textValue={project.name}
                       >
-                        <ul>
-                          {testCase.copied_files.map((file) => (
-                            <li key={`${testCase.id}-${file.name}`}>
-                              {file.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </AccordionItem>
-                    </Accordion>
+                        <div className="flex justify-between items-center">
+                          <span>{project.name}</span>
+                          {project.public && (
+                            <span className="text-default-400">(Public)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
                   ) : (
-                    <ul>
-                      {testCase.copied_files.map((file) => (
-                        <li key={`${testCase.id}-${file.name}`}>
-                          <Link
-                            color="foreground"
-                            href={`${MEDIA_URL}${file.path}`}
-                            className="text-sm text-foreground/100 dark:text-foreground-dark/100"
-                          >
-                            {file.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                    <SelectItem key="no-projects" isDisabled>
+                      No Projects Available
+                    </SelectItem>
                   )}
-                </TableCell>
-                <TableCell>
-                  {formatExecutionTime(
-                    testCase.execution_time,
-                    testCase.status,
-                  )}
-                </TableCell>
-                <TableCell>
-                  {testCase.num_errors > 0 ? (
-                    <Accordion isCompact>
-                      <AccordionItem
-                        title={
-                          <span className="text-sm text-foreground/100 dark:text-foreground-dark/100">{`${testCase.num_errors} errors`}</span>
-                        }
-                      >
-                        <ul>
-                          {testCase.testCaseErrors.map((error_) => (
-                            <li key={error_.id}>
-                              Error {error_.code}: {error_.count}
-                            </li>
-                          ))}
-                        </ul>
-                      </AccordionItem>
-                    </Accordion>
-                  ) : (
-                    <Accordion isCompact>
-                      <AccordionItem
-                        title={
-                          <span className="text-sm text-foreground dark:text-foreground-dark">
-                            No errors
-                          </span>
-                        }
-                      />
-                    </Accordion>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {formatCost(testCase.total_cost, testCase.status)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    {testCase.llm_model ? (
-                      <>
-                        <span className="font-medium text-sm">
-                          {testCase.llm_model}
-                        </span>
-                        <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                          {getProviderDisplayName(testCase.llm_provider)}
-                        </span>
-                      </>
+                </>
+              )}
+            </Select>
+          </div>
+
+          {/* Status selector */}
+          <div className="w-full lg:w-1/4 flex justify-center">
+            <Select
+              label="Filter by Status:"
+              className="w-full"
+              size="sm"
+              selectedKeys={new Set([selectedStatus])}
+              selectionMode="single"
+              onSelectionChange={(keys) => {
+                const value = [...keys][0];
+                setSelectedStatus(value);
+              }}
+              renderValue={() => {
+                return (
+                  <div className="flex items-center gap-2">
+                    {selectedStatus === "ALL" ? (
+                      "All Statuses"
                     ) : (
-                      <span className="text-foreground/60 dark:text-foreground-dark/60 italic text-sm">
-                        No model recorded
+                      <span
+                        className={`text-${statusColorMap[selectedStatus]}`}
+                      >
+                        {selectedStatus}
                       </span>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>
-                  {
-                    projects.find((project) => project.id === testCase.project)
-                      ?.name
-                  }
-                </TableCell>
+                );
+              }}
+            >
+              <SelectItem key="ALL" className="text-primary">
+                All Statuses
+              </SelectItem>
+              {statusOptions
+                .filter((opt) => opt.value !== "ALL")
+                .map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <div className="flex items-center gap-2">
+                      <Chip
+                        color={statusColorMap[opt.value]}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {opt.value}
+                      </Chip>
+                    </div>
+                  </SelectItem>
+                ))}
+            </Select>
+          </div>
 
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      as={Link}
-                      href={`/test-case/${testCase.id}`}
+          {/* Filter button */}
+          <div className="w-full lg:w-auto flex justify-center">
+            <Button color="primary" className="w-full h-12" type="submit">
+              Filter
+            </Button>
+          </div>
+        </Form>
+
+        <div className="flex-1 min-h-0 overflow-auto w-full mx-auto">
+          <Table
+            aria-label="Test Cases Table"
+            isStriped
+            sortDescriptor={sortDescriptor}
+            onSortChange={(descriptor) => {
+              setSortDescriptor(descriptor);
+              fetchPagedTestCases(
+                page,
+                descriptor.column,
+                descriptor.direction,
+              );
+            }}
+          >
+            <TableHeader>
+              {columns.map((column) => (
+                <TableColumn key={column.key} allowsSorting={column.sortable}>
+                  {column.name}
+                </TableColumn>
+              ))}
+            </TableHeader>
+            <TableBody
+              items={sortedTestCases}
+              isLoading={loading}
+              loadingContent={<Spinner label="Loading Test Cases..." />}
+              emptyContent={"No Test Cases to display."}
+            >
+              {(testCase) => (
+                <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
+                  <TableCell>{testCase.displayName}</TableCell>
+                  <TableCell>
+                    <Chip
+                      color={statusColorMap[testCase.status]}
                       size="sm"
                       variant="flat"
-                      color="primary"
-                      endContent={<Eye className="w-3 h-3" />}
                     >
-                      View
-                    </Button>
-                    {testCase.status === "RUNNING" && (
+                      {testCase.status}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(testCase.executed_at).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    {testCase.copied_files.length > 3 ? (
+                      <Accordion isCompact={true}>
+                        <AccordionItem
+                          title={`View ${testCase.copied_files.length} files`}
+                          isCompact={true}
+                          classNames={{ title: "text-sm mx-0" }}
+                        >
+                          <ul>
+                            {testCase.copied_files.map((file) => (
+                              <li key={`${testCase.id}-${file.name}`}>
+                                {file.name}
+                              </li>
+                            ))}
+                          </ul>
+                        </AccordionItem>
+                      </Accordion>
+                    ) : (
+                      <ul>
+                        {testCase.copied_files.map((file) => (
+                          <li key={`${testCase.id}-${file.name}`}>
+                            <Link
+                              color="foreground"
+                              href={`${MEDIA_URL}${file.path}`}
+                              className="text-sm text-foreground/100 dark:text-foreground-dark/100"
+                            >
+                              {file.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {formatExecutionTime(
+                      testCase.execution_time,
+                      testCase.status,
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {testCase.num_errors > 0 ? (
+                      <Accordion isCompact>
+                        <AccordionItem
+                          title={
+                            <span className="text-sm text-foreground/100 dark:text-foreground-dark/100">{`${testCase.num_errors} errors`}</span>
+                          }
+                        >
+                          <ul>
+                            {testCase.testCaseErrors.map((error_) => (
+                              <li key={error_.id}>
+                                Error {error_.code}: {error_.count}
+                              </li>
+                            ))}
+                          </ul>
+                        </AccordionItem>
+                      </Accordion>
+                    ) : (
+                      <Accordion isCompact>
+                        <AccordionItem
+                          title={
+                            <span className="text-sm text-foreground dark:text-foreground-dark">
+                              No errors
+                            </span>
+                          }
+                        />
+                      </Accordion>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {formatCost(testCase.total_cost, testCase.status)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      {testCase.llm_model ? (
+                        <>
+                          <span className="font-medium text-sm">
+                            {testCase.llm_model}
+                          </span>
+                          <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                            {getProviderDisplayName(testCase.llm_provider)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-foreground/60 dark:text-foreground-dark/60 italic text-sm">
+                          No model recorded
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {
+                      projects.find(
+                        (project) => project.id === testCase.project,
+                      )?.name
+                    }
+                  </TableCell>
+
+                  <TableCell>
+                    <div className="flex gap-2">
                       <Button
+                        as={Link}
+                        href={`/test-case/${testCase.id}`}
                         size="sm"
                         variant="flat"
-                        color="danger"
-                        onPress={(event) => handleStop(testCase.id, event)}
-                        endContent={<XCircle className="w-3 h-3" />}
+                        color="primary"
+                        endContent={<Eye className="w-3 h-3" />}
                       >
-                        Stop
+                        View
                       </Button>
-                    )}
-                    {!publicView && (
-                      <Button
-                        size="sm"
-                        variant="flat"
-                        color="danger"
-                        onPress={(event) => handleDelete(testCase.id, event)}
-                        endContent={<Trash className="w-3 h-3" />}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                      {testCase.status === "RUNNING" && (
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          color="danger"
+                          onPress={(event) => handleStop(testCase.id, event)}
+                          endContent={<XCircle className="w-3 h-3" />}
+                        >
+                          Stop
+                        </Button>
+                      )}
+                      {!publicView && (
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          color="danger"
+                          onPress={(event) => handleDelete(testCase.id, event)}
+                          endContent={<Trash className="w-3 h-3" />}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <div className="flex w-full max-w-[1200px] mx-auto justify-center">
         <Pagination

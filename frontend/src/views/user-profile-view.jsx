@@ -27,6 +27,7 @@ import {
   deleteApiKey,
 } from "../api/authentication-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import SetupStatusDashboard from "../components/setup-status-dashboard";
 
 const UserProfileView = () => {
   const { user, refreshUser } = useAuth();
@@ -148,8 +149,13 @@ const UserProfileView = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-5xl mx-auto my-auto max-h-[90vh]">
+      {/* Setup Status Dashboard */}
+      <div className="w-full">
+        <SetupStatusDashboard compact={true} showTitle={false} />
+      </div>
+
+      <div className="w-full max-w-2xl mx-auto space-y-6">
         <Card className="bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           <CardHeader>
             <h1 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
