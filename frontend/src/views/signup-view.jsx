@@ -54,8 +54,8 @@ function SignupView() {
 
   return (
     <div className="flex flex-col items-center justify-center p-6 w-full">
-      <Card className="p-6 sm:p-8 w-full max-w-md space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">
+      <Card className="p-6 sm:p-8 w-full max-w-md space-y-6 bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
           Create Account
         </h1>
         <Form
@@ -157,9 +157,9 @@ function SignupView() {
             {loading ? <Spinner size="sm" /> : "Sign Up"}
           </Button>
         </Form>
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-foreground/60 dark:text-foreground-dark/60">
           Already have an account?{" "}
-          <Link to="/login" className="text-primary-500">
+          <Link to="/login" className="text-primary">
             Log in
           </Link>
         </div>

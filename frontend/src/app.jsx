@@ -91,12 +91,18 @@ function AppContent() {
   if (!mounted) return;
 
   return (
-    <HeroUIProvider navigate={navigate} useHref={useHref}>
-      <div className="flex flex-col min-h-screen">
+    <HeroUIProvider
+      navigate={navigate}
+      useHref={useHref}
+      theme={theme}
+      className={theme}
+    >
+      <div className={`flex flex-col min-h-screen ${theme}`}>
         <Navbar
           onMenuOpenChange={setIsMenuOpen}
           maxWidth="lg"
           isMenuOpen={isMenuOpen}
+          className="bg-background sm:bg-background-subtle dark:bg-darkbg-card"
         >
           <NavbarMenuToggle
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}

@@ -114,24 +114,32 @@ const ProjectsList = ({
           const modelInfo = getLLMModelDisplay(project);
           return (
             <TableRow key={project.id}>
-              <TableCell>{project.name}</TableCell>
               <TableCell>
-                {
-                  connectors.find((t) => t.id === project.chatbot_connector)
-                    ?.name
-                }
+                <span className="text-foreground dark:text-foreground-dark font-medium">
+                  {project.name}
+                </span>
+              </TableCell>
+              <TableCell>
+                <span className="text-foreground dark:text-foreground-dark">
+                  {
+                    connectors.find((t) => t.id === project.chatbot_connector)
+                      ?.name
+                  }
+                </span>
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
                   <span
                     className={
-                      modelInfo.isEmpty ? "text-gray-500 italic" : "font-medium"
+                      modelInfo.isEmpty
+                        ? "text-foreground/60 dark:text-foreground-dark/60 italic"
+                        : "font-medium text-foreground dark:text-foreground-dark"
                     }
                   >
                     {modelInfo.modelName}
                   </span>
                   {modelInfo.providerName && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
                       {modelInfo.providerName}
                     </span>
                   )}

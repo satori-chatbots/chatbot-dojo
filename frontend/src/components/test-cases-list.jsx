@@ -31,7 +31,7 @@ function TestCasesList({ testCases }) {
                         href={`${MEDIA_URL}${fileObject.path}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
+                        className="text-primary hover:underline flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl"
                       >
                         {fileObject.name}
                       </a>

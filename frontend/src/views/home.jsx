@@ -530,29 +530,29 @@ function Home() {
   return (
     <div className="flex flex-col items-center justify-center p-6 w-full">
       {selectedProject ? (
-        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full">
+        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header */}
-          <h1 className="text-3xl font-bold text-center">
+          <h1 className="text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
             {selectedProject.name}
           </h1>
 
           {/* LLM Model Information */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-4 border border-border dark:border-border-dark backdrop-blur-sm">
             <div className="flex flex-col space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark">
                 LLM Configuration
               </h3>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-foreground/70 dark:text-foreground-dark/70">
                   Model:
                 </span>
                 <div className="flex flex-col items-end">
                   {selectedProject.api_key && selectedProject.llm_model ? (
                     <>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                      <span className="font-medium text-foreground dark:text-foreground-dark">
                         {selectedProject.llm_model}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
                         {getProviderDisplayName(selectedProject.llm_provider)}
                       </span>
                     </>
@@ -564,7 +564,7 @@ function Home() {
                 </div>
               </div>
               {selectedProject.api_key && selectedProject.llm_model && (
-                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
                   💡 <strong>Important:</strong> API provider (
                   {getProviderDisplayName(selectedProject.llm_provider)}) must
                   match the provider in your profiles. Check costs before
@@ -595,7 +595,7 @@ function Home() {
                 className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
                   isDragActive
                     ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
-                    : "border-gray-300 hover:border-gray-400"
+                    : "border-border dark:border-border-dark hover:border-gray-400 dark:hover:border-gray-500"
                 }`}
               >
                 <input {...getInputProps()} />
@@ -604,20 +604,22 @@ function Home() {
                     className={`transition-all duration-300 ease-in-out ${
                       isDragActive
                         ? "text-primary scale-125 opacity-80"
-                        : "text-gray-400 hover:text-gray-500"
+                        : "text-foreground/50 dark:text-foreground-dark/50 hover:text-foreground/70 dark:hover:text-foreground-dark/70"
                     } w-10 h-10`}
                   />
                   <div className="text-center">
                     <p
                       className={`text-sm font-medium transition-all duration-300 ${
-                        isDragActive ? "text-primary" : ""
+                        isDragActive
+                          ? "text-primary"
+                          : "text-foreground dark:text-foreground-dark"
                       }`}
                     >
                       {isDragActive
                         ? "Drop files here"
                         : "Drag and drop YAML files here"}
                     </p>
-                    <p className="text-xs mt-0.5 text-gray-500">
+                    <p className="text-xs mt-0.5 text-foreground/60 dark:text-foreground-dark/60">
                       or click to browse
                     </p>
                   </div>
@@ -646,8 +648,8 @@ function Home() {
                         Clear
                       </Button>
                     </div>
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-2 max-h-28 overflow-y-auto">
-                      <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                    <div className="bg-background-subtle dark:bg-darkbg-card rounded-md p-2 max-h-28 overflow-y-auto backdrop-blur-sm border border-border dark:border-border-dark">
+                      <ul className="text-sm text-foreground/70 dark:text-foreground-dark/70 space-y-1">
                         {[...selectedUploadFiles].map((file, index) => (
                           <li
                             key={index}
@@ -704,7 +706,7 @@ function Home() {
               {isGenerating && (
                 <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
                   <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
-                  <h3 className="text-base font-medium mb-1">
+                  <h3 className="text-base font-medium mb-1 text-foreground dark:text-foreground-dark">
                     Generating Profiles
                   </h3>
                   {generationStage && (
@@ -712,16 +714,16 @@ function Home() {
                       {generationStage}
                     </p>
                   )}
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                  <div className="w-full bg-muted dark:bg-muted-dark rounded-full h-2.5 mb-2">
                     <div
                       className="bg-primary h-2.5 rounded-full transition-all duration-300"
                       style={{ width: `${generationProgress}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 text-center">
                     {generationProgress}% complete
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
+                  <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 text-center mt-1">
                     This might take a few minutes. Please wait...
                   </p>
                 </div>
@@ -733,7 +735,7 @@ function Home() {
               {files.length > 0 ? (
                 <>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
                       {files.length} profiles
                     </span>
                     <Button
@@ -763,7 +765,7 @@ function Home() {
                               onPress={() =>
                                 navigate(`/yaml-editor/${file.id}`)
                               }
-                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-blue-500 hover:underline text-left"
+                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-primary hover:underline text-left"
                             >
                               {file.name}
                             </Link>
@@ -782,7 +784,7 @@ function Home() {
                   </ul>
                 </>
               ) : (
-                <p className="text-gray-500 text-center">
+                <p className="text-foreground/60 dark:text-foreground-dark/60 text-center">
                   No profiles uploaded yet.
                 </p>
               )}
@@ -811,7 +813,9 @@ function Home() {
         </Card>
       ) : (
         <div className="flex flex-col space-y-4">
-          <h2 className="text-xl font-bold text-center">Select a Project</h2>
+          <h2 className="text-xl font-bold text-center text-foreground dark:text-foreground-dark">
+            Select a Project
+          </h2>
           <ProjectsList
             projects={projects}
             connectors={availableConnectors}
@@ -841,7 +845,7 @@ function Home() {
         <ModalContent>
           <ModalHeader>Generate Profiles</ModalHeader>
           <ModalBody className="flex flex-col gap-4">
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-foreground/70 dark:text-foreground-dark/70">
               Profiles are generated based on conversations. More conversations
               with more turns create better profiles but take longer to
               generate.
@@ -939,7 +943,7 @@ function Home() {
       >
         <ModalContent>
           <ModalHeader>Confirm Deletion</ModalHeader>
-          <ModalBody className="text-gray-600 dark:text-gray-400">
+          <ModalBody className="text-foreground/70 dark:text-foreground-dark/70">
             Are you sure you want to delete the selected files?
           </ModalBody>
           <ModalFooter>
@@ -974,7 +978,7 @@ function Home() {
       >
         <ModalContent>
           <ModalHeader>Delete Project</ModalHeader>
-          <ModalBody className="text-gray-600 dark:text-gray-400">
+          <ModalBody className="text-foreground/70 dark:text-foreground-dark/70">
             Are you sure you want to delete this project? This action cannot be
             undone.
           </ModalBody>

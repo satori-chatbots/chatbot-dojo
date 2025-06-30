@@ -246,7 +246,10 @@ const EditProjectModal = ({
             />
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label htmlFor="edit-project-connector" className="text-sm">
+                <label
+                  htmlFor="edit-project-connector"
+                  className="text-sm text-foreground dark:text-foreground-dark"
+                >
                   Connector
                 </label>
                 <Button
@@ -295,7 +298,10 @@ const EditProjectModal = ({
 
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
-                <label htmlFor="edit-project-api-key" className="text-sm">
+                <label
+                  htmlFor="edit-project-api-key"
+                  className="text-sm text-foreground dark:text-foreground-dark"
+                >
                   API Key
                 </label>
                 <Button
@@ -329,7 +335,7 @@ const EditProjectModal = ({
                 ))}
               </Select>
               {apiKeys.length === 0 && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
                   API Keys are optional but recommended for authentication.
                 </p>
               )}
@@ -345,7 +351,7 @@ const EditProjectModal = ({
               <div className="w-full">
                 <label
                   htmlFor="edit-project-llm-model"
-                  className="text-sm mb-2 block"
+                  className="text-sm mb-2 block text-foreground dark:text-foreground-dark"
                 >
                   LLM Model
                 </label>
@@ -376,12 +382,12 @@ const EditProjectModal = ({
                   ))}
                 </Select>
                 {availableModels.length === 0 && !loadingModels && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
                     No models available for the selected API key provider.
                   </p>
                 )}
                 {availableModels.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
                     This model will be used for TRACER (profile generation).
                   </p>
                 )}
@@ -389,7 +395,10 @@ const EditProjectModal = ({
             )}
 
             <div className="flex w-full justify-between items-center">
-              <label htmlFor="edit-project-public" className="text-sm">
+              <label
+                htmlFor="edit-project-public"
+                className="text-sm text-foreground dark:text-foreground-dark"
+              >
                 Make Project Public
               </label>
               <Switch
