@@ -238,7 +238,7 @@ function TestCase() {
       <Tabs defaultValue="global" className="space-y-4">
         <Tab key="global" title="Global Details">
           <div className="space-y-4">
-            <Card shadow="sm">
+            <Card shadow="sm" className="bg-default-50 dark:bg-default-50">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                   Execution Times
@@ -274,7 +274,7 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            <Card shadow="sm">
+            <Card shadow="sm" className="bg-default-100 dark:bg-default-100">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                   Errors
@@ -319,7 +319,7 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            <Card shadow="sm">
+            <Card shadow="sm" className="bg-default-50 dark:bg-default-50">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                   Cost and LLM
@@ -366,7 +366,7 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            <Card shadow="sm">
+            <Card shadow="sm" className="bg-default-100 dark:bg-default-100">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                   Connector Information
@@ -386,7 +386,7 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            <Card shadow="sm">
+            <Card shadow="sm" className="bg-default-50 dark:bg-default-50">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                   Project Details
@@ -414,7 +414,7 @@ function TestCase() {
               </CardBody>
             </Card>
 
-            <Card shadow="sm">
+            <Card shadow="sm" className="bg-default-100 dark:bg-default-100">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                   Terminal Output
@@ -428,7 +428,7 @@ function TestCase() {
                       title: "text-foreground dark:text-foreground-dark",
                     }}
                   >
-                    <pre className="bg-gray-50 dark:bg-default-100 p-4 rounded-lg whitespace-pre-wrap text-left text-foreground dark:text-foreground-dark">
+                    <pre className="bg-gray-800 text-gray-200 dark:bg-black dark:text-green-400 p-4 rounded-lg whitespace-pre-wrap text-left font-mono">
                       {testCase[0].result}
                     </pre>
                   </AccordionItem>
@@ -444,7 +444,10 @@ function TestCase() {
                 <AccordionItem
                   key={report.id}
                   title={
-                    <Card shadow="sm" className="w-full">
+                    <Card
+                      shadow="sm"
+                      className="w-full bg-default-50 dark:bg-default-50"
+                    >
                       <CardHeader>
                         <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                           {report.name}
@@ -485,7 +488,10 @@ function TestCase() {
                   }
                 >
                   <div className="mt-4 space-y-4">
-                    <Card shadow="sm">
+                    <Card
+                      shadow="sm"
+                      className="bg-default-100 dark:bg-default-100"
+                    >
                       <CardHeader>
                         <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                           Execution Times
@@ -521,7 +527,10 @@ function TestCase() {
                       </CardBody>
                     </Card>
 
-                    <Card shadow="sm">
+                    <Card
+                      shadow="sm"
+                      className="bg-default-50 dark:bg-default-50"
+                    >
                       <CardHeader>
                         <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                           Errors
@@ -569,7 +578,10 @@ function TestCase() {
                       </CardBody>
                     </Card>
 
-                    <Card shadow="sm">
+                    <Card
+                      shadow="sm"
+                      className="bg-default-100 dark:bg-default-100"
+                    >
                       <CardHeader>
                         <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                           Profile Details
@@ -687,7 +699,10 @@ function TestCase() {
                       </CardBody>
                     </Card>
 
-                    <Card shadow="sm">
+                    <Card
+                      shadow="sm"
+                      className="bg-default-50 dark:bg-default-50"
+                    >
                       <CardHeader>
                         <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                           Conversations
@@ -708,7 +723,7 @@ function TestCase() {
                                 <div className="space-y-4">
                                   <Card
                                     shadow="none"
-                                    className="border-none bg-gray-50 dark:bg-default-100"
+                                    className="border-none bg-default-100 dark:bg-default-100"
                                   >
                                     <CardHeader>
                                       <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
@@ -779,7 +794,7 @@ function TestCase() {
 
                                   <Card
                                     shadow="none"
-                                    className="border-none bg-gray-50 dark:bg-default-100"
+                                    className="border-none bg-default-100 dark:bg-default-100"
                                   >
                                     <CardHeader>
                                       <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
@@ -817,7 +832,7 @@ function TestCase() {
 
                                   <Card
                                     shadow="none"
-                                    className="border-none bg-gray-50 dark:bg-default-100"
+                                    className="border-none bg-default-100 dark:bg-default-100"
                                   >
                                     <CardHeader>
                                       <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
@@ -856,7 +871,7 @@ function TestCase() {
 
                                   <Card
                                     shadow="none"
-                                    className="border-none bg-gray-50 dark:bg-default-100"
+                                    className="border-none bg-default-100 dark:bg-default-100"
                                   >
                                     <CardHeader>
                                       <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
@@ -902,7 +917,7 @@ function TestCase() {
 
                                   <Card
                                     shadow="none"
-                                    className="border-none bg-gray-50 dark:bg-default-100"
+                                    className="border-none bg-default-100 dark:bg-default-100"
                                   >
                                     <CardHeader>
                                       <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
@@ -960,7 +975,7 @@ function TestCase() {
 
                                   <Card
                                     shadow="none"
-                                    className="border-none bg-gray-50 dark:bg-default-100"
+                                    className="border-none bg-default-100 dark:bg-default-100"
                                   >
                                     <CardHeader>
                                       <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
@@ -972,16 +987,19 @@ function TestCase() {
                                         (message, index) => (
                                           <div
                                             key={index}
-                                            className={`mb-4 ${
+                                            className={`mb-4 p-3 rounded-lg ${
                                               Object.keys(message)[0] === "User"
-                                                ? "text-blue-600 dark:text-blue-400"
-                                                : "text-green-600 dark:text-green-400"
+                                                ? "bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                                                : "bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200"
                                             }`}
                                           >
-                                            <p className="font-bold text-foreground dark:text-foreground-dark">
-                                              {Object.keys(message)[0]}:
+                                            <p className="font-bold">
+                                              {Object.keys(message)[0] ===
+                                              "User"
+                                                ? "🧑‍💻 User:"
+                                                : "🤖 Agent:"}
                                             </p>
-                                            <p className="text-foreground dark:text-foreground-dark">
+                                            <p className="mt-1">
                                               {Object.values(message)[0]}
                                             </p>
                                           </div>
