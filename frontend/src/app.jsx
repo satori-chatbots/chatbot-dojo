@@ -102,6 +102,7 @@ function AppContent() {
           onMenuOpenChange={setIsMenuOpen}
           maxWidth="lg"
           isMenuOpen={isMenuOpen}
+          className="bg-background sm:bg-background-subtle dark:bg-darkbg-card"
         >
           <NavbarMenuToggle
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
