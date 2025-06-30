@@ -30,6 +30,7 @@ import {
   checkChatbotConnectorName,
 } from "../api/chatbot-connector-api";
 import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
+import SetupProgress from "../components/setup-progress";
 
 const ChatbotConnectors = () => {
   const [editData, setEditData] = useState({
@@ -286,6 +287,11 @@ const ChatbotConnectors = () => {
       <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
         Chatbot Connectors
       </h1>
+
+      {/* Setup Progress */}
+      <div className="w-full max-w-4xl">
+        <SetupProgress isCompact={true} />
+      </div>
 
       {/* Modal to create new connector */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>

@@ -19,6 +19,7 @@ import {
 import { PROVIDER_OPTIONS } from "../constants/providers";
 import { useAuth } from "../contexts/auth-context";
 import { ApiKeyItem } from "../components/api-key-item";
+import SetupProgress from "../components/setup-progress";
 import {
   updateUserProfile,
   getUserApiKeys,
@@ -149,6 +150,11 @@ const UserProfileView = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
+      {/* Setup Progress */}
+      <div className="w-full max-w-4xl">
+        <SetupProgress isCompact={true} />
+      </div>
+
       <div className="max-w-4xl mx-auto space-y-6">
         <Card className="bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           <CardHeader>

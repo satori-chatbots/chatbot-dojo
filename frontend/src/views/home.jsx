@@ -38,6 +38,7 @@ import useSelectedProject from "../hooks/use-selected-projects";
 import CreateProjectModal from "../components/create-project-modal";
 import EditProjectModal from "../components/edit-project-modal";
 import ProjectsList from "../components/project-list";
+import SetupProgress from "../components/setup-progress";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
@@ -528,7 +529,12 @@ function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 w-full">
+    <div className="flex flex-col items-center justify-center p-6 w-full space-y-6">
+      {/* Setup Progress - always visible when not complete */}
+      <div className="w-full max-w-lg">
+        <SetupProgress isCompact={true} />
+      </div>
+
       {selectedProject ? (
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header */}

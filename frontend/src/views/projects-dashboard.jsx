@@ -9,6 +9,7 @@ import useSelectedProject from "../hooks/use-selected-projects";
 import ProjectsList from "../components/project-list";
 import { Plus } from "lucide-react";
 import { getProviderDisplayName } from "../constants/providers";
+import SetupProgress from "../components/setup-progress";
 
 const ProjectsDashboard = () => {
   const [loading, setLoading] = useState(false);
@@ -83,6 +84,11 @@ const ProjectsDashboard = () => {
       <h2 className="text-xl sm:text-2xl font-bold text-center">
         My Projects:
       </h2>
+
+      {/* Setup Progress */}
+      <div className="w-full max-w-4xl">
+        <SetupProgress isCompact={true} />
+      </div>
 
       <div className="flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-2">
