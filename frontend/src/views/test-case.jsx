@@ -240,27 +240,33 @@ function TestCase() {
           <div className="space-y-4">
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Execution Times</h2>
+                <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Execution Times
+                </h2>
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       Average:
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {formatExecutionTime(globalReport.avg_execution_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-default-500">Max:</p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
+                      Max:
+                    </p>
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {formatExecutionTime(globalReport.max_execution_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-default-500">Min:</p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
+                      Min:
+                    </p>
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {formatExecutionTime(globalReport.min_execution_time)}
                     </p>
                   </div>
@@ -270,7 +276,9 @@ function TestCase() {
 
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Errors</h2>
+                <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Errors
+                </h2>
               </CardHeader>
               <CardBody>
                 <Table removeWrapper>
@@ -286,16 +294,19 @@ function TestCase() {
                   >
                     {globalErrors.map((error) => (
                       <TableRow key={error.id}>
-                        <TableCell className="w-1/3 text-foreground">
+                        <TableCell className="w-1/3 text-foreground dark:text-foreground-dark">
                           {error.code}
                         </TableCell>
-                        <TableCell className="w-1/3 text-foreground">
+                        <TableCell className="w-1/3 text-foreground dark:text-foreground-dark">
                           {error.count}
                         </TableCell>
-                        <TableCell className="w-1/3 text-foreground">
+                        <TableCell className="w-1/3 text-foreground dark:text-foreground-dark">
                           <ul>
                             {error.conversations.map((conv, index) => (
-                              <li key={index} className="text-foreground">
+                              <li
+                                key={index}
+                                className="text-foreground dark:text-foreground-dark"
+                              >
                                 {conv}
                               </li>
                             ))}
@@ -310,41 +321,43 @@ function TestCase() {
 
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Cost and LLM</h2>
+                <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Cost and LLM
+                </h2>
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       Total Cost:
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       ${globalReport.total_cost}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       Total Time:
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {formatExecutionTime(testCase[0].execution_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       LLM Model Used:
                     </p>
                     {testCase[0].llm_model ? (
                       <div className="flex flex-col">
-                        <p className="text-2xl font-bold text-foreground">
+                        <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                           {testCase[0].llm_model}
                         </p>
-                        <p className="text-sm text-default-500">
+                        <p className="text-sm text-default-500 dark:text-default-400">
                           {getProviderDisplayName(testCase[0].llm_provider)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-2xl font-bold text-default-500 italic">
+                      <p className="text-2xl font-bold text-default-500 dark:text-default-400 italic">
                         No model recorded
                       </p>
                     )}
@@ -355,15 +368,17 @@ function TestCase() {
 
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Connector Information</h2>
+                <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Connector Information
+                </h2>
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       Technology:
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {testCase[0].technology}
                     </p>
                   </div>
@@ -373,23 +388,25 @@ function TestCase() {
 
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Project Details</h2>
+                <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Project Details
+                </h2>
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       Project Name:
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {projectName}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-default-500">
+                    <p className="text-sm font-medium text-default-500 dark:text-default-400">
                       Number of Profiles:
                     </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                       {profileReports.length}
                     </p>
                   </div>
@@ -399,15 +416,19 @@ function TestCase() {
 
             <Card shadow="sm">
               <CardHeader>
-                <h2 className="text-2xl font-bold">Terminal Output</h2>
+                <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Terminal Output
+                </h2>
               </CardHeader>
               <CardBody>
                 <Accordion>
                   <AccordionItem
                     title="Show Output"
-                    className="text-sm font-medium"
+                    classNames={{
+                      title: "text-foreground dark:text-foreground-dark",
+                    }}
                   >
-                    <pre className="bg-gray-50 dark:bg-default-100 p-4 rounded-lg whitespace-pre-wrap text-left">
+                    <pre className="bg-gray-50 dark:bg-default-100 p-4 rounded-lg whitespace-pre-wrap text-left text-foreground dark:text-foreground-dark">
                       {testCase[0].result}
                     </pre>
                   </AccordionItem>
@@ -425,31 +446,33 @@ function TestCase() {
                   title={
                     <Card shadow="sm" className="w-full">
                       <CardHeader>
-                        <h2 className="text-2xl font-bold">{report.name}</h2>
+                        <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                          {report.name}
+                        </h2>
                       </CardHeader>
                       <CardBody>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-default-500">
+                            <p className="text-sm font-medium text-default-500 dark:text-default-400">
                               Avg Execution Time:
                             </p>
-                            <p className="text-2xl font-bold text-foreground">
+                            <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                               {formatExecutionTime(report.avg_execution_time)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-default-500">
+                            <p className="text-sm font-medium text-default-500 dark:text-default-400">
                               Total Cost:
                             </p>
-                            <p className="text-2xl font-bold text-foreground">
+                            <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                               ${report.total_cost}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-default-500">
+                            <p className="text-sm font-medium text-default-500 dark:text-default-400">
                               Total Errors:
                             </p>
-                            <p className="text-2xl font-bold text-foreground">
+                            <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                               {report.errors.reduce(
                                 (sum, error) => sum + error.count,
                                 0,
@@ -464,31 +487,33 @@ function TestCase() {
                   <div className="mt-4 space-y-4">
                     <Card shadow="sm">
                       <CardHeader>
-                        <h2 className="text-2xl font-bold">Execution Times</h2>
+                        <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                          Execution Times
+                        </h2>
                       </CardHeader>
                       <CardBody>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-default-500">
+                            <p className="text-sm font-medium text-default-500 dark:text-default-400">
                               Average:
                             </p>
-                            <p className="text-2xl font-bold text-foreground">
+                            <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                               {formatExecutionTime(report.avg_execution_time)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-default-500">
+                            <p className="text-sm font-medium text-default-500 dark:text-default-400">
                               Max:
                             </p>
-                            <p className="text-2xl font-bold text-foreground">
+                            <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                               {formatExecutionTime(report.max_execution_time)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-default-500">
+                            <p className="text-sm font-medium text-default-500 dark:text-default-400">
                               Min:
                             </p>
-                            <p className="text-2xl font-bold text-foreground">
+                            <p className="text-2xl font-bold text-foreground dark:text-foreground-dark">
                               {formatExecutionTime(report.min_execution_time)}
                             </p>
                           </div>
@@ -498,7 +523,9 @@ function TestCase() {
 
                     <Card shadow="sm">
                       <CardHeader>
-                        <h2 className="text-2xl font-bold">Errors</h2>
+                        <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                          Errors
+                        </h2>
                       </CardHeader>
                       <CardBody>
                         <Table removeWrapper>
@@ -515,19 +542,19 @@ function TestCase() {
                             {report.errors &&
                               report.errors.map((error) => (
                                 <TableRow key={error.id}>
-                                  <TableCell className="w-1/3 text-foreground">
+                                  <TableCell className="w-1/3 text-foreground dark:text-foreground-dark">
                                     {error.code}
                                   </TableCell>
-                                  <TableCell className="w-1/3 text-foreground">
+                                  <TableCell className="w-1/3 text-foreground dark:text-foreground-dark">
                                     {error.count}
                                   </TableCell>
-                                  <TableCell className="w-1/3 text-foreground">
+                                  <TableCell className="w-1/3 text-foreground dark:text-foreground-dark">
                                     <ul>
                                       {error.conversations?.map(
                                         (conv, index) => (
                                           <li
                                             key={index}
-                                            className="text-foreground"
+                                            className="text-foreground dark:text-foreground-dark"
                                           >
                                             {conv}
                                           </li>
@@ -544,7 +571,9 @@ function TestCase() {
 
                     <Card shadow="sm">
                       <CardHeader>
-                        <h2 className="text-2xl font-bold">Profile Details</h2>
+                        <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                          Profile Details
+                        </h2>
                       </CardHeader>
                       <CardBody>
                         <Table removeWrapper hideHeader>
@@ -554,40 +583,40 @@ function TestCase() {
                           </TableHeader>
                           <TableBody>
                             <TableRow>
-                              <TableCell className="font-medium w-1/3">
+                              <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                 Serial
                               </TableCell>
-                              <TableCell className="text-foreground">
+                              <TableCell className="text-foreground dark:text-foreground-dark">
                                 {report.serial}
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell className="font-medium w-1/3">
+                              <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                 Language
                               </TableCell>
-                              <TableCell className="text-foreground">
+                              <TableCell className="text-foreground dark:text-foreground-dark">
                                 {report.language}
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell className="font-medium w-1/3">
+                              <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                 Personality
                               </TableCell>
-                              <TableCell className="text-foreground">
+                              <TableCell className="text-foreground dark:text-foreground-dark">
                                 {report.personality}
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell className="font-medium w-1/3">
+                              <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                 Context
                               </TableCell>
-                              <TableCell className="text-foreground">
+                              <TableCell className="text-foreground dark:text-foreground-dark">
                                 <ul>
                                   {report.context_details?.map(
                                     (context, index) => (
                                       <li
                                         key={index}
-                                        className="text-foreground"
+                                        className="text-foreground dark:text-foreground-dark"
                                       >
                                         {context}
                                       </li>
@@ -597,16 +626,16 @@ function TestCase() {
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell className="font-medium w-1/3">
+                              <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                 Interaction Style
                               </TableCell>
-                              <TableCell className="text-foreground">
+                              <TableCell className="text-foreground dark:text-foreground-dark">
                                 <ul>
                                   {report.interaction_style?.map(
                                     (style, index) => (
                                       <li
                                         key={index}
-                                        className="text-foreground"
+                                        className="text-foreground dark:text-foreground-dark"
                                       >
                                         {style}
                                       </li>
@@ -616,34 +645,34 @@ function TestCase() {
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell className="font-medium w-1/3">
+                              <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                 Number of Conversations
                               </TableCell>
-                              <TableCell className="text-foreground">
+                              <TableCell className="text-foreground dark:text-foreground-dark">
                                 {report.number_conversations}
                               </TableCell>
                             </TableRow>
                             {report.steps && (
                               <TableRow>
-                                <TableCell className="font-medium w-1/3">
+                                <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                   Steps
                                 </TableCell>
-                                <TableCell className="text-foreground">
+                                <TableCell className="text-foreground dark:text-foreground-dark">
                                   {report.steps}
                                 </TableCell>
                               </TableRow>
                             )}
                             {report.all_answered && (
                               <TableRow>
-                                <TableCell className="font-medium w-1/3">
+                                <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                   All Answered
                                 </TableCell>
-                                <TableCell className="text-foreground">
+                                <TableCell className="text-foreground dark:text-foreground-dark">
                                   {Object.entries(report.all_answered).map(
                                     ([key, value]) => (
                                       <div
                                         key={key}
-                                        className="flex gap-2 text-foreground"
+                                        className="flex gap-2 text-foreground dark:text-foreground-dark"
                                       >
                                         <span>{key}:</span>
                                         <span>{value}</span>
@@ -660,7 +689,9 @@ function TestCase() {
 
                     <Card shadow="sm">
                       <CardHeader>
-                        <h2 className="text-2xl font-bold">Conversations</h2>
+                        <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                          Conversations
+                        </h2>
                       </CardHeader>
                       <CardBody>
                         <Accordion>
@@ -669,6 +700,10 @@ function TestCase() {
                               <AccordionItem
                                 key={convIndex}
                                 title={conversation.name}
+                                classNames={{
+                                  title:
+                                    "text-foreground dark:text-foreground-dark",
+                                }}
                               >
                                 <div className="space-y-4">
                                   <Card
@@ -676,13 +711,13 @@ function TestCase() {
                                     className="border-none bg-gray-50 dark:bg-default-100"
                                   >
                                     <CardHeader>
-                                      <h3 className="text-xl font-bold">
+                                      <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
                                         Ask About
                                       </h3>
                                     </CardHeader>
                                     <CardBody>
                                       <div className="mb-4">
-                                        <h4 className="text-lg font-semibold mb-2">
+                                        <h4 className="text-lg font-semibold mb-2 text-foreground dark:text-foreground-dark">
                                           Questions
                                         </h4>
                                         <div className="space-y-2 pl-4">
@@ -694,7 +729,7 @@ function TestCase() {
                                             .map((question, index) => (
                                               <p
                                                 key={index}
-                                                className="text-default-600"
+                                                className="text-default-600 dark:text-default-400"
                                               >
                                                 • {question}
                                               </p>
@@ -702,7 +737,7 @@ function TestCase() {
                                         </div>
                                       </div>
                                       <div>
-                                        <h4 className="text-lg font-semibold mb-2">
+                                        <h4 className="text-lg font-semibold mb-2 text-foreground dark:text-foreground-dark">
                                           Variables
                                         </h4>
                                         <Table
@@ -725,10 +760,10 @@ function TestCase() {
                                                   Object.entries(item)[0];
                                                 return (
                                                   <TableRow key={index}>
-                                                    <TableCell className="font-medium w-1/3">
+                                                    <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                                       {key}
                                                     </TableCell>
-                                                    <TableCell className="text-foreground">
+                                                    <TableCell className="text-foreground dark:text-foreground-dark">
                                                       {Array.isArray(value)
                                                         ? value.join(", ")
                                                         : value}
@@ -747,7 +782,7 @@ function TestCase() {
                                     className="border-none bg-gray-50 dark:bg-default-100"
                                   >
                                     <CardHeader>
-                                      <h3 className="text-xl font-bold">
+                                      <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
                                         Answer
                                       </h3>
                                     </CardHeader>
@@ -765,10 +800,10 @@ function TestCase() {
                                           {conversation.data_output.map(
                                             (item, index) => (
                                               <TableRow key={index}>
-                                                <TableCell className="font-medium w-1/3">
+                                                <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                                   {Object.keys(item)[0]}
                                                 </TableCell>
-                                                <TableCell className="text-foreground">
+                                                <TableCell className="text-foreground dark:text-foreground-dark">
                                                   {Object.values(item)[0] ??
                                                     "None"}
                                                 </TableCell>
@@ -785,7 +820,7 @@ function TestCase() {
                                     className="border-none bg-gray-50 dark:bg-default-100"
                                   >
                                     <CardHeader>
-                                      <h3 className="text-xl font-bold">
+                                      <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
                                         Errors
                                       </h3>
                                     </CardHeader>
@@ -805,10 +840,10 @@ function TestCase() {
                                           {conversation.errors.map(
                                             (error, index) => (
                                               <TableRow key={index}>
-                                                <TableCell className="font-medium w-1/3">
+                                                <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                                   {Object.keys(error)[0]}
                                                 </TableCell>
-                                                <TableCell className="text-foreground">
+                                                <TableCell className="text-foreground dark:text-foreground-dark">
                                                   {Object.values(error)[0]}
                                                 </TableCell>
                                               </TableRow>
@@ -824,7 +859,7 @@ function TestCase() {
                                     className="border-none bg-gray-50 dark:bg-default-100"
                                   >
                                     <CardHeader>
-                                      <h3 className="text-xl font-bold">
+                                      <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
                                         Total Time and Cost
                                       </h3>
                                     </CardHeader>
@@ -840,20 +875,20 @@ function TestCase() {
                                         </TableHeader>
                                         <TableBody>
                                           <TableRow>
-                                            <TableCell className="font-medium w-1/3">
+                                            <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                               Total Time
                                             </TableCell>
-                                            <TableCell className="text-foreground">
+                                            <TableCell className="text-foreground dark:text-foreground-dark">
                                               {formatExecutionTime(
                                                 conversation.conversation_time,
                                               )}
                                             </TableCell>
                                           </TableRow>
                                           <TableRow>
-                                            <TableCell className="font-medium w-1/3">
+                                            <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                               Total Cost
                                             </TableCell>
-                                            <TableCell className="text-foreground">
+                                            <TableCell className="text-foreground dark:text-foreground-dark">
                                               $
                                               {conversation.total_cost.toFixed(
                                                 6,
@@ -870,7 +905,7 @@ function TestCase() {
                                     className="border-none bg-gray-50 dark:bg-default-100"
                                   >
                                     <CardHeader>
-                                      <h3 className="text-xl font-bold">
+                                      <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
                                         Response Time Report
                                       </h3>
                                     </CardHeader>
@@ -886,10 +921,10 @@ function TestCase() {
                                         </TableHeader>
                                         <TableBody>
                                           <TableRow>
-                                            <TableCell className="font-medium w-1/3">
+                                            <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                               Average
                                             </TableCell>
-                                            <TableCell className="text-foreground">
+                                            <TableCell className="text-foreground dark:text-foreground-dark">
                                               {conversation.response_time_avg.toFixed(
                                                 2,
                                               )}
@@ -897,10 +932,10 @@ function TestCase() {
                                             </TableCell>
                                           </TableRow>
                                           <TableRow>
-                                            <TableCell className="font-medium w-1/3">
+                                            <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                               Maximum
                                             </TableCell>
-                                            <TableCell className="text-foreground">
+                                            <TableCell className="text-foreground dark:text-foreground-dark">
                                               {conversation.response_time_max.toFixed(
                                                 2,
                                               )}
@@ -908,10 +943,10 @@ function TestCase() {
                                             </TableCell>
                                           </TableRow>
                                           <TableRow>
-                                            <TableCell className="font-medium w-1/3">
+                                            <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                               Minimum
                                             </TableCell>
-                                            <TableCell className="text-foreground">
+                                            <TableCell className="text-foreground dark:text-foreground-dark">
                                               {conversation.response_time_min.toFixed(
                                                 2,
                                               )}
@@ -928,7 +963,7 @@ function TestCase() {
                                     className="border-none bg-gray-50 dark:bg-default-100"
                                   >
                                     <CardHeader>
-                                      <h3 className="text-xl font-bold">
+                                      <h3 className="text-xl font-bold text-foreground dark:text-foreground-dark">
                                         Interaction
                                       </h3>
                                     </CardHeader>
@@ -943,10 +978,12 @@ function TestCase() {
                                                 : "text-green-600 dark:text-green-400"
                                             }`}
                                           >
-                                            <p className="font-bold">
+                                            <p className="font-bold text-foreground dark:text-foreground-dark">
                                               {Object.keys(message)[0]}:
                                             </p>
-                                            <p>{Object.values(message)[0]}</p>
+                                            <p className="text-foreground dark:text-foreground-dark">
+                                              {Object.values(message)[0]}
+                                            </p>
                                           </div>
                                         ),
                                       )}
