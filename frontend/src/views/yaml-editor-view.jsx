@@ -377,14 +377,21 @@ function YamlEditor() {
                 <Accordion>
                   {Object.entries(documentationSections).map(
                     ([sectionTitle, section]) => (
-                      <AccordionItem key={sectionTitle} title={sectionTitle}>
+                      <AccordionItem
+                        key={sectionTitle}
+                        title={
+                          <span className="text-foreground dark:text-foreground-dark">
+                            {sectionTitle}
+                          </span>
+                        }
+                      >
                         <div className="space-y-4 pt-2">
                           {section.items.map((item, index) => (
                             <div key={index} className="space-y-1.5">
                               <pre className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap">
                                 {item.code}
                               </pre>
-                              <p className="text-sm text-default-foreground/70">
+                              <p className="text-sm text-default-foreground">
                                 {item.description}
                               </p>
                             </div>
@@ -402,14 +409,21 @@ function YamlEditor() {
                 <Accordion>
                   {Object.entries(yamlBasicsSections).map(
                     ([sectionTitle, section]) => (
-                      <AccordionItem key={sectionTitle} title={sectionTitle}>
+                      <AccordionItem
+                        key={sectionTitle}
+                        title={
+                          <span className="text-foreground dark:text-foreground-dark">
+                            {sectionTitle}
+                          </span>
+                        }
+                      >
                         <div className="space-y-4 pt-2">
                           {section.items.map((item, index) => (
                             <div key={index} className="space-y-1.5">
                               <pre className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap">
                                 {item.code}
                               </pre>
-                              <p className="text-sm text-default-foreground/70">
+                              <p className="text-sm text-default-foreground">
                                 {item.description}
                               </p>
                             </div>
