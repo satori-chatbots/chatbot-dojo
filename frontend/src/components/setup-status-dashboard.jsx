@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardBody,
@@ -19,6 +19,9 @@ import {
   FileText,
   ChevronRight,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getUserApiKeys } from "../api/authentication-api";
@@ -41,9 +44,65 @@ const getStepStatus = (step) => {
   return { text: "Incomplete", color: "danger" };
 };
 
+// Detailed explanations for each step
+const getStepExplanation = (stepId, status, selectedProject) => {
+  const explanations = {
+    apikeys: {
+      title: "Why API Keys are needed",
+      content: status.completed
+        ? `✅ You have ${status.count} API key${status.count !== 1 ? "s" : ""} configured. These provide access to LLM providers (OpenAI, Google, etc.) that power the user simulator.`
+        : "🔑 API keys are required to access LLM providers (OpenAI, Google, Anthropic, etc.) that power Sensei's user simulator. The simulator uses these AI models to act as realistic users during testing.",
+      action: status.completed
+        ? "View or add more API keys"
+        : "Add your first API key to enable user simulation",
+    },
+    connectors: {
+      title: "Why Chatbot Connectors are needed",
+      content: status.completed
+        ? `✅ You have ${status.count} connector${status.count !== 1 ? "s" : ""} configured. These connect Sensei to different chatbot technologies for testing.`
+        : "🔌 Chatbot connectors link Sensei to the chatbots you want to test (Taskyto, Ada, Rasa, etc.). Each connector knows how to communicate with a specific chatbot technology.",
+      action: status.completed
+        ? "View or add more connectors"
+        : "Configure connectors to your chatbot platforms",
+    },
+    projects: {
+      title: "Why Projects are needed",
+      content: status.completed
+        ? `✅ You have ${status.count} project${status.count !== 1 ? "s" : ""}, with ${status.hasConfiguredProject ? "at least one fully configured" : "none fully configured yet"}. Projects organize your testing scenarios and link API keys with connectors.`
+        : "📁 Projects organize your testing scenarios. Each project links an API key (for user simulation) with a chatbot connector (what to test) and contains user profiles that define test behaviors.",
+      action: status.completed
+        ? "View or configure more projects"
+        : "Create a project to organize your tests",
+    },
+    profiles: {
+      title: "Why User Profiles are needed",
+      content: selectedProject
+        ? status.completed
+          ? `✅ You have ${status.count} profile${status.count !== 1 ? "s" : ""} in "${selectedProject.name}". These YAML files define how the user simulator behaves during conversations with your chatbot.`
+          : `📄 User profiles are YAML files that define how Sensei simulates users. They specify user goals, conversation styles, questions to ask, and expected outputs. You can create them manually, upload existing ones, or auto-generate them with TRACER.`
+        : "📄 User profiles define how the user simulator behaves during testing. Select a project first to manage profiles for that specific testing scenario.",
+      action: selectedProject
+        ? status.completed
+          ? "View, edit, or add more profiles"
+          : "Create your first user profile to start testing"
+        : "Select a project first",
+    },
+  };
+
+  return (
+    explanations[stepId] || {
+      title: "Setup Step",
+      content: "Configuration needed for Sensei.",
+      action: "Configure this step",
+    }
+  );
+};
+
 const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
   const navigate = useNavigate();
   const [selectedProject] = useSelectedProject();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Status states
   const [apiKeysStatus, setApiKeysStatus] = useState({
@@ -76,51 +135,38 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
     selectedProject ? selectedProject.id : undefined,
   );
 
-  // Load API keys status
-  useEffect(() => {
-    const loadApiKeysStatus = async () => {
-      try {
-        const apiKeys = await getUserApiKeys();
-        setApiKeysStatus({
-          loading: false,
-          completed: apiKeys.length > 0,
-          count: apiKeys.length,
-        });
-      } catch (error) {
-        console.error("Error loading API keys:", error);
-        setApiKeysStatus({
-          loading: false,
-          completed: false,
-          count: 0,
-        });
-      }
-    };
+  // Real-time update function with more frequent polling
+  const updateStatuses = useCallback(async () => {
+    try {
+      // Load API keys status
+      const apiKeys = await getUserApiKeys();
+      setApiKeysStatus({
+        loading: false,
+        completed: apiKeys.length > 0,
+        count: apiKeys.length,
+      });
 
-    loadApiKeysStatus();
+      // Load connectors status
+      const connectors = await fetchChatbotConnectors();
+      setConnectorsStatus({
+        loading: false,
+        completed: connectors.length > 0,
+        count: connectors.length,
+      });
+    } catch (error) {
+      console.error("Error updating statuses:", error);
+    }
   }, []);
 
-  // Load connectors status
+  // Load initial status and set up more frequent updates
   useEffect(() => {
-    const loadConnectorsStatus = async () => {
-      try {
-        const connectors = await fetchChatbotConnectors();
-        setConnectorsStatus({
-          loading: false,
-          completed: connectors.length > 0,
-          count: connectors.length,
-        });
-      } catch (error) {
-        console.error("Error loading connectors:", error);
-        setConnectorsStatus({
-          loading: false,
-          completed: false,
-          count: 0,
-        });
-      }
-    };
+    updateStatuses();
 
-    loadConnectorsStatus();
-  }, []);
+    // Set up more frequent updates every 10 seconds for real-time feel
+    const interval = setInterval(updateStatuses, 10000);
+
+    return () => clearInterval(interval);
+  }, [updateStatuses]);
 
   // Update projects status
   useEffect(() => {
@@ -154,7 +200,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
     {
       id: "apikeys",
       title: "API Keys",
-      description: "Configure your AI provider API keys",
+      description: "LLM provider access for user simulation",
       icon: User,
       status: apiKeysStatus,
       action: () => navigate("/profile"),
@@ -164,7 +210,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
     {
       id: "connectors",
       title: "Chatbot Connectors",
-      description: "Set up connections to your chatbots",
+      description: "Connections to chatbot platforms you want to test",
       icon: Zap,
       status: connectorsStatus,
       action: () => navigate("/chatbot-connectors"),
@@ -174,7 +220,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
     {
       id: "projects",
       title: "Projects",
-      description: "Create and configure your testing projects",
+      description: "Testing scenarios that link keys, connectors & profiles",
       icon: FolderOpen,
       status: projectsStatus,
       action: () => navigate("/projects"),
@@ -185,7 +231,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
     {
       id: "profiles",
       title: "User Profiles",
-      description: "Upload or generate user testing profiles",
+      description: "YAML files defining user simulator behaviors",
       icon: FileText,
       status: profilesStatus,
       action: () => navigate("/"),
@@ -212,35 +258,171 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
     return <XCircle className="w-4 h-4 text-danger" />;
   };
 
+  // Get next suggested step
+  const nextStep = setupSteps.find(
+    (step) => !step.status.completed && !step.disabled,
+  );
+
   if (compact) {
     return (
-      <Card className="bg-content2 dark:bg-darkbg-glass shadow-glass border border-border dark:border-border-dark w-full">
-        <CardBody className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <Card
+        className={`
+          bg-content1 dark:bg-content1
+          shadow-medium border border-divider dark:border-divider
+          w-full transition-all duration-300 hover:shadow-large
+          ${isHovered ? "scale-[1.02]" : ""}
+        `}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <CardBody className="p-3">
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
             <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium">Setup Progress</p>
-                <p className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                  {completedSteps} of {totalSteps} steps complete
-                </p>
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Setup Progress</p>
+                  <p className="text-xs text-foreground/60">
+                    {completedSteps} of {totalSteps} complete
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Progress
-                value={progressPercentage}
-                className="w-32 sm:w-20"
-                size="sm"
-                color={progressPercentage === 100 ? "success" : "primary"}
-              />
-              <span className="text-xs font-medium min-w-[3rem]">
-                {Math.round(progressPercentage)}%
-              </span>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Progress
+                  value={progressPercentage}
+                  className="w-20"
+                  size="sm"
+                  color={progressPercentage === 100 ? "success" : "primary"}
+                />
+                <span className="text-xs font-medium min-w-[2.5rem]">
+                  {Math.round(progressPercentage)}%
+                </span>
+              </div>
+
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4 text-foreground/60" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-foreground/60" />
+              )}
             </div>
           </div>
 
-          {progressPercentage < 100 && (
-            <div className="mt-3 flex flex-wrap gap-1">
+          {/* Expanded content */}
+          {isExpanded && (
+            <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+              {progressPercentage === 100 ? (
+                <div className="bg-success/10 border border-success/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-success">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Setup Complete!</span>
+                  </div>
+                  <p className="text-xs text-foreground/70 mt-1">
+                    🎉 Sensei is ready! You can now create and run user
+                    simulation tests.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Next step suggestion with better explanation */}
+                  {nextStep && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-primary mb-1">
+                            🎯 Next: {nextStep.title}
+                          </p>
+                          <p className="text-xs text-foreground/70 mb-2">
+                            {
+                              getStepExplanation(
+                                nextStep.id,
+                                nextStep.status,
+                                selectedProject,
+                              ).action
+                            }
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          color="primary"
+                          variant="flat"
+                          onPress={nextStep.action}
+                          endContent={<ChevronRight className="w-3 h-3" />}
+                        >
+                          {nextStep.actionText}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed explanations for incomplete steps */}
+                  <div className="space-y-2">
+                    {setupSteps
+                      .filter((step) => !step.status.completed)
+                      .slice(0, 3)
+                      .map((step) => {
+                        const Icon = step.icon;
+                        const stepStatus = getStepStatus(step);
+                        const explanation = getStepExplanation(
+                          step.id,
+                          step.status,
+                          selectedProject,
+                        );
+
+                        return (
+                          <div
+                            key={step.id}
+                            className="bg-content2/50 rounded-lg p-3 border border-divider/50"
+                          >
+                            <div className="flex items-start gap-3">
+                              <Icon className="w-4 h-4 text-foreground/60 mt-0.5" />
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-sm font-medium">
+                                    {step.title}
+                                  </p>
+                                  <Chip
+                                    size="sm"
+                                    variant="flat"
+                                    color={stepStatus.color}
+                                    className="text-xs"
+                                  >
+                                    {stepStatus.text}
+                                  </Chip>
+                                </div>
+                                <p className="text-xs text-foreground/70 mb-2">
+                                  {explanation.content}
+                                </p>
+                                {!step.disabled && (
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    color="primary"
+                                    onPress={step.action}
+                                    className="text-xs h-6"
+                                  >
+                                    {step.actionText}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Collapsed quick actions */}
+          {!isExpanded && progressPercentage < 100 && (
+            <div className="mt-3 flex gap-2">
               {setupSteps
                 .filter((step) => !step.status.completed && !step.disabled)
                 .slice(0, 2)
@@ -252,6 +434,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
                     color="primary"
                     onPress={step.action}
                     endContent={<ChevronRight className="w-3 h-3" />}
+                    className="text-xs"
                   >
                     {step.actionText}
                   </Button>
@@ -264,7 +447,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
   }
 
   return (
-    <Card className="bg-content2 dark:bg-darkbg-glass shadow-glass border border-border dark:border-border-dark w-full">
+    <Card className="bg-content1 dark:bg-content1 shadow-medium border border-divider dark:border-divider w-full">
       <CardHeader>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
@@ -303,8 +486,10 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
               <CheckCircle className="w-4 h-4" />
               <span className="text-sm font-medium">Setup Complete!</span>
             </div>
-            <p className="text-xs text-foreground/70 dark:text-foreground-dark/70 mt-1">
-              Your Sensei environment is fully configured and ready for testing.
+            <p className="text-xs text-foreground/70 mt-1">
+              🎉 Your Sensei environment is fully configured and ready for
+              testing. You can now create user profiles and run simulation
+              tests.
             </p>
           </div>
         )}
@@ -313,13 +498,18 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
           {setupSteps.map((step, index) => {
             const stepStatus = getStepStatus(step);
             const Icon = step.icon;
+            const explanation = getStepExplanation(
+              step.id,
+              step.status,
+              selectedProject,
+            );
 
             return (
               <div key={step.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-foreground/70 dark:text-foreground-dark/70" />
+                      <Icon className="w-4 h-4 text-foreground/70" />
                       <span className="text-sm font-medium">{step.title}</span>
                     </div>
                     {getStatusIcon(step.status)}
@@ -327,7 +517,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
 
                   <div className="flex items-center gap-2">
                     {step.status.completed && step.status.count > 0 && (
-                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                      <span className="text-xs text-foreground/60">
                         {step.status.count} configured
                       </span>
                     )}
@@ -338,9 +528,19 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
                 </div>
 
                 <div className="ml-7">
-                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mb-2">
+                  <p className="text-xs text-foreground/60 mb-2">
                     {step.description}
                   </p>
+
+                  {/* Enhanced explanations */}
+                  <div className="bg-content2/30 rounded-md p-2 mb-2">
+                    <div className="flex items-start gap-2">
+                      <Info className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-foreground/80">
+                        {explanation.content}
+                      </p>
+                    </div>
+                  </div>
 
                   {step.isProjectDependent && !selectedProject && (
                     <div className="flex items-center gap-2 text-warning text-xs mb-2">
@@ -351,7 +551,7 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
 
                   {!step.status.completed && !step.disabled && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
+                      <span className="text-xs text-foreground/50">
                         {step.requirement}
                       </span>
                       <Button
@@ -373,11 +573,17 @@ const SetupStatusDashboard = ({ compact = false, showTitle = true }) => {
           })}
         </div>
 
-        {progressPercentage < 100 && (
+        {progressPercentage < 100 && nextStep && (
           <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-            <p className="text-sm text-foreground/80 dark:text-foreground-dark/80">
-              <strong>Next Steps:</strong> Complete the remaining setup steps to
-              start testing with Sensei.
+            <p className="text-sm text-foreground/80">
+              <strong>🎯 Next Step:</strong> {nextStep.title} -{" "}
+              {
+                getStepExplanation(
+                  nextStep.id,
+                  nextStep.status,
+                  selectedProject,
+                ).action
+              }
             </p>
           </div>
         )}
