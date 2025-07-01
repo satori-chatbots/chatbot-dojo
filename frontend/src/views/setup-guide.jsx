@@ -26,10 +26,12 @@ const SetupGuide = () => {
     const dismissedKey = `sensei_setup_dismissed_${user ? user.id : "guest"}`;
     try {
       localStorage.setItem(dismissedKey, "false");
-    } catch {}
+    } catch {
+      /* ignore */
+    }
     setIsProgressHidden(false);
     // Force a page refresh to show the setup progress
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   return (

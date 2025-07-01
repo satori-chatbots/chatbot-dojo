@@ -112,7 +112,9 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   const handleDismiss = () => {
     try {
       localStorage.setItem(dismissedKey, "true");
-    } catch {}
+    } catch {
+      /* ignore */
+    }
     setIsDismissed(true);
   };
 
@@ -124,7 +126,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   };
 
   if (!shouldShow()) {
-    return null;
+    return;
   }
 
   if (loading) {
