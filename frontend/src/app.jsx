@@ -24,6 +24,7 @@ import { AuthProvider, useAuth } from "./contexts/auth-context";
 import PrivateRoute from "./components/private-route";
 import UserProfileView from "./views/user-profile-view";
 import { MyCustomToastProvider } from "./contexts/my-custom-toast-context";
+import { SetupProvider } from "./contexts/setup-context";
 import YamlEditor from "./views/yaml-editor-view";
 import SetupGuide from "./views/setup-guide";
 
@@ -139,7 +140,7 @@ function AppContent() {
             {user && (
               <NavbarItem isActive={location.pathname === "/projects"}>
                 <Link to="/projects" className="hover:underline">
-                  My Projects
+                  Projects
                 </Link>
               </NavbarItem>
             )}
@@ -380,9 +381,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <MyCustomToastProvider>
-        <AppContent />
-      </MyCustomToastProvider>
+      <SetupProvider>
+        <MyCustomToastProvider>
+          <AppContent />
+        </MyCustomToastProvider>
+      </SetupProvider>
     </AuthProvider>
   );
 }

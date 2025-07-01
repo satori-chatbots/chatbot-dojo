@@ -482,7 +482,7 @@ function Dashboard() {
         </h1>
       ) : (
         <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-          My Projects
+          Executions
         </h1>
       )}
 

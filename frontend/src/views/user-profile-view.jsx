@@ -20,6 +20,7 @@ import { PROVIDER_OPTIONS } from "../constants/providers";
 import { useAuth } from "../contexts/auth-context";
 import { ApiKeyItem } from "../components/api-key-item";
 import SetupProgress from "../components/setup-progress";
+import { useSetup } from "../contexts/setup-context";
 import {
   updateUserProfile,
   getUserApiKeys,
@@ -31,6 +32,7 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
 const UserProfileView = () => {
   const { user, refreshUser } = useAuth();
+  const { reloadApiKeys } = useSetup();
   const [loading, setLoading] = useState(false);
   const [apiKeys, setApiKeys] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,6 +101,7 @@ const UserProfileView = () => {
       try {
         await createApiKey(newApiKey);
         await loadApiKeys();
+        await reloadApiKeys(); // Update setup progress
         setNewApiKey({ name: "", api_key: "", provider: "openai" });
         setIsModalOpen(false);
         showToast("success", "API Key created successfully");
@@ -124,6 +127,7 @@ const UserProfileView = () => {
         provider: newProvider,
       });
       await loadApiKeys();
+      await reloadApiKeys(); // Update setup progress
       showToast("success", "API Key updated successfully");
     } catch (error) {
       showToast("error", error.message || "Failed to update API Key");
@@ -140,6 +144,7 @@ const UserProfileView = () => {
     try {
       await deleteApiKey(id);
       await loadApiKeys();
+      await reloadApiKeys(); // Update setup progress
       showToast("success", "API Key deleted successfully");
     } catch (error) {
       showToast("error", error.message || "Failed to delete API Key");

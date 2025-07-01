@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardBody,
@@ -23,27 +23,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getUserApiKeys } from "../api/authentication-api";
-import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
-import useFetchProjects from "../hooks/use-fetch-projects";
-import useFetchFiles from "../hooks/use-fetch-files";
-import useSelectedProject from "../hooks/use-selected-projects";
+import { useSetup } from "../contexts/setup-context";
 
 const SetupProgress = ({ isCompact = false }) => {
   const navigate = useNavigate();
-  const [setupData, setSetupData] = useState({
-    apiKeys: [],
-    connectors: [],
-    projects: [],
-    profiles: [],
-  });
   const [isExpanded, setIsExpanded] = useState(!isCompact);
-  const [loading, setLoading] = useState(true);
 
-  // Using existing hooks for projects
-  const { projects, loadingProjects } = useFetchProjects("owned");
-  const [selectedProject] = useSelectedProject();
-  const { files } = useFetchFiles(selectedProject?.id);
+  // Use the setup context
+  const { setupData, loading } = useSetup();
 
   const setupSteps = [
     {
@@ -89,31 +76,6 @@ const SetupProgress = ({ isCompact = false }) => {
     },
   ];
 
-  const loadSetupData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [apiKeysData, connectorsData] = await Promise.all([
-        getUserApiKeys().catch(() => []),
-        fetchChatbotConnectors().catch(() => []),
-      ]);
-
-      setSetupData({
-        apiKeys: apiKeysData,
-        connectors: connectorsData,
-        projects: projects || [],
-        profiles: files || [],
-      });
-    } catch (error) {
-      console.error("Error loading setup data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [projects, files]);
-
-  useEffect(() => {
-    loadSetupData();
-  }, [loadSetupData]);
-
   const requiredSteps = setupSteps.filter((step) => !step.optional).length;
   const completedRequiredSteps = setupSteps.filter(
     (step) => !step.optional && step.completed,
@@ -127,7 +89,7 @@ const SetupProgress = ({ isCompact = false }) => {
 
   const isSetupComplete = completedRequiredSteps === requiredSteps;
 
-  if (loading && !loadingProjects) {
+  if (loading) {
     return (
       <Card className="w-full">
         <CardBody>
