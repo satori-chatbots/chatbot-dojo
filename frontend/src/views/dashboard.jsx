@@ -488,7 +488,7 @@ function Dashboard() {
 
       {/* Setup Progress - only show for authenticated users */}
       {!publicView && (
-        <div className="w-full max-w-[1200px]">
+        <div className="w-full max-w-4xl">
           <SetupProgress isCompact={true} />
         </div>
       )}

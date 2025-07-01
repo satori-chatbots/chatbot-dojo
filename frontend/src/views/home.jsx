@@ -538,7 +538,7 @@ function Home() {
   return (
     <div className="flex flex-col items-center justify-center p-6 w-full space-y-6">
       {/* Setup Progress - always visible when not complete */}
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-4xl">
         <SetupProgress isCompact={true} />
       </div>
 

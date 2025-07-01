@@ -144,7 +144,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
     return (
       <Card className="w-full bg-gradient-to-r from-success-50 to-primary-50 border-success-200">
         <CardBody className="py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
               <CheckCircle className="w-6 h-6 text-success animate-bounce" />
               <div>
@@ -189,8 +189,8 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
         <CardBody className="py-4">
           <div className="space-y-4">
             {/* Header with improved actions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   Setup Progress
                   {nextStep && (
@@ -213,7 +213,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                 </Chip>
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Quick next step button */}
                 {nextStep && !isExpanded && (
                   <Tooltip content={`Next: ${nextStep.title}`}>
@@ -303,7 +303,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                     return (
                       <div
                         key={step.id}
-                        className={`group relative flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
+                        className={`group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
                           step.completed
                             ? "bg-success-50 border-success-200 hover:bg-success-100"
                             : isActive
@@ -311,112 +311,120 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                               : "bg-default-50 border-default-200 hover:bg-default-100"
                         }`}
                       >
-                        {/* Step number indicator */}
-                        <div className="flex-shrink-0 relative">
-                          <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                              step.completed
-                                ? "bg-success text-white"
-                                : isActive
-                                  ? "bg-primary text-white"
-                                  : "bg-default-300 text-default-600"
-                            }`}
-                          >
-                            {step.completed ? "✓" : index + 1}
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0">
-                          <StepIcon
-                            className={`w-5 h-5 transition-colors ${
-                              step.completed
-                                ? "text-success"
-                                : isActive
-                                  ? "text-primary"
-                                  : "text-default-400"
-                            }`}
-                          />
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4
-                              className={`text-sm font-medium ${
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {/* Step number indicator */}
+                          <div className="flex-shrink-0 relative">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                                 step.completed
-                                  ? "text-success-700"
+                                  ? "bg-success text-white"
                                   : isActive
-                                    ? "text-primary-700"
-                                    : "text-default-700"
+                                    ? "bg-primary text-white"
+                                    : "bg-default-300 text-default-600"
                               }`}
                             >
-                              {step.title}
-                            </h4>
-                            {step.optional && (
-                              <Chip
-                                size="sm"
-                                variant="bordered"
-                                color="default"
-                              >
-                                Optional
-                              </Chip>
-                            )}
+                              {step.completed ? "✓" : index + 1}
+                            </div>
                           </div>
-                          <p className="text-xs text-default-500 mt-1">
-                            {step.description}
-                          </p>
 
-                          {/* Enhanced Status info */}
-                          {step.id === "api-key" &&
-                            setupData.apiKeys.length > 0 && (
-                              <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                {setupData.apiKeys.length} API key
-                                {setupData.apiKeys.length > 1 ? "s" : ""}{" "}
-                                configured
-                              </p>
-                            )}
-                          {step.id === "connector" &&
-                            setupData.connectors.length > 0 && (
-                              <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                {setupData.connectors.length} connector
-                                {setupData.connectors.length > 1
-                                  ? "s"
-                                  : ""}{" "}
-                                created
-                              </p>
-                            )}
-                          {step.id === "project" &&
-                            setupData.projects.length > 0 && (
-                              <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                {setupData.projects.length} project
-                                {setupData.projects.length > 1 ? "s" : ""}{" "}
-                                created
-                              </p>
-                            )}
-                          {step.id === "profiles" &&
-                            setupData.profiles.length > 0 && (
-                              <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                {setupData.profiles.length} profile
-                                {setupData.profiles.length > 1 ? "s" : ""}{" "}
-                                created
-                              </p>
-                            )}
+                          <div className="flex-shrink-0">
+                            <StepIcon
+                              className={`w-5 h-5 transition-colors ${
+                                step.completed
+                                  ? "text-success"
+                                  : isActive
+                                    ? "text-primary"
+                                    : "text-default-400"
+                              }`}
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4
+                                className={`text-sm font-medium ${
+                                  step.completed
+                                    ? "text-success-700"
+                                    : isActive
+                                      ? "text-primary-700"
+                                      : "text-default-700"
+                                }`}
+                              >
+                                {step.title}
+                              </h4>
+                              {step.optional && (
+                                <Chip
+                                  size="sm"
+                                  variant="bordered"
+                                  color="default"
+                                >
+                                  Optional
+                                </Chip>
+                              )}
+                            </div>
+                            <p className="text-xs text-default-500 mt-1">
+                              {step.description}
+                            </p>
+
+                            {/* Enhanced Status info */}
+                            {step.id === "api-key" &&
+                              setupData.apiKeys.length > 0 && (
+                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {setupData.apiKeys.length} API key
+                                  {setupData.apiKeys.length > 1 ? "s" : ""}{" "}
+                                  configured
+                                </p>
+                              )}
+                            {step.id === "connector" &&
+                              setupData.connectors.length > 0 && (
+                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {setupData.connectors.length} connector
+                                  {setupData.connectors.length > 1
+                                    ? "s"
+                                    : ""}{" "}
+                                  created
+                                </p>
+                              )}
+                            {step.id === "project" &&
+                              setupData.projects.length > 0 && (
+                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {setupData.projects.length} project
+                                  {setupData.projects.length > 1
+                                    ? "s"
+                                    : ""}{" "}
+                                  created
+                                </p>
+                              )}
+                            {step.id === "profiles" &&
+                              setupData.profiles.length > 0 && (
+                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {setupData.profiles.length} profile
+                                  {setupData.profiles.length > 1
+                                    ? "s"
+                                    : ""}{" "}
+                                  created
+                                </p>
+                              )}
+                          </div>
                         </div>
 
                         {!step.completed && (
-                          <Button
-                            size="sm"
-                            color={isActive ? "primary" : "default"}
-                            variant={isActive ? "solid" : "bordered"}
-                            onPress={step.action}
-                            endContent={<ArrowRight className="w-3 h-3" />}
-                            className="transition-all duration-200 group-hover:shadow-sm"
-                          >
-                            {step.actionText}
-                          </Button>
+                          <div className="flex justify-end sm:justify-start mt-2 sm:mt-0">
+                            <Button
+                              size="sm"
+                              color={isActive ? "primary" : "default"}
+                              variant={isActive ? "solid" : "bordered"}
+                              onPress={step.action}
+                              endContent={<ArrowRight className="w-3 h-3" />}
+                              className="transition-all duration-200 group-hover:shadow-sm"
+                            >
+                              {step.actionText}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     );
@@ -427,7 +435,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                 {nextStep && (
                   <>
                     <Divider />
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg border border-primary-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg border border-primary-200">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                           <Zap className="w-4 h-4 text-primary" />
