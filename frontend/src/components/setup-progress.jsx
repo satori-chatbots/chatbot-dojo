@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardBody,
@@ -20,7 +20,7 @@ import {
   Bot,
   FolderPlus,
   Users,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getUserApiKeys } from "../api/authentication-api";
@@ -49,7 +49,8 @@ const SetupProgress = ({ isCompact = false }) => {
     {
       id: "api-key",
       title: "Add API Key",
-      description: "Add an API key for your chosen provider (required to run profiles)",
+      description:
+        "Add an API key for your chosen provider (required to run profiles and use TRACER)",
       icon: Key,
       optional: false,
       completed: setupData.apiKeys.length > 0,
@@ -88,7 +89,7 @@ const SetupProgress = ({ isCompact = false }) => {
     },
   ];
 
-  const loadSetupData = async () => {
+  const loadSetupData = useCallback(async () => {
     try {
       setLoading(true);
       const [apiKeysData, connectorsData] = await Promise.all([
@@ -107,19 +108,22 @@ const SetupProgress = ({ isCompact = false }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projects, files]);
 
   useEffect(() => {
     loadSetupData();
-  }, [projects, files]);
+  }, [loadSetupData]);
 
-  const completedSteps = setupSteps.filter(step => step.completed).length;
-  const requiredSteps = setupSteps.filter(step => !step.optional).length;
-  const completedRequiredSteps = setupSteps.filter(step => !step.optional && step.completed).length;
+  const requiredSteps = setupSteps.filter((step) => !step.optional).length;
+  const completedRequiredSteps = setupSteps.filter(
+    (step) => !step.optional && step.completed,
+  ).length;
   const progressPercentage = (completedRequiredSteps / requiredSteps) * 100;
 
-  const nextStep = setupSteps.find(step => !step.completed && !step.optional);
-  const nextOptionalStep = setupSteps.find(step => !step.completed && step.optional);
+  const nextStep = setupSteps.find((step) => !step.completed && !step.optional);
+  const nextOptionalStep = setupSteps.find(
+    (step) => !step.completed && step.optional,
+  );
 
   const isSetupComplete = completedRequiredSteps === requiredSteps;
 
@@ -142,7 +146,9 @@ const SetupProgress = ({ isCompact = false }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-success" />
-              <span className="text-sm font-medium text-success-700">Setup Complete!</span>
+              <span className="text-sm font-medium text-success-700">
+                Setup Complete!
+              </span>
             </div>
             <Button
               size="sm"
@@ -167,31 +173,37 @@ const SetupProgress = ({ isCompact = false }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-semibold">Setup Progress</h3>
-                             <Chip size="sm" color={isSetupComplete ? "success" : "primary"} variant="flat">
-                 {completedRequiredSteps}/{requiredSteps} Complete
-               </Chip>
+              <Chip
+                size="sm"
+                color={isSetupComplete ? "success" : "primary"}
+                variant="flat"
+              >
+                {completedRequiredSteps}/{requiredSteps} Complete
+              </Chip>
             </div>
 
-                         {isCompact && (
-               <div className="flex items-center gap-2">
-                 <Button
-                   size="sm"
-                   variant="light"
-                   onPress={() => navigate("/setup")}
-                   startContent={<Sparkles className="w-3 h-3" />}
-                 >
-                   Setup Guide
-                 </Button>
-                 <Button
-                   isIconOnly
-                   size="sm"
-                   variant="light"
-                   onPress={() => setIsExpanded(!isExpanded)}
-                 >
-                   <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                 </Button>
-               </div>
-             )}
+            {isCompact && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="light"
+                  onPress={() => navigate("/setup")}
+                  startContent={<Sparkles className="w-3 h-3" />}
+                >
+                  Setup Guide
+                </Button>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => setIsExpanded(!isExpanded)}
+                >
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                  />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Progress Bar */}
@@ -205,7 +217,9 @@ const SetupProgress = ({ isCompact = false }) => {
             />
             <div className="flex justify-between text-xs text-foreground-500">
               <span>Required steps completed</span>
-              <span>{completedRequiredSteps}/{requiredSteps}</span>
+              <span>
+                {completedRequiredSteps}/{requiredSteps}
+              </span>
             </div>
           </div>
 
@@ -216,12 +230,14 @@ const SetupProgress = ({ isCompact = false }) => {
 
               {/* Steps List */}
               <div className="space-y-3">
-                {setupSteps.map((step, index) => {
+                {setupSteps.map((step) => {
                   const StepIcon = step.icon;
-                  const isActive = !step.completed && (
-                    (!step.optional && step === nextStep) ||
-                    (step.optional && !nextStep && step === nextOptionalStep)
-                  );
+                  const isActive =
+                    !step.completed &&
+                    ((!step.optional && step === nextStep) ||
+                      (step.optional &&
+                        !nextStep &&
+                        step === nextOptionalStep));
 
                   return (
                     <div
@@ -243,16 +259,28 @@ const SetupProgress = ({ isCompact = false }) => {
                       </div>
 
                       <div className="flex-shrink-0">
-                        <StepIcon className={`w-5 h-5 ${
-                          step.completed ? "text-success" : isActive ? "text-primary" : "text-default-400"
-                        }`} />
+                        <StepIcon
+                          className={`w-5 h-5 ${
+                            step.completed
+                              ? "text-success"
+                              : isActive
+                                ? "text-primary"
+                                : "text-default-400"
+                          }`}
+                        />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className={`text-sm font-medium ${
-                            step.completed ? "text-success-700" : isActive ? "text-primary-700" : "text-default-700"
-                          }`}>
+                          <h4
+                            className={`text-sm font-medium ${
+                              step.completed
+                                ? "text-success-700"
+                                : isActive
+                                  ? "text-primary-700"
+                                  : "text-default-700"
+                            }`}
+                          >
                             {step.title}
                           </h4>
                           {step.optional && (
@@ -261,29 +289,41 @@ const SetupProgress = ({ isCompact = false }) => {
                             </Chip>
                           )}
                         </div>
-                        <p className="text-xs text-default-500 mt-1">{step.description}</p>
+                        <p className="text-xs text-default-500 mt-1">
+                          {step.description}
+                        </p>
 
                         {/* Status info */}
-                        {step.id === "api-key" && setupData.apiKeys.length > 0 && (
-                          <p className="text-xs text-success-600 mt-1">
-                            {setupData.apiKeys.length} API key{setupData.apiKeys.length > 1 ? "s" : ""} configured
-                          </p>
-                        )}
-                        {step.id === "connector" && setupData.connectors.length > 0 && (
-                          <p className="text-xs text-success-600 mt-1">
-                            {setupData.connectors.length} connector{setupData.connectors.length > 1 ? "s" : ""} created
-                          </p>
-                        )}
-                        {step.id === "project" && setupData.projects.length > 0 && (
-                          <p className="text-xs text-success-600 mt-1">
-                            {setupData.projects.length} project{setupData.projects.length > 1 ? "s" : ""} created
-                          </p>
-                        )}
-                        {step.id === "profiles" && setupData.profiles.length > 0 && (
-                          <p className="text-xs text-success-600 mt-1">
-                            {setupData.profiles.length} profile{setupData.profiles.length > 1 ? "s" : ""} created
-                          </p>
-                        )}
+                        {step.id === "api-key" &&
+                          setupData.apiKeys.length > 0 && (
+                            <p className="text-xs text-success-600 mt-1">
+                              {setupData.apiKeys.length} API key
+                              {setupData.apiKeys.length > 1 ? "s" : ""}{" "}
+                              configured
+                            </p>
+                          )}
+                        {step.id === "connector" &&
+                          setupData.connectors.length > 0 && (
+                            <p className="text-xs text-success-600 mt-1">
+                              {setupData.connectors.length} connector
+                              {setupData.connectors.length > 1 ? "s" : ""}{" "}
+                              created
+                            </p>
+                          )}
+                        {step.id === "project" &&
+                          setupData.projects.length > 0 && (
+                            <p className="text-xs text-success-600 mt-1">
+                              {setupData.projects.length} project
+                              {setupData.projects.length > 1 ? "s" : ""} created
+                            </p>
+                          )}
+                        {step.id === "profiles" &&
+                          setupData.profiles.length > 0 && (
+                            <p className="text-xs text-success-600 mt-1">
+                              {setupData.profiles.length} profile
+                              {setupData.profiles.length > 1 ? "s" : ""} created
+                            </p>
+                          )}
                       </div>
 
                       {!step.completed && (
@@ -309,16 +349,24 @@ const SetupProgress = ({ isCompact = false }) => {
                   <div className="flex items-center justify-between p-3 bg-primary-50 rounded-lg border border-primary-200">
                     <div>
                       <h4 className="text-sm font-medium text-primary-700">
-                        {isSetupComplete ? "Ready to Start!" : `Next: ${(nextStep || nextOptionalStep)?.title}`}
+                        {isSetupComplete
+                          ? "Ready to Start!"
+                          : `Next: ${(nextStep || nextOptionalStep)?.title}`}
                       </h4>
                       <p className="text-xs text-primary-600">
-                        {isSetupComplete ? "All setup steps completed. You can now run tests with your profiles." : (nextStep || nextOptionalStep)?.description}
+                        {isSetupComplete
+                          ? "All setup steps completed. You can now run tests with your profiles."
+                          : (nextStep || nextOptionalStep)?.description}
                       </p>
                     </div>
                     <Button
                       size="sm"
                       color={isSetupComplete ? "success" : "primary"}
-                      onPress={isSetupComplete ? () => navigate("/") : (nextStep || nextOptionalStep)?.action}
+                      onPress={
+                        isSetupComplete
+                          ? () => navigate("/")
+                          : (nextStep || nextOptionalStep)?.action
+                      }
                       endContent={<ArrowRight className="w-3 h-3" />}
                     >
                       {isSetupComplete ? "Start Testing" : "Continue"}
@@ -356,7 +404,11 @@ const SetupProgress = ({ isCompact = false }) => {
               <div className="flex justify-center gap-2">
                 <Dropdown>
                   <DropdownTrigger>
-                    <Button size="sm" variant="bordered" endContent={<ChevronDown className="w-3 h-3" />}>
+                    <Button
+                      size="sm"
+                      variant="bordered"
+                      endContent={<ChevronDown className="w-3 h-3" />}
+                    >
                       Quick Actions
                     </Button>
                   </DropdownTrigger>
