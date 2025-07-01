@@ -152,7 +152,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                   🎉 Setup Complete!
                 </span>
                 <p className="text-xs text-success-600">
-                  You're all set to start testing your chatbot
+                  {"You're all set to start testing your chatbot"}
                 </p>
               </div>
             </div>

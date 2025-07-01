@@ -81,7 +81,7 @@ const SetupGuide = () => {
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">
-            Welcome to Sensei's Setup Guide
+            {"Welcome to Sensei's Setup Guide"}
           </h2>
         </CardHeader>
         <CardBody className="space-y-4">
@@ -92,21 +92,24 @@ const SetupGuide = () => {
           </p>
 
           <div className="space-y-3">
-            <h3 className="text-lg font-medium">What you'll set up:</h3>
+            <h3 className="text-lg font-medium">{"What you'll set up:"}</h3>
             <ul className="space-y-2 text-sm text-foreground/70 ml-4">
               <li className="flex items-start gap-2">
                 <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                 <div>
-                  <strong>API Key:</strong> Add your AI provider API key for
-                  running profiles and testing. Make sure to add an API key that
-                  matches your profiles LLM model's provider.
+                  <strong>API Key:</strong>{" "}
+                  {
+                    "Add your AI provider API key for running profiles and testing. Make sure to add an API key that matches your profiles LLM model's provider."
+                  }
                 </div>
               </li>
               <li className="flex items-start gap-2">
                 <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                 <div>
-                  <strong>Chatbot Connector:</strong> Connect Sensei to your
-                  chatbot's API so it can send messages and receive responses.
+                  <strong>Chatbot Connector:</strong>{" "}
+                  {
+                    "Connect Sensei to your chatbot's API so it can send messages and receive responses."
+                  }
                 </div>
               </li>
               <li className="flex items-start gap-2">
