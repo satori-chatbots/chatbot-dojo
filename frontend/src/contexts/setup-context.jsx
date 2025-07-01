@@ -6,6 +6,7 @@ import useFetchFiles from "../hooks/use-fetch-files";
 import useSelectedProject from "../hooks/use-selected-projects";
 import { fetchFiles } from "../api/file-api";
 import { useAuth } from "./auth-context";
+import { fetchProjects } from "../api/project-api";
 
 const SetupContext = createContext();
 
@@ -37,16 +38,18 @@ export const SetupProvider = ({ children }) => {
   const loadSetupData = useCallback(async () => {
     try {
       setLoading(true);
-      const [apiKeysData, connectorsData] = await Promise.all([
+      // Always fetch fresh data tied to the *current* authenticated user.
+      const [apiKeysData, connectorsData, projectsData] = await Promise.all([
         getUserApiKeys().catch(() => []),
         fetchChatbotConnectors().catch(() => []),
+        fetchProjects("owned").catch(() => []),
       ]);
 
-      // Fetch profiles from all projects
+      // Fetch profiles from all freshly-fetched projects
       let allProfiles = [];
-      if (projects && projects.length > 0) {
+      if (projectsData && projectsData.length > 0) {
         const profilesArrays = await Promise.all(
-          projects.map((project) => fetchFiles(project.id).catch(() => [])),
+          projectsData.map((project) => fetchFiles(project.id).catch(() => [])),
         );
         allProfiles = profilesArrays.flat();
       }
@@ -54,7 +57,7 @@ export const SetupProvider = ({ children }) => {
       setSetupData({
         apiKeys: apiKeysData,
         connectors: connectorsData,
-        projects: projects || [],
+        projects: projectsData || [],
         profiles: allProfiles,
       });
     } catch (error) {
@@ -62,7 +65,7 @@ export const SetupProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [projects]);
+  }, []);
 
   // Individual reload functions
   const reloadApiKeys = useCallback(async () => {
@@ -83,26 +86,42 @@ export const SetupProvider = ({ children }) => {
     }
   }, []);
 
+  // Reload projects for both the local hook (to keep UI in sync) and the setup context
   const reloadProjectsData = useCallback(async () => {
-    await reloadProjects();
-    // The projects will be updated via the dependency in loadSetupData
+    try {
+      // First trigger the hook to refresh any other components using it
+      reloadProjects();
+
+      // Then fetch fresh data to update this context immediately
+      const projectsData = await fetchProjects("owned").catch(() => []);
+      setSetupData((prev) => ({ ...prev, projects: projectsData }));
+    } catch (error) {
+      console.error("Error reloading projects:", error);
+    }
   }, [reloadProjects]);
 
   const reloadProfilesData = useCallback(async () => {
-    // Re-fetch profiles from all projects
     try {
+      // Always work with fresh project data when computing profiles
+      const projectsData = await fetchProjects("owned").catch(() => []);
+
       let allProfiles = [];
-      if (projects && projects.length > 0) {
+      if (projectsData && projectsData.length > 0) {
         const profilesArrays = await Promise.all(
-          projects.map((project) => fetchFiles(project.id).catch(() => [])),
+          projectsData.map((project) => fetchFiles(project.id).catch(() => [])),
         );
         allProfiles = profilesArrays.flat();
       }
-      setSetupData((prev) => ({ ...prev, profiles: allProfiles }));
+
+      setSetupData((prev) => ({
+        ...prev,
+        projects: projectsData,
+        profiles: allProfiles,
+      }));
     } catch (error) {
       console.error("Error reloading profiles:", error);
     }
-  }, [projects]);
+  }, []);
 
   // Combined reload function
   const reloadAllSetupData = useCallback(async () => {
