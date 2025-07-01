@@ -24,6 +24,7 @@ import {
   EyeOff,
   Settings,
   Zap,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSetup } from "../contexts/setup-context";
@@ -139,7 +140,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   }
 
   // Celebration state for completed setup
-  if (isSetupComplete && !forceShow) {
+  if (isSetupComplete && !forceShow && !isDismissed) {
     return (
       <Card className="w-full bg-gradient-to-r from-success-50 to-primary-50 border-success-200">
         <CardBody className="py-3">
@@ -165,37 +166,16 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
               >
                 Start Testing
               </Button>
-              {!isCompact && (
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      color="success"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Setup options">
-                    <DropdownItem
-                      key="show-details"
-                      startContent={<Settings className="w-4 h-4" />}
-                      onPress={() => setIsExpanded(true)}
-                    >
-                      Show Setup Details
-                    </DropdownItem>
-                    <DropdownItem
-                      key="hide-progress"
-                      startContent={<EyeOff className="w-4 h-4" />}
-                      onPress={handleDismiss}
-                      className="text-warning"
-                    >
-                      Hide Progress
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-              )}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                color="success"
+                onPress={handleDismiss}
+                aria-label="Close celebration banner"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </CardBody>
