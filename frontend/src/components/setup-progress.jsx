@@ -188,46 +188,53 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
       <Card className="w-full relative">
         <CardBody className="py-4">
           <div className="space-y-4">
-            {/* Header with improved actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
+            {/* Improved Header - Better mobile layout */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Left side - Title and progress info */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-semibold truncate">
                   Setup Progress
-                  {nextStep && (
-                    <Chip
-                      size="sm"
-                      color="primary"
-                      variant="flat"
-                      startContent={<Zap className="w-3 h-3" />}
-                    >
-                      Action Required
-                    </Chip>
-                  )}
                 </h3>
                 <Chip
                   size="sm"
                   color={isSetupComplete ? "success" : "primary"}
                   variant="flat"
+                  className="hidden xs:flex"
                 >
-                  {completedRequiredSteps}/{requiredSteps} Complete
+                  {completedRequiredSteps}/{requiredSteps}
                 </Chip>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Quick next step button */}
+              {/* Right side - Actions */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Continue button - only show when collapsed and there's a next step */}
                 {nextStep && !isExpanded && (
-                  <Tooltip content={`Next: ${nextStep.title}`}>
+                  <Tooltip content={nextStep.description} placement="top">
                     <Button
                       size="sm"
                       color="primary"
                       variant="solid"
                       onPress={nextStep.action}
+                      className="hidden sm:flex"
                       startContent={<ArrowRight className="w-3 h-3" />}
-                      className="animate-pulse"
                     >
                       Continue
                     </Button>
                   </Tooltip>
+                )}
+
+                {/* Mobile continue button - simpler for small screens, no tooltip */}
+                {nextStep && !isExpanded && (
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="solid"
+                    onPress={nextStep.action}
+                    className="sm:hidden"
+                    isIconOnly
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
                 )}
 
                 {/* Settings dropdown */}
@@ -270,21 +277,30 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
               </div>
             </div>
 
-            {/* Progress Bar - always visible */}
+            {/* Progress Bar with better info layout */}
             <div className="space-y-2">
               <Progress
                 value={progressPercentage}
                 color={isSetupComplete ? "success" : "primary"}
                 size="sm"
-                showValueLabel={true}
-                formatOptions={{ style: "percent" }}
                 className="transition-all duration-300"
               />
-              <div className="flex justify-between text-xs text-foreground-500">
-                <span>Required steps completed</span>
+              <div className="flex justify-between items-center text-xs text-foreground-500">
                 <span>
-                  {completedRequiredSteps}/{requiredSteps}
+                  {completedRequiredSteps}/{requiredSteps} steps completed
                 </span>
+                {/* Show next step hint when collapsed - desktop only */}
+                {nextStep && !isExpanded && (
+                  <span className="text-primary font-medium text-xs hidden sm:block">
+                    Next: {nextStep.title}
+                  </span>
+                )}
+                {/* Mobile next step - simpler */}
+                {nextStep && !isExpanded && (
+                  <span className="text-primary font-medium text-xs sm:hidden truncate max-w-[120px]">
+                    Next: {nextStep.title}
+                  </span>
+                )}
               </div>
             </div>
 
