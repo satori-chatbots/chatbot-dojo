@@ -127,7 +127,8 @@ export const SetupProvider = ({ children }) => {
   React.useEffect(() => {
     if (authLoading) return;
     if (user) {
-      // User logged in or changed, reload
+      // User logged in or changed, clear old data first, then reload
+      setSetupData({ apiKeys: [], connectors: [], projects: [], profiles: [] });
       reloadAllSetupData();
     } else {
       // User logged out, clear setup data
