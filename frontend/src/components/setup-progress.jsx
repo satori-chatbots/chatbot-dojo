@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardBody, Divider } from "@heroui/react";
+import { Card, CardBody, Divider, Progress } from "@heroui/react";
 import { Key, Bot, FolderPlus, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSetup } from "../contexts/setup-context";
@@ -157,14 +157,35 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
               onToggleExpand={() => setIsExpanded(!isExpanded)}
               onDismiss={handleDismiss}
             />
-            {isExpanded && (
+            {isExpanded ? (
               <>
                 <Divider className="my-3" />
                 <StepList
                   setupSteps={setupSteps}
                   progressPercentage={progressPercentage}
+                  nextStep={nextStep}
+                  setupData={setupData}
                 />
               </>
+            ) : (
+              <div className="space-y-2 pt-2">
+                <Progress
+                  value={progressPercentage}
+                  color={isSetupComplete ? "success" : "primary"}
+                  size="sm"
+                  className="transition-all duration-300"
+                />
+                <div className="flex justify-between items-center text-xs text-foreground-500">
+                  <span>
+                    {completedRequiredSteps}/{requiredSteps} steps completed
+                  </span>
+                  {nextStep && (
+                    <span className="text-primary font-medium truncate max-w-[150px] sm:max-w-xs">
+                      Next: {nextStep.title}
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </CardBody>
