@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -175,6 +175,7 @@ function YamlEditor() {
 
   const validateYaml = useCallback(async (value) => {
     setIsValidatingYaml(true);
+
     try {
       // First check YAML syntax
       yamlLoad(value);
@@ -189,14 +190,24 @@ function YamlEditor() {
           const validationResult = await validateYamlOnServer(value);
           if (validationResult.valid) {
             setServerValidationErrors(undefined);
-          } else {
-            setServerValidationErrors(validationResult.errors);
+            return { isValid: true, serverValidationErrors: undefined };
           }
+          setServerValidationErrors(validationResult.errors);
+          return {
+            isValid: true,
+            serverValidationErrors: validationResult.errors,
+          };
         } catch (error) {
           console.error("Schema validation error:", error);
+          // On server-side validation error, we don't have new errors.
+          return { isValid: true, serverValidationErrors: undefined };
         } finally {
           setIsValidatingSchema(false);
         }
+      } else {
+        // YAML is empty, so it's valid with no server errors.
+        setServerValidationErrors(undefined);
+        return { isValid: true, serverValidationErrors: undefined };
       }
     } catch (error) {
       setIsValid(false);
@@ -213,6 +224,7 @@ function YamlEditor() {
       });
       setHasTypedAfterError(false);
       console.error("Invalid YAML:", error);
+      return { isValid: false, serverValidationErrors: undefined };
     } finally {
       setIsValidatingYaml(false);
     }
@@ -263,11 +275,12 @@ function YamlEditor() {
     setHasTypedAfterError(false);
     try {
       // Re-validate before saving to ensure we have the latest validation state
-      await validateYaml(editorContent);
+      const validationResults = await validateYaml(editorContent);
 
-      let hasValidationErrors =
-        isValid === false ||
-        (serverValidationErrors && serverValidationErrors.length > 0);
+      const hasValidationErrors =
+        !validationResults.isValid ||
+        (validationResults.serverValidationErrors &&
+          validationResults.serverValidationErrors.length > 0);
       const forceSave = false;
 
       if (fileId) {
@@ -342,11 +355,9 @@ function YamlEditor() {
   }, [
     editorContent,
     fileId,
-    isValid,
     navigate,
     reloadProfiles,
     selectedProject,
-    serverValidationErrors,
     showToast,
     validateYaml,
   ]);
@@ -419,6 +430,14 @@ function YamlEditor() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleSave]);
+
+  const wordCount = useMemo(
+    () =>
+      editorContent
+        ? editorContent.split(/\s+/).filter((word) => word.length > 0).length
+        : 0,
+    [editorContent],
+  );
 
   return (
     <div className="container mx-auto p-4">
@@ -620,16 +639,7 @@ function YamlEditor() {
                 </span>
                 <span>{editorContent.split("\n").length} lines</span>
                 <span>{editorContent.length} characters</span>
-                {editorContent.length > 0 && (
-                  <span>
-                    {
-                      editorContent
-                        .split(/\s+/)
-                        .filter((word) => word.length > 0).length
-                    }{" "}
-                    words
-                  </span>
-                )}
+                {editorContent.length > 0 && <span>{wordCount} words</span>}
 
                 {/* Zoom controls integrated into status bar */}
                 <div className="flex items-center gap-1 ml-2 border-l border-default-300 pl-3">
