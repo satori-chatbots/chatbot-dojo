@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -16,11 +16,14 @@ import {
   ZoomOutIcon,
   Save,
   Edit,
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
-import { tomorrow } from "thememirror";
+import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
 import { useSetup } from "../contexts/setup-context";
@@ -33,6 +36,7 @@ import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import { linter, lintGutter } from "@codemirror/lint";
+import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import {
   completionsSchema,
   getCursorContext,
@@ -65,9 +69,15 @@ function myCompletions(context) {
     }
   }
 
+  // Enhanced autocomplete with better descriptions
+  const enhancedOptions = options.map((option) => ({
+    ...option,
+    boost: option.type === "keyword" ? 99 : 0, // Prioritize keywords
+  }));
+
   return {
     from: word.from,
-    options: options,
+    options: enhancedOptions,
   };
 }
 
@@ -85,95 +95,215 @@ function YamlEditor() {
   const { showToast } = useMyCustomToast();
   const [serverValidationErrors, setServerValidationErrors] = useState();
 
+  // New state for UI improvements
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalContent, setOriginalContent] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isValidatingYaml, setIsValidatingYaml] = useState(false);
+  const [isValidatingSchema, setIsValidatingSchema] = useState(false);
+  const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
+
+  // Autosave and data protection state
+  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      const saved = globalThis.localStorage.getItem(
+        "yamlEditorAutosaveEnabled",
+      );
+      setAutosaveEnabled(saved === null ? true : JSON.parse(saved));
+    }
+  }, []);
+  const [lastSaved, setLastSaved] = useState();
+
+  // Persist autosave setting
+  useEffect(() => {
+    localStorage.setItem(
+      "yamlEditorAutosaveEnabled",
+      JSON.stringify(autosaveEnabled),
+    );
+  }, [autosaveEnabled]);
+
+  // Enhanced status bar state
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+  const [editorRef, setEditorRef] = useState();
+
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
 
   const yamlTypoLinter = linter(createYamlTypoLinter());
+
+  // Jump to error location functionality
+  const jumpToError = useCallback(
+    (line) => {
+      if (editorRef && editorRef.view) {
+        try {
+          const lineNumber = Math.max(
+            1,
+            Math.min(line, editorRef.view.state.doc.lines),
+          );
+          const pos = editorRef.view.state.doc.line(lineNumber).from;
+          editorRef.view.dispatch({
+            selection: { anchor: pos },
+            scrollIntoView: true,
+          });
+          editorRef.view.focus();
+        } catch (error) {
+          console.error("Error jumping to line:", error);
+        }
+      }
+    },
+    [editorRef],
+  );
+
+  // Track cursor position
+  const cursorPositionExtension = EditorView.updateListener.of((update) => {
+    if (update.selectionSet) {
+      const pos = update.state.selection.main.head;
+      const line = update.state.doc.lineAt(pos);
+      setCursorPosition({
+        line: line.number,
+        column: pos - line.from + 1,
+      });
+    }
+  });
 
   const customKeymap = keymap.of([
     {
       key: "Enter",
       run: insertNewlineAndIndent,
     },
+    ...searchKeymap,
   ]);
 
-  const validateYaml = useCallback((value) => {
-    try {
-      yamlLoad(value);
-      setIsValid(true);
-      setErrorInfo(undefined);
-    } catch (error) {
-      setIsValid(false);
-      const errorLines = error.message.split("\n");
-      const errorMessage = errorLines[0];
-      const codeContext = errorLines.slice(1).join("\n");
-      setErrorInfo({
-        message: errorMessage,
-        line: error.mark ? error.mark.line + 1 : undefined,
-        column: error.mark ? error.mark.column + 1 : undefined,
-        codeContext: codeContext,
-        isSchemaError: false,
-      });
-      console.error("Invalid YAML:", error);
-    }
-  }, []);
+  const validateYaml = useCallback(
+    async (value) => {
+      setIsValidatingYaml(true);
+
+      try {
+        // First check YAML syntax
+        yamlLoad(value);
+        setIsValid(true);
+        setErrorInfo(undefined);
+        setHasTypedAfterError(false);
+
+        // If YAML is valid, check schema on server
+        if (value.trim()) {
+          setIsValidatingSchema(true);
+          try {
+            const validationResult = await validateYamlOnServer(value);
+            if (validationResult.valid) {
+              setServerValidationErrors(undefined);
+              return { isValid: true, serverValidationErrors: undefined };
+            }
+            setServerValidationErrors(validationResult.errors);
+            return {
+              isValid: true,
+              serverValidationErrors: validationResult.errors,
+            };
+          } catch (error) {
+            console.error("Schema validation error:", error);
+            // On server-side validation error, we don't have new errors.
+            return { isValid: true, serverValidationErrors: undefined };
+          } finally {
+            setIsValidatingSchema(false);
+          }
+        } else {
+          // YAML is empty, so it's valid with no server errors.
+          setServerValidationErrors(undefined);
+          return { isValid: true, serverValidationErrors: undefined };
+        }
+      } catch (error) {
+        setIsValid(false);
+        setServerValidationErrors(undefined); // Clear server errors if YAML syntax is invalid
+        const errorLines = error.message.split("\n");
+        const errorMessage = errorLines[0];
+        const codeContext = errorLines.slice(1).join("\n");
+        setErrorInfo({
+          message: errorMessage,
+          line: error.mark ? error.mark.line + 1 : undefined,
+          column: error.mark ? error.mark.column + 1 : undefined,
+          codeContext: codeContext,
+          isSchemaError: false,
+        });
+        setHasTypedAfterError(false);
+        console.error("Invalid YAML:", error);
+        return { isValid: false, serverValidationErrors: undefined };
+      } finally {
+        setIsValidatingYaml(false);
+      }
+    },
+    [
+      setHasTypedAfterError,
+      setErrorInfo,
+      setIsValid,
+      setIsValidatingSchema,
+      setIsValidatingYaml,
+      setServerValidationErrors,
+    ],
+  );
 
   useEffect(() => {
-    if (fileId) {
-      fetchFile(fileId)
-        .then((response) => {
+    const loadContent = async () => {
+      setIsLoading(true);
+      try {
+        if (fileId) {
+          const response = await fetchFile(fileId);
           setEditorContent(response.yamlContent);
-          validateYaml(response.yamlContent);
-          validateYamlOnServer(response.yamlContent)
-            .then((validationResult) => {
-              if (!validationResult.valid) {
-                setServerValidationErrors(validationResult.errors);
-              }
-            })
-            .catch((error) => {
-              console.error("Error validating YAML on server:", error);
-            });
-        })
-        .catch((error) => console.error("Error fetching file:", error));
-    } else {
-      fetchTemplate()
-        .then((response) => {
+          setOriginalContent(response.yamlContent);
+          await validateYaml(response.yamlContent);
+        } else {
+          const response = await fetchTemplate();
           if (response.template) {
             setEditorContent(response.template);
-            validateYaml(response.template);
+            setOriginalContent(response.template);
+            await validateYaml(response.template);
           }
-        })
-        .catch((error) => {
-          console.error("Error fetching template:", error);
-          showToast("error", "Failed to load template");
-        });
-    }
+        }
+      } catch (error) {
+        console.error("Error loading content:", error);
+        showToast(
+          "error",
+          fileId ? "Failed to load file" : "Failed to load template",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContent();
   }, [fileId, showToast, validateYaml]);
 
-  const handleSave = async () => {
-    try {
-      setServerValidationErrors(undefined);
-      let hasValidationErrors = false;
-      const forceSave = false;
+  // Debounced validation effect
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      await validateYaml(editorContent);
+    }, 300);
 
-      if (!forceSave) {
-        try {
-          const validationResult = await validateYamlOnServer(editorContent);
-          if (!validationResult.valid) {
-            setServerValidationErrors(validationResult.errors);
-            hasValidationErrors = true;
-          }
-        } catch (error) {
-          console.error("Server validation error:", error);
-          hasValidationErrors = true;
-        }
-      }
+    return () => clearTimeout(timeoutId);
+  }, [editorContent, validateYaml]);
+
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    setHasTypedAfterError(false);
+    try {
+      // Re-validate before saving to ensure we have the latest validation state
+      const validationResults = await validateYaml(editorContent);
+
+      const hasValidationErrors =
+        !validationResults.isValid ||
+        (validationResults.serverValidationErrors &&
+          validationResults.serverValidationErrors.length > 0);
+      const forceSave = false;
 
       if (fileId) {
         const response = await updateFile(fileId, editorContent, {
           ignoreValidationErrors: hasValidationErrors || forceSave,
         });
         await reloadProfiles(); // Update setup progress
+        setOriginalContent(editorContent);
+        setHasUnsavedChanges(false);
         const successMessage =
           hasValidationErrors || forceSave
             ? "File saved with validation errors"
@@ -182,6 +312,7 @@ function YamlEditor() {
           hasValidationErrors || forceSave ? "warning" : "success",
           response.message || successMessage,
         );
+        setLastSaved(new Date()); // Track save time
       } else {
         if (!selectedProject) {
           showToast("error", "Please select a project first");
@@ -196,6 +327,8 @@ function YamlEditor() {
         ) {
           const newFileId = response.uploaded_file_ids[0];
           await reloadProfiles(); // Update setup progress
+          setOriginalContent(editorContent);
+          setHasUnsavedChanges(false);
           const successMessage =
             hasValidationErrors || forceSave
               ? "File created with validation errors"
@@ -204,6 +337,7 @@ function YamlEditor() {
             hasValidationErrors || forceSave ? "warning" : "success",
             successMessage,
           );
+          setLastSaved(new Date()); // Track save time
           navigate(`/yaml-editor/${newFileId}`);
         } else {
           const errorMessage =
@@ -229,121 +363,359 @@ function YamlEditor() {
       } catch {
         showToast("error", "Error saving file");
       }
+    } finally {
+      setIsSaving(false);
     }
-  };
+  }, [
+    editorContent,
+    fileId,
+    navigate,
+    reloadProfiles,
+    selectedProject,
+    showToast,
+    validateYaml,
+  ]);
+
+  // Autosave functionality
+  useEffect(() => {
+    if (!autosaveEnabled || !hasUnsavedChanges || !fileId || isSaving) {
+      return;
+    }
+
+    const autosaveTimer = setTimeout(async () => {
+      try {
+        await handleSave();
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error("Autosave failed:", error);
+      }
+    }, 5000); // Auto-save every 5 seconds
+
+    return () => clearTimeout(autosaveTimer);
+  }, [
+    hasUnsavedChanges,
+    autosaveEnabled,
+    fileId,
+    isSaving,
+    handleSave,
+    showToast,
+  ]);
+
+  // Prevent data loss on page leave
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
+        return "You have unsaved changes. Are you sure you want to leave?";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleEditorChange = (value) => {
     setEditorContent(value);
-    validateYaml(value);
-    setServerValidationErrors(undefined);
+
+    // If there were previous errors (client or server), mark that user is typing
+    if (!isValid || serverValidationErrors) {
+      setHasTypedAfterError(true);
+    }
+
+    // Clear server validation errors when user starts typing (they'll be re-checked by debounced validation)
+    if (serverValidationErrors) {
+      setServerValidationErrors(undefined);
+    }
+
+    setHasUnsavedChanges(value !== originalContent);
   };
+
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave]);
+
+  const wordCount = useMemo(
+    () =>
+      editorContent
+        ? editorContent.split(/\s+/).filter((word) => word.length > 0).length
+        : 0,
+    [editorContent],
+  );
+
+  const lineCount = useMemo(
+    () => editorContent.split("\n").length,
+    [editorContent],
+  );
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">
-        {fileId ? "Edit YAML File" : "Create New YAML"}
-      </h1>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">
+            {fileId ? "Edit YAML File" : "Create New YAML"}
+          </h1>
+          {isLoading && (
+            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm font-medium">Loading...</span>
+            </div>
+          )}
+        </div>
+        <Button
+          variant="light"
+          size="sm"
+          onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="lg:hidden"
+        >
+          {sidebarCollapsed ? <Eye /> : <EyeOff />}
+          {sidebarCollapsed ? "Show Help" : "Hide Help"}
+        </Button>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="mr-2">YAML Validity:</span>
-              {isValid && !serverValidationErrors ? (
-                <CheckCircle2 className="text-green-500" />
+          <div className="mb-3 flex items-start justify-between gap-4">
+            <div className="min-h-[32px] flex items-center flex-1">
+              {isValidatingYaml ? (
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="font-medium">Validating YAML...</span>
+                </div>
+              ) : isValidatingSchema ? (
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="font-medium">Validating Profile...</span>
+                </div>
+              ) : hasTypedAfterError ? (
+                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span className="font-medium">Checking...</span>
+                </div>
+              ) : isValid === false ? (
+                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium">Invalid YAML</div>
+                    {errorInfo && !errorInfo.isSchemaError && (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="text-xs opacity-75 mt-0.5 cursor-pointer hover:opacity-100 underline decoration-dotted"
+                        onClick={() =>
+                          errorInfo.line && jumpToError(errorInfo.line)
+                        }
+                        onKeyDown={(e) => {
+                          if (
+                            (e.key === "Enter" || e.key === " ") &&
+                            errorInfo.line
+                          ) {
+                            jumpToError(errorInfo.line);
+                          }
+                        }}
+                        title={
+                          errorInfo.line
+                            ? `Click to jump to line ${errorInfo.line}`
+                            : undefined
+                        }
+                      >
+                        {errorInfo.message}
+                        {errorInfo.line && ` at line ${errorInfo.line}`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : serverValidationErrors &&
+                serverValidationErrors.length > 0 ? (
+                <div className="flex items-start gap-2 text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium">Invalid Profile</div>
+                    <div className="text-xs opacity-75 mt-0.5">
+                      {serverValidationErrors.length} validation{" "}
+                      {serverValidationErrors.length === 1 ? "error" : "errors"}
+                      {serverValidationErrors.some((error) => error.line) &&
+                        " (click to jump)"}
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <AlertCircle className="text-red-500" />
-              )}
-
-              {!isValid && errorInfo && errorInfo.isSchemaError && (
-                <div className="ml-2 text-red-500 text-sm">
-                  <details>
-                    <summary>
-                      Schema Validation Errors ({errorInfo.errors.length})
-                    </summary>
-                    <ul className="list-disc pl-5 mt-1">
-                      {errorInfo.errors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </ul>
-                  </details>
-                </div>
-              )}
-
-              {!isValid && errorInfo && !errorInfo.isSchemaError && (
-                <div className="ml-2 text-red-500 text-sm">
-                  {errorInfo.message}
-                  {errorInfo.line && ` at line ${errorInfo.line}`}
-                </div>
-              )}
-
-              {serverValidationErrors && (
-                <div className="ml-2 text-red-500 text-sm">
-                  {serverValidationErrors.length} server validation{" "}
-                  {serverValidationErrors.length === 1 ? "error" : "errors"} -
-                  see details below
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span className="font-medium">Valid Profile</span>
                 </div>
               )}
             </div>
-            <Button
-              className="text-sm"
-              color="primary"
-              onPress={() => handleSave()}
-            >
-              {fileId ? (
-                <>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Update YAML
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save YAML
-                </>
-              )}
-            </Button>
+
+            <div className="flex items-center justify-end">
+              <Button
+                size="sm"
+                color="primary"
+                variant={hasUnsavedChanges ? "solid" : "flat"}
+                onPress={() => handleSave()}
+                isLoading={isSaving}
+                isDisabled={isLoading}
+                className="h-8 px-3 text-sm"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : fileId ? (
+                  <>
+                    <Edit className="mr-1.5 h-3.5 w-3.5" />
+                    {hasUnsavedChanges ? "Update*" : "Update"}
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                    {hasUnsavedChanges ? "Save*" : "Save"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
+
+          {!isValid && errorInfo && errorInfo.isSchemaError && (
+            <div className="mb-4 p-3 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
+              <details>
+                <summary className="cursor-pointer text-red-700 dark:text-red-400 font-medium">
+                  Schema Validation Errors ({errorInfo.errors.length})
+                </summary>
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  {errorInfo.errors.map((error, index) => (
+                    <li
+                      key={index}
+                      className="text-red-600 dark:text-red-300 text-sm"
+                    >
+                      {error}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </div>
+          )}
           <div className="relative">
-            <CodeMirror
-              value={editorContent}
-              height="70vh"
-              width="100%"
-              extensions={[
-                yaml(),
-                EditorView.lineWrapping,
-                autocompletion({ override: [myCompletions] }),
-                yamlTypoLinter,
-                lintGutter(),
-                customKeymap,
-              ]}
-              onChange={handleEditorChange}
-              theme={isDark ? materialDark : tomorrow}
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: true,
-                highlightActiveLineGutter: true,
-                highlightActiveLine: true,
-                lineWrapping: true,
-                autocompletion: true,
-              }}
-              style={{ fontSize: `${fontSize}px` }}
-            />
-            <div className="absolute bottom-2 right-6 flex space-x-2">
-              <Button
-                variant="outline"
-                onPress={zoomOut}
-                aria-label="Zoom out"
-                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm text-sm"
-              >
-                <ZoomOutIcon className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="outline"
-                onPress={zoomIn}
-                aria-label="Zoom in"
-                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm text-sm"
-              >
-                <ZoomInIcon className="w-5 h-5" />
-              </Button>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[70vh] bg-default-100 rounded-lg">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-default-500">Loading editor...</p>
+                </div>
+              </div>
+            ) : (
+              <CodeMirror
+                value={editorContent}
+                height="70vh"
+                width="100%"
+                extensions={[
+                  yaml(),
+                  EditorView.lineWrapping,
+                  autocompletion({
+                    override: [myCompletions],
+                    closeOnBlur: false,
+                    activateOnTyping: true,
+                    maxRenderedOptions: 20,
+                  }),
+                  yamlTypoLinter,
+                  lintGutter(),
+                  customKeymap,
+                  highlightSelectionMatches(),
+                  cursorPositionExtension,
+                ]}
+                onChange={handleEditorChange}
+                theme={isDark ? materialDark : githubLight}
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: true,
+                  highlightActiveLineGutter: true,
+                  highlightActiveLine: true,
+                  lineWrapping: true,
+                  autocompletion: true,
+                }}
+                style={{ fontSize: `${fontSize}px` }}
+                ref={setEditorRef}
+              />
+            )}
+
+            {/* Enhanced Status Bar - moved directly under editor */}
+            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex items-center gap-4">
+                <span className="font-mono">
+                  Line {cursorPosition.line}, Col {cursorPosition.column}
+                </span>
+                <span>{lineCount} lines</span>
+                <span>{editorContent.length} characters</span>
+                {editorContent.length > 0 && <span>{wordCount} words</span>}
+
+                {/* Zoom controls integrated into status bar */}
+                <div className="flex items-center gap-1 ml-2 border-l border-default-300 pl-3">
+                  <Button
+                    variant="light"
+                    size="sm"
+                    onPress={zoomOut}
+                    aria-label="Zoom out"
+                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
+                  >
+                    <ZoomOutIcon className="w-3 h-3" />
+                  </Button>
+                  <span className="text-default-400 text-xs font-mono">
+                    {fontSize}px
+                  </span>
+                  <Button
+                    variant="light"
+                    size="sm"
+                    onPress={zoomIn}
+                    aria-label="Zoom in"
+                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
+                  >
+                    <ZoomInIcon className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Autosave controls integrated into status bar */}
+                {fileId && (
+                  <label className="flex items-center gap-2 cursor-pointer text-default-600 hover:text-default-700">
+                    <input
+                      type="checkbox"
+                      checked={autosaveEnabled}
+                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
+                      className="w-3 h-3"
+                    />
+                    <span>Auto-save</span>
+                  </label>
+                )}
+                {hasUnsavedChanges ? (
+                  autosaveEnabled && fileId ? (
+                    <span className="text-amber-600 flex items-center gap-1">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                      <span>Auto-save pending</span>
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 flex items-center gap-1">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                      <span>Unsaved</span>
+                    </span>
+                  )
+                ) : lastSaved ? (
+                  <span className="text-green-600">
+                    Saved: {lastSaved.toLocaleTimeString()}
+                  </span>
+                ) : undefined}
+                <span className="text-default-400">YAML</span>
+              </div>
             </div>
           </div>
           {serverValidationErrors && (
@@ -354,16 +726,38 @@ function YamlEditor() {
               </h3>
               <ul className="list-disc pl-5 mt-2 space-y-1 max-h-60 overflow-y-auto">
                 {serverValidationErrors.map((error, index) => (
-                  <li key={index} className="text-red-600 dark:text-red-300">
-                    {error.message}
-                    {error.line && (
-                      <span className="font-mono"> at line {error.line}</span>
-                    )}
-                    {error.path && (
-                      <span className="font-mono text-red-500 dark:text-red-400">
-                        {" "}
-                        ({error.path})
-                      </span>
+                  <li
+                    key={index}
+                    className={`text-red-600 dark:text-red-300 ${
+                      error.line ? "" : "ml-6"
+                    }`}
+                  >
+                    {error.line ? (
+                      <button
+                        type="button"
+                        className="text-left underline decoration-dotted hover:text-red-800 dark:hover:text-red-100"
+                        onClick={() => jumpToError(error.line)}
+                        title={`Click to jump to line ${error.line}`}
+                      >
+                        {error.message}
+                        <span className="font-mono"> at line {error.line}</span>
+                        {error.path && (
+                          <span className="font-mono text-red-500 dark:text-red-400">
+                            {" "}
+                            ({error.path})
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <>
+                        {error.message}
+                        {error.path && (
+                          <span className="font-mono text-red-500 dark:text-red-400">
+                            {" "}
+                            ({error.path})
+                          </span>
+                        )}
+                      </>
                     )}
                   </li>
                 ))}
@@ -371,75 +765,157 @@ function YamlEditor() {
             </div>
           )}
         </div>
-        <div className="w-full lg:w-1/3">
-          <Tabs defaultValue="profile" className="space-y-4">
-            <Tab key="profile" title="User Profile Help">
-              <div className="bg-default-50 p-4 rounded-lg">
-                <h2 className="text-lg font-semibold mb-2">
-                  User Profile Documentation
-                </h2>
-                <Accordion>
-                  {Object.entries(documentationSections).map(
-                    ([sectionTitle, section]) => (
-                      <AccordionItem
-                        key={sectionTitle}
-                        title={
-                          <span className="text-foreground dark:text-foreground-dark">
-                            {sectionTitle}
-                          </span>
-                        }
-                      >
-                        <div className="space-y-4 pt-2">
-                          {section.items.map((item, index) => (
-                            <div key={index} className="space-y-1.5">
-                              <pre className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap">
-                                {item.code}
-                              </pre>
-                              <p className="text-sm text-default-foreground">
-                                {item.description}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionItem>
-                    ),
-                  )}
-                </Accordion>
-              </div>
-            </Tab>
-            <Tab key="yaml" title="YAML Help">
-              <div className="bg-default-50 p-4 rounded-lg">
-                <h2 className="text-lg font-semibold mb-2">YAML Tutorial</h2>
-                <Accordion>
-                  {Object.entries(yamlBasicsSections).map(
-                    ([sectionTitle, section]) => (
-                      <AccordionItem
-                        key={sectionTitle}
-                        title={
-                          <span className="text-foreground dark:text-foreground-dark">
-                            {sectionTitle}
-                          </span>
-                        }
-                      >
-                        <div className="space-y-4 pt-2">
-                          {section.items.map((item, index) => (
-                            <div key={index} className="space-y-1.5">
-                              <pre className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap">
-                                {item.code}
-                              </pre>
-                              <p className="text-sm text-default-foreground">
-                                {item.description}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionItem>
-                    ),
-                  )}
-                </Accordion>
-              </div>
-            </Tab>
-          </Tabs>
+        <div
+          className={`w-full lg:w-1/3 ${sidebarCollapsed ? "hidden lg:block" : ""}`}
+        >
+          <div className="sticky top-4">
+            <Tabs defaultValue="profile" className="space-y-3 -mt-1">
+              <Tab key="profile" title="User Profile Help">
+                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
+                  <h2 className="text-base font-semibold mb-2">
+                    User Profile Documentation
+                  </h2>
+                  <div className="text-xs text-default-500 mb-3 space-y-1">
+                    <div>
+                      Use{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+F
+                      </kbd>{" "}
+                      to search in editor
+                    </div>
+                    <div>
+                      Use{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+S
+                      </kbd>{" "}
+                      to save the file
+                    </div>
+                    <div>Click any code example to copy it</div>
+                  </div>
+                  <Accordion variant="light" className="px-0">
+                    {Object.entries(documentationSections).map(
+                      ([sectionTitle, section]) => (
+                        <AccordionItem
+                          key={sectionTitle}
+                          title={
+                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
+                              {sectionTitle}
+                            </span>
+                          }
+                        >
+                          <div className="space-y-3 pt-1 pb-2">
+                            {section.items.map((item, index) => (
+                              <div key={index} className="space-y-1.5">
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(item.code);
+                                    showToast(
+                                      "success",
+                                      "Code copied to clipboard",
+                                    );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      navigator.clipboard.writeText(item.code);
+                                      showToast(
+                                        "success",
+                                        "Code copied to clipboard",
+                                      );
+                                    }
+                                  }}
+                                  title="Click to copy"
+                                >
+                                  {item.code}
+                                </div>
+                                <p className="text-sm text-default-foreground">
+                                  {item.description}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionItem>
+                      ),
+                    )}
+                  </Accordion>
+                </div>
+              </Tab>
+              <Tab key="yaml" title="YAML Help">
+                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
+                  <h2 className="text-base font-semibold mb-2">
+                    YAML Tutorial
+                  </h2>
+                  <div className="text-xs text-default-500 mb-3 space-y-1">
+                    <div>
+                      Use{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+F
+                      </kbd>{" "}
+                      to search in editor
+                    </div>
+                    <div>
+                      Use{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+S
+                      </kbd>{" "}
+                      to save the file
+                    </div>
+                    <div>Click any code example to copy it</div>
+                  </div>
+                  <Accordion variant="light" className="px-0">
+                    {Object.entries(yamlBasicsSections).map(
+                      ([sectionTitle, section]) => (
+                        <AccordionItem
+                          key={sectionTitle}
+                          title={
+                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
+                              {sectionTitle}
+                            </span>
+                          }
+                        >
+                          <div className="space-y-3 pt-1 pb-2">
+                            {section.items.map((item, index) => (
+                              <div key={index} className="space-y-1.5">
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(item.code);
+                                    showToast(
+                                      "success",
+                                      "Code copied to clipboard",
+                                    );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      navigator.clipboard.writeText(item.code);
+                                      showToast(
+                                        "success",
+                                        "Code copied to clipboard",
+                                      );
+                                    }
+                                  }}
+                                  title="Click to copy"
+                                >
+                                  {item.code}
+                                </div>
+                                <p className="text-sm text-default-foreground">
+                                  {item.description}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionItem>
+                      ),
+                    )}
+                  </Accordion>
+                </div>
+              </Tab>
+            </Tabs>
+          </div>
         </div>
       </div>
     </div>
