@@ -15,7 +15,10 @@ const StepList = ({ setupSteps, progressPercentage, nextStep, setupData }) => {
         {setupSteps.map((step, index) => {
           const StepIcon = step.icon;
           const isActive =
-            !step.completed && !step.optional && step === nextStep;
+            !step.completed &&
+            !step.optional &&
+            nextStep &&
+            step.id === nextStep.id;
           return (
             <li
               key={step.id}
