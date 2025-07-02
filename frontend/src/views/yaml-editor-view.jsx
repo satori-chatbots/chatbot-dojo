@@ -106,11 +106,15 @@ function YamlEditor() {
   const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
 
   // Autosave and data protection state
-  const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
-    const saved = localStorage.getItem("yamlEditorAutosaveEnabled");
-    // Default to true if no setting is saved
-    return saved === null ? true : JSON.parse(saved);
-  });
+  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      const saved = globalThis.localStorage.getItem(
+        "yamlEditorAutosaveEnabled",
+      );
+      setAutosaveEnabled(saved === null ? true : JSON.parse(saved));
+    }
+  }, []);
   const [lastSaved, setLastSaved] = useState();
 
   // Persist autosave setting
@@ -173,62 +177,72 @@ function YamlEditor() {
     ...searchKeymap,
   ]);
 
-  const validateYaml = useCallback(async (value) => {
-    setIsValidatingYaml(true);
+  const validateYaml = useCallback(
+    async (value) => {
+      setIsValidatingYaml(true);
 
-    try {
-      // First check YAML syntax
-      yamlLoad(value);
-      setIsValid(true);
-      setErrorInfo(undefined);
-      setHasTypedAfterError(false);
+      try {
+        // First check YAML syntax
+        yamlLoad(value);
+        setIsValid(true);
+        setErrorInfo(undefined);
+        setHasTypedAfterError(false);
 
-      // If YAML is valid, check schema on server
-      if (value.trim()) {
-        setIsValidatingSchema(true);
-        try {
-          const validationResult = await validateYamlOnServer(value);
-          if (validationResult.valid) {
-            setServerValidationErrors(undefined);
+        // If YAML is valid, check schema on server
+        if (value.trim()) {
+          setIsValidatingSchema(true);
+          try {
+            const validationResult = await validateYamlOnServer(value);
+            if (validationResult.valid) {
+              setServerValidationErrors(undefined);
+              return { isValid: true, serverValidationErrors: undefined };
+            }
+            setServerValidationErrors(validationResult.errors);
+            return {
+              isValid: true,
+              serverValidationErrors: validationResult.errors,
+            };
+          } catch (error) {
+            console.error("Schema validation error:", error);
+            // On server-side validation error, we don't have new errors.
             return { isValid: true, serverValidationErrors: undefined };
+          } finally {
+            setIsValidatingSchema(false);
           }
-          setServerValidationErrors(validationResult.errors);
-          return {
-            isValid: true,
-            serverValidationErrors: validationResult.errors,
-          };
-        } catch (error) {
-          console.error("Schema validation error:", error);
-          // On server-side validation error, we don't have new errors.
+        } else {
+          // YAML is empty, so it's valid with no server errors.
+          setServerValidationErrors(undefined);
           return { isValid: true, serverValidationErrors: undefined };
-        } finally {
-          setIsValidatingSchema(false);
         }
-      } else {
-        // YAML is empty, so it's valid with no server errors.
-        setServerValidationErrors(undefined);
-        return { isValid: true, serverValidationErrors: undefined };
+      } catch (error) {
+        setIsValid(false);
+        setServerValidationErrors(undefined); // Clear server errors if YAML syntax is invalid
+        const errorLines = error.message.split("\n");
+        const errorMessage = errorLines[0];
+        const codeContext = errorLines.slice(1).join("\n");
+        setErrorInfo({
+          message: errorMessage,
+          line: error.mark ? error.mark.line + 1 : undefined,
+          column: error.mark ? error.mark.column + 1 : undefined,
+          codeContext: codeContext,
+          isSchemaError: false,
+        });
+        setHasTypedAfterError(false);
+        console.error("Invalid YAML:", error);
+        return { isValid: false, serverValidationErrors: undefined };
+      } finally {
+        setIsValidatingYaml(false);
       }
-    } catch (error) {
-      setIsValid(false);
-      setServerValidationErrors(undefined); // Clear server errors if YAML syntax is invalid
-      const errorLines = error.message.split("\n");
-      const errorMessage = errorLines[0];
-      const codeContext = errorLines.slice(1).join("\n");
-      setErrorInfo({
-        message: errorMessage,
-        line: error.mark ? error.mark.line + 1 : undefined,
-        column: error.mark ? error.mark.column + 1 : undefined,
-        codeContext: codeContext,
-        isSchemaError: false,
-      });
-      setHasTypedAfterError(false);
-      console.error("Invalid YAML:", error);
-      return { isValid: false, serverValidationErrors: undefined };
-    } finally {
-      setIsValidatingYaml(false);
-    }
-  }, []);
+    },
+    [
+      setHasTypedAfterError,
+      setErrorInfo,
+      setIsValid,
+      setIsValidatingSchema,
+      setIsValidatingYaml,
+      setServerValidationErrors,
+    ],
+  );
 
   useEffect(() => {
     const loadContent = async () => {
@@ -439,6 +453,11 @@ function YamlEditor() {
     [editorContent],
   );
 
+  const lineCount = useMemo(
+    () => editorContent.split("\n").length,
+    [editorContent],
+  );
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
@@ -636,7 +655,7 @@ function YamlEditor() {
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
-                <span>{editorContent.split("\n").length} lines</span>
+                <span>{lineCount} lines</span>
                 <span>{editorContent.length} characters</span>
                 {editorContent.length > 0 && <span>{wordCount} words</span>}
 
