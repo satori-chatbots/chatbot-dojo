@@ -624,7 +624,6 @@ function YamlEditor() {
                   highlightActiveLine: true,
                   lineWrapping: true,
                   autocompletion: true,
-                  searchKeymap: true,
                 }}
                 style={{ fontSize: `${fontSize}px` }}
                 ref={setEditorRef}
