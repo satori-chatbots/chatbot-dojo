@@ -105,6 +105,10 @@ function YamlEditor() {
   const [isValidatingSchema, setIsValidatingSchema] = useState(false);
   const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
 
+  // Autosave and data protection state
+  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
+  const [lastSaved, setLastSaved] = useState();
+
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
 
@@ -203,7 +207,48 @@ function YamlEditor() {
     return () => clearTimeout(timeoutId);
   }, [editorContent, validateYaml]);
 
-  const handleSave = async () => {
+  // Autosave functionality
+  useEffect(() => {
+    if (!autosaveEnabled || !hasUnsavedChanges || !fileId || isSaving) {
+      return;
+    }
+
+    const autosaveTimer = setTimeout(async () => {
+      try {
+        await handleSave();
+        setLastSaved(new Date());
+        showToast("info", "File auto-saved");
+      } catch (error) {
+        console.error("Autosave failed:", error);
+      }
+    }, 30_000); // Auto-save every 30 seconds
+
+    return () => clearTimeout(autosaveTimer);
+  }, [
+    hasUnsavedChanges,
+    autosaveEnabled,
+    fileId,
+    isSaving,
+    handleSave,
+    showToast,
+  ]);
+
+  // Prevent data loss on page leave
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
+        return "You have unsaved changes. Are you sure you want to leave?";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const handleSave = useCallback(async () => {
     setIsSaving(true);
     setHasTypedAfterError(false);
     try {
@@ -230,6 +275,7 @@ function YamlEditor() {
           hasValidationErrors || forceSave ? "warning" : "success",
           response.message || successMessage,
         );
+        setLastSaved(new Date()); // Track save time
       } else {
         if (!selectedProject) {
           showToast("error", "Please select a project first");
@@ -254,6 +300,7 @@ function YamlEditor() {
             hasValidationErrors || forceSave ? "warning" : "success",
             successMessage,
           );
+          setLastSaved(new Date()); // Track save time
           navigate(`/yaml-editor/${newFileId}`);
         } else {
           const errorMessage =
@@ -282,7 +329,17 @@ function YamlEditor() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [
+    editorContent,
+    fileId,
+    isValid,
+    navigate,
+    reloadProfiles,
+    selectedProject,
+    serverValidationErrors,
+    showToast,
+    validateYaml,
+  ]);
 
   const handleEditorChange = (value) => {
     setEditorContent(value);
@@ -390,32 +447,60 @@ function YamlEditor() {
               )}
             </div>
 
-            <Button
-              size="sm"
-              color="primary"
-              variant={hasUnsavedChanges ? "solid" : "flat"}
-              onPress={() => handleSave()}
-              isLoading={isSaving}
-              isDisabled={isLoading}
-              className="h-8 px-3 text-sm"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Saving...
-                </>
-              ) : fileId ? (
-                <>
-                  <Edit className="mr-1.5 h-3.5 w-3.5" />
-                  {hasUnsavedChanges ? "Update*" : "Update"}
-                </>
-              ) : (
-                <>
-                  <Save className="mr-1.5 h-3.5 w-3.5" />
-                  {hasUnsavedChanges ? "Save*" : "Save"}
-                </>
+            <div className="flex items-center gap-3">
+              {/* Autosave controls to the left of save button */}
+              {fileId && (
+                <div className="flex flex-col gap-1 text-xs text-default-500">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autosaveEnabled}
+                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
+                      className="w-3 h-3"
+                    />
+                    <span>Auto-save</span>
+                  </label>
+                  {hasUnsavedChanges && autosaveEnabled && (
+                    <div className="flex items-center gap-1 text-amber-600">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                      <span>Auto-save pending</span>
+                    </div>
+                  )}
+                  {lastSaved && !hasUnsavedChanges && (
+                    <span className="text-green-600">
+                      Last saved: {lastSaved.toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
               )}
-            </Button>
+
+              <Button
+                size="sm"
+                color="primary"
+                variant={hasUnsavedChanges ? "solid" : "flat"}
+                onPress={() => handleSave()}
+                isLoading={isSaving}
+                isDisabled={isLoading}
+                className="h-8 px-3 text-sm"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : fileId ? (
+                  <>
+                    <Edit className="mr-1.5 h-3.5 w-3.5" />
+                    {hasUnsavedChanges ? "Update*" : "Update"}
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                    {hasUnsavedChanges ? "Save*" : "Save"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {!isValid && errorInfo && errorInfo.isSchemaError && (
