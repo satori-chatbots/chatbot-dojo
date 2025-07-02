@@ -139,7 +139,8 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   };
 
   if (!shouldShow()) {
-    return;
+    // eslint-disable-next-line unicorn/no-null
+    return null;
   }
 
   if (loading) {
