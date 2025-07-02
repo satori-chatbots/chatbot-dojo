@@ -327,30 +327,30 @@ function YamlEditor() {
 
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
-          <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
+          <div className="mb-3 flex items-start justify-between gap-4">
+            <div className="min-h-[32px] flex items-center flex-1">
               {isValidatingYaml ? (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-md">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span className="font-medium">Validating YAML...</span>
                 </div>
               ) : isValidatingSchema ? (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-md">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span className="font-medium">Validating Profile...</span>
                 </div>
               ) : hasTypedAfterError ? (
-                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-4 py-2 rounded-md">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-3.5 h-3.5" />
                   <span className="font-medium">Checking...</span>
                 </div>
               ) : isValid === false ? (
-                <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-md">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="font-medium">Invalid YAML</div>
                     {errorInfo && !errorInfo.isSchemaError && (
-                      <div className="text-sm opacity-80">
+                      <div className="text-xs opacity-75 mt-0.5">
                         {errorInfo.message}
                         {errorInfo.line && ` at line ${errorInfo.line}`}
                       </div>
@@ -359,19 +359,19 @@ function YamlEditor() {
                 </div>
               ) : serverValidationErrors &&
                 serverValidationErrors.length > 0 ? (
-                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-md">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="flex items-start gap-2 text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="font-medium">Invalid Profile</div>
-                    <div className="text-sm opacity-80">
+                    <div className="text-xs opacity-75 mt-0.5">
                       {serverValidationErrors.length} validation{" "}
                       {serverValidationErrors.length === 1 ? "error" : "errors"}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-md">
-                  <CheckCircle2 className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span className="font-medium">Valid Profile</span>
                 </div>
               )}
@@ -384,20 +384,21 @@ function YamlEditor() {
               onPress={() => handleSave()}
               isLoading={isSaving}
               isDisabled={isLoading}
+              className="h-8 px-3 text-sm"
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   Saving...
                 </>
               ) : fileId ? (
                 <>
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-1.5 h-3.5 w-3.5" />
                   {hasUnsavedChanges ? "Update*" : "Update"}
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
                   {hasUnsavedChanges ? "Save*" : "Save"}
                 </>
               )}
@@ -464,22 +465,24 @@ function YamlEditor() {
                 style={{ fontSize: `${fontSize}px` }}
               />
             )}
-            <div className="absolute bottom-2 right-6 flex space-x-2">
+            <div className="absolute bottom-2 right-6 flex space-x-1.5">
               <Button
                 variant="outline"
+                size="sm"
                 onPress={zoomOut}
                 aria-label="Zoom out"
-                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm text-sm"
+                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm h-7 w-7 min-w-0 p-0"
               >
-                <ZoomOutIcon className="w-5 h-5" />
+                <ZoomOutIcon className="w-4 h-4" />
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 onPress={zoomIn}
                 aria-label="Zoom in"
-                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm text-sm"
+                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm h-7 w-7 min-w-0 p-0"
               >
-                <ZoomInIcon className="w-5 h-5" />
+                <ZoomInIcon className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -512,32 +515,34 @@ function YamlEditor() {
           className={`w-full lg:w-1/3 ${sidebarCollapsed ? "hidden lg:block" : ""}`}
         >
           <div className="sticky top-4">
-            <Tabs defaultValue="profile" className="space-y-4">
+            <Tabs defaultValue="profile" className="space-y-3 -mt-1">
               <Tab key="profile" title="User Profile Help">
-                <div className="bg-default-50 p-4 rounded-lg max-h-[70vh] overflow-y-auto">
-                  <h2 className="text-lg font-semibold mb-2">
+                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
+                  <h2 className="text-base font-semibold mb-2">
                     User Profile Documentation
                   </h2>
-                  <div className="text-xs text-default-500 mb-3">
+                  <div className="text-xs text-default-500 mb-3 space-y-1">
                     <div>
                       Use{" "}
-                      <kbd className="bg-default-200 px-1 rounded">Ctrl+F</kbd>{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+F
+                      </kbd>{" "}
                       to search in editor
                     </div>
                     <div>Click any code example to copy it</div>
                   </div>
-                  <Accordion>
+                  <Accordion variant="light" className="px-0">
                     {Object.entries(documentationSections).map(
                       ([sectionTitle, section]) => (
                         <AccordionItem
                           key={sectionTitle}
                           title={
-                            <span className="text-foreground dark:text-foreground-dark">
+                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
                               {sectionTitle}
                             </span>
                           }
                         >
-                          <div className="space-y-4 pt-2">
+                          <div className="space-y-3 pt-1 pb-2">
                             {section.items.map((item, index) => (
                               <div key={index} className="space-y-1.5">
                                 <div
@@ -577,28 +582,32 @@ function YamlEditor() {
                 </div>
               </Tab>
               <Tab key="yaml" title="YAML Help">
-                <div className="bg-default-50 p-4 rounded-lg max-h-[70vh] overflow-y-auto">
-                  <h2 className="text-lg font-semibold mb-2">YAML Tutorial</h2>
-                  <div className="text-xs text-default-500 mb-3">
+                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
+                  <h2 className="text-base font-semibold mb-2">
+                    YAML Tutorial
+                  </h2>
+                  <div className="text-xs text-default-500 mb-3 space-y-1">
                     <div>
                       Use{" "}
-                      <kbd className="bg-default-200 px-1 rounded">Ctrl+F</kbd>{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+F
+                      </kbd>{" "}
                       to search in editor
                     </div>
                     <div>Click any code example to copy it</div>
                   </div>
-                  <Accordion>
+                  <Accordion variant="light" className="px-0">
                     {Object.entries(yamlBasicsSections).map(
                       ([sectionTitle, section]) => (
                         <AccordionItem
                           key={sectionTitle}
                           title={
-                            <span className="text-foreground dark:text-foreground-dark">
+                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
                               {sectionTitle}
                             </span>
                           }
                         >
-                          <div className="space-y-4 pt-2">
+                          <div className="space-y-3 pt-1 pb-2">
                             {section.items.map((item, index) => (
                               <div key={index} className="space-y-1.5">
                                 <div
