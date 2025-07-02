@@ -300,6 +300,19 @@ function YamlEditor() {
     setHasUnsavedChanges(value !== originalContent);
   };
 
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave]);
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
@@ -529,6 +542,13 @@ function YamlEditor() {
                       </kbd>{" "}
                       to search in editor
                     </div>
+                    <div>
+                      Use{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+S
+                      </kbd>{" "}
+                      to save the file
+                    </div>
                     <div>Click any code example to copy it</div>
                   </div>
                   <Accordion variant="light" className="px-0">
@@ -593,6 +613,13 @@ function YamlEditor() {
                         Ctrl+F
                       </kbd>{" "}
                       to search in editor
+                    </div>
+                    <div>
+                      Use{" "}
+                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
+                        Ctrl+S
+                      </kbd>{" "}
+                      to save the file
                     </div>
                     <div>Click any code example to copy it</div>
                   </div>
