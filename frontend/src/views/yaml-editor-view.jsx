@@ -20,7 +20,7 @@ import {
 import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
-import { tomorrow } from "thememirror";
+import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
 import { useSetup } from "../contexts/setup-context";
@@ -316,7 +316,7 @@ function YamlEditor() {
                 customKeymap,
               ]}
               onChange={handleEditorChange}
-              theme={isDark ? materialDark : tomorrow}
+              theme={isDark ? materialDark : githubLight}
               basicSetup={{
                 lineNumbers: true,
                 foldGutter: true,
