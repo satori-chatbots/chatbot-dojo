@@ -194,7 +194,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
             <div className="flex items-center justify-between gap-2">
               {/* Left side - Title and progress info */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold truncate">
+                <h3 className="text-base sm:text-lg font-semibold truncate text-foreground">
                   Setup Progress
                 </h3>
                 <Chip
@@ -365,7 +365,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                                     ? "text-success-700"
                                     : isActive
                                       ? "text-primary-700"
-                                      : "text-default-700"
+                                      : "text-foreground"
                                 }`}
                               >
                                 {step.title}
@@ -380,7 +380,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                                 </Chip>
                               )}
                             </div>
-                            <p className="text-xs text-default-500 mt-1">
+                            <p className="text-xs text-foreground-500 mt-1">
                               {step.description}
                             </p>
 

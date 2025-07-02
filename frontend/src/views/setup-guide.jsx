@@ -48,7 +48,9 @@ const SetupGuide = () => {
         </Button>
         <div className="flex items-center gap-3">
           <BookOpen className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">Setup Guide</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            Setup Guide
+          </h1>
         </div>
       </div>
 
@@ -82,7 +84,7 @@ const SetupGuide = () => {
       {/* Description */}
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold text-foreground">
             {"Welcome to Sensei's Setup Guide"}
           </h2>
         </CardHeader>
@@ -94,7 +96,9 @@ const SetupGuide = () => {
           </p>
 
           <div className="space-y-3">
-            <h3 className="text-lg font-medium">{"What you'll set up:"}</h3>
+            <h3 className="text-lg font-medium text-foreground">
+              {"What you'll set up:"}
+            </h3>
             <ul className="space-y-2 text-sm text-foreground/70 ml-4">
               <li className="flex items-start gap-2">
                 <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
@@ -165,7 +169,7 @@ const SetupGuide = () => {
       {/* Additional Help */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">Need Help?</h3>
+          <h3 className="text-lg font-semibold text-foreground">Need Help?</h3>
         </CardHeader>
         <CardBody className="space-y-3">
           <p className="text-sm text-foreground/70">

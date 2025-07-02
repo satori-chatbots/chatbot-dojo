@@ -9,46 +9,6 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        // Light mode palette
-        background: {
-          DEFAULT: "#f8fafc", // off-white, Notion-like
-          paper: "#ffffffcc", // frosted white
-          subtle: "#f4f6fa", // subtle background
-        },
-        primary: {
-          DEFAULT: "#6366f1", // blue-violet
-          light: "#a5b4fc",
-          dark: "#4338ca",
-        },
-        secondary: {
-          DEFAULT: "#a78bfa", // purple
-          light: "#ddd6fe",
-          dark: "#7c3aed",
-        },
-        accent: {
-          DEFAULT: "linear-gradient(90deg, #6366f1 0%, #a78bfa 100%)",
-        },
-        border: {
-          DEFAULT: "#e5e7eb",
-          dark: "#23272f",
-        },
-        muted: {
-          DEFAULT: "#f1f5f9",
-          dark: "#1e293b",
-        },
-        // Dark mode palette
-        darkbg: {
-          DEFAULT: "#18181b", // neutral dark gray
-          glass: "rgba(24,24,27,0.8)", // frosted neutral gray glass
-          card: "rgba(39,39,42,0.8)", // slightly lighter neutral gray
-        },
-        // Text
-        foreground: {
-          DEFAULT: "#22223b",
-          dark: "#e2e8f0", // light gray that works well with dark purple/black gradient
-        },
-      },
       backgroundImage: {
         "radial-gradient": "radial-gradient(var(--tw-gradient-stops))",
         "dark-gradient":
@@ -83,39 +43,99 @@ export default {
       themes: {
         light: {
           colors: {
-            background: {
-              DEFAULT: "#f8fafc",
+            background: "#f8fafc",
+            foreground: "#22223b",
+            content1: "#ffffff",
+            content2: "#f4f6fa",
+            content3: "#ffffffcc",
+            border: "#e5e7eb",
+            primary: {
+              50: "#eef2ff",
+              100: "#e0e7ff",
+              200: "#c7d2fe",
+              300: "#a5b4fc",
+              400: "#818cf8",
+              500: "#6366f1",
+              600: "#4f46e5",
+              700: "#4338ca",
+              800: "#3730a3",
+              900: "#312e81",
+              DEFAULT: "#6366f1",
             },
-            foreground: {
-              DEFAULT: "#22223b",
+            secondary: {
+              50: "#f5f3ff",
+              100: "#ede9fe",
+              200: "#ddd6fe",
+              300: "#c4b5fd",
+              400: "#a78bfa",
+              500: "#8b5cf6",
+              600: "#7c3aed",
+              700: "#6d28d9",
+              800: "#5b21b6",
+              900: "#4c1d95",
+              DEFAULT: "#a78bfa",
             },
-            content1: {
-              DEFAULT: "#ffffff", // solid white for modals/inputs
-            },
-            content2: {
-              DEFAULT: "#f4f6fa", // for subtle backgrounds
-            },
-            content3: {
-              DEFAULT: "#ffffffcc", // frosted white for glass cards
+            success: {
+              50: "#f0fdf4",
+              100: "#dcfce7",
+              200: "#bbf7d0",
+              300: "#86efac",
+              400: "#4ade80",
+              500: "#22c55e",
+              600: "#16a34a",
+              700: "#15803d",
+              800: "#166534",
+              900: "#14532d",
+              DEFAULT: "#22c55e",
             },
           },
         },
         dark: {
           colors: {
-            background: {
-              DEFAULT: "#000000",
+            background: "#0D0D0D",
+            foreground: "#e2e8f0",
+            content1: "#1A1A1A",
+            content2: "#2C2C2C",
+            content3: "rgba(26, 26, 26, 0.7)",
+            border: "#2C2C2C",
+            primary: {
+              50: "rgba(99, 102, 241, 0.1)",
+              100: "rgba(99, 102, 241, 0.2)",
+              200: "#4338ca",
+              300: "#4f46e5",
+              400: "#6366f1",
+              500: "#818cf8",
+              600: "#a5b4fc",
+              700: "#c7d2fe",
+              800: "#e0e7ff",
+              900: "#eef2ff",
+              DEFAULT: "#818cf8",
             },
-            foreground: {
-              DEFAULT: "#e2e8f0", // your light gray for dark mode text
+            secondary: {
+              50: "rgba(167, 139, 250, 0.1)",
+              100: "rgba(167, 139, 250, 0.2)",
+              200: "#6d28d9",
+              300: "#7c3aed",
+              400: "#8b5cf6",
+              500: "#a78bfa",
+              600: "#c4b5fd",
+              700: "#ddd6fe",
+              800: "#ede9fe",
+              900: "#f5f3ff",
+              DEFAULT: "#a78bfa",
             },
-            content1: {
-              DEFAULT: "#18181b", // solid dark gray for modals/inputs
-            },
-            content2: {
-              DEFAULT: "#27272a", // for subtle backgrounds
-            },
-            content3: {
-              DEFAULT: "rgba(24,24,27,0.8)", // transparent for glass cards
+            success: {
+              50: "rgba(34, 197, 94, 0.1)",
+              100: "rgba(34, 197, 94, 0.2)",
+              200: "#15803d",
+              300: "#16a34a",
+              400: "#22c55e",
+              500: "#4ade80",
+              600: "#86efac",
+              700: "#bbf7d0",
+              800: "#dcfce7",
+              900: "#f0fdf4",
+              DEFAULT: "#4ade80",
             },
           },
         },
