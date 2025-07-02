@@ -161,6 +161,9 @@ class TestFile(models.Model):
         default=False,
         help_text="Whether the YAML file is valid for execution in Sensei",
     )
+    execution = models.ForeignKey(
+        "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="test_files"
+    )
 
     def __str__(self) -> str:
         """Return the base name of the file."""
@@ -652,6 +655,9 @@ class ProfileGenerationTask(models.Model):
     turns = models.PositiveIntegerField(default=5)
     generated_file_ids = models.JSONField(default=list)
     process_id = models.IntegerField(null=True, blank=True)
+    execution = models.ForeignKey(
+        "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="generation_tasks"
+    )
 
     def __str__(self) -> str:
         """Return a string representation of the task."""
@@ -749,5 +755,91 @@ def delete_rule_file_from_media(sender: type[RuleFile], instance: RuleFile, **_k
 
 @receiver(post_delete, sender=TypeFile)
 def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **_kwargs: Any) -> None:  # noqa: ANN401
-    """Delete the type file from media when the TypeFile is deleted."""
-    instance.file.delete(save=False)
+    """Delete the file from media when the TypeFile is deleted."""
+    try:
+        if instance.file and Path(instance.file.path).exists():
+            Path(instance.file.path).unlink()
+            logger.info("Deleted file %s from media.", instance.file.path)
+    except (FileNotFoundError, PermissionError, OSError):
+        logger.exception("Error deleting file %s", instance.file.path)
+
+
+class ProfileExecution(models.Model):
+    """Represents a profile generation execution (TRACER or Manual)."""
+
+    EXECUTION_TYPE_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("tracer", "TRACER"),
+        ("manual", "Manual"),
+    ]
+
+    STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("PENDING", "Pending"),
+        ("RUNNING", "Running"),
+        ("COMPLETED", "Completed"),
+        ("ERROR", "Error"),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="profile_executions")
+    execution_name = models.CharField(max_length=255)  # "TRACER_2024-01-16_11:30" or "Manual_2024-01-16_11:30"
+    execution_type = models.CharField(max_length=20, choices=EXECUTION_TYPE_CHOICES)  # "tracer" or "manual"
+
+    # TRACER specific parameters (null for manual)
+    sessions = models.IntegerField(null=True, blank=True)  # TRACER sessions
+    turns_per_session = models.IntegerField(null=True, blank=True)  # TRACER turns
+
+    # Status and timing
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
+    execution_time_minutes = models.IntegerField(null=True, blank=True)
+
+    # File organization
+    profiles_directory = models.CharField(max_length=500)
+    generated_profiles_count = models.IntegerField(default=0)
+
+    class Meta:
+        """Meta options for the ProfileExecution model."""
+
+        ordering: ClassVar[list[str]] = ["execution_type", "-created_at"]  # Manual first, then by date desc
+
+    def __str__(self) -> str:
+        """Return a string representation of the ProfileExecution."""
+        return f"{self.execution_name} - {self.project.name}"
+
+    @property
+    def display_info(self) -> str:
+        """Returns display info for the folder header."""
+        if self.execution_type == "tracer":
+            return f"({self.sessions} sessions, {self.turns_per_session} turns)"
+        return f"({self.generated_profiles_count} profiles)"
+
+
+class TracerAnalysisResult(models.Model):
+    """Stores TRACER-specific analysis data (reports, graphs)."""
+
+    execution = models.OneToOneField(ProfileExecution, on_delete=models.CASCADE, related_name="analysis_result")
+
+    # TRACER output files
+    report_file_path = models.CharField(max_length=500, blank=True)  # report.md
+    workflow_graph_path = models.CharField(max_length=500, blank=True)  # workflow_graph.svg
+
+    # Analysis metadata
+    total_interactions = models.IntegerField(default=0)
+    coverage_percentage = models.FloatField(null=True, blank=True)
+    unique_paths_discovered = models.IntegerField(default=0)
+
+    def __str__(self) -> str:
+        """Return a string representation of the TracerAnalysisResult."""
+        return f"Analysis for {self.execution.execution_name}"
+
+
+class OriginalTracerProfile(models.Model):
+    """Stores original TRACER-generated profiles for read-only viewing in dashboard."""
+
+    execution = models.ForeignKey(ProfileExecution, on_delete=models.CASCADE, related_name="original_profiles")
+    original_filename = models.CharField(max_length=255)
+    original_content = models.TextField()  # Original YAML content
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        """Return a string representation of the OriginalTracerProfile."""
+        return f"Original {self.original_filename} - {self.execution.execution_name}"
