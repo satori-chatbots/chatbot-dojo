@@ -109,10 +109,49 @@ function YamlEditor() {
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [lastSaved, setLastSaved] = useState();
 
+  // Enhanced status bar state
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+  const [editorRef, setEditorRef] = useState();
+
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
 
   const yamlTypoLinter = linter(createYamlTypoLinter());
+
+  // Jump to error location functionality
+  const jumpToError = useCallback(
+    (line) => {
+      if (editorRef && editorRef.view) {
+        try {
+          const lineNumber = Math.max(
+            1,
+            Math.min(line, editorRef.view.state.doc.lines),
+          );
+          const pos = editorRef.view.state.doc.line(lineNumber).from;
+          editorRef.view.dispatch({
+            selection: { anchor: pos },
+            scrollIntoView: true,
+          });
+          editorRef.view.focus();
+        } catch (error) {
+          console.error("Error jumping to line:", error);
+        }
+      }
+    },
+    [editorRef],
+  );
+
+  // Track cursor position
+  const cursorPositionExtension = EditorView.updateListener.of((update) => {
+    if (update.selectionSet) {
+      const pos = update.state.selection.main.head;
+      const line = update.state.doc.lineAt(pos);
+      setCursorPosition({
+        line: line.number,
+        column: pos - line.from + 1,
+      });
+    }
+  });
 
   const customKeymap = keymap.of([
     {
@@ -207,47 +246,6 @@ function YamlEditor() {
     return () => clearTimeout(timeoutId);
   }, [editorContent, validateYaml]);
 
-  // Autosave functionality
-  useEffect(() => {
-    if (!autosaveEnabled || !hasUnsavedChanges || !fileId || isSaving) {
-      return;
-    }
-
-    const autosaveTimer = setTimeout(async () => {
-      try {
-        await handleSave();
-        setLastSaved(new Date());
-        showToast("info", "File auto-saved");
-      } catch (error) {
-        console.error("Autosave failed:", error);
-      }
-    }, 30_000); // Auto-save every 30 seconds
-
-    return () => clearTimeout(autosaveTimer);
-  }, [
-    hasUnsavedChanges,
-    autosaveEnabled,
-    fileId,
-    isSaving,
-    handleSave,
-    showToast,
-  ]);
-
-  // Prevent data loss on page leave
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue =
-          "You have unsaved changes. Are you sure you want to leave?";
-        return "You have unsaved changes. Are you sure you want to leave?";
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     setHasTypedAfterError(false);
@@ -341,6 +339,46 @@ function YamlEditor() {
     validateYaml,
   ]);
 
+  // Autosave functionality
+  useEffect(() => {
+    if (!autosaveEnabled || !hasUnsavedChanges || !fileId || isSaving) {
+      return;
+    }
+
+    const autosaveTimer = setTimeout(async () => {
+      try {
+        await handleSave();
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error("Autosave failed:", error);
+      }
+    }, 5000); // Auto-save every 5 seconds
+
+    return () => clearTimeout(autosaveTimer);
+  }, [
+    hasUnsavedChanges,
+    autosaveEnabled,
+    fileId,
+    isSaving,
+    handleSave,
+    showToast,
+  ]);
+
+  // Prevent data loss on page leave
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
+        return "You have unsaved changes. Are you sure you want to leave?";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const handleEditorChange = (value) => {
     setEditorContent(value);
 
@@ -420,7 +458,27 @@ function YamlEditor() {
                   <div>
                     <div className="font-medium">Invalid YAML</div>
                     {errorInfo && !errorInfo.isSchemaError && (
-                      <div className="text-xs opacity-75 mt-0.5">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="text-xs opacity-75 mt-0.5 cursor-pointer hover:opacity-100 underline decoration-dotted"
+                        onClick={() =>
+                          errorInfo.line && jumpToError(errorInfo.line)
+                        }
+                        onKeyDown={(e) => {
+                          if (
+                            (e.key === "Enter" || e.key === " ") &&
+                            errorInfo.line
+                          ) {
+                            jumpToError(errorInfo.line);
+                          }
+                        }}
+                        title={
+                          errorInfo.line
+                            ? `Click to jump to line ${errorInfo.line}`
+                            : undefined
+                        }
+                      >
                         {errorInfo.message}
                         {errorInfo.line && ` at line ${errorInfo.line}`}
                       </div>
@@ -436,6 +494,8 @@ function YamlEditor() {
                     <div className="text-xs opacity-75 mt-0.5">
                       {serverValidationErrors.length} validation{" "}
                       {serverValidationErrors.length === 1 ? "error" : "errors"}
+                      {serverValidationErrors.some((error) => error.line) &&
+                        " (click to jump)"}
                     </div>
                   </div>
                 </div>
@@ -447,33 +507,7 @@ function YamlEditor() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Autosave controls to the left of save button */}
-              {fileId && (
-                <div className="flex flex-col gap-1 text-xs text-default-500">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={autosaveEnabled}
-                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
-                      className="w-3 h-3"
-                    />
-                    <span>Auto-save</span>
-                  </label>
-                  {hasUnsavedChanges && autosaveEnabled && (
-                    <div className="flex items-center gap-1 text-amber-600">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                      <span>Auto-save pending</span>
-                    </div>
-                  )}
-                  {lastSaved && !hasUnsavedChanges && (
-                    <span className="text-green-600">
-                      Last saved: {lastSaved.toLocaleTimeString()}
-                    </span>
-                  )}
-                </div>
-              )}
-
+            <div className="flex items-center justify-end">
               <Button
                 size="sm"
                 color="primary"
@@ -548,6 +582,7 @@ function YamlEditor() {
                   lintGutter(),
                   customKeymap,
                   highlightSelectionMatches(),
+                  cursorPositionExtension,
                 ]}
                 onChange={handleEditorChange}
                 theme={isDark ? materialDark : githubLight}
@@ -561,27 +596,86 @@ function YamlEditor() {
                   searchKeymap: true,
                 }}
                 style={{ fontSize: `${fontSize}px` }}
+                ref={setEditorRef}
               />
             )}
-            <div className="absolute bottom-2 right-6 flex space-x-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={zoomOut}
-                aria-label="Zoom out"
-                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm h-7 w-7 min-w-0 p-0"
-              >
-                <ZoomOutIcon className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={zoomIn}
-                aria-label="Zoom in"
-                className="bg-black/10 dark:bg-black/80 backdrop-blur-sm h-7 w-7 min-w-0 p-0"
-              >
-                <ZoomInIcon className="w-4 h-4" />
-              </Button>
+
+            {/* Enhanced Status Bar - moved directly under editor */}
+            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex items-center gap-4">
+                <span className="font-mono">
+                  Line {cursorPosition.line}, Col {cursorPosition.column}
+                </span>
+                <span>{editorContent.split("\n").length} lines</span>
+                <span>{editorContent.length} characters</span>
+                {editorContent.length > 0 && (
+                  <span>
+                    {
+                      editorContent
+                        .split(/\s+/)
+                        .filter((word) => word.length > 0).length
+                    }{" "}
+                    words
+                  </span>
+                )}
+
+                {/* Zoom controls integrated into status bar */}
+                <div className="flex items-center gap-1 ml-2 border-l border-default-300 pl-3">
+                  <Button
+                    variant="light"
+                    size="sm"
+                    onPress={zoomOut}
+                    aria-label="Zoom out"
+                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
+                  >
+                    <ZoomOutIcon className="w-3 h-3" />
+                  </Button>
+                  <span className="text-default-400 text-xs font-mono">
+                    {fontSize}px
+                  </span>
+                  <Button
+                    variant="light"
+                    size="sm"
+                    onPress={zoomIn}
+                    aria-label="Zoom in"
+                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
+                  >
+                    <ZoomInIcon className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Autosave controls integrated into status bar */}
+                {fileId && (
+                  <label className="flex items-center gap-2 cursor-pointer text-default-600 hover:text-default-700">
+                    <input
+                      type="checkbox"
+                      checked={autosaveEnabled}
+                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
+                      className="w-3 h-3"
+                    />
+                    <span>Auto-save</span>
+                  </label>
+                )}
+                {hasUnsavedChanges ? (
+                  autosaveEnabled && fileId ? (
+                    <span className="text-amber-600 flex items-center gap-1">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                      <span>Auto-save pending</span>
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 flex items-center gap-1">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                      <span>Unsaved</span>
+                    </span>
+                  )
+                ) : lastSaved ? (
+                  <span className="text-green-600">
+                    Saved: {lastSaved.toLocaleTimeString()}
+                  </span>
+                ) : undefined}
+                <span className="text-default-400">YAML</span>
+              </div>
             </div>
           </div>
           {serverValidationErrors && (
@@ -592,16 +686,38 @@ function YamlEditor() {
               </h3>
               <ul className="list-disc pl-5 mt-2 space-y-1 max-h-60 overflow-y-auto">
                 {serverValidationErrors.map((error, index) => (
-                  <li key={index} className="text-red-600 dark:text-red-300">
-                    {error.message}
-                    {error.line && (
-                      <span className="font-mono"> at line {error.line}</span>
-                    )}
-                    {error.path && (
-                      <span className="font-mono text-red-500 dark:text-red-400">
-                        {" "}
-                        ({error.path})
-                      </span>
+                  <li
+                    key={index}
+                    className={`text-red-600 dark:text-red-300 ${
+                      error.line ? "" : "ml-6"
+                    }`}
+                  >
+                    {error.line ? (
+                      <button
+                        type="button"
+                        className="text-left underline decoration-dotted hover:text-red-800 dark:hover:text-red-100"
+                        onClick={() => jumpToError(error.line)}
+                        title={`Click to jump to line ${error.line}`}
+                      >
+                        {error.message}
+                        <span className="font-mono"> at line {error.line}</span>
+                        {error.path && (
+                          <span className="font-mono text-red-500 dark:text-red-400">
+                            {" "}
+                            ({error.path})
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <>
+                        {error.message}
+                        {error.path && (
+                          <span className="font-mono text-red-500 dark:text-red-400">
+                            {" "}
+                            ({error.path})
+                          </span>
+                        )}
+                      </>
                     )}
                   </li>
                 ))}
