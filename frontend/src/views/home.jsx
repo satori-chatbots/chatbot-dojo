@@ -372,7 +372,7 @@ function Home() {
     formData.append("project", selectedProject.id);
     uploadFiles(formData)
       .then(async () => {
-        reloadFiles(); // Refresh the file list
+        await reloadFiles(); // Refresh the file list
         await reloadProfiles(); // Update setup progress
         setSelectedUploadFiles(undefined);
         if (fileInputReference.current) {
