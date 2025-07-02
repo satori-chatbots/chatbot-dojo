@@ -30,8 +30,11 @@ import {
   checkChatbotConnectorName,
 } from "../api/chatbot-connector-api";
 import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
+import SetupProgress from "../components/setup-progress";
+import { useSetup } from "../contexts/setup-context";
 
 const ChatbotConnectors = () => {
+  const { reloadConnectors } = useSetup();
   const [editData, setEditData] = useState({
     name: "",
     technology: "",
@@ -174,6 +177,7 @@ const ChatbotConnectors = () => {
         link: "",
       });
       loadConnectors();
+      await reloadConnectors(); // Update setup progress
       // Close modal
       onOpenChange(false);
     } catch (error) {
@@ -221,6 +225,7 @@ const ChatbotConnectors = () => {
       await updateChatbotConnector(editData.id, data);
       setIsEditOpen(false);
       await loadConnectors();
+      await reloadConnectors(); // Update setup progress
     } catch (error) {
       alert(`Error updating chatbot connector: ${error.message}`);
     }
@@ -233,6 +238,7 @@ const ChatbotConnectors = () => {
     try {
       await deleteChatbotConnector(id);
       await loadConnectors();
+      await reloadConnectors(); // Update setup progress
     } catch (error) {
       alert(`Error deleting chatbot connector: ${error.message}`);
     }
@@ -286,6 +292,11 @@ const ChatbotConnectors = () => {
       <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
         Chatbot Connectors
       </h1>
+
+      {/* Setup Progress */}
+      <div className="w-full max-w-4xl">
+        <SetupProgress isCompact={true} />
+      </div>
 
       {/* Modal to create new connector */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>

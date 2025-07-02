@@ -38,6 +38,8 @@ import useSelectedProject from "../hooks/use-selected-projects";
 import CreateProjectModal from "../components/create-project-modal";
 import EditProjectModal from "../components/edit-project-modal";
 import ProjectsList from "../components/project-list";
+import SetupProgress from "../components/setup-progress";
+import { useSetup } from "../contexts/setup-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
@@ -48,6 +50,7 @@ const preventDefault = (event) => event.preventDefault();
 
 function Home() {
   const { showToast } = useMyCustomToast();
+  const { reloadProjects: reloadSetupProjects, reloadProfiles } = useSetup();
 
   // List of available chatbot connectors (eg Taskyto, Rasa, etc.)
   const [availableConnectors, setAvailableConnectors] = useState([]);
@@ -134,6 +137,7 @@ function Home() {
             statusIntervalReference.current = undefined;
             // Explicitly reload files when generation completes
             await reloadFiles();
+            await reloadProfiles(); // Update setup progress
             setIsGenerating(false);
             showToast(
               "success",
@@ -160,7 +164,7 @@ function Home() {
         }
       }, 3000); // Check every 3 seconds
     },
-    [reloadFiles, showToast],
+    [reloadFiles, reloadProfiles, showToast],
   );
 
   const handleGenerateProfiles = async () => {
@@ -255,6 +259,7 @@ function Home() {
 
   const handleProjectUpdated = async () => {
     await reloadProjects();
+    await reloadSetupProjects(); // Update setup progress
 
     // If the edited project is the currently selected project, fetch fresh data
     if (selectedProject && editProjectId === selectedProject.id) {
@@ -366,8 +371,9 @@ function Home() {
 
     formData.append("project", selectedProject.id);
     uploadFiles(formData)
-      .then(() => {
-        reloadFiles(); // Refresh the file list
+      .then(async () => {
+        await reloadFiles(); // Refresh the file list
+        await reloadProfiles(); // Update setup progress
         setSelectedUploadFiles(undefined);
         if (fileInputReference.current) {
           fileInputReference.current.value = undefined; // Clear the file input
@@ -407,6 +413,7 @@ function Home() {
       await deleteFiles(selectedFiles);
       setSelectedFiles([]);
       reloadFiles();
+      await reloadProfiles(); // Update setup progress
       showToast("success", "Files deleted successfully!");
     } catch (error) {
       console.error("Error deleting files:", error);
@@ -513,6 +520,7 @@ function Home() {
     try {
       await deleteProject(deleteProjectModal.projectId);
       await reloadProjects();
+      await reloadSetupProjects(); // Update setup progress
       setSelectedProject(undefined);
       showToast("success", "Project deleted successfully!");
     } catch (error) {
@@ -528,7 +536,12 @@ function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 w-full">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col items-center space-y-4 sm:space-y-6 w-full sm:max-w-4xl mx-auto my-auto">
+      {/* Setup Progress - always visible when not complete */}
+      <div className="w-full max-w-lg">
+        <SetupProgress isCompact={true} />
+      </div>
+
       {selectedProject ? (
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header */}
@@ -898,6 +911,7 @@ function Home() {
         connectors={availableConnectors}
         onProjectCreated={async (newProject) => {
           await reloadProjects();
+          await reloadSetupProjects(); // Update setup progress
           setSelectedProject(newProject);
         }}
       />

@@ -42,6 +42,7 @@ import { Eye, Search, Trash, XCircle } from "lucide-react";
 import { fetchPaginatedTestCases } from "../api/test-cases-api";
 import { getProviderDisplayName } from "../constants/providers";
 import { formatExecutionTime as sharedFormatExecutionTime } from "../utils/time-utils";
+import SetupProgress from "../components/setup-progress";
 
 const statusOptions = [
   { label: "All", value: "ALL" },
@@ -481,8 +482,15 @@ function Dashboard() {
         </h1>
       ) : (
         <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-          My Projects
+          Executions
         </h1>
+      )}
+
+      {/* Setup Progress - only show for authenticated users */}
+      {!publicView && (
+        <div className="w-full max-w-4xl">
+          <SetupProgress isCompact={true} />
+        </div>
       )}
 
       {/* Project Selector */}

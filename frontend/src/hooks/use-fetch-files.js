@@ -8,7 +8,7 @@ function useFetchFiles(project_id) {
 
   const loadFiles = useCallback(() => {
     setLoading(true);
-    fetchFiles(project_id)
+    return fetchFiles(project_id)
       .then((data) => {
         setFiles(data);
         setLoading(false);
@@ -16,6 +16,7 @@ function useFetchFiles(project_id) {
       .catch((error_) => {
         setError(error_);
         setLoading(false);
+        throw error_;
       });
   }, [project_id]);
 
@@ -24,7 +25,7 @@ function useFetchFiles(project_id) {
   }, [loadFiles]);
 
   const reloadFiles = useCallback(() => {
-    loadFiles();
+    return loadFiles();
   }, [loadFiles]);
 
   return { files, loading, error, reloadFiles };

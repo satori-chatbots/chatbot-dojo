@@ -9,8 +9,11 @@ import useSelectedProject from "../hooks/use-selected-projects";
 import ProjectsList from "../components/project-list";
 import { Plus } from "lucide-react";
 import { getProviderDisplayName } from "../constants/providers";
+import SetupProgress from "../components/setup-progress";
+import { useSetup } from "../contexts/setup-context";
 
 const ProjectsDashboard = () => {
+  const { reloadProjects: reloadSetupProjects } = useSetup();
   const [loading, setLoading] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -47,6 +50,7 @@ const ProjectsDashboard = () => {
     try {
       await deleteProject(projectId);
       await reloadProjects();
+      await reloadSetupProjects(); // Update setup progress
     } catch (error) {
       console.error("Error deleting project:", error);
       alert(`Error deleting project: ${error.message}`);
@@ -55,6 +59,7 @@ const ProjectsDashboard = () => {
 
   const handleProjectUpdated = async () => {
     await reloadProjects();
+    await reloadSetupProjects(); // Update setup progress
 
     // If the edited project is the currently selected project, fetch fresh data
     if (selectedProject && editProjectId === selectedProject.id) {
@@ -76,13 +81,17 @@ const ProjectsDashboard = () => {
         connectors={connectors}
         onProjectCreated={async (newProject) => {
           await reloadProjects();
+          await reloadSetupProjects(); // Update setup progress
           setSelectedProject(newProject);
         }}
       />
 
-      <h2 className="text-xl sm:text-2xl font-bold text-center">
-        My Projects:
-      </h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-center">Projects</h2>
+
+      {/* Setup Progress */}
+      <div className="w-full max-w-4xl">
+        <SetupProgress isCompact={true} />
+      </div>
 
       <div className="flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-2">

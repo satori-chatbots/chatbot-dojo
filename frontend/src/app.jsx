@@ -24,7 +24,9 @@ import { AuthProvider, useAuth } from "./contexts/auth-context";
 import PrivateRoute from "./components/private-route";
 import UserProfileView from "./views/user-profile-view";
 import { MyCustomToastProvider } from "./contexts/my-custom-toast-context";
+import { SetupProvider } from "./contexts/setup-context";
 import YamlEditor from "./views/yaml-editor-view";
+import SetupGuide from "./views/setup-guide";
 
 export const MoonIcon = (properties) => {
   return (
@@ -118,6 +120,13 @@ function AppContent() {
                 </Link>
               </NavbarItem>
             )}
+            {user && (
+              <NavbarItem isActive={location.pathname === "/setup"}>
+                <Link to="/setup" className="hover:underline">
+                  Setup Guide
+                </Link>
+              </NavbarItem>
+            )}
             <NavbarItem isActive={location.pathname === "/dashboard"}>
               <Link to="/dashboard" className="hover:underline">
                 Results
@@ -131,7 +140,7 @@ function AppContent() {
             {user && (
               <NavbarItem isActive={location.pathname === "/projects"}>
                 <Link to="/projects" className="hover:underline">
-                  My Projects
+                  Projects
                 </Link>
               </NavbarItem>
             )}
@@ -226,6 +235,15 @@ function AppContent() {
                 onClick={handleLinkClick}
               >
                 Test Center
+              </Link>
+            </NavbarMenuItem>
+            <NavbarMenuItem isActive={location.pathname === "/setup"}>
+              <Link
+                to="/setup"
+                className="hover:underline"
+                onClick={handleLinkClick}
+              >
+                Setup Guide
               </Link>
             </NavbarMenuItem>
             <NavbarMenuItem isActive={location.pathname === "/dashboard"}>
@@ -340,6 +358,14 @@ function AppContent() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/setup"
+              element={
+                <PrivateRoute>
+                  <SetupGuide />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </main>
 
@@ -355,9 +381,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <MyCustomToastProvider>
-        <AppContent />
-      </MyCustomToastProvider>
+      <SetupProvider>
+        <MyCustomToastProvider>
+          <AppContent />
+        </MyCustomToastProvider>
+      </SetupProvider>
     </AuthProvider>
   );
 }

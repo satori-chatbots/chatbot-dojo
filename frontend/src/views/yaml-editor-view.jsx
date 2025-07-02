@@ -23,6 +23,7 @@ import { materialDark } from "@uiw/codemirror-theme-material";
 import { tomorrow } from "thememirror";
 import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
+import { useSetup } from "../contexts/setup-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import {
   documentationSections,
@@ -80,6 +81,7 @@ function YamlEditor() {
   const isDark = theme === "dark";
   const navigate = useNavigate();
   const [selectedProject] = useSelectedProject();
+  const { reloadProfiles } = useSetup();
   const { showToast } = useMyCustomToast();
   const [serverValidationErrors, setServerValidationErrors] = useState();
 
@@ -171,6 +173,7 @@ function YamlEditor() {
         const response = await updateFile(fileId, editorContent, {
           ignoreValidationErrors: hasValidationErrors || forceSave,
         });
+        await reloadProfiles(); // Update setup progress
         const successMessage =
           hasValidationErrors || forceSave
             ? "File saved with validation errors"
@@ -192,6 +195,7 @@ function YamlEditor() {
           response.uploaded_file_ids.length > 0
         ) {
           const newFileId = response.uploaded_file_ids[0];
+          await reloadProfiles(); // Update setup progress
           const successMessage =
             hasValidationErrors || forceSave
               ? "File created with validation errors"
