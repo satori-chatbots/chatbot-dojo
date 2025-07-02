@@ -2,6 +2,54 @@ import React from "react";
 import { Button, Chip } from "@heroui/react";
 import { CheckCircle, ArrowRight } from "lucide-react";
 
+const stepSummaryConfig = {
+  "api-key": {
+    data: (setupData) => setupData.apiKeys,
+    noun: "API key",
+    verb: "configured",
+  },
+  connector: {
+    data: (setupData) => setupData.connectors,
+    noun: "connector",
+    verb: "created",
+  },
+  project: {
+    data: (setupData) => setupData.projects,
+    noun: "project",
+    verb: "created",
+  },
+  profiles: {
+    data: (setupData) =>
+      setupData.profiles.filter((file) => file.is_valid !== false),
+    noun: "profile",
+    verb: "created",
+  },
+};
+
+const renderStepSummary = (stepId, setupData) => {
+  const config = stepSummaryConfig[stepId];
+  if (!config) {
+    // eslint-disable-next-line unicorn/no-null
+    return null;
+  }
+
+  const items = config.data(setupData);
+  const count = items.length;
+
+  if (count > 0) {
+    return (
+      <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
+        <CheckCircle className="w-3 h-3" />
+        {count} {config.noun}
+        {count > 1 ? "s" : ""} {config.verb}
+      </p>
+    );
+  }
+
+  // eslint-disable-next-line unicorn/no-null
+  return null;
+};
+
 const StepItem = ({ step, index, isActive, setupData }) => {
   const StepIcon = step.icon;
   return (
@@ -61,43 +109,7 @@ const StepItem = ({ step, index, isActive, setupData }) => {
             )}
           </div>
           <p className="text-xs text-foreground-500 mt-1">{step.description}</p>
-
-          {step.id === "api-key" && setupData.apiKeys.length > 0 && (
-            <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              {setupData.apiKeys.length} API key
-              {setupData.apiKeys.length > 1 ? "s" : ""} configured
-            </p>
-          )}
-          {step.id === "connector" && setupData.connectors.length > 0 && (
-            <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              {setupData.connectors.length} connector
-              {setupData.connectors.length > 1 ? "s" : ""} created
-            </p>
-          )}
-          {step.id === "project" && setupData.projects.length > 0 && (
-            <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              {setupData.projects.length} project
-              {setupData.projects.length > 1 ? "s" : ""} created
-            </p>
-          )}
-          {step.id === "profiles" &&
-            (() => {
-              const validProfiles = setupData.profiles.filter(
-                (file) => file.is_valid !== false,
-              );
-              if (validProfiles.length > 0) {
-                return (
-                  <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    {validProfiles.length} profile
-                    {validProfiles.length > 1 ? "s" : ""} created
-                  </p>
-                );
-              }
-            })()}
+          {renderStepSummary(step.id, setupData)}
         </div>
       </div>
 
