@@ -103,25 +103,20 @@ const StepList = ({ setupSteps, progressPercentage, nextStep, setupData }) => {
                     </p>
                   )}
                   {step.id === "profiles" &&
-                    setupData.profiles.some(
-                      (file) => file.is_valid !== false,
-                    ) && (
-                      <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        {
-                          setupData.profiles.filter(
-                            (file) => file.is_valid !== false,
-                          ).length
-                        }{" "}
-                        profile
-                        {setupData.profiles.filter(
-                          (file) => file.is_valid !== false,
-                        ).length > 1
-                          ? "s"
-                          : ""}{" "}
-                        created
-                      </p>
-                    )}
+                    (() => {
+                      const validProfiles = setupData.profiles.filter(
+                        (file) => file.is_valid !== false,
+                      );
+                      if (validProfiles.length > 0) {
+                        return (
+                          <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            {validProfiles.length} profile
+                            {validProfiles.length > 1 ? "s" : ""} created
+                          </p>
+                        );
+                      }
+                    })()}
                 </div>
               </div>
 
