@@ -185,10 +185,10 @@ class ExecuteSelectedAPIView(APIView):
 
 @api_view(["POST"])
 def generate_profiles(request: Request) -> Response:
-    """Generate user profiles based on conversations and turns."""
+    """Generate user profiles using TRACER with sessions and turns per session."""
     project_id = request.data.get("project_id")
-    conversations = request.data.get("conversations", 1)
-    turns = request.data.get("turns", 10)
+    sessions = request.data.get("sessions", 3)  # Default to 3 sessions
+    turns_per_session = request.data.get("turns_per_session", 8)  # Default to 8 turns per session
 
     if not project_id:
         return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
@@ -200,14 +200,26 @@ def generate_profiles(request: Request) -> Response:
     except Project.DoesNotExist:
         return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
 
+    # Validate project configuration
+    if not project.chatbot_connector:
+        return Response(
+            {"error": "Project must have a chatbot connector configured."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not project.llm_model:
+        return Response({"error": "Project must have an LLM model configured."}, status=status.HTTP_400_BAD_REQUEST)
+
     task = ProfileGenerationTask.objects.create(
-        project=project, status="PENDING", conversations=conversations, turns=turns
+        project=project,
+        status="PENDING",
+        conversations=sessions,  # Store sessions in conversations field for compatibility
+        turns=turns_per_session,
     )
 
     profile_generator = ProfileGenerator()
     threading.Thread(
         target=profile_generator.run_async_profile_generation,
-        args=(task.id, project.chatbot_connector.technology, conversations, turns, request.user.id),
+        args=(task.id, project.chatbot_connector.technology, sessions, turns_per_session, request.user.id),
     ).start()
 
     return Response(

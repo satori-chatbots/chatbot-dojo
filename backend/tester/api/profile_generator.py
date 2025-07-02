@@ -1,14 +1,28 @@
 """Profile generation functionality."""
 
-import time
+import json
+import re
+import shlex
+import shutil
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+from django.conf import settings
+
 from tester.api.base import logger
-from tester.models import ProfileGenerationTask
+from tester.models import (
+    OriginalTracerProfile,
+    ProfileExecution,
+    ProfileGenerationTask,
+    TestFile,
+    TracerAnalysisResult,
+)
 
 
 class ProfileGenerator:
-    """Handles user profile generation tasks."""
+    """Handles user profile generation tasks with real TRACER integration."""
 
     def run_async_profile_generation(
         self,
@@ -18,67 +32,320 @@ class ProfileGenerator:
         turns: int,
         _user_id: Any,  # noqa: ANN401
     ) -> None:
-        """Run profile generation asynchronously in a background thread."""
+        """Run profile generation asynchronously using real TRACER."""
         task = None
+        execution = None
         try:
             task = ProfileGenerationTask.objects.get(id=task_id)
             task.status = "RUNNING"
-            task.stage = "Initializing"
+            task.stage = "INITIALIZING"
             task.save()
 
-            logger.info(f"Starting profile generation for task {task_id}")
-            logger.info(f"Technology: {technology}, Conversations: {conversations}, Turns: {turns}")
+            logger.info(f"Starting TRACER profile generation for task {task_id}")
+            logger.info(f"Technology: {technology}, Sessions: {conversations}, Turns: {turns}")
+
+            # Create execution record
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+            execution_name = f"TRACER_{timestamp}"
+
+            execution = ProfileExecution.objects.create(
+                project=task.project,
+                execution_name=execution_name,
+                execution_type="tracer",
+                sessions=conversations,
+                turns_per_session=turns,
+                status="RUNNING",
+                profiles_directory=f"project_data/{task.project.id}/executions/{execution_name.lower()}",
+            )
+
+            # Link task to execution
+            task.execution = execution
+            task.save()
 
             # Update progress
             task.progress_percentage = 10
-            task.stage = "Setting up environment"
+            task.stage = "GENERATING_CONVERSATIONS"
             task.save()
 
-            # Detailed implementation would go here
-            # This is a complex process for generating user profiles
-            # For now, this is a placeholder that simulates the process
+            # Run TRACER generation
+            success = self.run_tracer_generation(task, execution, technology, conversations, turns)
 
-            # Simulate different stages of profile generation
-            stages = [
-                ("Analyzing conversation patterns", 20),
-                ("Generating user personas", 40),
-                ("Creating profile templates", 60),
-                ("Validating profiles", 80),
-                ("Finalizing generation", 100),
-            ]
+            if success:
+                task.status = "COMPLETED"
+                task.progress_percentage = 100
+                task.stage = "COMPLETED"
+                execution.status = "COMPLETED"
+                logger.info(f"TRACER profile generation completed for task {task_id}")
+            else:
+                task.status = "ERROR"
+                task.error_message = "TRACER execution failed"
+                execution.status = "ERROR"
+                logger.error(f"TRACER profile generation failed for task {task_id}")
 
-            for stage_name, progress in stages:
-                task.stage = stage_name
-                task.progress_percentage = progress
-                task.save()
-
-                # Simulate processing time
-                time.sleep(2)
-
-                # Check if task was cancelled
-                task.refresh_from_db()
-                if task.status == "CANCELLED":
-                    logger.info(f"Profile generation task {task_id} was cancelled")
-                    return
-
-            task.status = "COMPLETED"
-            task.progress_percentage = 100
-            task.stage = "Completed"
             task.save()
+            execution.save()
 
-            logger.info(f"Profile generation completed for task {task_id}")
-
-        # Here it is helpful to catch everything
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Error in profile generation for task {task_id}: {e!s}")
+            logger.error(f"Error in TRACER profile generation for task {task_id}: {e!s}")
             if task:
                 try:
-                    task.status = "FAILED"
+                    task.status = "ERROR"
                     task.error_message = str(e)
                     task.save()
-                # Here too
                 except Exception as update_exc:  # noqa: BLE001
                     logger.critical(
-                        f"Failed to update task {task_id} to FAILED status after an error. "
+                        f"Failed to update task {task_id} to ERROR status after an error. "
                         f"Initial error: {e!s}. Update error: {update_exc!s}"
                     )
+            if execution:
+                try:
+                    execution.status = "ERROR"
+                    execution.save()
+                except Exception:  # noqa: BLE001
+                    logger.critical(f"Failed to update execution {execution.id} to ERROR status")
+
+    def run_tracer_generation(
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        technology: str,
+        sessions: int,
+        turns_per_session: int,
+    ) -> bool:
+        """Execute TRACER command and process results with dual storage."""
+        try:
+            # Validate project configuration
+            project = task.project
+            if not project.chatbot_connector:
+                error_message = "Project must have a chatbot connector configured"
+                raise ValueError(error_message)
+
+            if not project.llm_model:
+                error_message = "Project must have an LLM model configured"
+                raise ValueError(error_message)
+
+            # Set up output directory
+            output_dir = Path(settings.MEDIA_ROOT) / execution.profiles_directory
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Update progress
+            task.progress_percentage = 20
+            task.stage = "CREATING_PROFILES"
+            task.save()
+
+            # Get project configuration
+            chatbot_url = project.chatbot_connector.link if project.chatbot_connector else "http://localhost:5000"
+            model = project.llm_model or "gpt-4o-mini"
+
+            # Build TRACER command
+            cmd = [
+                "tracer",
+                "-s",
+                str(sessions),
+                "-n",
+                str(turns_per_session),
+                "-t",
+                technology,
+                "-u",
+                chatbot_url,
+                "-m",
+                model,
+                "-o",
+                str(output_dir),
+            ]
+
+            logger.info(f"Executing TRACER command: {shlex.join(cmd)}")
+
+            # Execute TRACER
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)  # noqa: S603
+
+            if result.returncode != 0:
+                logger.error(f"TRACER execution failed: {result.stderr}")
+                task.error_message = f"TRACER failed: {result.stderr}"
+                task.save()
+                return False
+
+            # Success path
+            logger.info(f"TRACER execution successful for task {task.id}")
+
+            # Update progress
+            task.progress_percentage = 80
+            task.stage = "SAVING_FILES"
+            task.save()
+
+            # Process results with dual storage
+            self.process_tracer_results_dual_storage(execution, output_dir)
+
+            # Calculate execution time
+            execution_time = (datetime.now(UTC) - execution.created_at).seconds // 60
+            execution.execution_time_minutes = execution_time
+            execution.save()
+
+            return True
+
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error(f"TRACER execution error: {e!s}")
+            task.error_message = f"TRACER execution error: {e!s}"
+            task.save()
+            return False
+
+        else:
+            return True
+
+    def process_tracer_results_dual_storage(self, execution: ProfileExecution, output_dir: Path) -> None:
+        """Process TRACER results with dual storage: editable + read-only originals."""
+        # Create directory structure
+        profiles_dir = output_dir / "profiles"
+        originals_dir = output_dir / "originals"
+        analysis_dir = output_dir / "analysis"
+
+        originals_dir.mkdir(exist_ok=True)
+        analysis_dir.mkdir(exist_ok=True)
+
+        # Create editable profiles directory for TestFiles
+        project = execution.project
+        user_id = project.owner.id
+        project_id = project.id
+        editable_profiles_dir = (
+            Path(settings.MEDIA_ROOT) / "projects" / f"user_{user_id}" / f"project_{project_id}" / "profiles"
+        )
+        editable_profiles_dir.mkdir(parents=True, exist_ok=True)
+
+        profile_count = 0
+
+        # Process each generated profile
+        if profiles_dir.exists():
+            for yaml_file in profiles_dir.glob("*.yaml"):
+                # Read original content
+                with yaml_file.open("r", encoding="utf-8") as f:
+                    original_content = f.read()
+
+                # Store read-only original for TRACER dashboard
+                OriginalTracerProfile.objects.create(
+                    execution=execution, original_filename=yaml_file.name, original_content=original_content
+                )
+
+                # Copy original to originals directory
+                shutil.copy(yaml_file, originals_dir / yaml_file.name)
+
+                # Create editable copy for TestFile
+                editable_file_path = editable_profiles_dir / yaml_file.name
+                shutil.copy(yaml_file, editable_file_path)
+
+                # Create TestFile with proper file reference
+                relative_path = f"projects/user_{user_id}/project_{project_id}/profiles/{yaml_file.name}"
+                test_file = TestFile(project=project, execution=execution)
+                test_file.file.name = relative_path
+                test_file.save()
+
+                profile_count += 1
+
+        # Update execution with profile count
+        execution.generated_profiles_count = profile_count
+        execution.save()
+
+        # Move analysis files if they exist
+        report_path = output_dir / "report.md"
+        graph_path = output_dir / "workflow_graph.svg"
+
+        final_report_path = None
+        final_graph_path = None
+
+        # Parse report metadata before moving
+        report_metadata = self._parse_report_metadata(report_path) if report_path.exists() else {}
+
+        if report_path.exists():
+            final_report_path = analysis_dir / "report.md"
+            shutil.move(report_path, final_report_path)
+
+        if graph_path.exists():
+            final_graph_path = analysis_dir / "workflow_graph.svg"
+            shutil.move(graph_path, final_graph_path)
+
+        # Create analysis result record
+        TracerAnalysisResult.objects.create(
+            execution=execution,
+            report_file_path=str(final_report_path) if final_report_path else "",
+            workflow_graph_path=str(final_graph_path) if final_graph_path else "",
+            total_interactions=report_metadata.get("total_interactions", 0),
+            unique_paths_discovered=report_metadata.get("unique_paths", 0),
+        )
+
+        logger.info(f"Processed {profile_count} profiles for execution {execution.execution_name}")
+
+    def _parse_report_metadata(self, report_path: Path) -> dict[str, int]:
+        """Parse TRACER report files to extract metadata."""
+        metadata = {"total_interactions": 0, "unique_paths": 0}
+
+        try:
+            # First try to parse functionalities.json if it exists (structured data)
+            json_path = report_path.parent / "functionalities.json"
+            if json_path.exists():
+                metadata.update(self._parse_functionalities_json(json_path))
+
+            # Parse the markdown report for performance statistics
+            with report_path.open("r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Look for "X functionalities discovered" pattern
+            lines = content.split("\n")
+            for raw_line in lines:
+                line = raw_line.strip()
+
+                # Search for pattern like: "**2 functionalities** discovered across **2 categories**"
+                if "functionalities** discovered" in line:
+                    try:
+                        # Extract the number before "functionalities"
+                        match = re.search(r"\*\*(\d+)\s+functionalities\*\*", line)
+                        if match:
+                            metadata["unique_paths"] = int(match.group(1))
+                    except (ValueError, AttributeError):
+                        pass
+
+                # Look for Performance Statistics table values
+                if "Total LLM Calls" in line and "|" in line:
+                    try:
+                        # Format: | Total LLM Calls | 42 |
+                        parts = [part.strip() for part in line.split("|")]
+                        min_markdown_table_columns = 3
+                        if len(parts) >= min_markdown_table_columns and parts[2].isdigit():
+                            metadata["total_interactions"] = int(parts[2])
+                    except (ValueError, IndexError):
+                        pass
+
+            logger.info(f"Parsed TRACER report metadata: {metadata}")
+
+        except (OSError, ValueError) as e:
+            logger.warning(f"Could not parse TRACER report metadata: {e!s}")
+
+        return metadata
+
+    def _parse_functionalities_json(self, json_path: Path) -> dict[str, int]:
+        """Parse functionalities.json for structured metadata."""
+        metadata = {}
+        try:
+            with json_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Extract relevant metrics from JSON structure
+            if (
+                isinstance(data, dict)
+                and "functionalities" in data
+                and isinstance(data["functionalities"], (list, dict))
+            ):
+                metadata["unique_paths"] = len(data["functionalities"])
+
+            # Look for interaction/call counts
+            if "statistics" in data and isinstance(data.get("statistics"), dict):
+                stats = data["statistics"]
+                if "total_calls" in stats:
+                    metadata["total_interactions"] = stats["total_calls"]
+                elif "total_llm_calls" in stats:
+                    metadata["total_interactions"] = stats["total_llm_calls"]
+
+            logger.info(f"Parsed functionalities.json: {metadata}")
+
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f"Could not parse functionalities.json: {e!s}")
+
+        return metadata

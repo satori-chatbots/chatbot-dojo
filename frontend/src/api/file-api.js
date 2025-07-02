@@ -154,8 +154,8 @@ export const generateProfiles = async (projectId, parameters = {}) => {
       },
       body: JSON.stringify({
         project_id: projectId,
-        conversations: parameters.conversations || 5,
-        turns: parameters.turns || 5,
+        sessions: parameters.sessions || 3,
+        turns_per_session: parameters.turns_per_session || 8,
       }),
     });
     return await response.json();
