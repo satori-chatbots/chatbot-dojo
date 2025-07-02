@@ -1,34 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardBody,
-  Button,
-  Progress,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Chip,
-  Divider,
-  Tooltip,
-} from "@heroui/react";
-import {
-  CheckCircle,
-  ChevronDown,
-  ArrowRight,
-  Key,
-  Bot,
-  FolderPlus,
-  Users,
-  Sparkles,
-  EyeOff,
-  Settings,
-  Zap,
-  X,
-} from "lucide-react";
+import { Card, CardBody, Divider } from "@heroui/react";
+import { Key, Bot, FolderPlus, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSetup } from "../contexts/setup-context";
 import { useAuth } from "../contexts/auth-context";
+import ProgressHeader from "./setup-progress/progress-header";
+import StepList from "./setup-progress/step-list";
+import CelebrationBanner from "./setup-progress/celebration-banner";
 
 const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   const navigate = useNavigate();
@@ -158,44 +136,10 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   // Celebration state for completed setup
   if (isSetupComplete && !forceShow && !isDismissed) {
     return (
-      <Card className="w-full bg-gradient-to-r from-success-50 to-primary-50 border-success-200">
-        <CardBody className="py-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 text-success animate-bounce" />
-              <div>
-                <span className="text-sm font-semibold text-success-700">
-                  🎉 Setup Complete!
-                </span>
-                <p className="text-xs text-success-600">
-                  {"You're all set to start testing your chatbot"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                color="success"
-                variant="solid"
-                startContent={<Sparkles className="w-4 h-4" />}
-                onPress={() => navigate("/")}
-              >
-                Start Testing
-              </Button>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                color="success"
-                onPress={handleDismiss}
-                aria-label="Close celebration banner"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+      <CelebrationBanner
+        onDismiss={handleDismiss}
+        onNavigate={() => navigate("/")}
+      />
     );
   }
 
@@ -204,357 +148,22 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
       <Card className="w-full relative">
         <CardBody className="py-4">
           <div className="space-y-4">
-            {/* Improved Header - Better mobile layout */}
-            <div className="flex items-center justify-between gap-2">
-              {/* Left side - Title and progress info */}
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold truncate text-foreground">
-                  Setup Progress
-                </h3>
-                <Chip
-                  size="sm"
-                  color={isSetupComplete ? "success" : "primary"}
-                  variant="flat"
-                  className="hidden xs:flex"
-                >
-                  {completedRequiredSteps}/{requiredSteps}
-                </Chip>
-              </div>
-
-              {/* Right side - Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {/* Continue button - only show when collapsed and there's a next step */}
-                {nextStep && !isExpanded && (
-                  <Tooltip content={nextStep.description} placement="top">
-                    <Button
-                      size="sm"
-                      color="primary"
-                      variant="solid"
-                      onPress={nextStep.action}
-                      className="hidden sm:flex"
-                      startContent={<ArrowRight className="w-3 h-3" />}
-                    >
-                      Continue
-                    </Button>
-                  </Tooltip>
-                )}
-
-                {/* Mobile continue button - simpler for small screens, no tooltip */}
-                {nextStep && !isExpanded && (
-                  <Button
-                    size="sm"
-                    color="primary"
-                    variant="solid"
-                    onPress={nextStep.action}
-                    className="sm:hidden"
-                    isIconOnly
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                )}
-
-                {/* Settings dropdown */}
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button isIconOnly size="sm" variant="light">
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Setup options">
-                    <DropdownItem
-                      key="setup-guide"
-                      startContent={<Sparkles className="w-4 h-4" />}
-                      onPress={() => navigate("/setup")}
-                    >
-                      Setup Guide
-                    </DropdownItem>
-                    <DropdownItem
-                      key="hide-progress"
-                      startContent={<EyeOff className="w-4 h-4" />}
-                      onPress={handleDismiss}
-                      className="text-warning"
-                    >
-                      Hide Progress
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-
-                {/* Expand/collapse button */}
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={() => setIsExpanded(!isExpanded)}
-                >
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                  />
-                </Button>
-              </div>
-            </div>
-
-            {/* Progress Bar with better info layout */}
-            <div className="space-y-2">
-              <Progress
-                value={progressPercentage}
-                color={isSetupComplete ? "success" : "primary"}
-                size="sm"
-                className="transition-all duration-300"
-              />
-              <div className="flex justify-between items-center text-xs text-foreground-500">
-                <span>
-                  {completedRequiredSteps}/{requiredSteps} steps completed
-                </span>
-                {/* Show next step hint when collapsed - desktop only */}
-                {nextStep && !isExpanded && (
-                  <span className="text-primary font-medium text-xs hidden sm:block">
-                    Next: {nextStep.title}
-                  </span>
-                )}
-                {/* Mobile next step - simpler */}
-                {nextStep && !isExpanded && (
-                  <span className="text-primary font-medium text-xs sm:hidden truncate max-w-[120px]">
-                    Next: {nextStep.title}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Expanded Content */}
+            <ProgressHeader
+              isExpanded={isExpanded}
+              isSetupComplete={isSetupComplete}
+              completedRequiredSteps={completedRequiredSteps}
+              requiredSteps={requiredSteps}
+              nextStep={nextStep}
+              onToggleExpand={() => setIsExpanded(!isExpanded)}
+              onDismiss={handleDismiss}
+            />
             {isExpanded && (
               <>
-                <Divider />
-
-                {/* Steps List with improved design */}
-                <div className="space-y-3">
-                  {setupSteps.map((step, index) => {
-                    const StepIcon = step.icon;
-                    const isActive =
-                      !step.completed && !step.optional && step === nextStep;
-
-                    return (
-                      <div
-                        key={step.id}
-                        className={`group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
-                          step.completed
-                            ? "bg-success-50 border-success-200 hover:bg-success-100"
-                            : isActive
-                              ? "bg-primary-50 border-primary-200 hover:bg-primary-100 ring-2 ring-primary-200"
-                              : "bg-default-50 border-default-200 hover:bg-default-100"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {/* Step number indicator */}
-                          <div className="flex-shrink-0 relative">
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                step.completed
-                                  ? "bg-success text-white"
-                                  : isActive
-                                    ? "bg-primary text-white"
-                                    : "bg-default-300 text-default-600"
-                              }`}
-                            >
-                              {step.completed ? "✓" : index + 1}
-                            </div>
-                          </div>
-
-                          <div className="flex-shrink-0">
-                            <StepIcon
-                              className={`w-5 h-5 transition-colors ${
-                                step.completed
-                                  ? "text-success"
-                                  : isActive
-                                    ? "text-primary"
-                                    : "text-default-400"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4
-                                className={`text-sm font-medium ${
-                                  step.completed
-                                    ? "text-success-700"
-                                    : isActive
-                                      ? "text-primary-700"
-                                      : "text-foreground"
-                                }`}
-                              >
-                                {step.title}
-                              </h4>
-                              {step.optional && (
-                                <Chip
-                                  size="sm"
-                                  variant="bordered"
-                                  color="default"
-                                >
-                                  Optional
-                                </Chip>
-                              )}
-                            </div>
-                            <p className="text-xs text-foreground-500 mt-1">
-                              {step.description}
-                            </p>
-
-                            {/* Enhanced Status info */}
-                            {step.id === "api-key" &&
-                              setupData.apiKeys.length > 0 && (
-                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {setupData.apiKeys.length} API key
-                                  {setupData.apiKeys.length > 1 ? "s" : ""}{" "}
-                                  configured
-                                </p>
-                              )}
-                            {step.id === "connector" &&
-                              setupData.connectors.length > 0 && (
-                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {setupData.connectors.length} connector
-                                  {setupData.connectors.length > 1
-                                    ? "s"
-                                    : ""}{" "}
-                                  created
-                                </p>
-                              )}
-                            {step.id === "project" &&
-                              setupData.projects.length > 0 && (
-                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {setupData.projects.length} project
-                                  {setupData.projects.length > 1
-                                    ? "s"
-                                    : ""}{" "}
-                                  created
-                                </p>
-                              )}
-                            {step.id === "profiles" &&
-                              setupData.profiles.some(
-                                (file) => file.is_valid !== false,
-                              ) && (
-                                <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {
-                                    setupData.profiles.filter(
-                                      (file) => file.is_valid !== false,
-                                    ).length
-                                  }{" "}
-                                  profile
-                                  {setupData.profiles.filter(
-                                    (file) => file.is_valid !== false,
-                                  ).length > 1
-                                    ? "s"
-                                    : ""}{" "}
-                                  created
-                                </p>
-                              )}
-                          </div>
-                        </div>
-
-                        {!step.completed && (
-                          <div className="flex justify-end sm:justify-start mt-2 sm:mt-0">
-                            <Button
-                              size="sm"
-                              color={isActive ? "primary" : "default"}
-                              variant={isActive ? "solid" : "bordered"}
-                              onPress={step.action}
-                              endContent={<ArrowRight className="w-3 h-3" />}
-                              className="transition-all duration-200 group-hover:shadow-sm"
-                            >
-                              {step.actionText}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Enhanced Next Step Suggestion */}
-                {nextStep && (
-                  <>
-                    <Divider />
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg border border-primary-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Zap className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-primary-700">
-                            Next: {nextStep.title}
-                          </h4>
-                          <p className="text-xs text-primary-600">
-                            {nextStep.description}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        color="primary"
-                        onPress={nextStep.action}
-                        endContent={<ArrowRight className="w-3 h-3" />}
-                        className="font-medium"
-                      >
-                        Continue Setup
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                {/* Quick Actions Dropdown - Enhanced */}
-                <div className="flex justify-center">
-                  <Dropdown>
-                    <DropdownTrigger>
-                      <Button
-                        size="sm"
-                        variant="bordered"
-                        endContent={<ChevronDown className="w-3 h-3" />}
-                      >
-                        Quick Actions
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownMenu aria-label="Quick setup actions">
-                      <DropdownItem
-                        key="setup-guide"
-                        startContent={<Sparkles className="w-4 h-4" />}
-                        onPress={() => navigate("/setup")}
-                        className="text-primary"
-                      >
-                        View Full Setup Guide
-                      </DropdownItem>
-                      <DropdownItem
-                        key="profile"
-                        startContent={<Key className="w-4 h-4" />}
-                        onPress={() => navigate("/profile")}
-                      >
-                        Manage API Keys
-                      </DropdownItem>
-                      <DropdownItem
-                        key="connectors"
-                        startContent={<Bot className="w-4 h-4" />}
-                        onPress={() => navigate("/chatbot-connectors")}
-                      >
-                        Chatbot Connectors
-                      </DropdownItem>
-                      <DropdownItem
-                        key="projects"
-                        startContent={<FolderPlus className="w-4 h-4" />}
-                        onPress={() => navigate("/projects")}
-                      >
-                        My Projects
-                      </DropdownItem>
-                      <DropdownItem
-                        key="home"
-                        startContent={<Users className="w-4 h-4" />}
-                        onPress={() => navigate("/")}
-                      >
-                        Test Center
-                      </DropdownItem>
-                    </DropdownMenu>
-                  </Dropdown>
-                </div>
+                <Divider className="my-3" />
+                <StepList
+                  setupSteps={setupSteps}
+                  progressPercentage={progressPercentage}
+                />
               </>
             )}
           </div>
