@@ -82,7 +82,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
       description: "Add user profiles manually or with TRACER",
       icon: Users,
       optional: false,
-      completed: setupData.profiles.length > 0,
+      completed: setupData.profiles.some((file) => file.is_valid !== false),
       action: () => navigate("/"),
       actionText: "Create Profiles",
     },
@@ -417,11 +417,20 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                                 </p>
                               )}
                             {step.id === "profiles" &&
-                              setupData.profiles.length > 0 && (
+                              setupData.profiles.some(
+                                (file) => file.is_valid !== false,
+                              ) && (
                                 <p className="text-xs text-success-600 mt-1 flex items-center gap-1">
                                   <CheckCircle className="w-3 h-3" />
-                                  {setupData.profiles.length} profile
-                                  {setupData.profiles.length > 1
+                                  {
+                                    setupData.profiles.filter(
+                                      (file) => file.is_valid !== false,
+                                    ).length
+                                  }{" "}
+                                  profile
+                                  {setupData.profiles.filter(
+                                    (file) => file.is_valid !== false,
+                                  ).length > 1
                                     ? "s"
                                     : ""}{" "}
                                   created
