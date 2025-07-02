@@ -13,12 +13,25 @@ const SetupGuide = () => {
   // Check if setup progress is hidden
   React.useEffect(() => {
     const dismissedKey = `sensei_setup_dismissed_${user ? user.id : "guest"}`;
-    try {
-      const dismissed = localStorage.getItem(dismissedKey) === "true";
-      setIsProgressHidden(dismissed);
-    } catch (error) {
-      console.error("Error checking setup progress status:", error);
-    }
+    const updateProgressHiddenStatus = () => {
+      try {
+        const dismissed = localStorage.getItem(dismissedKey) === "true";
+        setIsProgressHidden(dismissed);
+      } catch (error) {
+        console.error("Error checking setup progress status:", error);
+      }
+    };
+    updateProgressHiddenStatus();
+    globalThis.addEventListener(
+      "sensei:setupDismissedChange",
+      updateProgressHiddenStatus,
+    );
+    return () => {
+      globalThis.removeEventListener(
+        "sensei:setupDismissedChange",
+        updateProgressHiddenStatus,
+      );
+    };
   }, [user]);
 
   // Function to show setup progress again
@@ -26,12 +39,10 @@ const SetupGuide = () => {
     const dismissedKey = `sensei_setup_dismissed_${user ? user.id : "guest"}`;
     try {
       localStorage.setItem(dismissedKey, "false");
+      globalThis.dispatchEvent(new Event("sensei:setupDismissedChange"));
     } catch {
       /* ignore */
     }
-    setIsProgressHidden(false);
-    // Force a page refresh to show the setup progress
-    globalThis.location.reload();
   };
 
   return (

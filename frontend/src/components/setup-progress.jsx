@@ -100,22 +100,35 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
 
   // Load user preferences from localStorage
   useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem(dismissedKey) === "true";
-      setIsDismissed(dismissed);
-    } catch (error) {
-      console.error("Error loading setup dismissal status:", error);
-    }
+    const updateDismissalStatus = () => {
+      try {
+        const dismissed = localStorage.getItem(dismissedKey) === "true";
+        setIsDismissed(dismissed);
+      } catch (error) {
+        console.error("Error loading setup dismissal status:", error);
+      }
+    };
+    updateDismissalStatus();
+    globalThis.addEventListener(
+      "sensei:setupDismissedChange",
+      updateDismissalStatus,
+    );
+    return () => {
+      globalThis.removeEventListener(
+        "sensei:setupDismissedChange",
+        updateDismissalStatus,
+      );
+    };
   }, [dismissedKey]);
 
   // Handle dismissal
   const handleDismiss = () => {
     try {
       localStorage.setItem(dismissedKey, "true");
+      globalThis.dispatchEvent(new Event("sensei:setupDismissedChange"));
     } catch {
       /* ignore */
     }
-    setIsDismissed(true);
   };
 
   // Determine if component should be visible
