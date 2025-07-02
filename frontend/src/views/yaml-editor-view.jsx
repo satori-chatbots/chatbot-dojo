@@ -106,8 +106,20 @@ function YamlEditor() {
   const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
 
   // Autosave and data protection state
-  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
+  const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
+    const saved = localStorage.getItem("yamlEditorAutosaveEnabled");
+    // Default to true if no setting is saved
+    return saved === null ? true : JSON.parse(saved);
+  });
   const [lastSaved, setLastSaved] = useState();
+
+  // Persist autosave setting
+  useEffect(() => {
+    localStorage.setItem(
+      "yamlEditorAutosaveEnabled",
+      JSON.stringify(autosaveEnabled),
+    );
+  }, [autosaveEnabled]);
 
   // Enhanced status bar state
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
