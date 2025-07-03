@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Terminal,
 } from "lucide-react";
 
 const TracerExecutionCard = ({
@@ -18,6 +19,7 @@ const TracerExecutionCard = ({
   onViewReport,
   onViewGraph,
   onViewProfiles,
+  onViewLogs,
   onDelete,
   getStatusIcon,
   getStatusColor,
@@ -197,6 +199,20 @@ const TracerExecutionCard = ({
                   <Users className="w-4 h-4" />
                 </Button>
               </Tooltip>
+
+              {execution.has_logs && onViewLogs && (
+                <Tooltip content="View Execution Logs">
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    color={execution.has_error ? "danger" : "default"}
+                    onPress={() => onViewLogs(execution)}
+                  >
+                    <Terminal className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+              )}
             </div>
 
             {/* Expand/More Menu */}
@@ -370,6 +386,18 @@ const TracerExecutionCard = ({
                     onPress={() => onViewProfiles(execution)}
                   >
                     View Original Profiles
+                  </Button>
+                )}
+
+                {execution.has_logs && onViewLogs && (
+                  <Button
+                    size="sm"
+                    color={execution.has_error ? "danger" : "default"}
+                    variant="flat"
+                    startContent={<Terminal className="w-4 h-4" />}
+                    onPress={() => onViewLogs(execution)}
+                  >
+                    View Logs
                   </Button>
                 )}
               </div>

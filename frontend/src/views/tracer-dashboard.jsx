@@ -31,6 +31,7 @@ import TracerExecutionCard from "../components/tracer-execution-card";
 import InlineReportViewer from "../components/inline-report-viewer";
 import InlineGraphViewer from "../components/inline-graph-viewer";
 import OriginalProfilesViewer from "../components/original-profiles-viewer";
+import ExecutionLogsViewer from "../components/execution-logs-viewer";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
 const TracerDashboard = () => {
@@ -114,6 +115,14 @@ const TracerDashboard = () => {
   const handleViewProfiles = (execution) => {
     setViewingContent({
       type: "profiles",
+      execution: execution,
+    });
+    onOpen();
+  };
+
+  const handleViewLogs = (execution) => {
+    setViewingContent({
+      type: "logs",
       execution: execution,
     });
     onOpen();
@@ -204,6 +213,13 @@ const TracerDashboard = () => {
       case "profiles":
         return (
           <OriginalProfilesViewer
+            execution={viewingContent.execution}
+            onClose={() => onOpenChange(false)}
+          />
+        );
+      case "logs":
+        return (
+          <ExecutionLogsViewer
             execution={viewingContent.execution}
             onClose={() => onOpenChange(false)}
           />
@@ -333,6 +349,7 @@ const TracerDashboard = () => {
               onViewReport={handleViewReport}
               onViewGraph={handleViewGraph}
               onViewProfiles={handleViewProfiles}
+              onViewLogs={handleViewLogs}
               onDelete={handleDeleteExecution}
               getStatusIcon={getStatusIcon}
               getStatusColor={getStatusColor}

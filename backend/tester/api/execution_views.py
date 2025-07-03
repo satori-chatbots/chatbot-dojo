@@ -420,11 +420,18 @@ def get_tracer_executions(request: Request) -> Response:
         tracer_executions = (
             ProfileExecution.objects.filter(project__in=user_projects, execution_type="tracer")
             .select_related("project", "analysis_result")
+            .prefetch_related("generation_tasks")
             .order_by("-created_at")
         )
 
         execution_data = []
         for execution in tracer_executions:
+            # Get error message from associated task if available
+            error_message = ""
+            if execution.generation_tasks.exists():
+                task = execution.generation_tasks.first()
+                error_message = task.error_message if task.error_message else ""
+
             execution_info = {
                 "id": execution.id,
                 "execution_name": execution.execution_name,
@@ -438,6 +445,9 @@ def get_tracer_executions(request: Request) -> Response:
                 "generated_profiles_count": execution.generated_profiles_count,
                 "has_analysis": hasattr(execution, "analysis_result"),
                 "analysis": None,
+                "has_logs": bool(execution.tracer_stdout or execution.tracer_stderr),
+                "has_error": execution.status == "ERROR",
+                "error_message": error_message,
             }
 
             # Add analysis data if available
@@ -660,5 +670,36 @@ def get_tracer_original_profiles(request: Request, execution_id: int) -> Respons
         logger.error(f"Error fetching original profiles for execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while fetching the original profiles."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
+    """Get the TRACER execution logs (stdout and stderr) for debugging failed executions."""
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
+
+        # Check ownership
+        if execution.project.owner != request.user:
+            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response(
+            {
+                "execution_name": execution.execution_name,
+                "project_name": execution.project.name,
+                "status": execution.status,
+                "stdout": execution.tracer_stdout or "",
+                "stderr": execution.tracer_stderr or "",
+                "created_at": execution.created_at.isoformat(),
+            }
+        )
+
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error fetching TRACER logs for execution {execution_id}: {e}")
+        return Response(
+            {"error": "An error occurred while fetching the execution logs."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )

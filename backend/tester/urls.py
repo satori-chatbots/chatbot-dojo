@@ -107,6 +107,11 @@ urlpatterns = [
         name="get-tracer-original-profiles",
     ),
     path(
+        "tracer-execution-logs/<int:execution_id>/",
+        api.get_tracer_execution_logs,
+        name="get-tracer-execution-logs",
+    ),
+    path(
         "llm-models/",
         get_available_models,
         name="llm-models",

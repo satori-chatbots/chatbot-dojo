@@ -293,3 +293,17 @@ export const deleteTracerExecution = async (executionId) => {
     throw error;
   }
 };
+
+// Fetch TRACER execution logs
+export const fetchTracerExecutionLogs = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-execution-logs/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER execution logs:", error);
+    throw error;
+  }
+};
