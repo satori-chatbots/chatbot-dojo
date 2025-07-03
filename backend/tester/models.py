@@ -373,15 +373,13 @@ class Project(models.Model):
 
     def create_manual_execution_folder(self) -> "ProfileExecution":
         """Create a new manual profile execution folder for organizing profiles."""
-        from datetime import UTC, datetime
-
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        execution_name = f"Manual_{timestamp}"
+        # Use a fixed name for manual executions - no timestamp
+        execution_name = "Manual_Profiles"
 
         # Create directory structure
         user_id = self.owner.id
         project_id = self.id
-        execution_dir = f"projects/user_{user_id}/project_{project_id}/executions/{execution_name.lower()}"
+        execution_dir = f"projects/user_{user_id}/project_{project_id}/executions/manual_profiles"
 
         # Create execution record
         execution = ProfileExecution.objects.create(
@@ -395,19 +393,12 @@ class Project(models.Model):
         return execution
 
     def get_or_create_current_manual_execution(self) -> "ProfileExecution":
-        """Get the current manual execution folder, or create one if none exists."""
-        # Look for a recent manual execution (within the last hour) to group profiles
-        from datetime import UTC, datetime, timedelta
+        """Get the single manual execution folder for this project, or create one if none exists."""
+        # Look for THE manual execution for this project (there should only be one)
+        manual_execution = self.profile_executions.filter(execution_type="manual").first()
 
-        one_hour_ago = datetime.now(UTC) - timedelta(hours=1)
-        recent_manual_execution = (
-            self.profile_executions.filter(execution_type="manual", created_at__gte=one_hour_ago)
-            .order_by("-created_at")
-            .first()
-        )
-
-        if recent_manual_execution:
-            return recent_manual_execution
+        if manual_execution:
+            return manual_execution
 
         return self.create_manual_execution_folder()
 

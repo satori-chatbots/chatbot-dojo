@@ -40,7 +40,7 @@ const ExecutionFolder = ({
     });
 
     if (execution.execution_type === "manual") {
-      return `Manual • ${dateStr} ${timeStr}`;
+      return "Manual Profiles";
     }
     return `TRACER • ${dateStr} ${timeStr}`;
   };
@@ -104,9 +104,8 @@ const ExecutionFolder = ({
     }
   };
 
-  const canDelete =
-    execution.execution_type === "tracer" ||
-    (execution.execution_type === "manual" && profiles.length === 0);
+  const canDelete = execution.execution_type === "tracer";
+  // Manual executions are permanent and should not be deleted
 
   return (
     <div className="group">

@@ -360,14 +360,12 @@ def delete_profile_execution(request: Request, execution_id: int) -> Response:
         if execution.project.owner != request.user:
             return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Prevent deletion of manual executions if they have profiles
+        # Prevent deletion of manual executions - they are permanent
         if execution.execution_type == "manual":
-            profile_count = TestFile.objects.filter(execution=execution).count()
-            if profile_count > 0:
-                return Response(
-                    {"error": "Cannot delete manual execution with profiles. Delete profiles individually first."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            return Response(
+                {"error": "Manual execution folders cannot be deleted. Delete individual profiles instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         with transaction.atomic():
             # Delete associated files from filesystem
