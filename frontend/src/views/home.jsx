@@ -11,6 +11,8 @@ import {
   Form,
   useDisclosure,
   Link,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import {
   Upload,
@@ -173,6 +175,7 @@ function Home() {
   const [profileGenParameters, setProfileGenParameters] = useState({
     sessions: 8,
     turns_per_session: 5,
+    verbosity: "normal",
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const statusIntervalReference = useRef();
@@ -195,7 +198,7 @@ function Home() {
   const handleProfileGenParameterChange = (field, value) => {
     setProfileGenParameters((previous) => ({
       ...previous,
-      [field]: Number.parseInt(value) || 0,
+      [field]: field === "verbosity" ? value : Number.parseInt(value) || 0,
     }));
   };
 
@@ -261,6 +264,7 @@ function Home() {
       const response = await generateProfiles(selectedProject.id, {
         sessions: profileGenParameters.sessions,
         turns_per_session: profileGenParameters.turns_per_session,
+        verbosity: profileGenParameters.verbosity,
       });
 
       // Start polling for status
@@ -962,6 +966,34 @@ function Home() {
                       )
                     }
                   />
+                  <Select
+                    label="Log Verbosity"
+                    selectedKeys={[profileGenParameters.verbosity]}
+                    onSelectionChange={(selection) => {
+                      const verbosity = Array.from(selection)[0];
+                      handleProfileGenParameterChange("verbosity", verbosity);
+                    }}
+                    description="Choose log detail level for debugging"
+                  >
+                    <SelectItem key="normal" textValue="Normal">
+                      <div className="flex flex-col">
+                        <span className="text-small">Normal</span>
+                        <span className="text-tiny text-default-400">Standard output</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem key="verbose" textValue="Verbose">
+                      <div className="flex flex-col">
+                        <span className="text-small">Verbose (-v)</span>
+                        <span className="text-tiny text-default-400">Shows conversations and interactions</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem key="debug" textValue="Debug">
+                      <div className="flex flex-col">
+                        <span className="text-small">Debug (-vv)</span>
+                        <span className="text-tiny text-default-400">Debug mode with detailed technical info</span>
+                      </div>
+                    </SelectItem>
+                  </Select>
                 </div>
               </div>
 

@@ -834,6 +834,12 @@ class ProfileExecution(models.Model):
         ("ERROR", "Error"),
     ]
 
+    VERBOSITY_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("normal", "Normal"),
+        ("verbose", "Verbose (-v)"),
+        ("debug", "Debug (-vv)"),
+    ]
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="profile_executions")
     execution_name = models.CharField(max_length=255)  # "TRACER_2024-01-16_11:30" or "Manual_2024-01-16_11:30"
     execution_type = models.CharField(max_length=20, choices=EXECUTION_TYPE_CHOICES)  # "tracer" or "manual"
@@ -841,6 +847,14 @@ class ProfileExecution(models.Model):
     # TRACER specific parameters (null for manual)
     sessions = models.IntegerField(null=True, blank=True)  # TRACER sessions
     turns_per_session = models.IntegerField(null=True, blank=True)  # TRACER turns
+    verbosity = models.CharField(
+        max_length=10,
+        choices=VERBOSITY_CHOICES,
+        default="normal",
+        null=True,
+        blank=True,
+        help_text="TRACER verbosity level for debugging"
+    )  # TRACER verbosity level
 
     # Status and timing
     created_at = models.DateTimeField(auto_now_add=True)

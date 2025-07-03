@@ -141,7 +141,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-default-500">Execution Name</p>
                     <p className="font-medium">{logsData?.execution_name}</p>
@@ -153,6 +153,24 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                         ? new Date(logsData.created_at).toLocaleString()
                         : "N/A"}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-default-500">Log Verbosity</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium capitalize">
+                        {logsData?.verbosity || "normal"}
+                      </span>
+                      {logsData?.verbosity === "verbose" && (
+                        <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">
+                          -v
+                        </span>
+                      )}
+                      {logsData?.verbosity === "debug" && (
+                        <span className="text-xs bg-warning-100 text-warning-700 px-2 py-0.5 rounded">
+                          -vv
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardBody>
@@ -172,6 +190,32 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
             >
               <Tab key="summary" title="Summary">
                 <div className="space-y-4 pt-4">
+                  {/* Verbosity Level Explanation */}
+                  {logsData?.verbosity && (
+                    <Card className="border">
+                      <CardBody className="p-4">
+                        <h4 className="font-semibold mb-2">Log Verbosity Level</h4>
+                        <div className="text-sm space-y-2">
+                          {logsData.verbosity === "normal" && (
+                            <p className="text-default-600">
+                              <strong>Normal:</strong> Standard output with basic execution information.
+                            </p>
+                          )}
+                          {logsData.verbosity === "verbose" && (
+                            <p className="text-default-600">
+                              <strong>Verbose (-v):</strong> Shows conversations and interactions between TRACER and the chatbot, including dialogue content and response analysis.
+                            </p>
+                          )}
+                          {logsData.verbosity === "debug" && (
+                            <p className="text-default-600">
+                              <strong>Debug (-vv):</strong> Debug mode with detailed technical information, internal operations, API calls, and low-level debugging data.
+                            </p>
+                          )}
+                        </div>
+                      </CardBody>
+                    </Card>
+                  )}
+
                   {logsData?.stdout || logsData?.stderr ? (
                     <div className="space-y-3">
                       <p className="text-default-600">

@@ -30,6 +30,7 @@ class ProfileGenerator:
         technology: str,
         conversations: int,
         turns: int,
+        verbosity: str,
         _user_id: Any,  # noqa: ANN401
     ) -> None:
         """Run profile generation asynchronously using real TRACER."""
@@ -42,7 +43,7 @@ class ProfileGenerator:
             task.save()
 
             logger.info(f"Starting TRACER profile generation for task {task_id}")
-            logger.info(f"Technology: {technology}, Sessions: {conversations}, Turns: {turns}")
+            logger.info(f"Technology: {technology}, Sessions: {conversations}, Turns: {turns}, Verbosity: {verbosity}")
 
             # Create execution record
             timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -54,6 +55,7 @@ class ProfileGenerator:
                 execution_type="tracer",
                 sessions=conversations,
                 turns_per_session=turns,
+                verbosity=verbosity,
                 status="RUNNING",
                 profiles_directory=f"project_data/{task.project.id}/executions/{execution_name.lower()}",
             )
@@ -68,7 +70,7 @@ class ProfileGenerator:
             task.save()
 
             # Run TRACER generation
-            success = self.run_tracer_generation(task, execution, technology, conversations, turns, "all")
+            success = self.run_tracer_generation(task, execution, technology, conversations, turns, verbosity, "all")
 
             if success:
                 task.status = "COMPLETED"
@@ -111,6 +113,7 @@ class ProfileGenerator:
         technology: str,
         sessions: int,
         turns_per_session: int,
+        verbosity: str,
         graph_format: str = "all",  # Ask TRACER to generate all available formats in one go
     ) -> bool:
         """Execute TRACER command and process results with dual storage."""
@@ -156,6 +159,12 @@ class ProfileGenerator:
                 "--graph-format",
                 graph_format,
             ]
+
+            # Add verbosity flags
+            if verbosity == "verbose":
+                cmd.append("-v")
+            elif verbosity == "debug":
+                cmd.append("-vv")
 
             logger.info(f"Executing TRACER command: {shlex.join(cmd)}")
 

@@ -191,9 +191,18 @@ def generate_profiles(request: Request) -> Response:
     project_id = request.data.get("project_id")
     sessions = request.data.get("sessions", 3)  # Default to 3 sessions
     turns_per_session = request.data.get("turns_per_session", 8)  # Default to 8 turns per session
+    verbosity = request.data.get("verbosity", "normal")  # Default to normal verbosity
 
     if not project_id:
         return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate verbosity parameter
+    valid_verbosity_levels = ["normal", "verbose", "debug"]
+    if verbosity not in valid_verbosity_levels:
+        return Response(
+            {"error": f"Invalid verbosity level. Must be one of: {', '.join(valid_verbosity_levels)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         project = Project.objects.get(id=project_id)
@@ -221,7 +230,7 @@ def generate_profiles(request: Request) -> Response:
     profile_generator = ProfileGenerator()
     threading.Thread(
         target=profile_generator.run_async_profile_generation,
-        args=(task.id, project.chatbot_connector.technology, sessions, turns_per_session, request.user.id),
+        args=(task.id, project.chatbot_connector.technology, sessions, turns_per_session, verbosity, request.user.id),
     ).start()
 
     return Response(
@@ -316,6 +325,7 @@ def get_profile_executions(request: Request, project_id: int) -> Response:
                     "sessions": execution.sessions,
                     "turns_per_session": execution.turns_per_session,
                     "execution_time_minutes": execution.execution_time_minutes,
+                    "verbosity": execution.verbosity,
                 }
             )
 
@@ -441,6 +451,7 @@ def get_tracer_executions(request: Request) -> Response:
                 "created_at": execution.created_at.isoformat(),
                 "sessions": execution.sessions,
                 "turns_per_session": execution.turns_per_session,
+                "verbosity": execution.verbosity,
                 "execution_time_minutes": execution.execution_time_minutes,
                 "generated_profiles_count": execution.generated_profiles_count,
                 "has_analysis": hasattr(execution, "analysis_result"),
@@ -691,6 +702,7 @@ def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
                 "status": execution.status,
                 "stdout": execution.tracer_stdout or "",
                 "stderr": execution.tracer_stderr or "",
+                "verbosity": execution.verbosity,
                 "created_at": execution.created_at.isoformat(),
             }
         )

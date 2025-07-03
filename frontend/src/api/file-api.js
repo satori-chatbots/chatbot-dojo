@@ -156,6 +156,7 @@ export const generateProfiles = async (projectId, parameters = {}) => {
         project_id: projectId,
         sessions: parameters.sessions || 3,
         turns_per_session: parameters.turns_per_session || 8,
+        verbosity: parameters.verbosity || "normal",
       }),
     });
     return await response.json();

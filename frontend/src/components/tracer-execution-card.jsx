@@ -265,7 +265,7 @@ const TracerExecutionCard = ({
             )}
 
             {/* Detailed Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-primary" />
                 <div>
@@ -298,6 +298,27 @@ const TracerExecutionCard = ({
                   <p className="font-medium">
                     {formatDuration(execution.execution_time_minutes)}
                   </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-xs text-default-500">Verbosity</p>
+                  <div className="flex items-center gap-1">
+                    <p className="font-medium capitalize text-xs">
+                      {execution.verbosity || "normal"}
+                    </p>
+                    {execution.verbosity === "verbose" && (
+                      <span className="text-xs bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded">
+                        -v
+                      </span>
+                    )}
+                    {execution.verbosity === "debug" && (
+                      <span className="text-xs bg-warning-100 text-warning-700 px-1.5 py-0.5 rounded">
+                        -vv
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
