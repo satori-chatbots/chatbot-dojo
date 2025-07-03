@@ -528,28 +528,37 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
         if not graph_path.exists():
             return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if it's a PDF file and handle accordingly
-        if graph_path.suffix.lower() == ".pdf":
-            # For PDF files, we'll return metadata and let frontend handle the file URL
+        # Handle different file types
+        file_extension = graph_path.suffix.lower()
+
+        if file_extension in [".pdf", ".png"]:
+            # For binary files (PDF, PNG), return metadata and let frontend handle the file URL
+            file_type = file_extension[1:]  # Remove the dot
             return Response(
                 {
-                    "file_type": "pdf",
+                    "file_type": file_type,
                     "file_url": f"/media/{analysis.workflow_graph_path}",
                     "execution_name": execution.execution_name,
                     "project_name": execution.project.name,
                 }
             )
-        # For SVG or other text-based files, return content directly
-        with graph_path.open("r", encoding="utf-8") as f:
-            graph_content = f.read()
+        if file_extension == ".svg":
+            # For SVG files, return content directly for inline display
+            with graph_path.open("r", encoding="utf-8") as f:
+                graph_content = f.read()
 
+            return Response(
+                {
+                    "file_type": "svg",
+                    "graph_content": graph_content,
+                    "execution_name": execution.execution_name,
+                    "project_name": execution.project.name,
+                }
+            )
+        # Default handling for unknown formats
         return Response(
-            {
-                "file_type": "svg",
-                "graph_content": graph_content,
-                "execution_name": execution.execution_name,
-                "project_name": execution.project.name,
-            }
+            {"error": f"Unsupported graph file format: {file_extension}"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     except ProfileExecution.DoesNotExist:

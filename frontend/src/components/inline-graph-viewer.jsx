@@ -62,7 +62,8 @@ const InlineGraphViewer = ({ execution, onClose }) => {
       // Create a temporary link element to trigger download
       const link = document.createElement("a");
       link.href = graphData.file_url;
-      link.download = `${execution.execution_name}_workflow_graph.${graphData.file_type === "pdf" ? "pdf" : "svg"}`;
+      const fileExtension = graphData.file_type || "svg";
+      link.download = `${execution.execution_name}_workflow_graph.${fileExtension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -97,6 +98,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
 
   const isPdf = graphData?.file_type === "pdf";
   const isSvg = graphData?.file_type === "svg";
+  const isPng = graphData?.file_type === "png";
 
   return (
     <>
@@ -123,7 +125,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
           {/* Controls */}
           {graphData && !loading && !error && (
             <div className="flex items-center gap-2">
-              {/* Download Button - Available for both PDF and SVG */}
+              {/* Download Button - Available for all formats */}
               <Button
                 isIconOnly
                 size="sm"
@@ -135,8 +137,8 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                 <Download className="w-4 h-4" />
               </Button>
 
-              {/* Zoom Controls - Only for SVG */}
-              {isSvg && (
+              {/* Zoom Controls - Only for SVG and PNG */}
+              {(isSvg || isPng) && (
                 <>
                   <Button
                     isIconOnly
@@ -232,7 +234,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                         onPress={handleDownload}
                         size="sm"
                       >
-                        Download PDF
+                        Download {graphData.file_type?.toUpperCase()}
                       </Button>
                     </div>
                   </div>
@@ -256,6 +258,24 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                   </div>
                 )}
 
+                {/* PNG Display */}
+                {isPng && (
+                  <div
+                    className="flex justify-center items-center min-h-[400px] overflow-auto"
+                    style={{
+                      transform: `scale(${zoom})`,
+                      transformOrigin: "center",
+                    }}
+                  >
+                    <img
+                      src={graphData.file_url}
+                      alt="TRACER Workflow Graph"
+                      className="max-w-full h-auto rounded-lg"
+                      style={{ maxHeight: "800px" }}
+                    />
+                  </div>
+                )}
+
                 {/* Graph Info */}
                 <div className="mt-4 pt-4 border-t border-default-200">
                   <p className="text-sm text-default-500">
@@ -264,6 +284,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     your chatbot.
                     {isPdf && " The graph is displayed as a PDF document."}
                     {isSvg && " You can zoom in/out to explore the details."}
+                    {isPng && " You can zoom in/out to explore the details."}
                   </p>
                 </div>
               </CardBody>

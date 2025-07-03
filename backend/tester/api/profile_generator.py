@@ -68,7 +68,7 @@ class ProfileGenerator:
             task.save()
 
             # Run TRACER generation
-            success = self.run_tracer_generation(task, execution, technology, conversations, turns)
+            success = self.run_tracer_generation(task, execution, technology, conversations, turns, "svg")
 
             if success:
                 task.status = "COMPLETED"
@@ -111,6 +111,7 @@ class ProfileGenerator:
         technology: str,
         sessions: int,
         turns_per_session: int,
+        graph_format: str = "svg",  # Default to SVG for better web display
     ) -> bool:
         """Execute TRACER command and process results with dual storage."""
         try:
@@ -152,6 +153,8 @@ class ProfileGenerator:
                 model,
                 "-o",
                 str(output_dir),
+                "--graph-format",
+                graph_format,
             ]
 
             logger.info(f"Executing TRACER command: {shlex.join(cmd)}")
@@ -179,7 +182,7 @@ class ProfileGenerator:
             task.save()
 
             # Process results with dual storage
-            self.process_tracer_results_dual_storage(execution, output_dir)
+            self.process_tracer_results_dual_storage(execution, output_dir, graph_format)
 
             # Calculate execution time
             execution_time = (datetime.now(UTC) - execution.created_at).seconds // 60
@@ -197,7 +200,9 @@ class ProfileGenerator:
         else:
             return True
 
-    def process_tracer_results_dual_storage(self, execution: ProfileExecution, output_dir: Path) -> None:
+    def process_tracer_results_dual_storage(
+        self, execution: ProfileExecution, output_dir: Path, graph_format: str = "svg"
+    ) -> None:
         """Process TRACER results with dual storage: editable + read-only originals."""
         # Create directory structure
         profiles_dir = output_dir / "profiles"
@@ -249,9 +254,9 @@ class ProfileGenerator:
         execution.generated_profiles_count = profile_count
         execution.save()
 
-        # Move analysis files if they exist - TRACER generates README.md and workflow_graph.pdf
+        # Move analysis files if they exist - TRACER generates README.md and workflow_graph in specified format
         readme_path = output_dir / "README.md"  # TRACER generates README.md, not report.md
-        graph_path = output_dir / "workflow_graph.pdf"  # TRACER generates PDF, not SVG
+        graph_path = output_dir / f"workflow_graph.{graph_format}"  # TRACER generates graph in specified format
 
         final_report_path = None
         final_graph_path = None
@@ -265,9 +270,9 @@ class ProfileGenerator:
             logger.info(f"Moved README.md to {final_report_path}")
 
         if graph_path.exists():
-            final_graph_path = analysis_dir / "workflow_graph.pdf"  # Keep as PDF
+            final_graph_path = analysis_dir / f"workflow_graph.{graph_format}"  # Keep in specified format
             shutil.move(graph_path, final_graph_path)
-            logger.info(f"Moved workflow_graph.pdf to {final_graph_path}")
+            logger.info(f"Moved workflow_graph.{graph_format} to {final_graph_path}")
 
         # Also move functionalities.json if it exists
         json_path = output_dir / "functionalities.json"
