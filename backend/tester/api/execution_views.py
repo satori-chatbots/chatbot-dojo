@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import QuerySet
 from django.db.utils import DatabaseError
+from django.http import FileResponse
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -447,7 +448,8 @@ def get_tracer_executions(request: Request) -> Response:
                     "coverage_percentage": analysis.coverage_percentage,
                     "unique_paths_discovered": analysis.unique_paths_discovered,
                     "has_report": bool(analysis.report_file_path),
-                    "has_graph": bool(analysis.workflow_graph_path),
+                    "has_graph": analysis.has_any_graph,
+                    "available_formats": analysis.get_available_formats(),
                 }
 
             execution_data.append(execution_info)
@@ -506,8 +508,12 @@ def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
 
 
 @api_view(["GET"])
-def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
-    """Get the workflow graph content for a TRACER execution."""
+def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response | FileResponse:
+    """Get the workflow graph content for a TRACER execution.
+
+    If 'graph_format' query parameter is provided, it serves the file for download.
+    Otherwise, it returns JSON with SVG content for inline display.
+    """
     try:
         execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
 
@@ -520,30 +526,68 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
             return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
 
         analysis = execution.analysis_result
-        if not analysis.workflow_graph_path:
+        if not analysis.has_any_graph:
             return Response({"error": "No workflow graph found for this execution."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Read graph content
-        graph_path = Path(settings.MEDIA_ROOT) / analysis.workflow_graph_path
-        if not graph_path.exists():
-            return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+        # Get requested format from query parameter (defaults to first available). Use custom param to avoid DRF renderer negotiation.
+        requested_format = request.GET.get("graph_format", "").lower()
+        # Backward-compatibility: fall back to legacy 'format' param if provided
+        if not requested_format:
+            requested_format = request.GET.get("format", "").lower()
 
-        # Handle different file types
-        file_extension = graph_path.suffix.lower()
+        is_download = bool(requested_format)
+        available_formats = analysis.get_available_formats()
 
-        if file_extension in [".pdf", ".png"]:
-            # For binary files (PDF, PNG), return metadata and let frontend handle the file URL
-            file_type = file_extension[1:]  # Remove the dot
+        if not is_download:
+            # For initial inline view, default to SVG if available
+            if "svg" in available_formats:
+                requested_format = "svg"
+            else:
+                # If no SVG, return the first available format's data in JSON (might not render)
+                requested_format = available_formats[0] if available_formats else None
+        elif requested_format not in available_formats:
             return Response(
-                {
-                    "file_type": file_type,
-                    "file_url": f"/media/{analysis.workflow_graph_path}",
-                    "execution_name": execution.execution_name,
-                    "project_name": execution.project.name,
-                }
+                {"error": f"Format '{requested_format}' not available for this execution."},
+                status=status.HTTP_404_NOT_FOUND,
             )
-        if file_extension == ".svg":
-            # For SVG files, return content directly for inline display
+
+        if not requested_format:
+            return Response({"error": "No graph formats available."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the path for the requested format
+        graph_path_field = f"workflow_graph_{requested_format}_path"
+        graph_path_str = getattr(analysis, graph_path_field, "")
+
+        logger.debug(
+            "Using graph_path_field=%s, value=%s",
+            graph_path_field,
+            graph_path_str,
+        )
+
+        if not graph_path_str:
+            return Response({"error": f"No {requested_format.upper()} graph found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+        graph_path = Path(settings.MEDIA_ROOT) / graph_path_str
+
+        # If for download, serve the file directly
+        if is_download:
+            if not graph_path.exists():
+                return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+            try:
+                response = FileResponse(
+                    graph_path.open("rb"),
+                    as_attachment=True,
+                    filename=f"{execution.execution_name}_workflow_graph.{requested_format}",
+                )
+                return response
+            except FileNotFoundError:
+                return Response({"error": "File not found on server."}, status=status.HTTP_404_NOT_FOUND)
+
+        # For inline display (only SVG is supported)
+        if requested_format == "svg":
+            if not graph_path.exists():
+                return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+
             with graph_path.open("r", encoding="utf-8") as f:
                 graph_content = f.read()
 
@@ -553,11 +597,13 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
                     "graph_content": graph_content,
                     "execution_name": execution.execution_name,
                     "project_name": execution.project.name,
+                    "available_formats": available_formats,
                 }
             )
-        # Default handling for unknown formats
+
+        # Fallback for non-download, non-svg requests (should not be hit with current logic)
         return Response(
-            {"error": f"Unsupported graph file format: {file_extension}"},
+            {"error": f"Unsupported request for format: {requested_format}"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

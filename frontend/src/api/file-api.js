@@ -245,13 +245,20 @@ export const fetchTracerAnalysisReport = async (executionId) => {
   }
 };
 
-export const fetchTracerWorkflowGraph = async (executionId) => {
+export const fetchTracerWorkflowGraph = async (executionId, format = null) => {
   try {
-    const response = await apiClient(
-      `${API_BASE_URL}/tracer-workflow-graph/${executionId}/`,
-    );
-    const data = await response.json();
-    return data;
+    let url = `${API_BASE_URL}/tracer-workflow-graph/${executionId}/`;
+    if (format) {
+      url += `?graph_format=${format}`;
+    }
+    const response = await apiClient(url);
+
+    // If a format is requested, it's for download, so we expect a blob.
+    if (format) {
+      return response.blob();
+    }
+    // Otherwise, it's the initial load for the viewer, which expects JSON with inline SVG.
+    return response.json();
   } catch (error) {
     console.error("Error fetching TRACER workflow graph:", error);
     throw error;

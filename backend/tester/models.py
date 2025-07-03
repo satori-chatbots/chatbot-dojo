@@ -879,7 +879,11 @@ class TracerAnalysisResult(models.Model):
 
     # TRACER output files
     report_file_path = models.CharField(max_length=500, blank=True, default="")  # report.md
-    workflow_graph_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.svg
+
+    # Multiple graph format files
+    workflow_graph_svg_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.svg
+    workflow_graph_png_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.png
+    workflow_graph_pdf_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.pdf
 
     # Analysis metadata
     total_interactions = models.IntegerField(default=0)
@@ -889,6 +893,22 @@ class TracerAnalysisResult(models.Model):
     def __str__(self) -> str:
         """Return a string representation of the TracerAnalysisResult."""
         return f"Analysis for {self.execution.execution_name}"
+
+    @property
+    def has_any_graph(self) -> bool:
+        """Return True if any graph format is available."""
+        return bool(self.workflow_graph_svg_path or self.workflow_graph_png_path or self.workflow_graph_pdf_path)
+
+    def get_available_formats(self) -> list[str]:
+        """Return a list of available graph formats."""
+        formats = []
+        if self.workflow_graph_svg_path:
+            formats.append("svg")
+        if self.workflow_graph_png_path:
+            formats.append("png")
+        if self.workflow_graph_pdf_path:
+            formats.append("pdf")
+        return formats
 
 
 class OriginalTracerProfile(models.Model):

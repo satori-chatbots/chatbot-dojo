@@ -7,6 +7,10 @@ import {
   Spinner,
   Card,
   CardBody,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@heroui/react";
 import {
   BarChart3,
@@ -15,6 +19,7 @@ import {
   ZoomIn,
   ZoomOut,
   Download,
+  ChevronDown,
 } from "lucide-react";
 import { fetchTracerWorkflowGraph } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
@@ -110,17 +115,33 @@ const InlineGraphViewer = ({ execution, onClose }) => {
     }
   };
 
-  const handleDownload = () => {
-    if (graphData?.file_url) {
-      // Create a temporary link element to trigger download
+  const handleDownload = async (format) => {
+    try {
+      const targetFormat = format || graphData?.file_type;
+      if (!targetFormat) {
+        showToast("No format available for download", "error");
+        return;
+      }
+
+      // We always fetch for download to get the blob
+      const blob = await fetchTracerWorkflowGraph(execution.id, targetFormat);
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = graphData.file_url;
-      const fileExtension = graphData.file_type || "svg";
-      link.download = `${execution.execution_name}_workflow_graph.${fileExtension}`;
+      link.href = url;
+      link.download = `${execution.execution_name}_workflow_graph.${targetFormat}`;
       document.body.appendChild(link);
       link.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
-      showToast("Download started", "success");
+
+      showToast(`Download started (${targetFormat.toUpperCase()})`, "success");
+    } catch (error) {
+      console.error("Error downloading graph:", error);
+      showToast("Failed to download graph", "error");
     }
   };
 
@@ -152,6 +173,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
   const isPdf = graphData?.file_type === "pdf";
   const isSvg = graphData?.file_type === "svg";
   const isPng = graphData?.file_type === "png";
+  const availableFormats = graphData?.available_formats || [];
 
   return (
     <>
@@ -170,6 +192,9 @@ const InlineGraphViewer = ({ execution, onClose }) => {
               {graphData && (
                 <p className="text-xs text-default-400">
                   Format: {graphData.file_type?.toUpperCase()}
+                  {availableFormats.length > 1 &&
+                    ` (${availableFormats.map(f => f.toUpperCase()).join(', ')} available)`
+                  }
                 </p>
               )}
             </div>
@@ -178,17 +203,41 @@ const InlineGraphViewer = ({ execution, onClose }) => {
           {/* Controls */}
           {graphData && !loading && !error && (
             <div className="flex items-center gap-2">
-              {/* Download Button - Available for all formats */}
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={handleDownload}
-                aria-label="Download graph"
-                title="Download workflow graph"
-              >
-                <Download className="w-4 h-4" />
-              </Button>
+              {/* Download Dropdown - Available for all formats */}
+              {availableFormats.length > 1 ? (
+                <Dropdown>
+                  <DropdownTrigger>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      endContent={<ChevronDown className="w-4 h-4" />}
+                      startContent={<Download className="w-4 h-4" />}
+                    >
+                      Download
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu aria-label="Download formats">
+                    {availableFormats.map((format) => (
+                      <DropdownItem
+                        key={format}
+                        startContent={<Download className="w-4 h-4" />}
+                        onPress={() => handleDownload(format)}
+                      >
+                        Download as {format.toUpperCase()}
+                      </DropdownItem>
+                    ))}
+                  </DropdownMenu>
+                </Dropdown>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="light"
+                  onPress={() => handleDownload()}
+                  startContent={<Download className="w-4 h-4" />}
+                >
+                  Download
+                </Button>
+              )}
 
               {/* Zoom Controls - Only for SVG and PNG */}
               {(isSvg || isPng) && (
@@ -226,14 +275,6 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     aria-label="Zoom in"
                   >
                     <ZoomIn className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="light"
-                    onPress={handleResetZoom}
-                    className="text-xs"
-                  >
-                    Reset
                   </Button>
                 </>
               )}
@@ -289,17 +330,6 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                         title="TRACER Workflow Graph"
                         style={{ border: "none" }}
                       />
-                    </div>
-                    <div className="text-center">
-                      <Button
-                        color="primary"
-                        variant="light"
-                        startContent={<Download className="w-4 h-4" />}
-                        onPress={handleDownload}
-                        size="sm"
-                      >
-                        Download {graphData.file_type?.toUpperCase()}
-                      </Button>
                     </div>
                   </div>
                 )}
@@ -386,15 +416,6 @@ const InlineGraphViewer = ({ execution, onClose }) => {
         >
           Back to Dashboard
         </Button>
-        {graphData && !loading && !error && (
-          <Button
-            color="primary"
-            startContent={<Download className="w-4 h-4" />}
-            onPress={handleDownload}
-          >
-            Download Graph
-          </Button>
-        )}
       </ModalFooter>
     </>
   );
