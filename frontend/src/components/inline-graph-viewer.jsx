@@ -242,15 +242,10 @@ const InlineGraphViewer = ({ execution, onClose }) => {
 
                 {/* SVG Display */}
                 {isSvg && (
-                  <div
-                    className="flex justify-center items-center min-h-[400px] overflow-auto"
-                    style={{
-                      transform: `scale(${zoom})`,
-                      transformOrigin: "center",
-                    }}
-                  >
+                  <div className="overflow-auto min-h-[400px]">
                     <div
                       className="text-foreground"
+                      style={{ width: `${zoom * 100}%` }}
                       dangerouslySetInnerHTML={{
                         __html: processSvgContent(graphData.graph_content),
                       }}
@@ -260,18 +255,15 @@ const InlineGraphViewer = ({ execution, onClose }) => {
 
                 {/* PNG Display */}
                 {isPng && (
-                  <div
-                    className="flex justify-center items-center min-h-[400px] overflow-auto"
-                    style={{
-                      transform: `scale(${zoom})`,
-                      transformOrigin: "center",
-                    }}
-                  >
+                  <div className="overflow-auto min-h-[400px]">
                     <img
                       src={graphData.file_url}
                       alt="TRACER Workflow Graph"
-                      className="max-w-full h-auto rounded-lg"
-                      style={{ maxHeight: "800px" }}
+                      className="rounded-lg"
+                      style={{
+                        width: `${zoom * 100}%`,
+                        maxHeight: "800px",
+                      }}
                     />
                   </div>
                 )}
