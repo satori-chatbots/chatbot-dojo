@@ -37,6 +37,19 @@ const TracerExecutionCard = ({
     return `${hours}h ${remainingMinutes}m`;
   };
 
+  const formatExecutionName = (execution) => {
+    const date = new Date(execution.created_at);
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const day = date.getDate();
+    const timeStr = date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    return `${execution.project_name} • ${month} ${day} ${timeStr}`;
+  };
+
   const isCompleted = execution.status === "COMPLETED";
   const isRunning = execution.status === "RUNNING";
   const hasAnalysis = execution.has_analysis && execution.analysis;
@@ -51,10 +64,10 @@ const TracerExecutionCard = ({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-foreground">
-                {execution.execution_name}
+                {formatExecutionName(execution)}
               </h3>
               <p className="text-sm text-default-500">
-                Project: {execution.project_name}
+                {execution.execution_name}
               </p>
             </div>
           </div>
