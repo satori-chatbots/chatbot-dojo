@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ModalHeader,
   ModalBody,
@@ -26,6 +26,15 @@ const InlineGraphViewer = ({ execution, onClose }) => {
   const [zoom, setZoom] = useState(1);
   const { showToast } = useMyCustomToast();
 
+  const panContainerRef = useRef(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // Zoom configuration
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 5;
+  const ZOOM_STEP = 0.25;
+
   useEffect(() => {
     loadGraph();
   }, [execution.id]);
@@ -46,15 +55,59 @@ const InlineGraphViewer = ({ execution, onClose }) => {
   };
 
   const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.25, 3));
+    setZoom((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
   };
 
   const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 0.25, 0.25));
+    setZoom((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
   };
 
   const handleResetZoom = () => {
     setZoom(1);
+  };
+
+  const handleMouseDown = (e) => {
+    if (panContainerRef.current) {
+      e.preventDefault();
+      panContainerRef.current.style.cursor = "grabbing";
+      panContainerRef.current.style.userSelect = "none";
+      setPanStart({
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: panContainerRef.current.scrollLeft,
+        scrollTop: panContainerRef.current.scrollTop,
+      });
+      setIsPanning(true);
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isPanning && panContainerRef.current) {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      panContainerRef.current.scrollTop = panStart.scrollTop - dy;
+      panContainerRef.current.scrollLeft = panStart.scrollLeft - dx;
+    }
+  };
+
+  const handleMouseUpOrLeave = () => {
+    if (isPanning && panContainerRef.current) {
+      panContainerRef.current.style.cursor = "grab";
+      panContainerRef.current.style.removeProperty("user-select");
+      setIsPanning(false);
+    }
+  };
+
+  // Allow Ctrl + mouse wheel to zoom
+  const handleWheelZoom = (event) => {
+    if (event.ctrlKey) {
+      event.preventDefault();
+      if (event.deltaY < 0) {
+        handleZoomIn();
+      } else {
+        handleZoomOut();
+      }
+    }
   };
 
   const handleDownload = () => {
@@ -145,7 +198,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     size="sm"
                     variant="light"
                     onPress={handleZoomOut}
-                    isDisabled={zoom <= 0.25}
+                    isDisabled={zoom <= MIN_ZOOM}
                     aria-label="Zoom out"
                   >
                     <ZoomOut className="w-4 h-4" />
@@ -153,12 +206,23 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                   <span className="text-sm text-default-500 min-w-[4rem] text-center">
                     {Math.round(zoom * 100)}%
                   </span>
+                  {/* Zoom slider */}
+                  <input
+                    type="range"
+                    min={MIN_ZOOM}
+                    max={MAX_ZOOM}
+                    step={ZOOM_STEP}
+                    value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    className="w-[150px] cursor-pointer accent-secondary"
+                    aria-label="Zoom slider"
+                  />
                   <Button
                     isIconOnly
                     size="sm"
                     variant="light"
                     onPress={handleZoomIn}
-                    isDisabled={zoom >= 3}
+                    isDisabled={zoom >= MAX_ZOOM}
                     aria-label="Zoom in"
                   >
                     <ZoomIn className="w-4 h-4" />
@@ -242,29 +306,57 @@ const InlineGraphViewer = ({ execution, onClose }) => {
 
                 {/* SVG Display */}
                 {isSvg && (
-                  <div className="overflow-auto min-h-[400px]">
+                  <div
+                    ref={panContainerRef}
+                    className="overflow-auto min-h-[400px] cursor-grab"
+                    onWheel={handleWheelZoom}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUpOrLeave}
+                    onMouseLeave={handleMouseUpOrLeave}
+                  >
                     <div
-                      className="text-foreground"
-                      style={{ width: `${zoom * 100}%` }}
-                      dangerouslySetInnerHTML={{
-                        __html: processSvgContent(graphData.graph_content),
+                      style={{
+                        transform: `scale(${zoom})`,
+                        transformOrigin: "top left",
                       }}
-                    />
+                    >
+                      <div
+                        className="text-foreground"
+                        dangerouslySetInnerHTML={{
+                          __html: processSvgContent(graphData.graph_content),
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
                 {/* PNG Display */}
                 {isPng && (
-                  <div className="overflow-auto min-h-[400px]">
-                    <img
-                      src={graphData.file_url}
-                      alt="TRACER Workflow Graph"
-                      className="rounded-lg"
+                  <div
+                    ref={panContainerRef}
+                    className="overflow-auto min-h-[400px] cursor-grab"
+                    onWheel={handleWheelZoom}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUpOrLeave}
+                    onMouseLeave={handleMouseUpOrLeave}
+                  >
+                    <div
                       style={{
-                        width: `${zoom * 100}%`,
-                        maxHeight: "800px",
+                        transform: `scale(${zoom})`,
+                        transformOrigin: "top left",
                       }}
-                    />
+                    >
+                      <img
+                        src={graphData.file_url}
+                        alt="TRACER Workflow Graph"
+                        className="rounded-lg"
+                        style={{
+                          maxHeight: "800px",
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
