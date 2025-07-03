@@ -133,7 +133,10 @@ function AppContent() {
             </NavbarItem>
             {user && (
               <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
-                <Link to="/tracer-dashboard" className="hover:underline text-sm">
+                <Link
+                  to="/tracer-dashboard"
+                  className="hover:underline text-sm"
+                >
                   TRACER Dashboard
                 </Link>
               </NavbarItem>
@@ -163,7 +166,9 @@ function AppContent() {
                   <DropdownItem
                     key="setup-guide"
                     onPress={() => navigate("/setup")}
-                    className={location.pathname === "/setup" ? "bg-primary/10" : ""}
+                    className={
+                      location.pathname === "/setup" ? "bg-primary/10" : ""
+                    }
                   >
                     <div className="flex flex-col gap-1">
                       <span className="font-medium">Setup Guide</span>
@@ -175,7 +180,11 @@ function AppContent() {
                   <DropdownItem
                     key="chatbot-connectors"
                     onPress={() => navigate("/chatbot-connectors")}
-                    className={location.pathname === "/chatbot-connectors" ? "bg-primary/10" : ""}
+                    className={
+                      location.pathname === "/chatbot-connectors"
+                        ? "bg-primary/10"
+                        : ""
+                    }
                   >
                     <div className="flex flex-col gap-1">
                       <span className="font-medium">Chatbot Connectors</span>
@@ -187,7 +196,9 @@ function AppContent() {
                   <DropdownItem
                     key="projects"
                     onPress={() => navigate("/projects")}
-                    className={location.pathname === "/projects" ? "bg-primary/10" : ""}
+                    className={
+                      location.pathname === "/projects" ? "bg-primary/10" : ""
+                    }
                   >
                     <div className="flex flex-col gap-1">
                       <span className="font-medium">Projects</span>

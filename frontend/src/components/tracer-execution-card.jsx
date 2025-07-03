@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  Card,
-  CardBody,
-  Button,
-  Chip,
-  Progress,
-  Tooltip,
-} from "@heroui/react";
+import { Card, CardBody, Button, Chip, Progress, Tooltip } from "@heroui/react";
 import {
   FileText,
   BarChart3,
@@ -31,7 +24,7 @@ const TracerExecutionCard = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-    const formatDate = (dateString) => {
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
     const timeStr = date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -51,13 +44,17 @@ const TracerExecutionCard = ({
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    return remainingMinutes > 0
+      ? `${hours}h ${remainingMinutes}m`
+      : `${hours}h`;
   };
 
   const isCompleted = execution.status === "COMPLETED";
   const isRunning = execution.status === "RUNNING";
   const hasAnalysis = execution.has_analysis && execution.analysis;
-  const hasActions = (isCompleted && hasAnalysis) || (isCompleted && execution.generated_profiles_count > 0);
+  const hasActions =
+    (isCompleted && hasAnalysis) ||
+    (isCompleted && execution.generated_profiles_count > 0);
 
   return (
     <Card className="border-default-200 hover:border-primary-200 transition-all duration-200 hover:shadow-md">
@@ -89,7 +86,9 @@ const TracerExecutionCard = ({
               <div className="flex items-center gap-4 text-xs text-default-500">
                 <span>{execution.project_name}</span>
                 {execution.execution_time_minutes && (
-                  <span>• {formatDuration(execution.execution_time_minutes)} runtime</span>
+                  <span>
+                    • {formatDuration(execution.execution_time_minutes)} runtime
+                  </span>
                 )}
               </div>
             </div>
@@ -104,11 +103,15 @@ const TracerExecutionCard = ({
               </div>
               <div className="text-center">
                 <p className="text-default-500">Turns/Session</p>
-                <p className="font-medium">{execution.turns_per_session || "0"}</p>
+                <p className="font-medium">
+                  {execution.turns_per_session || "0"}
+                </p>
               </div>
               <div className="text-center">
                 <p className="text-default-500">Profiles</p>
-                <p className="font-medium">{execution.generated_profiles_count || "0"}</p>
+                <p className="font-medium">
+                  {execution.generated_profiles_count || "0"}
+                </p>
               </div>
             </div>
           )}
@@ -127,48 +130,68 @@ const TracerExecutionCard = ({
 
             {/* Quick Actions */}
             <div className="flex gap-1">
-              <Tooltip content={
-                isCompleted && hasAnalysis && execution.analysis.has_report
-                  ? "View Report"
-                  : "Report not available"
-              }>
+              <Tooltip
+                content={
+                  isCompleted && hasAnalysis && execution.analysis.has_report
+                    ? "View Report"
+                    : "Report not available"
+                }
+              >
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  isDisabled={!(isCompleted && hasAnalysis && execution.analysis.has_report)}
+                  isDisabled={
+                    !(
+                      isCompleted &&
+                      hasAnalysis &&
+                      execution.analysis.has_report
+                    )
+                  }
                   onPress={() => onViewReport(execution)}
                 >
                   <FileText className="w-4 h-4" />
                 </Button>
               </Tooltip>
 
-              <Tooltip content={
-                isCompleted && hasAnalysis && execution.analysis.has_graph
-                  ? "View Graph"
-                  : "Graph not available"
-              }>
+              <Tooltip
+                content={
+                  isCompleted && hasAnalysis && execution.analysis.has_graph
+                    ? "View Graph"
+                    : "Graph not available"
+                }
+              >
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  isDisabled={!(isCompleted && hasAnalysis && execution.analysis.has_graph)}
+                  isDisabled={
+                    !(
+                      isCompleted &&
+                      hasAnalysis &&
+                      execution.analysis.has_graph
+                    )
+                  }
                   onPress={() => onViewGraph(execution)}
                 >
                   <BarChart3 className="w-4 h-4" />
                 </Button>
               </Tooltip>
 
-              <Tooltip content={
-                isCompleted && execution.generated_profiles_count > 0
-                  ? "View Profiles"
-                  : "Profiles not available"
-              }>
+              <Tooltip
+                content={
+                  isCompleted && execution.generated_profiles_count > 0
+                    ? "View Profiles"
+                    : "Profiles not available"
+                }
+              >
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  isDisabled={!(isCompleted && execution.generated_profiles_count > 0)}
+                  isDisabled={
+                    !(isCompleted && execution.generated_profiles_count > 0)
+                  }
                   onPress={() => onViewProfiles(execution)}
                 >
                   <Users className="w-4 h-4" />
@@ -186,7 +209,11 @@ const TracerExecutionCard = ({
                     variant="light"
                     onPress={() => setIsExpanded(!isExpanded)}
                   >
-                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
                   </Button>
                 </Tooltip>
               )}
@@ -215,7 +242,9 @@ const TracerExecutionCard = ({
             {execution.execution_name && (
               <div>
                 <p className="text-xs text-default-500 mb-1">Execution Name</p>
-                <p className="text-sm text-foreground">{execution.execution_name}</p>
+                <p className="text-sm text-foreground">
+                  {execution.execution_name}
+                </p>
               </div>
             )}
 
@@ -232,21 +261,27 @@ const TracerExecutionCard = ({
                 <TrendingUp className="w-4 h-4 text-success" />
                 <div>
                   <p className="text-xs text-default-500">Turns/Session</p>
-                  <p className="font-medium">{execution.turns_per_session || "N/A"}</p>
+                  <p className="font-medium">
+                    {execution.turns_per_session || "N/A"}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-secondary" />
                 <div>
                   <p className="text-xs text-default-500">Profiles</p>
-                  <p className="font-medium">{execution.generated_profiles_count}</p>
+                  <p className="font-medium">
+                    {execution.generated_profiles_count}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-warning" />
                 <div>
                   <p className="text-xs text-default-500">Duration</p>
-                  <p className="font-medium">{formatDuration(execution.execution_time_minutes)}</p>
+                  <p className="font-medium">
+                    {formatDuration(execution.execution_time_minutes)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -261,24 +296,36 @@ const TracerExecutionCard = ({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
                     <p className="text-xs text-default-500">Total LLM Calls</p>
-                    <p className="font-medium">{execution.analysis.total_interactions}</p>
+                    <p className="font-medium">
+                      {execution.analysis.total_interactions}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-default-500">Unique Functionalities</p>
-                    <p className="font-medium">{execution.analysis.unique_paths_discovered}</p>
+                    <p className="text-xs text-default-500">
+                      Unique Functionalities
+                    </p>
+                    <p className="font-medium">
+                      {execution.analysis.unique_paths_discovered}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-default-500">Categories</p>
-                    <p className="font-medium">{execution.analysis.categories_count}</p>
+                    <p className="font-medium">
+                      {execution.analysis.categories_count}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-default-500">Estimated Cost</p>
-                    <p className="font-medium">${execution.analysis.estimated_cost_usd.toFixed(4)}</p>
+                    <p className="font-medium">
+                      ${execution.analysis.estimated_cost_usd.toFixed(4)}
+                    </p>
                   </div>
                   {execution.analysis.coverage_percentage !== null && (
                     <div>
                       <p className="text-xs text-default-500">Coverage</p>
-                      <p className="font-medium">{execution.analysis.coverage_percentage.toFixed(1)}%</p>
+                      <p className="font-medium">
+                        {execution.analysis.coverage_percentage.toFixed(1)}%
+                      </p>
                     </div>
                   )}
                 </div>
@@ -288,17 +335,19 @@ const TracerExecutionCard = ({
             {/* Full Action Buttons (when expanded) */}
             {hasActions && (
               <div className="flex flex-wrap gap-2">
-                {isCompleted && hasAnalysis && execution.analysis.has_report && (
-                  <Button
-                    size="sm"
-                    color="primary"
-                    variant="flat"
-                    startContent={<FileText className="w-4 h-4" />}
-                    onPress={() => onViewReport(execution)}
-                  >
-                    View Report
-                  </Button>
-                )}
+                {isCompleted &&
+                  hasAnalysis &&
+                  execution.analysis.has_report && (
+                    <Button
+                      size="sm"
+                      color="primary"
+                      variant="flat"
+                      startContent={<FileText className="w-4 h-4" />}
+                      onPress={() => onViewReport(execution)}
+                    >
+                      View Report
+                    </Button>
+                  )}
 
                 {isCompleted && hasAnalysis && execution.analysis.has_graph && (
                   <Button

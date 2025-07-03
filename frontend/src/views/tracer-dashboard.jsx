@@ -154,7 +154,11 @@ const TracerDashboard = () => {
     async (execution) => {
       if (!execution?.id) return;
 
-      if (!window.confirm("Delete TRACER execution? This action cannot be undone.")) {
+      if (
+        !window.confirm(
+          "Delete TRACER execution? This action cannot be undone.",
+        )
+      ) {
         return;
       }
 
