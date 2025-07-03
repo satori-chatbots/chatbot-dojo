@@ -156,7 +156,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
   return (
     <>
       <ModalHeader className="flex flex-col gap-1">
-        <div className="flex items-center justify-between w-full">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-secondary-50 dark:bg-secondary-900/20">
               <BarChart3 className="w-5 h-5 text-secondary" />
@@ -214,7 +214,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     step={ZOOM_STEP}
                     value={zoom}
                     onChange={(e) => setZoom(parseFloat(e.target.value))}
-                    className="w-[150px] cursor-pointer accent-secondary"
+                    className="w-[100px] sm:w-[150px] cursor-pointer accent-secondary"
                     aria-label="Zoom slider"
                   />
                   <Button
@@ -308,7 +308,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                 {isSvg && (
                   <div
                     ref={panContainerRef}
-                    className="overflow-auto min-h-[400px] cursor-grab"
+                    className="overflow-auto min-h-[40vh] md:min-h-[50vh] cursor-grab"
                     onWheel={handleWheelZoom}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
@@ -335,7 +335,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                 {isPng && (
                   <div
                     ref={panContainerRef}
-                    className="overflow-auto min-h-[400px] cursor-grab"
+                    className="overflow-auto min-h-[40vh] md:min-h-[50vh] cursor-grab"
                     onWheel={handleWheelZoom}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
