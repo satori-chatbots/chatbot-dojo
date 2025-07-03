@@ -277,3 +277,19 @@ export const fetchTracerOriginalProfiles = async (executionId) => {
     throw error;
   }
 };
+
+// Delete a TRACER execution
+export const deleteTracerExecution = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-execution/${executionId}/delete/`,
+      {
+        method: "DELETE",
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting TRACER execution:", error);
+    throw error;
+  }
+};

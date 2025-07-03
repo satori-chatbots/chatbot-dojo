@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardBody,
@@ -26,7 +26,7 @@ import {
   CheckCircle,
   Loader,
 } from "lucide-react";
-import { fetchTracerExecutions } from "../api/file-api";
+import { fetchTracerExecutions, deleteProfileExecution } from "../api/file-api";
 import TracerExecutionCard from "../components/tracer-execution-card";
 import InlineReportViewer from "../components/inline-report-viewer";
 import InlineGraphViewer from "../components/inline-graph-viewer";
@@ -148,6 +148,36 @@ const TracerDashboard = () => {
         return "default";
     }
   };
+
+  // Handler for deleting a TRACER execution
+  const handleDeleteExecution = useCallback(
+    async (execution) => {
+      if (!execution?.id) return;
+
+      if (!window.confirm("Delete TRACER execution? This action cannot be undone.")) {
+        return;
+      }
+
+      try {
+        const response = await deleteProfileExecution(execution.id);
+        showToast(response.message || "Execution deleted", "success");
+        await loadTracerExecutions();
+      } catch (error) {
+        console.error("Error deleting TRACER execution:", error);
+        let errorMessage = "Error deleting TRACER execution";
+        try {
+          const errorData = JSON.parse(error.message);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // ignore JSON parse failure
+        }
+        showToast(errorMessage, "error");
+      }
+    },
+    [showToast],
+  );
 
   const renderModalContent = () => {
     if (!viewingContent) return null;
@@ -299,6 +329,7 @@ const TracerDashboard = () => {
               onViewReport={handleViewReport}
               onViewGraph={handleViewGraph}
               onViewProfiles={handleViewProfiles}
+              onDelete={handleDeleteExecution}
               getStatusIcon={getStatusIcon}
               getStatusColor={getStatusColor}
             />

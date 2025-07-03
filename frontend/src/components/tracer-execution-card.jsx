@@ -5,10 +5,6 @@ import {
   Button,
   Chip,
   Progress,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
   Tooltip,
 } from "@heroui/react";
 import {
@@ -19,10 +15,9 @@ import {
   Activity,
   TrendingUp,
   Zap,
-  MoreVertical,
-  Trash2,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from "lucide-react";
 
 const TracerExecutionCard = ({
@@ -38,22 +33,17 @@ const TracerExecutionCard = ({
 
     const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMinutes < 1) return "Just now";
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString("en-US", {
+    const timeStr = date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const dateStr = date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined
     });
+
+    return `TRACER • ${dateStr} ${timeStr}`;
   };
 
   const formatDuration = (minutes) => {
@@ -83,7 +73,7 @@ const TracerExecutionCard = ({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-sm font-semibold text-foreground truncate">
-                  {execution.project_name}
+                  {formatDate(execution.created_at)}
                 </h3>
                 <Chip
                   color={getStatusColor(execution.status)}
@@ -97,10 +87,7 @@ const TracerExecutionCard = ({
               </div>
 
               <div className="flex items-center gap-4 text-xs text-default-500">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {formatDate(execution.created_at)}
-                </span>
+                <span>{execution.project_name}</span>
                 {execution.execution_time_minutes && (
                   <span>• {formatDuration(execution.execution_time_minutes)} runtime</span>
                 )}
@@ -139,48 +126,55 @@ const TracerExecutionCard = ({
             )}
 
             {/* Quick Actions */}
-            {hasActions && (
-              <div className="flex gap-1">
-                {isCompleted && hasAnalysis && execution.analysis.has_report && (
-                  <Tooltip content="View Report">
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      onPress={() => onViewReport(execution)}
-                    >
-                      <FileText className="w-4 h-4" />
-                    </Button>
-                  </Tooltip>
-                )}
+            <div className="flex gap-1">
+              <Tooltip content={
+                isCompleted && hasAnalysis && execution.analysis.has_report
+                  ? "View Report"
+                  : "Report not available"
+              }>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  isDisabled={!(isCompleted && hasAnalysis && execution.analysis.has_report)}
+                  onPress={() => onViewReport(execution)}
+                >
+                  <FileText className="w-4 h-4" />
+                </Button>
+              </Tooltip>
 
-                {isCompleted && hasAnalysis && execution.analysis.has_graph && (
-                  <Tooltip content="View Graph">
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      onPress={() => onViewGraph(execution)}
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                    </Button>
-                  </Tooltip>
-                )}
+              <Tooltip content={
+                isCompleted && hasAnalysis && execution.analysis.has_graph
+                  ? "View Graph"
+                  : "Graph not available"
+              }>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  isDisabled={!(isCompleted && hasAnalysis && execution.analysis.has_graph)}
+                  onPress={() => onViewGraph(execution)}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                </Button>
+              </Tooltip>
 
-                {isCompleted && execution.generated_profiles_count > 0 && (
-                  <Tooltip content="View Profiles">
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      onPress={() => onViewProfiles(execution)}
-                    >
-                      <Users className="w-4 h-4" />
-                    </Button>
-                  </Tooltip>
-                )}
-              </div>
-            )}
+              <Tooltip content={
+                isCompleted && execution.generated_profiles_count > 0
+                  ? "View Profiles"
+                  : "Profiles not available"
+              }>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  isDisabled={!(isCompleted && execution.generated_profiles_count > 0)}
+                  onPress={() => onViewProfiles(execution)}
+                >
+                  <Users className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            </div>
 
             {/* Expand/More Menu */}
             <div className="flex gap-1">
@@ -197,26 +191,19 @@ const TracerExecutionCard = ({
                 </Tooltip>
               )}
 
-              <Dropdown placement="bottom-end">
-                <DropdownTrigger>
-                  <Button isIconOnly size="sm" variant="light">
-                    <MoreVertical className="w-4 h-4" />
+              {onDelete && (
+                <Tooltip content="Delete Execution">
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    color="danger"
+                    onPress={() => onDelete(execution)}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
-                </DropdownTrigger>
-                <DropdownMenu aria-label="Execution actions">
-                  {onDelete && (
-                    <DropdownItem
-                      key="delete"
-                      className="text-danger"
-                      color="danger"
-                      startContent={<Trash2 className="w-4 h-4" />}
-                      onPress={() => onDelete(execution)}
-                    >
-                      Delete Execution
-                    </DropdownItem>
-                  )}
-                </DropdownMenu>
-              </Dropdown>
+                </Tooltip>
+              )}
             </div>
           </div>
         </div>
