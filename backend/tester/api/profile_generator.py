@@ -159,6 +159,11 @@ class ProfileGenerator:
             # Execute TRACER
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)  # noqa: S603
 
+            # Store TRACER output for debugging
+            execution.tracer_stdout = result.stdout
+            execution.tracer_stderr = result.stderr
+            execution.save(update_fields=["tracer_stdout", "tracer_stderr"])
+
             if result.returncode != 0:
                 logger.error(f"TRACER execution failed: {result.stderr}")
                 task.error_message = f"TRACER failed: {result.stderr}"

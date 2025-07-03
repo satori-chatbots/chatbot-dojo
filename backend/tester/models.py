@@ -796,6 +796,10 @@ class ProfileExecution(models.Model):
     profiles_directory = models.CharField(max_length=500)
     generated_profiles_count = models.IntegerField(default=0)
 
+    # TRACER process output for debugging
+    tracer_stdout = models.TextField(null=True, blank=True)
+    tracer_stderr = models.TextField(null=True, blank=True)
+
     class Meta:
         """Meta options for the ProfileExecution model."""
 
@@ -819,8 +823,8 @@ class TracerAnalysisResult(models.Model):
     execution = models.OneToOneField(ProfileExecution, on_delete=models.CASCADE, related_name="analysis_result")
 
     # TRACER output files
-    report_file_path = models.CharField(max_length=500, blank=True)  # report.md
-    workflow_graph_path = models.CharField(max_length=500, blank=True)  # workflow_graph.svg
+    report_file_path = models.CharField(max_length=500, blank=True, default="")  # report.md
+    workflow_graph_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.svg
 
     # Analysis metadata
     total_interactions = models.IntegerField(default=0)
