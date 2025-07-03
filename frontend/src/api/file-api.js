@@ -204,3 +204,19 @@ export const fetchProfileExecutions = async (projectId) => {
     throw error;
   }
 };
+
+export const deleteProfileExecution = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/profile-execution/${executionId}/delete/`,
+      {
+        method: "DELETE",
+      },
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error deleting profile execution:", error);
+    throw error;
+  }
+};

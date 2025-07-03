@@ -82,6 +82,11 @@ urlpatterns = [
         name="get-profile-executions",
     ),
     path(
+        "profile-execution/<int:execution_id>/delete/",
+        api.delete_profile_execution,
+        name="delete-profile-execution",
+    ),
+    path(
         "llm-models/",
         get_available_models,
         name="llm-models",

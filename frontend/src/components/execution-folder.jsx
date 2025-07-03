@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { Link, Button } from "@heroui/react";
+import { Link, Button, Chip } from "@heroui/react";
 import {
   ChevronDown,
   ChevronRight,
-  Folder,
   AlertTriangle,
   Clock,
-  Users
+  Users,
+  Settings,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -16,132 +17,196 @@ const ExecutionFolder = ({
   selectedFiles,
   onProfileSelect,
   showAll = false,
-  onToggleShowAll
+  onToggleShowAll,
+  onDeleteExecution,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true); // Start expanded by default
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
-  const displayProfiles = showAll ? profiles : profiles.slice(0, 3);
-  const hasMoreProfiles = profiles.length > 3;
+  const displayProfiles = showAll ? profiles : profiles.slice(0, 4);
+  const hasMoreProfiles = profiles.length > 4;
 
-  const getFolderIcon = () => {
+  const getExecutionLabel = () => {
+    const date = new Date(execution.created_at);
+    const timeStr = date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const dateStr = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
     if (execution.execution_type === "manual") {
-      return <Users className="w-4 h-4" />;
+      return `Manual • ${dateStr} ${timeStr}`;
     }
-    return <Clock className="w-4 h-4" />;
+    return `TRACER • ${dateStr} ${timeStr}`;
   };
 
-  const getFolderHeader = () => {
-    const timestamp = new Date(execution.created_at).toLocaleString();
+  const getExecutionIcon = () => {
     if (execution.execution_type === "manual") {
-      return `Manual_${timestamp}`;
+      return <Users className="w-4 h-4 text-blue-500" />;
     }
-    return `TRACER_${timestamp}`;
+    return <Settings className="w-4 h-4 text-purple-500" />;
   };
 
-  const getDisplayInfo = () => {
+  const getStatusChip = () => {
+    if (execution.execution_type !== "tracer" || !execution.status) return null;
+
+    const statusConfig = {
+      COMPLETED: { color: "success", label: "Done" },
+      RUNNING: { color: "warning", label: "Running" },
+      ERROR: { color: "danger", label: "Failed" },
+      PENDING: { color: "default", label: "Pending" },
+    };
+
+    const config = statusConfig[execution.status] || statusConfig["PENDING"];
+
+    return (
+      <Chip size="sm" color={config.color} variant="flat">
+        {config.label}
+      </Chip>
+    );
+  };
+
+  const getDetailsText = () => {
     if (execution.execution_type === "tracer") {
-      return `(${execution.sessions} sessions, ${execution.turns_per_session} turns)`;
+      return `${execution.sessions}s • ${execution.turns_per_session}t`;
     }
-    return `(${execution.generated_profiles_count} profiles)`;
+    return `${profiles.length} profiles`;
   };
+
+  const handleDelete = async (e) => {
+    // HeroUI onPress doesn't always pass a proper event object
+    if (e && e.stopPropagation) {
+      e.stopPropagation(); // Prevent folder toggle if event exists
+    }
+
+    // Simple confirmation
+    const confirmMessage =
+      execution.execution_type === "manual"
+        ? `Delete manual execution "${execution.execution_name}"?\n\nThis will only work if no profiles are in this execution.`
+        : `Delete TRACER execution "${execution.execution_name}"?\n\nThis will permanently delete all ${profiles.length} profiles.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await onDeleteExecution(execution.id);
+    } catch (error) {
+      console.error("Delete failed:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const canDelete =
+    execution.execution_type === "tracer" ||
+    (execution.execution_type === "manual" && profiles.length === 0);
 
   return (
-    <div className="mb-4 border border-default-200 rounded-lg bg-content1">
-      {/* Folder Header */}
+    <div className="group">
+      {/* Header */}
       <div
-        className="flex items-center justify-between p-3 cursor-pointer hover:bg-content2 transition-colors"
+        className="flex items-center justify-between py-2 px-1 cursor-pointer hover:bg-default-50 rounded-md transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-default-500" />
+            <ChevronDown className="w-4 h-4 text-default-400 flex-shrink-0" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-default-500" />
+            <ChevronRight className="w-4 h-4 text-default-400 flex-shrink-0" />
           )}
-          {getFolderIcon()}
-          <div className="flex flex-col">
-            <div className="flex items-center space-x-2">
-              <span className="font-medium text-foreground">
-                {getFolderHeader()}
+
+          {getExecutionIcon()}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-foreground text-sm">
+                {getExecutionLabel()}
               </span>
-              <span className="text-sm text-default-500">
-                {getDisplayInfo()}
-              </span>
+              {getStatusChip()}
             </div>
-            {execution.execution_type === "tracer" && execution.status && (
-              <span className={`text-xs ${
-                execution.status === "COMPLETED" ? "text-success" :
-                execution.status === "RUNNING" ? "text-warning" :
-                execution.status === "ERROR" ? "text-danger" : "text-default-500"
-              }`}>
-                Status: {execution.status}
-              </span>
-            )}
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 text-sm text-default-500">
-          <Folder className="w-4 h-4" />
-          <span>{profiles.length} profiles</span>
+        <div className="flex items-center gap-3 text-xs text-default-500 flex-shrink-0">
+          <span>{getDetailsText()}</span>
+          <span>{profiles.length} files</span>
+
+          {/* Delete Button - Only show if deletable */}
+          {canDelete && (
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              color="danger"
+              className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 min-w-6"
+              onPress={handleDelete}
+              isLoading={isDeleting}
+              title={
+                execution.execution_type === "manual"
+                  ? "Delete manual execution (only if empty)"
+                  : "Delete TRACER execution"
+              }
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Profiles List */}
       {isExpanded && (
-        <div className="border-t border-default-200 p-3 bg-content2/50">
+        <div className="ml-6 mt-1 mb-3">
           {profiles.length === 0 ? (
-            <p className="text-default-500 text-sm italic">No profiles in this execution</p>
+            <p className="text-default-400 text-sm italic py-2">No profiles</p>
           ) : (
-            <>
-              <ul className="space-y-2">
-                {displayProfiles.map((profile) => (
-                  <li key={profile.id} className="flex items-start space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedFiles.includes(profile.id)}
-                      onChange={() => onProfileSelect(profile.id)}
-                      className="form-checkbox h-4 w-4 mt-1"
-                    />
-                    <div className="flex items-center space-x-2 flex-1">
-                      <Link
-                        variant="light"
-                        onPress={() => navigate(`/yaml-editor/${profile.id}`)}
-                        className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-primary hover:underline text-left"
-                      >
-                        {profile.name}
-                      </Link>
-                      {profile.is_valid === false && (
-                        <div
-                          className="tooltip-container"
-                          title="Invalid profile: This YAML has validation errors"
-                        >
-                          <AlertTriangle className="h-4 w-4 text-red-500" />
-                        </div>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <div className="space-y-1">
+              {displayProfiles.map((profile) => (
+                <div
+                  key={profile.id}
+                  className="flex items-center gap-2 py-1 group/item"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.includes(profile.id)}
+                    onChange={() => onProfileSelect(profile.id)}
+                    className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary focus:ring-1"
+                  />
 
-              {/* Show All/Collapse Button */}
-              {hasMoreProfiles && (
-                <div className="mt-3">
-                  <Button
-                    size="sm"
-                    variant="light"
-                    color="primary"
-                    onPress={() => onToggleShowAll(execution.id)}
-                    className="text-xs"
+                  <Link
+                    onPress={() => navigate(`/yaml-editor/${profile.id}`)}
+                    className="text-sm text-default-700 hover:text-primary transition-colors flex-1 truncate"
                   >
-                    {showAll ?
-                      `[−] Show less...` :
-                      `[+] Show all ${profiles.length} profiles...`
-                    }
-                  </Button>
+                    {profile.name}
+                  </Link>
+
+                  {profile.is_valid === false && (
+                    <AlertTriangle
+                      className="w-4 h-4 text-danger flex-shrink-0"
+                      title="Invalid YAML"
+                    />
+                  )}
                 </div>
+              ))}
+
+              {hasMoreProfiles && (
+                <Button
+                  size="sm"
+                  variant="light"
+                  color="primary"
+                  onPress={() => onToggleShowAll(execution.id)}
+                  className="mt-2 h-6 text-xs font-normal"
+                >
+                  {showAll ? "Show less" : `+${profiles.length - 4} more`}
+                </Button>
               )}
-            </>
+            </div>
           )}
         </div>
       )}

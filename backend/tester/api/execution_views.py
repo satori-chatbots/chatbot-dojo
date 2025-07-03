@@ -310,11 +310,13 @@ def get_profile_executions(request: Request, project_id: int) -> Response:
 
         # Add TRACER-specific fields if it's a TRACER execution
         if execution.execution_type == "tracer":
-            execution_info.update({
-                "sessions": execution.sessions,
-                "turns_per_session": execution.turns_per_session,
-                "execution_time_minutes": execution.execution_time_minutes,
-            })
+            execution_info.update(
+                {
+                    "sessions": execution.sessions,
+                    "turns_per_session": execution.turns_per_session,
+                    "execution_time_minutes": execution.execution_time_minutes,
+                }
+            )
 
         execution_data.append(execution_info)
 
@@ -346,3 +348,63 @@ def stop_test_execution(request: Request) -> Response:
 
     except TestCase.DoesNotExist:
         return Response({"error": "Test case not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["DELETE"])
+def delete_profile_execution(request: Request, execution_id: int) -> Response:
+    """Delete a profile execution and all its associated profiles and files."""
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id)
+
+        # Check ownership
+        if execution.project.owner != request.user:
+            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Prevent deletion of manual executions if they have profiles
+        if execution.execution_type == "manual":
+            profile_count = TestFile.objects.filter(execution=execution).count()
+            if profile_count > 0:
+                return Response(
+                    {"error": "Cannot delete manual execution with profiles. Delete profiles individually first."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        with transaction.atomic():
+            # Delete associated files from filesystem
+            try:
+                if execution.profiles_directory:
+                    profiles_dir = Path(settings.MEDIA_ROOT) / execution.profiles_directory
+                    if profiles_dir.exists():
+                        shutil.rmtree(profiles_dir)
+                        logger.info(f"Deleted execution directory: {profiles_dir}")
+            except Exception as e:
+                logger.warning(f"Failed to delete execution directory: {e}")
+                # Continue with database deletion even if file deletion fails
+
+            # Delete related database objects (cascade will handle most of this)
+            # But we'll explicitly delete TestFiles to clean up their file references
+            test_files = TestFile.objects.filter(execution=execution)
+            for test_file in test_files:
+                try:
+                    if test_file.file:
+                        test_file.file.delete(save=False)
+                except Exception as e:
+                    logger.warning(f"Failed to delete file {test_file.file.name}: {e}")
+
+            # Delete the execution (cascade will handle related objects)
+            execution_name = execution.execution_name
+            execution.delete()
+
+            logger.info(f"Successfully deleted execution: {execution_name}")
+
+            return Response(
+                {"message": f"Execution '{execution_name}' deleted successfully"}, status=status.HTTP_200_OK
+            )
+
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error deleting execution {execution_id}: {e}")
+        return Response(
+            {"error": "An error occurred while deleting the execution."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

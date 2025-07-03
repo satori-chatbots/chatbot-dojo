@@ -29,6 +29,7 @@ import {
   checkGenerationStatus,
   checkOngoingGeneration,
   fetchProfileExecutions,
+  deleteProfileExecution,
 } from "../api/file-api";
 import { deleteProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
@@ -102,8 +103,8 @@ function Home() {
 
       // Flatten all profiles for easy selection management
       const profiles = [];
-      data.executions?.forEach(execution => {
-        execution.profiles.forEach(profile => {
+      data.executions?.forEach((execution) => {
+        execution.profiles.forEach((profile) => {
           profiles.push(profile);
         });
       });
@@ -117,6 +118,49 @@ function Home() {
       setLoadingExecutions(false);
     }
   }, [selectedProject, showToast]);
+
+  // Handler for execution deletion
+  const handleDeleteExecution = useCallback(
+    async (executionId) => {
+      try {
+        const response = await deleteProfileExecution(executionId);
+        showToast(
+          "success",
+          response.message || "Execution deleted successfully",
+        );
+
+        // Clear any selected files that belonged to this execution
+        const executionToDelete = executions.find(
+          (exec) => exec.id === executionId,
+        );
+        if (executionToDelete) {
+          const profilesToDeselect = executionToDelete.profiles.map(
+            (p) => p.id,
+          );
+          setSelectedFiles((prev) =>
+            prev.filter((id) => !profilesToDeselect.includes(id)),
+          );
+        }
+
+        // Reload executions and profiles
+        await reloadExecutions();
+        await reloadProfiles(); // Update setup progress
+      } catch (error) {
+        console.error("Error deleting execution:", error);
+        let errorMessage = "Error deleting execution";
+        try {
+          const errorData = JSON.parse(error.message);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // Use default message if parsing fails
+        }
+        showToast("error", errorMessage);
+      }
+    },
+    [executions, reloadExecutions, reloadProfiles, showToast],
+  );
 
   // Loading state for the serverside validation of the execution name
   const [loadingValidation, setLoadingValidation] = useState(false);
@@ -382,7 +426,7 @@ function Home() {
 
   // Handle execution folder expansion
   const toggleShowAllProfiles = (executionId) => {
-    setExpandedExecutions(prev => {
+    setExpandedExecutions((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(executionId)) {
         newSet.delete(executionId);
@@ -484,7 +528,8 @@ function Home() {
     // Check if any of the selected files are invalid
     const invalidFiles = allProfiles
       .filter(
-        (profile) => selectedFiles.includes(profile.id) && profile.is_valid === false,
+        (profile) =>
+          selectedFiles.includes(profile.id) && profile.is_valid === false,
       )
       .map((profile) => profile.name);
 
@@ -799,7 +844,8 @@ function Home() {
                 <>
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      📁 Profile Executions ({allProfiles.length} profiles total)
+                      📁 Profile Executions ({allProfiles.length} profiles
+                      total)
                     </span>
                     <Button
                       size="sm"
@@ -822,6 +868,7 @@ function Home() {
                         onProfileSelect={selectFile}
                         showAll={expandedExecutions.has(execution.id)}
                         onToggleShowAll={toggleShowAllProfiles}
+                        onDeleteExecution={handleDeleteExecution}
                       />
                     ))}
                   </div>
@@ -890,7 +937,9 @@ function Home() {
           <ModalBody className="flex flex-col gap-4">
             <div className="space-y-3">
               <div>
-                <h4 className="text-sm font-medium text-foreground mb-2">📊 Configuration</h4>
+                <h4 className="text-sm font-medium text-foreground mb-2">
+                  📊 Configuration
+                </h4>
                 <div className="space-y-3">
                   <Input
                     label="Sessions (exploration sessions)"
@@ -907,17 +956,31 @@ function Home() {
                     min="1"
                     value={profileGenParameters.turns_per_session.toString()}
                     onValueChange={(value) =>
-                      handleProfileGenParameterChange("turns_per_session", value)
+                      handleProfileGenParameterChange(
+                        "turns_per_session",
+                        value,
+                      )
                     }
                   />
                 </div>
               </div>
 
-                              <div className="pt-2 border-t border-default-200">
-                <h4 className="text-sm font-medium text-foreground mb-2">📝 Using:</h4>
+              <div className="pt-2 border-t border-default-200">
+                <h4 className="text-sm font-medium text-foreground mb-2">
+                  📝 Using:
+                </h4>
                 <div className="text-sm text-default-600 space-y-1">
-                  <div>Model: {selectedProject?.llm_model || 'gpt-4o-mini'} (from project settings)</div>
-                  <div>Technology: {availableConnectors.find(c => c.id === selectedProject?.chatbot_connector)?.technology || 'Unknown'} (from connector)</div>
+                  <div>
+                    Model: {selectedProject?.llm_model || "gpt-4o-mini"} (from
+                    project settings)
+                  </div>
+                  <div>
+                    Technology:{" "}
+                    {availableConnectors.find(
+                      (c) => c.id === selectedProject?.chatbot_connector,
+                    )?.technology || "Unknown"}{" "}
+                    (from connector)
+                  </div>
                 </div>
               </div>
             </div>
