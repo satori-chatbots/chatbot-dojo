@@ -146,6 +146,20 @@ def upload_to_types(instance: "TypeFile", filename: str) -> str:
     return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
 
 
+def upload_to_execution(instance: "TestFile", filename: str) -> str:
+    """Returns the path where Test Files are stored in execution folders."""
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+
+    # If execution is provided, use execution-based path
+    if instance.execution:
+        execution_name = instance.execution.execution_name.lower()
+        return f"projects/user_{user_id}/project_{project_id}/executions/{execution_name}/profiles/{filename}"
+
+    # Fallback to old path structure (backward compatibility)
+    return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
+
+
 class TestFile(models.Model):
     """Model to store the uploaded User Profiles YAML files.
 
@@ -153,7 +167,7 @@ class TestFile(models.Model):
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
     """
 
-    file = models.FileField(upload_to=upload_to)
+    file = models.FileField(upload_to=upload_to_execution)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
@@ -171,6 +185,10 @@ class TestFile(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TestFile instance."""
+        # If no execution is assigned and this is a new file, create/assign a manual execution
+        if not self.execution and not self.pk:
+            self.execution = self.project.get_or_create_current_manual_execution()
+
         super().save(*args, **kwargs)
 
         # After saving, try to read and process the file
@@ -181,7 +199,6 @@ class TestFile(models.Model):
                     yaml_content = file.read()
 
                 # Validate using YamlValidator
-
                 validator = YamlValidator()
                 validation_errors = validator.validate(yaml_content)
 
@@ -195,16 +212,25 @@ class TestFile(models.Model):
                     return
 
                 # Create new filename and change the extension to yaml
-                # To avoid having yaml and yml files with the same name
                 new_filename = f"{test_name}.yaml"
-                # Get user and project id
+
+                # Generate new path using execution folder structure
                 user_id = self.project.owner.id
                 project_id = self.project.id
-                new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
+
+                if self.execution:
+                    execution_name = self.execution.execution_name.lower()
+                    new_path = f"projects/user_{user_id}/project_{project_id}/executions/{execution_name}/profiles/{new_filename}"
+                else:
+                    # Fallback to old structure
+                    new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
 
                 # Rename the file
                 old_path = self.file.path
                 new_full_path = Path(settings.MEDIA_ROOT) / new_path
+
+                # Create parent directories if they don't exist
+                new_full_path.parent.mkdir(parents=True, exist_ok=True)
                 Path(old_path).rename(new_full_path)
 
                 # Update the model
@@ -214,19 +240,21 @@ class TestFile(models.Model):
                 # Set validation status - only boolean flag
                 self.is_valid = not bool(validation_errors)
 
-                # Update all fields in the database
+                # Update execution profile count
+                if self.execution:
+                    profile_count = self.execution.test_files.count()
+                    self.execution.generated_profiles_count = profile_count
+                    self.execution.save(update_fields=['generated_profiles_count'])
+
+                # Save again with updated fields
                 TestFile.objects.filter(pk=self.pk).update(
                     file=self.file.name,
-                    name=test_name,
-                    is_valid=self.is_valid,
+                    name=self.name,
+                    is_valid=self.is_valid
                 )
 
-            except yaml.YAMLError:
-                # Set as invalid but don't raise exception
-                self.is_valid = False
-                TestFile.objects.filter(pk=self.pk).update(is_valid=False)
-            except OSError:
-                # Set as invalid but don't raise exception
+            except (FileNotFoundError, yaml.YAMLError) as e:
+                logger.warning(f"Error processing TestFile {self.pk}: {e}")
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
 
@@ -346,6 +374,45 @@ class Project(models.Model):
             logger.info("Updated run.yml at %s", run_yml_path)
         except yaml.YAMLError:
             logger.exception("Error creating run.yml")
+
+    def create_manual_execution_folder(self) -> "ProfileExecution":
+        """Create a new manual profile execution folder for organizing profiles."""
+        from datetime import UTC, datetime
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        execution_name = f"Manual_{timestamp}"
+
+        # Create directory structure
+        user_id = self.owner.id
+        project_id = self.id
+        execution_dir = f"projects/user_{user_id}/project_{project_id}/executions/{execution_name.lower()}"
+
+        # Create execution record
+        execution = ProfileExecution.objects.create(
+            project=self,
+            execution_name=execution_name,
+            execution_type="manual",
+            status="COMPLETED",  # Manual executions are always completed
+            profiles_directory=execution_dir,
+        )
+
+        return execution
+
+    def get_or_create_current_manual_execution(self) -> "ProfileExecution":
+        """Get the current manual execution folder, or create one if none exists."""
+        # Look for a recent manual execution (within the last hour) to group profiles
+        from datetime import UTC, datetime, timedelta
+
+        one_hour_ago = datetime.now(UTC) - timedelta(hours=1)
+        recent_manual_execution = self.profile_executions.filter(
+            execution_type="manual",
+            created_at__gte=one_hour_ago
+        ).order_by('-created_at').first()
+
+        if recent_manual_execution:
+            return recent_manual_execution
+
+        return self.create_manual_execution_folder()
 
 
 @receiver(post_delete, sender=Project)
