@@ -416,10 +416,11 @@ def get_tracer_executions(request: Request) -> Response:
         user_projects = Project.objects.filter(owner=request.user)
 
         # Get all TRACER executions for user's projects
-        tracer_executions = ProfileExecution.objects.filter(
-            project__in=user_projects,
-            execution_type="tracer"
-        ).select_related('project', 'analysis_result').order_by('-created_at')
+        tracer_executions = (
+            ProfileExecution.objects.filter(project__in=user_projects, execution_type="tracer")
+            .select_related("project", "analysis_result")
+            .order_by("-created_at")
+        )
 
         execution_data = []
         for execution in tracer_executions:
@@ -434,19 +435,19 @@ def get_tracer_executions(request: Request) -> Response:
                 "turns_per_session": execution.turns_per_session,
                 "execution_time_minutes": execution.execution_time_minutes,
                 "generated_profiles_count": execution.generated_profiles_count,
-                "has_analysis": hasattr(execution, 'analysis_result'),
-                "analysis": None
+                "has_analysis": hasattr(execution, "analysis_result"),
+                "analysis": None,
             }
 
             # Add analysis data if available
-            if hasattr(execution, 'analysis_result'):
+            if hasattr(execution, "analysis_result"):
                 analysis = execution.analysis_result
                 execution_info["analysis"] = {
                     "total_interactions": analysis.total_interactions,
                     "coverage_percentage": analysis.coverage_percentage,
                     "unique_paths_discovered": analysis.unique_paths_discovered,
                     "has_report": bool(analysis.report_file_path),
-                    "has_graph": bool(analysis.workflow_graph_path)
+                    "has_graph": bool(analysis.workflow_graph_path),
                 }
 
             execution_data.append(execution_info)
@@ -457,7 +458,7 @@ def get_tracer_executions(request: Request) -> Response:
         logger.error(f"Error fetching TRACER executions: {e!s}")
         return Response(
             {"error": "An error occurred while fetching TRACER executions."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -472,7 +473,7 @@ def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
             return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
 
         # Check if analysis result exists
-        if not hasattr(execution, 'analysis_result'):
+        if not hasattr(execution, "analysis_result"):
             return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
 
         analysis = execution.analysis_result
@@ -487,19 +488,20 @@ def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
         with report_path.open("r", encoding="utf-8") as f:
             report_content = f.read()
 
-        return Response({
-            "report_content": report_content,
-            "execution_name": execution.execution_name,
-            "project_name": execution.project.name
-        })
+        return Response(
+            {
+                "report_content": report_content,
+                "execution_name": execution.execution_name,
+                "project_name": execution.project.name,
+            }
+        )
 
     except ProfileExecution.DoesNotExist:
         return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.error(f"Error fetching TRACER report for execution {execution_id}: {e}")
         return Response(
-            {"error": "An error occurred while fetching the report."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "An error occurred while fetching the report."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -514,7 +516,7 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
             return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
 
         # Check if analysis result exists
-        if not hasattr(execution, 'analysis_result'):
+        if not hasattr(execution, "analysis_result"):
             return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
 
         analysis = execution.analysis_result
@@ -526,14 +528,29 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
         if not graph_path.exists():
             return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Check if it's a PDF file and handle accordingly
+        if graph_path.suffix.lower() == ".pdf":
+            # For PDF files, we'll return metadata and let frontend handle the file URL
+            return Response(
+                {
+                    "file_type": "pdf",
+                    "file_url": f"/media/{analysis.workflow_graph_path}",
+                    "execution_name": execution.execution_name,
+                    "project_name": execution.project.name,
+                }
+            )
+        # For SVG or other text-based files, return content directly
         with graph_path.open("r", encoding="utf-8") as f:
             graph_content = f.read()
 
-        return Response({
-            "graph_content": graph_content,
-            "execution_name": execution.execution_name,
-            "project_name": execution.project.name
-        })
+        return Response(
+            {
+                "file_type": "svg",
+                "graph_content": graph_content,
+                "execution_name": execution.execution_name,
+                "project_name": execution.project.name,
+            }
+        )
 
     except ProfileExecution.DoesNotExist:
         return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -541,7 +558,7 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
         logger.error(f"Error fetching TRACER graph for execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while fetching the workflow graph."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -556,22 +573,26 @@ def get_tracer_original_profiles(request: Request, execution_id: int) -> Respons
             return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
 
         # Get original profiles
-        original_profiles = execution.original_profiles.all().order_by('original_filename')
+        original_profiles = execution.original_profiles.all().order_by("original_filename")
 
         profiles_data = []
         for profile in original_profiles:
-            profiles_data.append({
-                "id": profile.id,
-                "filename": profile.original_filename,
-                "content": profile.original_content,
-                "created_at": profile.created_at.isoformat()
-            })
+            profiles_data.append(
+                {
+                    "id": profile.id,
+                    "filename": profile.original_filename,
+                    "content": profile.original_content,
+                    "created_at": profile.created_at.isoformat(),
+                }
+            )
 
-        return Response({
-            "profiles": profiles_data,
-            "execution_name": execution.execution_name,
-            "project_name": execution.project.name
-        })
+        return Response(
+            {
+                "profiles": profiles_data,
+                "execution_name": execution.execution_name,
+                "project_name": execution.project.name,
+            }
+        )
 
     except ProfileExecution.DoesNotExist:
         return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -579,5 +600,5 @@ def get_tracer_original_profiles(request: Request, execution_id: int) -> Respons
         logger.error(f"Error fetching original profiles for execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while fetching the original profiles."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )

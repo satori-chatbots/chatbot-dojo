@@ -86,14 +86,18 @@ const TracerExecutionCard = ({
               <TrendingUp className="w-4 h-4 text-success" />
               <div>
                 <p className="text-xs text-default-500">Turns/Session</p>
-                <p className="font-medium">{execution.turns_per_session || "N/A"}</p>
+                <p className="font-medium">
+                  {execution.turns_per_session || "N/A"}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-secondary" />
               <div>
                 <p className="text-xs text-default-500">Profiles</p>
-                <p className="font-medium">{execution.generated_profiles_count}</p>
+                <p className="font-medium">
+                  {execution.generated_profiles_count}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -117,11 +121,15 @@ const TracerExecutionCard = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <p className="text-xs text-default-500">Total Interactions</p>
-                  <p className="font-medium">{execution.analysis.total_interactions}</p>
+                  <p className="font-medium">
+                    {execution.analysis.total_interactions}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-default-500">Unique Paths</p>
-                  <p className="font-medium">{execution.analysis.unique_paths_discovered}</p>
+                  <p className="font-medium">
+                    {execution.analysis.unique_paths_discovered}
+                  </p>
                 </div>
                 {execution.analysis.coverage_percentage !== null && (
                   <div>
@@ -195,8 +203,7 @@ const TracerExecutionCard = ({
               <div className="text-sm text-default-500 italic">
                 {execution.status === "ERROR"
                   ? "Execution failed - no actions available"
-                  : "Execution pending - no actions available yet"
-                }
+                  : "Execution pending - no actions available yet"}
               </div>
             )}
           </div>

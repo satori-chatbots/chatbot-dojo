@@ -8,7 +8,14 @@ import {
   Card,
   CardBody,
 } from "@heroui/react";
-import { BarChart3, ArrowLeft, AlertCircle, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  BarChart3,
+  ArrowLeft,
+  AlertCircle,
+  ZoomIn,
+  ZoomOut,
+  Download,
+} from "lucide-react";
 import { fetchTracerWorkflowGraph } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
@@ -39,15 +46,28 @@ const InlineGraphViewer = ({ execution, onClose }) => {
   };
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.25, 3));
+    setZoom((prev) => Math.min(prev + 0.25, 3));
   };
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.25, 0.25));
+    setZoom((prev) => Math.max(prev - 0.25, 0.25));
   };
 
   const handleResetZoom = () => {
     setZoom(1);
+  };
+
+  const handleDownload = () => {
+    if (graphData?.file_url) {
+      // Create a temporary link element to trigger download
+      const link = document.createElement("a");
+      link.href = graphData.file_url;
+      link.download = `${execution.execution_name}_workflow_graph.${graphData.file_type === "pdf" ? "pdf" : "svg"}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Download started", "success");
+    }
   };
 
   // Process SVG content to ensure it's properly sized and styled
@@ -59,7 +79,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
       .replace(/stroke="black"/g, 'stroke="currentColor"');
 
     // If the SVG doesn't have proper viewBox, try to extract dimensions and add it
-    if (!processedSvg.includes('viewBox')) {
+    if (!processedSvg.includes("viewBox")) {
       const widthMatch = processedSvg.match(/width="(\d+)"/);
       const heightMatch = processedSvg.match(/height="(\d+)"/);
       if (widthMatch && heightMatch) {
@@ -67,13 +87,16 @@ const InlineGraphViewer = ({ execution, onClose }) => {
         const height = heightMatch[1];
         processedSvg = processedSvg.replace(
           /<svg/,
-          `<svg viewBox="0 0 ${width} ${height}"`
+          `<svg viewBox="0 0 ${width} ${height}"`,
         );
       }
     }
 
     return processedSvg;
   };
+
+  const isPdf = graphData?.file_type === "pdf";
+  const isSvg = graphData?.file_type === "svg";
 
   return (
     <>
@@ -86,45 +109,68 @@ const InlineGraphViewer = ({ execution, onClose }) => {
             <div>
               <h2 className="text-xl font-semibold">TRACER Workflow Graph</h2>
               <p className="text-sm text-default-500">
-                {execution.execution_name} - {graphData?.project_name || execution.project_name}
+                {execution.execution_name} -{" "}
+                {graphData?.project_name || execution.project_name}
               </p>
+              {graphData && (
+                <p className="text-xs text-default-400">
+                  Format: {graphData.file_type?.toUpperCase()}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Zoom Controls */}
+          {/* Controls */}
           {graphData && !loading && !error && (
             <div className="flex items-center gap-2">
+              {/* Download Button - Available for both PDF and SVG */}
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={handleZoomOut}
-                isDisabled={zoom <= 0.25}
-                aria-label="Zoom out"
+                onPress={handleDownload}
+                aria-label="Download graph"
+                title="Download workflow graph"
               >
-                <ZoomOut className="w-4 h-4" />
+                <Download className="w-4 h-4" />
               </Button>
-              <span className="text-sm text-default-500 min-w-[4rem] text-center">
-                {Math.round(zoom * 100)}%
-              </span>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={handleZoomIn}
-                isDisabled={zoom >= 3}
-                aria-label="Zoom in"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                onPress={handleResetZoom}
-                className="text-xs"
-              >
-                Reset
-              </Button>
+
+              {/* Zoom Controls - Only for SVG */}
+              {isSvg && (
+                <>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={handleZoomOut}
+                    isDisabled={zoom <= 0.25}
+                    aria-label="Zoom out"
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-default-500 min-w-[4rem] text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={handleZoomIn}
+                    isDisabled={zoom >= 3}
+                    aria-label="Zoom in"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="light"
+                    onPress={handleResetZoom}
+                    className="text-xs"
+                  >
+                    Reset
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -164,23 +210,60 @@ const InlineGraphViewer = ({ execution, onClose }) => {
           <div className="space-y-4">
             <Card className="border-default-200">
               <CardBody className="p-6">
-                <div
-                  className="flex justify-center items-center min-h-[400px] overflow-auto"
-                  style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}
-                >
+                {/* PDF Display */}
+                {isPdf && (
+                  <div className="space-y-4">
+                    <div
+                      className="bg-default-100 dark:bg-default-800 rounded-lg"
+                      style={{ height: "600px" }}
+                    >
+                      <iframe
+                        src={graphData.file_url}
+                        className="w-full h-full rounded-lg"
+                        title="TRACER Workflow Graph"
+                        style={{ border: "none" }}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <Button
+                        color="primary"
+                        variant="light"
+                        startContent={<Download className="w-4 h-4" />}
+                        onPress={handleDownload}
+                        size="sm"
+                      >
+                        Download PDF
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SVG Display */}
+                {isSvg && (
                   <div
-                    className="text-foreground"
-                    dangerouslySetInnerHTML={{
-                      __html: processSvgContent(graphData.graph_content)
+                    className="flex justify-center items-center min-h-[400px] overflow-auto"
+                    style={{
+                      transform: `scale(${zoom})`,
+                      transformOrigin: "center",
                     }}
-                  />
-                </div>
+                  >
+                    <div
+                      className="text-foreground"
+                      dangerouslySetInnerHTML={{
+                        __html: processSvgContent(graphData.graph_content),
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Graph Info */}
                 <div className="mt-4 pt-4 border-t border-default-200">
                   <p className="text-sm text-default-500">
-                    This workflow graph shows the conversation paths and decision points
-                    discovered during the TRACER exploration of your chatbot.
+                    This workflow graph shows the conversation paths and
+                    decision points discovered during the TRACER exploration of
+                    your chatbot.
+                    {isPdf && " The graph is displayed as a PDF document."}
+                    {isSvg && " You can zoom in/out to explore the details."}
                   </p>
                 </div>
               </CardBody>
@@ -198,6 +281,15 @@ const InlineGraphViewer = ({ execution, onClose }) => {
         >
           Back to Dashboard
         </Button>
+        {graphData && !loading && !error && (
+          <Button
+            color="primary"
+            startContent={<Download className="w-4 h-4" />}
+            onPress={handleDownload}
+          >
+            Download Graph
+          </Button>
+        )}
       </ModalFooter>
     </>
   );

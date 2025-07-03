@@ -54,12 +54,14 @@ const TracerDashboard = () => {
 
     if (selectedProject !== "all") {
       filtered = filtered.filter(
-        (execution) => execution.project_id === parseInt(selectedProject)
+        (execution) => execution.project_id === parseInt(selectedProject),
       );
     }
 
     if (selectedStatus !== "all") {
-      filtered = filtered.filter((execution) => execution.status === selectedStatus);
+      filtered = filtered.filter(
+        (execution) => execution.status === selectedStatus,
+      );
     }
 
     setFilteredExecutions(filtered);
@@ -72,16 +74,17 @@ const TracerDashboard = () => {
       setExecutions(data.executions || []);
 
       // Extract unique projects for filtering
-      const projects = data.executions?.reduce((acc, execution) => {
-        const existing = acc.find(p => p.id === execution.project_id);
-        if (!existing) {
-          acc.push({
-            id: execution.project_id,
-            name: execution.project_name
-          });
-        }
-        return acc;
-      }, []) || [];
+      const projects =
+        data.executions?.reduce((acc, execution) => {
+          const existing = acc.find((p) => p.id === execution.project_id);
+          if (!existing) {
+            acc.push({
+              id: execution.project_id,
+              name: execution.project_name,
+            });
+          }
+          return acc;
+        }, []) || [];
 
       setUniqueProjects(projects);
     } catch (error) {
@@ -95,7 +98,7 @@ const TracerDashboard = () => {
   const handleViewReport = (execution) => {
     setViewingContent({
       type: "report",
-      execution: execution
+      execution: execution,
     });
     onOpen();
   };
@@ -103,7 +106,7 @@ const TracerDashboard = () => {
   const handleViewGraph = (execution) => {
     setViewingContent({
       type: "graph",
-      execution: execution
+      execution: execution,
     });
     onOpen();
   };
@@ -111,7 +114,7 @@ const TracerDashboard = () => {
   const handleViewProfiles = (execution) => {
     setViewingContent({
       type: "profiles",
-      execution: execution
+      execution: execution,
     });
     onOpen();
   };
@@ -203,7 +206,9 @@ const TracerDashboard = () => {
               <Select
                 label="Filter by Project"
                 placeholder="All Projects"
-                selectedKeys={selectedProject !== "all" ? [selectedProject] : []}
+                selectedKeys={
+                  selectedProject !== "all" ? [selectedProject] : []
+                }
                 onSelectionChange={(keys) => {
                   const selected = Array.from(keys)[0];
                   setSelectedProject(selected || "all");
@@ -215,7 +220,10 @@ const TracerDashboard = () => {
                   All Projects
                 </SelectItem>
                 {uniqueProjects.map((project) => (
-                  <SelectItem key={project.id.toString()} value={project.id.toString()}>
+                  <SelectItem
+                    key={project.id.toString()}
+                    value={project.id.toString()}
+                  >
                     {project.name}
                   </SelectItem>
                 ))}
@@ -306,9 +314,7 @@ const TracerDashboard = () => {
         scrollBehavior="inside"
         className="max-h-[90vh]"
       >
-        <ModalContent>
-          {renderModalContent()}
-        </ModalContent>
+        <ModalContent>{renderModalContent()}</ModalContent>
       </Modal>
     </div>
   );

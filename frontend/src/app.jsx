@@ -263,7 +263,9 @@ function AppContent() {
                 Results
               </Link>
             </NavbarMenuItem>
-            <NavbarMenuItem isActive={location.pathname === "/tracer-dashboard"}>
+            <NavbarMenuItem
+              isActive={location.pathname === "/tracer-dashboard"}
+            >
               <Link
                 to="/tracer-dashboard"
                 className="hover:underline"

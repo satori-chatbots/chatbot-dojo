@@ -17,45 +17,80 @@ const MarkdownRenderer = ({ content }) => {
   const renderMarkdown = (text) => {
     // Convert headers
     let html = text
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-6 mb-3 text-foreground">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-8 mb-4 text-foreground">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-8 mb-6 text-foreground">$1</h1>');
+      .replace(
+        /^### (.*$)/gim,
+        '<h3 class="text-lg font-semibold mt-6 mb-3 text-foreground">$1</h3>',
+      )
+      .replace(
+        /^## (.*$)/gim,
+        '<h2 class="text-xl font-semibold mt-8 mb-4 text-foreground">$1</h2>',
+      )
+      .replace(
+        /^# (.*$)/gim,
+        '<h1 class="text-2xl font-bold mt-8 mb-6 text-foreground">$1</h1>',
+      );
 
     // Convert bold text
-    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold">$1</strong>');
+    html = html.replace(
+      /\*\*(.*?)\*\*/gim,
+      '<strong class="font-semibold">$1</strong>',
+    );
 
     // Convert italic text
     html = html.replace(/\*(.*?)\*/gim, '<em class="italic">$1</em>');
 
     // Convert code blocks
-    html = html.replace(/```([\s\S]*?)```/gim, '<pre class="bg-default-100 dark:bg-default-800 rounded-lg p-4 overflow-x-auto my-4"><code class="text-sm">$1</code></pre>');
+    html = html.replace(
+      /```([\s\S]*?)```/gim,
+      '<pre class="bg-default-100 dark:bg-default-800 rounded-lg p-4 overflow-x-auto my-4"><code class="text-sm">$1</code></pre>',
+    );
 
     // Convert inline code
-    html = html.replace(/`([^`]+)`/gim, '<code class="bg-default-100 dark:bg-default-800 px-2 py-1 rounded text-sm">$1</code>');
+    html = html.replace(
+      /`([^`]+)`/gim,
+      '<code class="bg-default-100 dark:bg-default-800 px-2 py-1 rounded text-sm">$1</code>',
+    );
 
     // Convert lists
     html = html.replace(/^\- (.*$)/gim, '<li class="ml-4 mb-1">• $1</li>');
-    html = html.replace(/^\d+\. (.*$)/gim, '<li class="ml-4 mb-1 list-decimal">$1</li>');
+    html = html.replace(
+      /^\d+\. (.*$)/gim,
+      '<li class="ml-4 mb-1 list-decimal">$1</li>',
+    );
 
     // Convert tables
     const tableRegex = /\|(.+)\|\n\|[-\s\|]+\|\n((\|.+\|\n?)*)/gim;
     html = html.replace(tableRegex, (match, header, body) => {
-      const headerCells = header.split('|').filter(cell => cell.trim()).map(cell =>
-        `<th class="px-3 py-2 text-left font-semibold border-b border-default-200">${cell.trim()}</th>`
-      ).join('');
+      const headerCells = header
+        .split("|")
+        .filter((cell) => cell.trim())
+        .map(
+          (cell) =>
+            `<th class="px-3 py-2 text-left font-semibold border-b border-default-200">${cell.trim()}</th>`,
+        )
+        .join("");
 
-      const bodyRows = body.trim().split('\n').map(row => {
-        const cells = row.split('|').filter(cell => cell.trim()).map(cell =>
-          `<td class="px-3 py-2 border-b border-default-100">${cell.trim()}</td>`
-        ).join('');
-        return `<tr>${cells}</tr>`;
-      }).join('');
+      const bodyRows = body
+        .trim()
+        .split("\n")
+        .map((row) => {
+          const cells = row
+            .split("|")
+            .filter((cell) => cell.trim())
+            .map(
+              (cell) =>
+                `<td class="px-3 py-2 border-b border-default-100">${cell.trim()}</td>`,
+            )
+            .join("");
+          return `<tr>${cells}</tr>`;
+        })
+        .join("");
 
       return `<table class="w-full my-4 border-collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
     });
 
     // Convert line breaks
-    html = html.replace(/\n/gim, '<br />');
+    html = html.replace(/\n/gim, "<br />");
 
     return html;
   };
@@ -103,7 +138,8 @@ const InlineReportViewer = ({ execution, onClose }) => {
           <div>
             <h2 className="text-xl font-semibold">TRACER Analysis Report</h2>
             <p className="text-sm text-default-500">
-              {execution.execution_name} - {reportData?.project_name || execution.project_name}
+              {execution.execution_name} -{" "}
+              {reportData?.project_name || execution.project_name}
             </p>
           </div>
         </div>

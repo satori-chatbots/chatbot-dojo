@@ -137,7 +137,7 @@ class ProfileGenerator:
             chatbot_url = project.chatbot_connector.link if project.chatbot_connector else "http://localhost:5000"
             model = project.llm_model or "gpt-4o-mini"
 
-            # Build TRACER command
+            # Build TRACER command (removed non-existent options)
             cmd = [
                 "tracer",
                 "-s",
@@ -249,23 +249,32 @@ class ProfileGenerator:
         execution.generated_profiles_count = profile_count
         execution.save()
 
-        # Move analysis files if they exist
-        report_path = output_dir / "report.md"
-        graph_path = output_dir / "workflow_graph.svg"
+        # Move analysis files if they exist - TRACER generates README.md and workflow_graph.pdf
+        readme_path = output_dir / "README.md"  # TRACER generates README.md, not report.md
+        graph_path = output_dir / "workflow_graph.pdf"  # TRACER generates PDF, not SVG
 
         final_report_path = None
         final_graph_path = None
 
         # Parse report metadata before moving
-        report_metadata = self._parse_report_metadata(report_path) if report_path.exists() else {}
+        report_metadata = self._parse_report_metadata(readme_path) if readme_path.exists() else {}
 
-        if report_path.exists():
-            final_report_path = analysis_dir / "report.md"
-            shutil.move(report_path, final_report_path)
+        if readme_path.exists():
+            final_report_path = analysis_dir / "report.md"  # Rename to report.md for consistency
+            shutil.move(readme_path, final_report_path)
+            logger.info(f"Moved README.md to {final_report_path}")
 
         if graph_path.exists():
-            final_graph_path = analysis_dir / "workflow_graph.svg"
+            final_graph_path = analysis_dir / "workflow_graph.pdf"  # Keep as PDF
             shutil.move(graph_path, final_graph_path)
+            logger.info(f"Moved workflow_graph.pdf to {final_graph_path}")
+
+        # Also move functionalities.json if it exists
+        json_path = output_dir / "functionalities.json"
+        if json_path.exists():
+            final_json_path = analysis_dir / "functionalities.json"
+            shutil.move(json_path, final_json_path)
+            logger.info(f"Moved functionalities.json to {final_json_path}")
 
         # Create analysis result record
         TracerAnalysisResult.objects.create(
