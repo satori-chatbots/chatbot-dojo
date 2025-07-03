@@ -188,3 +188,19 @@ export const checkOngoingGeneration = async (projectId) => {
     throw error;
   }
 };
+
+export const fetchProfileExecutions = async (projectId) => {
+  if (!projectId) {
+    return { executions: [] };
+  }
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/profile-executions/${projectId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching profile executions:", error);
+    throw error;
+  }
+};

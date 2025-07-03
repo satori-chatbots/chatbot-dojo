@@ -28,15 +28,16 @@ import {
   generateProfiles,
   checkGenerationStatus,
   checkOngoingGeneration,
+  fetchProfileExecutions,
 } from "../api/file-api";
 import { deleteProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
-import useFetchFiles from "../hooks/use-fetch-files";
 import { executeTest, checkTestCaseName } from "../api/test-cases-api";
 import useSelectedProject from "../hooks/use-selected-projects";
 import CreateProjectModal from "../components/create-project-modal";
 import EditProjectModal from "../components/edit-project-modal";
+import ExecutionFolder from "../components/execution-folder";
 import ProjectsList from "../components/project-list";
 import SetupProgress from "../components/setup-progress";
 import { useSetup } from "../contexts/setup-context";
@@ -78,10 +79,44 @@ function Home() {
 
   const [selectedUploadFiles, setSelectedUploadFiles] = useState();
 
-  // List of files in the selected project
-  const { files, reloadFiles } = useFetchFiles(
-    selectedProject ? selectedProject.id : undefined,
-  );
+  // List of profile executions in the selected project
+  const [executions, setExecutions] = useState([]);
+  const [allProfiles, setAllProfiles] = useState([]);
+  const [loadingExecutions, setLoadingExecutions] = useState(false);
+
+  // Track which execution folders are expanded to show all profiles
+  const [expandedExecutions, setExpandedExecutions] = useState(new Set());
+
+  // Function to reload executions and profiles
+  const reloadExecutions = useCallback(async () => {
+    if (!selectedProject) {
+      setExecutions([]);
+      setAllProfiles([]);
+      return;
+    }
+
+    setLoadingExecutions(true);
+    try {
+      const data = await fetchProfileExecutions(selectedProject.id);
+      setExecutions(data.executions || []);
+
+      // Flatten all profiles for easy selection management
+      const profiles = [];
+      data.executions?.forEach(execution => {
+        execution.profiles.forEach(profile => {
+          profiles.push(profile);
+        });
+      });
+      setAllProfiles(profiles);
+    } catch (error) {
+      console.error("Error fetching executions:", error);
+      showToast("error", "Error loading profile executions");
+      setExecutions([]);
+      setAllProfiles([]);
+    } finally {
+      setLoadingExecutions(false);
+    }
+  }, [selectedProject, showToast]);
 
   // Loading state for the serverside validation of the execution name
   const [loadingValidation, setLoadingValidation] = useState(false);
@@ -92,8 +127,8 @@ function Home() {
   // Profiles generation states
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [profileGenParameters, setProfileGenParameters] = useState({
-    conversations: 5,
-    turns: 5,
+    sessions: 8,
+    turns_per_session: 5,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const statusIntervalReference = useRef();
@@ -135,8 +170,8 @@ function Home() {
           if (status.status === "COMPLETED") {
             clearInterval(statusIntervalReference.current);
             statusIntervalReference.current = undefined;
-            // Explicitly reload files when generation completes
-            await reloadFiles();
+            // Explicitly reload executions when generation completes
+            await reloadExecutions();
             await reloadProfiles(); // Update setup progress
             setIsGenerating(false);
             showToast(
@@ -164,7 +199,7 @@ function Home() {
         }
       }, 3000); // Check every 3 seconds
     },
-    [reloadFiles, reloadProfiles, showToast],
+    [reloadExecutions, reloadProfiles, showToast],
   );
 
   const handleGenerateProfiles = async () => {
@@ -180,8 +215,8 @@ function Home() {
 
     try {
       const response = await generateProfiles(selectedProject.id, {
-        conversations: profileGenParameters.conversations,
-        turns: profileGenParameters.turns,
+        sessions: profileGenParameters.sessions,
+        turns_per_session: profileGenParameters.turns_per_session,
       });
 
       // Start polling for status
@@ -296,13 +331,11 @@ function Home() {
     loadData();
   }, [showToast]);
 
-  // When the selected project changes, reload the files
+  // When the selected project changes, reload the executions
   useEffect(() => {
-    if (selectedProject) {
-      reloadFiles();
-    }
-    // We don't want to trigger this when reloadFiles changes, only when the project selection changes.
-  }, [selectedProject, reloadFiles]);
+    reloadExecutions();
+    // We don't want to trigger this when reloadExecutions changes, only when the project selection changes.
+  }, [selectedProject]);
 
   // When the list of projects changes, verify that the selected project still exists
   useEffect(() => {
@@ -347,13 +380,26 @@ function Home() {
     );
   };
 
+  // Handle execution folder expansion
+  const toggleShowAllProfiles = (executionId) => {
+    setExpandedExecutions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(executionId)) {
+        newSet.delete(executionId);
+      } else {
+        newSet.add(executionId);
+      }
+      return newSet;
+    });
+  };
+
   const toggleSelectAllFiles = () => {
-    if (selectedFiles.length === files.length) {
+    if (selectedFiles.length === allProfiles.length) {
       // If all files are already selected, deselect all
       setSelectedFiles([]);
     } else {
       // Otherwise, select all files
-      setSelectedFiles(files.map((file) => file.id));
+      setSelectedFiles(allProfiles.map((profile) => profile.id));
     }
   };
 
@@ -372,7 +418,7 @@ function Home() {
     formData.append("project", selectedProject.id);
     uploadFiles(formData)
       .then(async () => {
-        await reloadFiles(); // Refresh the file list
+        await reloadExecutions(); // Refresh the executions list
         await reloadProfiles(); // Update setup progress
         setSelectedUploadFiles(undefined);
         if (fileInputReference.current) {
@@ -412,7 +458,7 @@ function Home() {
     try {
       await deleteFiles(selectedFiles);
       setSelectedFiles([]);
-      reloadFiles();
+      await reloadExecutions();
       await reloadProfiles(); // Update setup progress
       showToast("success", "Files deleted successfully!");
     } catch (error) {
@@ -436,11 +482,11 @@ function Home() {
     }
 
     // Check if any of the selected files are invalid
-    const invalidFiles = files
+    const invalidFiles = allProfiles
       .filter(
-        (file) => selectedFiles.includes(file.id) && file.is_valid === false,
+        (profile) => selectedFiles.includes(profile.id) && profile.is_valid === false,
       )
-      .map((file) => file.name);
+      .map((profile) => profile.name);
 
     if (invalidFiles.length > 0) {
       showToast(
@@ -743,13 +789,17 @@ function Home() {
               )}
             </div>
 
-            {/* List Section */}
+            {/* Profile Executions Section */}
             <div className="flex-1 overflow-y-auto mt-4">
-              {files.length > 0 ? (
+              {loadingExecutions ? (
+                <div className="text-center py-4">
+                  <p className="text-default-500">Loading executions...</p>
+                </div>
+              ) : executions.length > 0 ? (
                 <>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex justify-between items-center mb-4">
                     <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      {files.length} profiles
+                      📁 Profile Executions ({allProfiles.length} profiles total)
                     </span>
                     <Button
                       size="sm"
@@ -757,44 +807,24 @@ function Home() {
                       color="primary"
                       onPress={toggleSelectAllFiles}
                     >
-                      {selectedFiles.length === files.length
+                      {selectedFiles.length === allProfiles.length
                         ? "Deselect All"
                         : "Select All"}
                     </Button>
                   </div>
-                  <ul className="space-y-2">
-                    {files.map((file) => (
-                      <li key={file.id} className="flex flex-col space-y-1">
-                        <div className="flex items-start space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedFiles.includes(file.id)}
-                            onChange={() => selectFile(file.id)}
-                            className="form-checkbox h-4 w-4 mt-1"
-                          />
-                          <div className="flex items-center space-x-2 flex-1">
-                            <Link
-                              variant="light"
-                              onPress={() =>
-                                navigate(`/yaml-editor/${file.id}`)
-                              }
-                              className="flex-1 break-words max-w-sm md:max-w-lg lg:max-w-2xl text-primary hover:underline text-left"
-                            >
-                              {file.name}
-                            </Link>
-                            {file.is_valid === false && (
-                              <div
-                                className="tooltip-container"
-                                title="Invalid profile: This YAML has validation errors"
-                              >
-                                <AlertTriangle className="h-4 w-4 text-red-500" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </li>
+                  <div className="space-y-1">
+                    {executions.map((execution) => (
+                      <ExecutionFolder
+                        key={execution.id}
+                        execution={execution}
+                        profiles={execution.profiles}
+                        selectedFiles={selectedFiles}
+                        onProfileSelect={selectFile}
+                        showAll={expandedExecutions.has(execution.id)}
+                        onToggleShowAll={toggleShowAllProfiles}
+                      />
                     ))}
-                  </ul>
+                  </div>
                 </>
               ) : (
                 <p className="text-foreground/60 dark:text-foreground-dark/60 text-center">
@@ -856,32 +886,40 @@ function Home() {
       {/* Generate Profiles Modal */}
       <Modal isOpen={isGenerateModalOpen} onOpenChange={setIsGenerateModalOpen}>
         <ModalContent>
-          <ModalHeader>Generate Profiles</ModalHeader>
+          <ModalHeader>Generate Profiles with TRACER</ModalHeader>
           <ModalBody className="flex flex-col gap-4">
-            <p className="text-foreground/70 dark:text-foreground-dark/70">
-              Profiles are generated based on conversations. More conversations
-              with more turns create better profiles but take longer to
-              generate.
-            </p>
-            <div className="space-y-4">
-              <Input
-                label="Number of conversations"
-                type="number"
-                min="1"
-                value={profileGenParameters.conversations.toString()}
-                onValueChange={(value) =>
-                  handleProfileGenParameterChange("conversations", value)
-                }
-              />
-              <Input
-                label="Turns per conversation"
-                type="number"
-                min="1"
-                value={profileGenParameters.turns.toString()}
-                onValueChange={(value) =>
-                  handleProfileGenParameterChange("turns", value)
-                }
-              />
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-sm font-medium text-foreground mb-2">📊 Configuration</h4>
+                <div className="space-y-3">
+                  <Input
+                    label="Sessions (exploration sessions)"
+                    type="number"
+                    min="1"
+                    value={profileGenParameters.sessions.toString()}
+                    onValueChange={(value) =>
+                      handleProfileGenParameterChange("sessions", value)
+                    }
+                  />
+                  <Input
+                    label="Turns per session"
+                    type="number"
+                    min="1"
+                    value={profileGenParameters.turns_per_session.toString()}
+                    onValueChange={(value) =>
+                      handleProfileGenParameterChange("turns_per_session", value)
+                    }
+                  />
+                </div>
+              </div>
+
+                              <div className="pt-2 border-t border-default-200">
+                <h4 className="text-sm font-medium text-foreground mb-2">📝 Using:</h4>
+                <div className="text-sm text-default-600 space-y-1">
+                  <div>Model: {selectedProject?.llm_model || 'gpt-4o-mini'} (from project settings)</div>
+                  <div>Technology: {availableConnectors.find(c => c.id === selectedProject?.chatbot_connector)?.technology || 'Unknown'} (from connector)</div>
+                </div>
+              </div>
             </div>
           </ModalBody>
           <ModalFooter>
@@ -898,7 +936,7 @@ function Home() {
               isDisabled={isGenerating}
               onPress={handleGenerateProfiles}
             >
-              Generate
+              Generate Profiles
             </Button>
           </ModalFooter>
         </ModalContent>

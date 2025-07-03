@@ -21,6 +21,7 @@ from tester.api.base import logger
 from tester.api.profile_generator import ProfileGenerator
 from tester.api.test_runner import TestExecutionConfig, TestRunner
 from tester.models import (
+    ProfileExecution,
     ProfileGenerationTask,
     Project,
     TestCase,
@@ -268,6 +269,56 @@ def check_ongoing_generation(_request: Request, project_id: int) -> Response:
     except DatabaseError as e:
         logger.error(f"Error checking ongoing generation: {e!s}")
         return Response({"error": "A database error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+def get_profile_executions(request: Request, project_id: int) -> Response:
+    """Get profile executions for a project with their associated profiles."""
+    try:
+        project = Project.objects.get(id=project_id)
+        if project.owner != request.user:
+            return Response({"error": "You do not own this project."}, status=status.HTTP_403_FORBIDDEN)
+    except Project.DoesNotExist:
+        return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get all executions for the project, ordered with manual first
+    executions = ProfileExecution.objects.filter(project=project).order_by("execution_type", "-created_at")
+
+    execution_data = []
+    for execution in executions:
+        # Get profiles for this execution
+        profiles = TestFile.objects.filter(execution=execution).select_related("project")
+
+        execution_info = {
+            "id": execution.id,
+            "execution_name": execution.execution_name,
+            "execution_type": execution.execution_type,
+            "status": execution.status,
+            "created_at": execution.created_at.isoformat(),
+            "display_info": execution.display_info,
+            "generated_profiles_count": execution.generated_profiles_count,
+            "profiles": [
+                {
+                    "id": profile.id,
+                    "name": profile.name,
+                    "is_valid": profile.is_valid,
+                    "uploaded_at": profile.uploaded_at.isoformat(),
+                }
+                for profile in profiles
+            ],
+        }
+
+        # Add TRACER-specific fields if it's a TRACER execution
+        if execution.execution_type == "tracer":
+            execution_info.update({
+                "sessions": execution.sessions,
+                "turns_per_session": execution.turns_per_session,
+                "execution_time_minutes": execution.execution_time_minutes,
+            })
+
+        execution_data.append(execution_info)
+
+    return Response({"executions": execution_data})
 
 
 @api_view(["POST"])

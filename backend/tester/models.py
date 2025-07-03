@@ -244,14 +244,10 @@ class TestFile(models.Model):
                 if self.execution:
                     profile_count = self.execution.test_files.count()
                     self.execution.generated_profiles_count = profile_count
-                    self.execution.save(update_fields=['generated_profiles_count'])
+                    self.execution.save(update_fields=["generated_profiles_count"])
 
                 # Save again with updated fields
-                TestFile.objects.filter(pk=self.pk).update(
-                    file=self.file.name,
-                    name=self.name,
-                    is_valid=self.is_valid
-                )
+                TestFile.objects.filter(pk=self.pk).update(file=self.file.name, name=self.name, is_valid=self.is_valid)
 
             except (FileNotFoundError, yaml.YAMLError) as e:
                 logger.warning(f"Error processing TestFile {self.pk}: {e}")
@@ -404,10 +400,11 @@ class Project(models.Model):
         from datetime import UTC, datetime, timedelta
 
         one_hour_ago = datetime.now(UTC) - timedelta(hours=1)
-        recent_manual_execution = self.profile_executions.filter(
-            execution_type="manual",
-            created_at__gte=one_hour_ago
-        ).order_by('-created_at').first()
+        recent_manual_execution = (
+            self.profile_executions.filter(execution_type="manual", created_at__gte=one_hour_ago)
+            .order_by("-created_at")
+            .first()
+        )
 
         if recent_manual_execution:
             return recent_manual_execution

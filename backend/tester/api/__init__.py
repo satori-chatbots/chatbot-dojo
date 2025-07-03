@@ -20,6 +20,7 @@ from .execution_views import (
     check_generation_status,
     check_ongoing_generation,
     generate_profiles,
+    get_profile_executions,
     stop_test_execution,
 )
 from .project_files import (
@@ -55,6 +56,7 @@ __all__ = [
     "check_ongoing_generation",
     "fetch_file_content",
     "generate_profiles",
+    "get_profile_executions",
     "get_technology_choices",
     "stop_test_execution",
     "validate_token",

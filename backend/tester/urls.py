@@ -77,6 +77,11 @@ urlpatterns = [
         name="check-ongoing-generation",
     ),
     path(
+        "profile-executions/<int:project_id>/",
+        api.get_profile_executions,
+        name="get-profile-executions",
+    ),
+    path(
         "llm-models/",
         get_available_models,
         name="llm-models",
