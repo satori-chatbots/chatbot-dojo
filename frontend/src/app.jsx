@@ -6,6 +6,7 @@ import ChatbotConnectors from "./views/chatbot-connectors";
 import ProjectsDashboard from "./views/projects-dashboard";
 import TestCase from "./views/test-case";
 import LoginView from "./views/login-view";
+import TracerDashboard from "./views/tracer-dashboard";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button, Switch } from "@heroui/react";
@@ -132,6 +133,13 @@ function AppContent() {
                 Results
               </Link>
             </NavbarItem>
+            {user && (
+              <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
+                <Link to="/tracer-dashboard" className="hover:underline">
+                  TRACER Dashboard
+                </Link>
+              </NavbarItem>
+            )}
             <NavbarItem isActive={location.pathname === "/chatbot-connectors"}>
               <Link to="/chatbot-connectors" className="hover:underline">
                 Chatbot Connectors
@@ -255,6 +263,15 @@ function AppContent() {
                 Results
               </Link>
             </NavbarMenuItem>
+            <NavbarMenuItem isActive={location.pathname === "/tracer-dashboard"}>
+              <Link
+                to="/tracer-dashboard"
+                className="hover:underline"
+                onClick={handleLinkClick}
+              >
+                TRACER Dashboard
+              </Link>
+            </NavbarMenuItem>
             <NavbarMenuItem
               isActive={location.pathname === "/chatbot-connectors"}
             >
@@ -322,6 +339,14 @@ function AppContent() {
               }
             />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/tracer-dashboard"
+              element={
+                <PrivateRoute>
+                  <TracerDashboard />
+                </PrivateRoute>
+              }
+            />
             <Route path="/chatbot-connectors" element={<ChatbotConnectors />} />
             <Route
               path="/projects"

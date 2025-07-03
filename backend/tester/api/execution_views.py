@@ -406,3 +406,178 @@ def delete_profile_execution(request: Request, execution_id: int) -> Response:
         return Response(
             {"error": "An error occurred while deleting the execution."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(["GET"])
+def get_tracer_executions(request: Request) -> Response:
+    """Get all TRACER executions across all user projects for the dashboard."""
+    try:
+        # Get all projects owned by the user
+        user_projects = Project.objects.filter(owner=request.user)
+
+        # Get all TRACER executions for user's projects
+        tracer_executions = ProfileExecution.objects.filter(
+            project__in=user_projects,
+            execution_type="tracer"
+        ).select_related('project', 'analysis_result').order_by('-created_at')
+
+        execution_data = []
+        for execution in tracer_executions:
+            execution_info = {
+                "id": execution.id,
+                "execution_name": execution.execution_name,
+                "project_name": execution.project.name,
+                "project_id": execution.project.id,
+                "status": execution.status,
+                "created_at": execution.created_at.isoformat(),
+                "sessions": execution.sessions,
+                "turns_per_session": execution.turns_per_session,
+                "execution_time_minutes": execution.execution_time_minutes,
+                "generated_profiles_count": execution.generated_profiles_count,
+                "has_analysis": hasattr(execution, 'analysis_result'),
+                "analysis": None
+            }
+
+            # Add analysis data if available
+            if hasattr(execution, 'analysis_result'):
+                analysis = execution.analysis_result
+                execution_info["analysis"] = {
+                    "total_interactions": analysis.total_interactions,
+                    "coverage_percentage": analysis.coverage_percentage,
+                    "unique_paths_discovered": analysis.unique_paths_discovered,
+                    "has_report": bool(analysis.report_file_path),
+                    "has_graph": bool(analysis.workflow_graph_path)
+                }
+
+            execution_data.append(execution_info)
+
+        return Response({"executions": execution_data})
+
+    except Exception as e:
+        logger.error(f"Error fetching TRACER executions: {e!s}")
+        return Response(
+            {"error": "An error occurred while fetching TRACER executions."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
+    """Get the analysis report content for a TRACER execution."""
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
+
+        # Check ownership
+        if execution.project.owner != request.user:
+            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if analysis result exists
+        if not hasattr(execution, 'analysis_result'):
+            return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+        analysis = execution.analysis_result
+        if not analysis.report_file_path:
+            return Response({"error": "No report file found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Read report content
+        report_path = Path(settings.MEDIA_ROOT) / analysis.report_file_path
+        if not report_path.exists():
+            return Response({"error": "Report file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+
+        with report_path.open("r", encoding="utf-8") as f:
+            report_content = f.read()
+
+        return Response({
+            "report_content": report_content,
+            "execution_name": execution.execution_name,
+            "project_name": execution.project.name
+        })
+
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error fetching TRACER report for execution {execution_id}: {e}")
+        return Response(
+            {"error": "An error occurred while fetching the report."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response:
+    """Get the workflow graph content for a TRACER execution."""
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
+
+        # Check ownership
+        if execution.project.owner != request.user:
+            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if analysis result exists
+        if not hasattr(execution, 'analysis_result'):
+            return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+        analysis = execution.analysis_result
+        if not analysis.workflow_graph_path:
+            return Response({"error": "No workflow graph found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Read graph content
+        graph_path = Path(settings.MEDIA_ROOT) / analysis.workflow_graph_path
+        if not graph_path.exists():
+            return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+
+        with graph_path.open("r", encoding="utf-8") as f:
+            graph_content = f.read()
+
+        return Response({
+            "graph_content": graph_content,
+            "execution_name": execution.execution_name,
+            "project_name": execution.project.name
+        })
+
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error fetching TRACER graph for execution {execution_id}: {e}")
+        return Response(
+            {"error": "An error occurred while fetching the workflow graph."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+def get_tracer_original_profiles(request: Request, execution_id: int) -> Response:
+    """Get the original read-only profiles for a TRACER execution."""
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
+
+        # Check ownership
+        if execution.project.owner != request.user:
+            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get original profiles
+        original_profiles = execution.original_profiles.all().order_by('original_filename')
+
+        profiles_data = []
+        for profile in original_profiles:
+            profiles_data.append({
+                "id": profile.id,
+                "filename": profile.original_filename,
+                "content": profile.original_content,
+                "created_at": profile.created_at.isoformat()
+            })
+
+        return Response({
+            "profiles": profiles_data,
+            "execution_name": execution.execution_name,
+            "project_name": execution.project.name
+        })
+
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error fetching original profiles for execution {execution_id}: {e}")
+        return Response(
+            {"error": "An error occurred while fetching the original profiles."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

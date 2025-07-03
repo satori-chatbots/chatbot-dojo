@@ -87,6 +87,26 @@ urlpatterns = [
         name="delete-profile-execution",
     ),
     path(
+        "tracer-executions/",
+        api.get_tracer_executions,
+        name="get-tracer-executions",
+    ),
+    path(
+        "tracer-analysis-report/<int:execution_id>/",
+        api.get_tracer_analysis_report,
+        name="get-tracer-analysis-report",
+    ),
+    path(
+        "tracer-workflow-graph/<int:execution_id>/",
+        api.get_tracer_workflow_graph,
+        name="get-tracer-workflow-graph",
+    ),
+    path(
+        "tracer-original-profiles/<int:execution_id>/",
+        api.get_tracer_original_profiles,
+        name="get-tracer-original-profiles",
+    ),
+    path(
         "llm-models/",
         get_available_models,
         name="llm-models",

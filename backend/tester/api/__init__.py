@@ -22,6 +22,10 @@ from .execution_views import (
     delete_profile_execution,
     generate_profiles,
     get_profile_executions,
+    get_tracer_analysis_report,
+    get_tracer_executions,
+    get_tracer_original_profiles,
+    get_tracer_workflow_graph,
     stop_test_execution,
 )
 from .project_files import (
@@ -60,6 +64,10 @@ __all__ = [
     "generate_profiles",
     "get_profile_executions",
     "get_technology_choices",
+    "get_tracer_analysis_report",
+    "get_tracer_executions",
+    "get_tracer_original_profiles",
+    "get_tracer_workflow_graph",
     "stop_test_execution",
     "validate_token",
     "validate_yaml",

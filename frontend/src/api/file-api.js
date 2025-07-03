@@ -213,10 +213,60 @@ export const deleteProfileExecution = async (executionId) => {
         method: "DELETE",
       },
     );
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting profile execution:", error);
+    throw error;
+  }
+};
+
+// TRACER Dashboard API functions
+export const fetchTracerExecutions = async () => {
+  try {
+    const response = await apiClient(`${API_BASE_URL}/tracer-executions/`);
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error deleting profile execution:", error);
+    console.error("Error fetching TRACER executions:", error);
+    throw error;
+  }
+};
+
+export const fetchTracerAnalysisReport = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-analysis-report/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER analysis report:", error);
+    throw error;
+  }
+};
+
+export const fetchTracerWorkflowGraph = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-workflow-graph/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER workflow graph:", error);
+    throw error;
+  }
+};
+
+export const fetchTracerOriginalProfiles = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-original-profiles/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER original profiles:", error);
     throw error;
   }
 };
