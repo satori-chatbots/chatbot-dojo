@@ -889,6 +889,8 @@ class TracerAnalysisResult(models.Model):
     total_interactions = models.IntegerField(default=0)
     coverage_percentage = models.FloatField(null=True, blank=True)
     unique_paths_discovered = models.IntegerField(default=0)
+    categories_count = models.IntegerField(default=0)
+    estimated_cost_usd = models.FloatField(default=0.0)
 
     def __str__(self) -> str:
         """Return a string representation of the TracerAnalysisResult."""

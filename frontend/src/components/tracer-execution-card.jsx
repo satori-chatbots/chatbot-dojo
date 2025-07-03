@@ -118,17 +118,31 @@ const TracerExecutionCard = ({
                 <BarChart3 className="w-4 h-4" />
                 Analysis Summary
               </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                  <p className="text-xs text-default-500">Total Interactions</p>
+                  <p className="text-xs text-default-500">Total LLM Calls</p>
                   <p className="font-medium">
                     {execution.analysis.total_interactions}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-default-500">Unique Paths</p>
+                  <p className="text-xs text-default-500">
+                    Unique Functionalities
+                  </p>
                   <p className="font-medium">
                     {execution.analysis.unique_paths_discovered}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-default-500">Categories</p>
+                  <p className="font-medium">
+                    {execution.analysis.categories_count}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-default-500">Estimated Cost</p>
+                  <p className="font-medium">
+                    ${execution.analysis.estimated_cost_usd.toFixed(4)}
                   </p>
                 </div>
                 {execution.analysis.coverage_percentage !== null && (

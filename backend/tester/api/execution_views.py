@@ -447,6 +447,8 @@ def get_tracer_executions(request: Request) -> Response:
                     "total_interactions": analysis.total_interactions,
                     "coverage_percentage": analysis.coverage_percentage,
                     "unique_paths_discovered": analysis.unique_paths_discovered,
+                    "categories_count": analysis.categories_count,
+                    "estimated_cost_usd": analysis.estimated_cost_usd,
                     "has_report": bool(analysis.report_file_path),
                     "has_graph": analysis.has_any_graph,
                     "available_formats": analysis.get_available_formats(),
@@ -565,7 +567,10 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response |
         )
 
         if not graph_path_str:
-            return Response({"error": f"No {requested_format.upper()} graph found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": f"No {requested_format.upper()} graph found for this execution."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         graph_path = Path(settings.MEDIA_ROOT) / graph_path_str
 

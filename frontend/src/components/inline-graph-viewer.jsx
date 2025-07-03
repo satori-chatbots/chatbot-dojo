@@ -193,8 +193,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                 <p className="text-xs text-default-400">
                   Format: {graphData.file_type?.toUpperCase()}
                   {availableFormats.length > 1 &&
-                    ` (${availableFormats.map(f => f.toUpperCase()).join(', ')} available)`
-                  }
+                    ` (${availableFormats.map((f) => f.toUpperCase()).join(", ")} available)`}
                 </p>
               )}
             </div>
