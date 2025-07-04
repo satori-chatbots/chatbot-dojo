@@ -24,10 +24,45 @@ const LogContent = ({ content, type }) => {
     );
   }
 
+  // Console styling based on type
+  const consoleStyle =
+    type === "STDERR"
+      ? "bg-gray-900 border-red-500/30"
+      : "bg-gray-900 border-green-500/30";
+
+  const textStyle = type === "STDERR" ? "text-red-400" : "text-green-400";
+
   return (
-    <pre className="bg-default-50 dark:bg-default-900 rounded-lg p-4 overflow-auto text-sm font-mono whitespace-pre-wrap border">
-      <code className="text-default-700 dark:text-default-300">{content}</code>
-    </pre>
+    <div className={`${consoleStyle} rounded-lg border-2 overflow-hidden`}>
+      {/* Console header */}
+      <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
+        <Terminal className="w-4 h-4 text-gray-400" />
+        <span className="text-gray-300 text-sm font-medium">
+          {type === "STDERR" ? "Error Output" : "Standard Output"}
+        </span>
+        <div className="flex gap-1 ml-auto">
+          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+        </div>
+      </div>
+
+      {/* Console content */}
+      <div className="p-4 overflow-auto max-h-96">
+        <pre className="text-sm font-mono whitespace-pre-wrap leading-relaxed">
+          <code className={`${textStyle} block`}>
+            {content.split("\n").map((line, index) => (
+              <div key={index} className="flex">
+                <span className="text-gray-500 select-none mr-4 text-xs">
+                  {String(index + 1).padStart(3, " ")}
+                </span>
+                <span className="flex-1">{line}</span>
+              </div>
+            ))}
+          </code>
+        </pre>
+      </div>
+    </div>
   );
 };
 
@@ -136,7 +171,9 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                   <h3 className="text-lg font-semibold">Execution Summary</h3>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(logsData?.status)}
-                    <span className={`font-medium ${getStatusColor(logsData?.status)}`}>
+                    <span
+                      className={`font-medium ${getStatusColor(logsData?.status)}`}
+                    >
                       {logsData?.status}
                     </span>
                   </div>
@@ -182,10 +219,11 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
               onSelectionChange={setSelectedTab}
               variant="underlined"
               classNames={{
-                tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
+                tabList:
+                  "gap-6 w-full relative rounded-none p-0 border-b border-divider",
                 cursor: "w-full bg-primary",
                 tab: "max-w-fit px-0 h-12",
-                tabContent: "group-data-[selected=true]:text-primary"
+                tabContent: "group-data-[selected=true]:text-primary",
               }}
             >
               <Tab key="summary" title="Summary">
@@ -194,21 +232,29 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                   {logsData?.verbosity && (
                     <Card className="border">
                       <CardBody className="p-4">
-                        <h4 className="font-semibold mb-2">Log Verbosity Level</h4>
+                        <h4 className="font-semibold mb-2">
+                          Log Verbosity Level
+                        </h4>
                         <div className="text-sm space-y-2">
                           {logsData.verbosity === "normal" && (
                             <p className="text-default-600">
-                              <strong>Normal:</strong> Standard output with basic execution information.
+                              <strong>Normal:</strong> Standard output with
+                              basic execution information.
                             </p>
                           )}
                           {logsData.verbosity === "verbose" && (
                             <p className="text-default-600">
-                              <strong>Verbose (-v):</strong> Shows conversations and interactions between TRACER and the chatbot, including dialogue content and response analysis.
+                              <strong>Verbose (-v):</strong> Shows conversations
+                              and interactions between TRACER and the chatbot,
+                              including dialogue content and response analysis.
                             </p>
                           )}
                           {logsData.verbosity === "debug" && (
                             <p className="text-default-600">
-                              <strong>Debug (-vv):</strong> Debug mode with detailed technical information, internal operations, API calls, and low-level debugging data.
+                              <strong>Debug (-vv):</strong> Debug mode with
+                              detailed technical information, internal
+                              operations, API calls, and low-level debugging
+                              data.
                             </p>
                           )}
                         </div>
@@ -219,23 +265,32 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                   {logsData?.stdout || logsData?.stderr ? (
                     <div className="space-y-3">
                       <p className="text-default-600">
-                        View the detailed output from the TRACER execution using the tabs above.
+                        View the detailed output from the TRACER execution using
+                        the tabs above.
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Card className="border">
                           <CardBody className="text-center p-4">
                             <div className="text-2xl font-bold text-success">
-                              {logsData.stdout ? logsData.stdout.split('\n').length : 0}
+                              {logsData.stdout
+                                ? logsData.stdout.split("\n").length
+                                : 0}
                             </div>
-                            <div className="text-sm text-default-500">STDOUT Lines</div>
+                            <div className="text-sm text-default-500">
+                              STDOUT Lines
+                            </div>
                           </CardBody>
                         </Card>
                         <Card className="border">
                           <CardBody className="text-center p-4">
                             <div className="text-2xl font-bold text-danger">
-                              {logsData.stderr ? logsData.stderr.split('\n').length : 0}
+                              {logsData.stderr
+                                ? logsData.stderr.split("\n").length
+                                : 0}
                             </div>
-                            <div className="text-sm text-default-500">STDERR Lines</div>
+                            <div className="text-sm text-default-500">
+                              STDERR Lines
+                            </div>
                           </CardBody>
                         </Card>
                       </div>
@@ -243,8 +298,12 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                   ) : (
                     <div className="text-center py-8 text-default-500">
                       <Terminal className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <h3 className="text-lg font-semibold mb-2">No Logs Available</h3>
-                      <p>This execution doesn't have any captured output logs.</p>
+                      <h3 className="text-lg font-semibold mb-2">
+                        No Logs Available
+                      </h3>
+                      <p>
+                        This execution doesn't have any captured output logs.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -257,7 +316,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                     <span>STDOUT</span>
                     {logsData?.stdout && (
                       <span className="bg-success text-success-foreground text-xs px-1.5 py-0.5 rounded">
-                        {logsData.stdout.split('\n').length}
+                        {logsData.stdout.split("\n").length}
                       </span>
                     )}
                   </div>
@@ -275,7 +334,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                     <span>STDERR</span>
                     {logsData?.stderr && (
                       <span className="bg-danger text-danger-foreground text-xs px-1.5 py-0.5 rounded">
-                        {logsData.stderr.split('\n').length}
+                        {logsData.stderr.split("\n").length}
                       </span>
                     )}
                   </div>

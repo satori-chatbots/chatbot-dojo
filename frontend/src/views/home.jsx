@@ -978,19 +978,25 @@ function Home() {
                     <SelectItem key="normal" textValue="Normal">
                       <div className="flex flex-col">
                         <span className="text-small">Normal</span>
-                        <span className="text-tiny text-default-400">Standard output</span>
+                        <span className="text-tiny text-default-400">
+                          Standard output
+                        </span>
                       </div>
                     </SelectItem>
                     <SelectItem key="verbose" textValue="Verbose">
                       <div className="flex flex-col">
                         <span className="text-small">Verbose (-v)</span>
-                        <span className="text-tiny text-default-400">Shows conversations and interactions</span>
+                        <span className="text-tiny text-default-400">
+                          Shows conversations and interactions
+                        </span>
                       </div>
                     </SelectItem>
                     <SelectItem key="debug" textValue="Debug">
                       <div className="flex flex-col">
                         <span className="text-small">Debug (-vv)</span>
-                        <span className="text-tiny text-default-400">Debug mode with detailed technical info</span>
+                        <span className="text-tiny text-default-400">
+                          Debug mode with detailed technical info
+                        </span>
                       </div>
                     </SelectItem>
                   </Select>
