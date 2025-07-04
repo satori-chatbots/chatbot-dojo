@@ -45,6 +45,13 @@ const TracerDashboard = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { showToast } = useMyCustomToast();
 
+  // Clear the modal content once the modal has been closed to avoid leftover overlays
+  useEffect(() => {
+    if (!isOpen) {
+      setViewingContent(null);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     loadTracerExecutions();
   }, []);
@@ -359,15 +366,17 @@ const TracerDashboard = () => {
       </div>
 
       {/* Modal for viewing content */}
-      <Modal
-        isOpen={isOpen}
-        onOpenChange={onOpenChange}
-        size="5xl"
-        scrollBehavior="inside"
-        className="max-h-[90vh]"
-      >
-        <ModalContent>{renderModalContent()}</ModalContent>
-      </Modal>
+      {isOpen && (
+        <Modal
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
+          size="5xl"
+          scrollBehavior="inside"
+          className="max-h-[90vh]"
+        >
+          <ModalContent>{renderModalContent()}</ModalContent>
+        </Modal>
+      )}
     </div>
   );
 };
