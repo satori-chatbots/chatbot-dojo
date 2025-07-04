@@ -13,11 +13,12 @@ import {
 import { Terminal, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { fetchTracerExecutionLogs } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
-import { FixedSizeList as List } from "react-window";
-
 const LogContent = React.memo(({ content, variant }) => {
   // Memoise log lines to avoid re-splitting on every render
-  const lines = React.useMemo(() => (content ? content.split("\n") : []), [content]);
+  const lines = React.useMemo(
+    () => (content ? content.split("\n") : []),
+    [content],
+  );
   const upperType = variant?.toUpperCase?.();
 
   if (!content || content.trim() === "") {
@@ -36,24 +37,12 @@ const LogContent = React.memo(({ content, variant }) => {
   const textStyle = isError ? "text-red-400" : "text-green-400";
   const headerTitle = isError ? "Error Output" : "Standard Output";
 
-  // Row renderer for virtualised list
-  const LogRow = ({ index, style, data }) => (
-    <div style={style} className="flex">
-      <span className="text-gray-500 select-none mr-4 text-xs">
-        {String(index + 1).padStart(3, " ")}
-      </span>
-      <span className="flex-1">{data[index]}</span>
-    </div>
-  );
-
   return (
     <div className={`${consoleStyle} rounded-lg border-2 overflow-hidden`}>
       {/* Console header */}
       <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
         <Terminal className="w-4 h-4 text-gray-400" />
-        <span className="text-gray-300 text-sm font-medium">
-          {headerTitle}
-        </span>
+        <span className="text-gray-300 text-sm font-medium">{headerTitle}</span>
         <div className="flex gap-1 ml-auto">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
           <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -63,16 +52,18 @@ const LogContent = React.memo(({ content, variant }) => {
 
       {/* Console content */}
       <div className="p-4 overflow-auto max-h-96">
-        <List
-          height={384}            /* Tailwind max-h-96 → 24rem (384px) */
-          itemCount={lines.length}
-          itemSize={20}           /* Approx. row height */
-          width="100%"
-          itemData={lines}
-          className={`${textStyle} text-sm font-mono leading-relaxed`}
-        >
-          {LogRow}
-        </List>
+        <div className={`${textStyle} text-sm font-mono leading-relaxed`}>
+          {lines.map((line, index) => (
+            <div key={index} className="flex">
+              <span className="text-gray-500 select-none mr-4 text-xs w-10 text-right">
+                {String(index + 1).padStart(3, " ")}
+              </span>
+              <span className="flex-1 whitespace-pre-wrap break-words">
+                {line}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -134,14 +125,14 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
   };
 
   // Cache line counts to prevent repeated split operations
-  const stdoutLinesCount = React.useMemo(() =>
-    logsData?.stdout ? logsData.stdout.split("\n").length : 0,
-    [logsData?.stdout]
+  const stdoutLinesCount = React.useMemo(
+    () => (logsData?.stdout ? logsData.stdout.split("\n").length : 0),
+    [logsData?.stdout],
   );
 
-  const stderrLinesCount = React.useMemo(() =>
-    logsData?.stderr ? logsData.stderr.split("\n").length : 0,
-    [logsData?.stderr]
+  const stderrLinesCount = React.useMemo(
+    () => (logsData?.stderr ? logsData.stderr.split("\n").length : 0),
+    [logsData?.stderr],
   );
 
   return (
