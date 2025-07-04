@@ -14,23 +14,24 @@ import { Terminal, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { fetchTracerExecutionLogs } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
-const LogContent = ({ content, type }) => {
+const LogContent = ({ content, variant }) => {
+  const upperType = variant?.toUpperCase?.();
+
   if (!content || content.trim() === "") {
     return (
       <div className="text-center py-8 text-default-500">
         <Terminal className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p>No {type} output available</p>
+        <p>No {variant} output available</p>
       </div>
     );
   }
 
-  // Console styling based on type
-  const consoleStyle =
-    type === "STDERR"
-      ? "bg-gray-900 border-red-500/30"
-      : "bg-gray-900 border-green-500/30";
-
-  const textStyle = type === "STDERR" ? "text-red-400" : "text-green-400";
+  const isError = upperType === "STDERR";
+  const consoleStyle = isError
+    ? "bg-gray-900 border-red-500/30"
+    : "bg-gray-900 border-green-500/30";
+  const textStyle = isError ? "text-red-400" : "text-green-400";
+  const headerTitle = isError ? "Error Output" : "Standard Output";
 
   return (
     <div className={`${consoleStyle} rounded-lg border-2 overflow-hidden`}>
@@ -38,7 +39,7 @@ const LogContent = ({ content, type }) => {
       <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
         <Terminal className="w-4 h-4 text-gray-400" />
         <span className="text-gray-300 text-sm font-medium">
-          {type === "STDERR" ? "Error Output" : "Standard Output"}
+          {headerTitle}
         </span>
         <div className="flex gap-1 ml-auto">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -323,7 +324,11 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                 }
               >
                 <div className="pt-4">
-                  <LogContent content={logsData?.stdout} type="STDOUT" />
+                  <LogContent
+                    key="stdout-panel"
+                    content={logsData?.stdout}
+                    variant="STDOUT"
+                  />
                 </div>
               </Tab>
 
@@ -341,7 +346,11 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                 }
               >
                 <div className="pt-4">
-                  <LogContent content={logsData?.stderr} type="STDERR" />
+                  <LogContent
+                    key="stderr-panel"
+                    content={logsData?.stderr}
+                    variant="STDERR"
+                  />
                 </div>
               </Tab>
             </Tabs>
