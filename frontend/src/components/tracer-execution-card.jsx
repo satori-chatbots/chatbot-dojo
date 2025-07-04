@@ -439,4 +439,4 @@ const TracerExecutionCard = ({
   );
 };
 
-export default TracerExecutionCard;
+export default React.memo(TracerExecutionCard);

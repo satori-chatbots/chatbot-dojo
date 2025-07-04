@@ -13,8 +13,11 @@ import {
 import { Terminal, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { fetchTracerExecutionLogs } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import { FixedSizeList as List } from "react-window";
 
-const LogContent = ({ content, variant }) => {
+const LogContent = React.memo(({ content, variant }) => {
+  // Memoise log lines to avoid re-splitting on every render
+  const lines = React.useMemo(() => (content ? content.split("\n") : []), [content]);
   const upperType = variant?.toUpperCase?.();
 
   if (!content || content.trim() === "") {
@@ -33,6 +36,16 @@ const LogContent = ({ content, variant }) => {
   const textStyle = isError ? "text-red-400" : "text-green-400";
   const headerTitle = isError ? "Error Output" : "Standard Output";
 
+  // Row renderer for virtualised list
+  const LogRow = ({ index, style, data }) => (
+    <div style={style} className="flex">
+      <span className="text-gray-500 select-none mr-4 text-xs">
+        {String(index + 1).padStart(3, " ")}
+      </span>
+      <span className="flex-1">{data[index]}</span>
+    </div>
+  );
+
   return (
     <div className={`${consoleStyle} rounded-lg border-2 overflow-hidden`}>
       {/* Console header */}
@@ -50,22 +63,20 @@ const LogContent = ({ content, variant }) => {
 
       {/* Console content */}
       <div className="p-4 overflow-auto max-h-96">
-        <pre className="text-sm font-mono whitespace-pre-wrap leading-relaxed">
-          <code className={`${textStyle} block`}>
-            {content.split("\n").map((line, index) => (
-              <div key={index} className="flex">
-                <span className="text-gray-500 select-none mr-4 text-xs">
-                  {String(index + 1).padStart(3, " ")}
-                </span>
-                <span className="flex-1">{line}</span>
-              </div>
-            ))}
-          </code>
-        </pre>
+        <List
+          height={384}            /* Tailwind max-h-96 → 24rem (384px) */
+          itemCount={lines.length}
+          itemSize={20}           /* Approx. row height */
+          width="100%"
+          itemData={lines}
+          className={`${textStyle} text-sm font-mono leading-relaxed`}
+        >
+          {LogRow}
+        </List>
       </div>
     </div>
   );
-};
+});
 
 const ExecutionLogsViewer = ({ execution, onClose }) => {
   const [logsData, setLogsData] = useState(null);
@@ -121,6 +132,17 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
         return "text-default-500";
     }
   };
+
+  // Cache line counts to prevent repeated split operations
+  const stdoutLinesCount = React.useMemo(() =>
+    logsData?.stdout ? logsData.stdout.split("\n").length : 0,
+    [logsData?.stdout]
+  );
+
+  const stderrLinesCount = React.useMemo(() =>
+    logsData?.stderr ? logsData.stderr.split("\n").length : 0,
+    [logsData?.stderr]
+  );
 
   return (
     <>
@@ -273,9 +295,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                         <Card className="border">
                           <CardBody className="text-center p-4">
                             <div className="text-2xl font-bold text-success">
-                              {logsData.stdout
-                                ? logsData.stdout.split("\n").length
-                                : 0}
+                              {stdoutLinesCount}
                             </div>
                             <div className="text-sm text-default-500">
                               STDOUT Lines
@@ -285,9 +305,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                         <Card className="border">
                           <CardBody className="text-center p-4">
                             <div className="text-2xl font-bold text-danger">
-                              {logsData.stderr
-                                ? logsData.stderr.split("\n").length
-                                : 0}
+                              {stderrLinesCount}
                             </div>
                             <div className="text-sm text-default-500">
                               STDERR Lines
@@ -315,20 +333,22 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                 title={
                   <div className="flex items-center gap-2">
                     <span>STDOUT</span>
-                    {logsData?.stdout && (
+                    {stdoutLinesCount > 0 && (
                       <span className="bg-success text-success-foreground text-xs px-1.5 py-0.5 rounded">
-                        {logsData.stdout.split("\n").length}
+                        {stdoutLinesCount}
                       </span>
                     )}
                   </div>
                 }
               >
                 <div className="pt-4">
-                  <LogContent
-                    key="stdout-panel"
-                    content={logsData?.stdout}
-                    variant="STDOUT"
-                  />
+                  {selectedTab === "stdout" && (
+                    <LogContent
+                      key="stdout-panel"
+                      content={logsData?.stdout}
+                      variant="STDOUT"
+                    />
+                  )}
                 </div>
               </Tab>
 
@@ -337,20 +357,22 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                 title={
                   <div className="flex items-center gap-2">
                     <span>STDERR</span>
-                    {logsData?.stderr && (
+                    {stderrLinesCount > 0 && (
                       <span className="bg-danger text-danger-foreground text-xs px-1.5 py-0.5 rounded">
-                        {logsData.stderr.split("\n").length}
+                        {stderrLinesCount}
                       </span>
                     )}
                   </div>
                 }
               >
                 <div className="pt-4">
-                  <LogContent
-                    key="stderr-panel"
-                    content={logsData?.stderr}
-                    variant="STDERR"
-                  />
+                  {selectedTab === "stderr" && (
+                    <LogContent
+                      key="stderr-panel"
+                      content={logsData?.stderr}
+                      variant="STDERR"
+                    />
+                  )}
                 </div>
               </Tab>
             </Tabs>
@@ -368,4 +390,4 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
   );
 };
 
-export default ExecutionLogsViewer;
+export default React.memo(ExecutionLogsViewer);

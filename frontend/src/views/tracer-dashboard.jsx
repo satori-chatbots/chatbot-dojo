@@ -15,6 +15,7 @@ import {
   useDisclosure,
   Spinner,
 } from "@heroui/react";
+import { FixedSizeList as List } from "react-window";
 import {
   FileText,
   BarChart3,
@@ -48,7 +49,7 @@ const TracerDashboard = () => {
   // Clear the modal content once the modal has been closed to avoid leftover overlays
   useEffect(() => {
     if (!isOpen) {
-      setViewingContent(null);
+      setTimeout(() => setViewingContent(null), 300);
     }
   }, [isOpen]);
 
@@ -236,6 +237,23 @@ const TracerDashboard = () => {
     }
   };
 
+  // Virtualised row renderer for the executions list
+  const ExecutionRow = ({ index, style }) => (
+    <div style={style}>
+      <TracerExecutionCard
+        key={filteredExecutions[index].id}
+        execution={filteredExecutions[index]}
+        onViewReport={handleViewReport}
+        onViewGraph={handleViewGraph}
+        onViewProfiles={handleViewProfiles}
+        onViewLogs={handleViewLogs}
+        onDelete={handleDeleteExecution}
+        getStatusIcon={getStatusIcon}
+        getStatusColor={getStatusColor}
+      />
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -333,8 +351,8 @@ const TracerDashboard = () => {
       </Card>
 
       {/* Executions List */}
-      <div className="space-y-4">
-        {filteredExecutions.length === 0 ? (
+      {filteredExecutions.length === 0 ? (
+        <div className="space-y-4">
           <Card className="border-default-200">
             <CardBody className="text-center py-8">
               <BarChart3 className="w-12 h-12 text-default-400 mx-auto mb-3" />
@@ -348,8 +366,19 @@ const TracerDashboard = () => {
               </p>
             </CardBody>
           </Card>
-        ) : (
-          filteredExecutions.map((execution) => (
+        </div>
+      ) : filteredExecutions.length > 50 ? (
+        <List
+          height={600} // Adjust list height as needed
+          itemCount={filteredExecutions.length}
+          itemSize={170} // Approximate collapsed card height
+          width="100%"
+        >
+          {ExecutionRow}
+        </List>
+      ) : (
+        <div className="space-y-4">
+          {filteredExecutions.map((execution) => (
             <TracerExecutionCard
               key={execution.id}
               execution={execution}
@@ -361,9 +390,9 @@ const TracerDashboard = () => {
               getStatusIcon={getStatusIcon}
               getStatusColor={getStatusColor}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal for viewing content */}
       {isOpen && (
