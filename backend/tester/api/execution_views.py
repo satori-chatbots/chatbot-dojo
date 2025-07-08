@@ -34,17 +34,18 @@ from tester.models import (
 class ExecuteSelectedAPIView(APIView):
     """API view to execute selected test files."""
 
-    def _setup_api_key(self, project: Project) -> None:
-        """Load and decrypt the API key for the project, setting it as an environment variable."""
+    def _setup_api_key(self, project: Project) -> str | None:
+        """Load and decrypt the API key for the project, returning the key if it exists."""
         try:
             if api_key_instance := project.api_key:
                 decrypted_key = cipher_suite.decrypt(api_key_instance.api_key_encrypted).decode()
-                os.environ["OPENAI_API_KEY"] = decrypted_key
                 logger.info(f"API key successfully loaded for project {project.name}")
-            else:
-                logger.warning(f"No API key found for project {project.name}")
+                return decrypted_key
+            logger.warning(f"No API key found for project {project.name}")
+            return None
         except (InvalidToken, ValueError, TypeError) as e:
             logger.error(f"Error loading/decrypting API key for project {project.name}: {e}")
+            return None
 
     def _copy_and_prepare_files(self, test_files: list[TestFile], user_profiles_path: Path) -> list[dict[str, str]]:
         """Copy test files to a temporary location and extract metadata."""
@@ -128,7 +129,7 @@ class ExecuteSelectedAPIView(APIView):
 
         test_name = request.data.get("test_name")
 
-        self._setup_api_key(project)
+        api_key = self._setup_api_key(project)
 
         base_dir = Path(settings.BASE_DIR).parent
         script_path = str(base_dir / "user-simulator" / "src" / "sensei_chat.py")
@@ -169,6 +170,8 @@ class ExecuteSelectedAPIView(APIView):
                 results_path=str(results_path),
                 technology=technology,
                 link=link,
+                api_key=api_key,
+                api_provider=project.llm_provider,
             )
             threading.Thread(
                 target=TestRunner().execute_test_background,
@@ -220,6 +223,18 @@ def generate_profiles(request: Request) -> Response:
     if not project.llm_model:
         return Response({"error": "Project must have an LLM model configured."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Setup API key
+    api_key = None
+    try:
+        if api_key_instance := project.api_key:
+            decrypted_key = cipher_suite.decrypt(api_key_instance.api_key_encrypted).decode()
+            logger.info(f"API key successfully loaded for project {project.name}")
+            api_key = decrypted_key
+        else:
+            logger.warning(f"No API key found for project {project.name}")
+    except (InvalidToken, ValueError, TypeError) as e:
+        logger.error(f"Error loading/decrypting API key for project {project.name}: {e}")
+
     task = ProfileGenerationTask.objects.create(
         project=project,
         status="PENDING",
@@ -230,7 +245,15 @@ def generate_profiles(request: Request) -> Response:
     profile_generator = ProfileGenerator()
     threading.Thread(
         target=profile_generator.run_async_profile_generation,
-        args=(task.id, project.chatbot_connector.technology, sessions, turns_per_session, verbosity, request.user.id),
+        args=(
+            task.id,
+            project.chatbot_connector.technology,
+            sessions,
+            turns_per_session,
+            verbosity,
+            request.user.id,
+            api_key,
+        ),
     ).start()
 
     return Response(

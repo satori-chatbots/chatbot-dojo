@@ -1,6 +1,7 @@
 """Test execution and management functionality."""
 
 import json
+import os
 import subprocess
 import threading
 import time
@@ -28,6 +29,8 @@ class TestExecutionConfig:
     results_path: str
     technology: str
     link: str
+    api_key: str | None
+    api_provider: str | None
 
 
 @dataclass
@@ -47,6 +50,27 @@ class TestRunner:
         """Initialize the TestRunner."""
         self.results_processor = ResultsProcessor()
         self.execution_utils = ExecutionUtils()
+
+    @staticmethod
+    def _get_api_key_env_var(provider: str | None) -> str:
+        """Get the environment variable name for the given LLM provider."""
+        provider_env_vars = {
+            "openai": "OPENAI_API_KEY",
+            "gemini": "GOOGLE_API_KEY",
+            "google": "GOOGLE_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "azure": "AZURE_OPENAI_API_KEY",
+            "cohere": "COHERE_API_KEY",
+            "huggingface": "HUGGINGFACEHUB_API_TOKEN",
+            "mistral": "MISTRAL_API_KEY",
+            "groq": "GROQ_API_KEY",
+        }
+
+        if provider and provider.lower() in provider_env_vars:
+            return provider_env_vars[provider.lower()]
+
+        # Default to OpenAI for backward compatibility
+        return "OPENAI_API_KEY"
 
     def execute_test_background(self, config: TestExecutionConfig) -> None:
         """Execute the test in a background thread."""
@@ -166,6 +190,14 @@ class TestRunner:
         cmd = self._build_command(config_data, config.project_path)
         logger.info(f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}")
 
+        # Prepare environment for subprocess
+        env = os.environ.copy()
+        if config.api_key:
+            # Set the correct environment variable based on the provider
+            env_var_name = self._get_api_key_env_var(config.api_provider)
+            env[env_var_name] = config.api_key
+            logger.info(f"Setting {env_var_name} environment variable for provider: {config.api_provider}")
+
         # Start the subprocess
         # S603: Trusted source
         process = subprocess.Popen(  # noqa: S603
@@ -173,6 +205,7 @@ class TestRunner:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=user_simulator_dir,
+            env=env,
         )
 
         # Save the process id and mark the test as RUNNING

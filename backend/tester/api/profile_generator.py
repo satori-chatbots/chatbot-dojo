@@ -1,6 +1,7 @@
 """Profile generation functionality."""
 
 import json
+import os
 import re
 import shlex
 import shutil
@@ -24,6 +25,27 @@ from tester.models import (
 class ProfileGenerator:
     """Handles user profile generation tasks with real TRACER integration."""
 
+    @staticmethod
+    def _get_api_key_env_var(provider: str | None) -> str:
+        """Get the environment variable name for the given LLM provider."""
+        provider_env_vars = {
+            "openai": "OPENAI_API_KEY",
+            "gemini": "GOOGLE_API_KEY",
+            "google": "GOOGLE_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "azure": "AZURE_OPENAI_API_KEY",
+            "cohere": "COHERE_API_KEY",
+            "huggingface": "HUGGINGFACEHUB_API_TOKEN",
+            "mistral": "MISTRAL_API_KEY",
+            "groq": "GROQ_API_KEY",
+        }
+
+        if provider and provider.lower() in provider_env_vars:
+            return provider_env_vars[provider.lower()]
+
+        # Default to OpenAI for backward compatibility
+        return "OPENAI_API_KEY"
+
     def run_async_profile_generation(
         self,
         task_id: int,
@@ -32,6 +54,7 @@ class ProfileGenerator:
         turns: int,
         verbosity: str,
         _user_id: Any,  # noqa: ANN401
+        api_key: str | None,
     ) -> None:
         """Run profile generation asynchronously using real TRACER."""
         task = None
@@ -70,7 +93,9 @@ class ProfileGenerator:
             task.save()
 
             # Run TRACER generation
-            success = self.run_tracer_generation(task, execution, technology, conversations, turns, verbosity, "all")
+            success = self.run_tracer_generation(
+                task, execution, technology, conversations, turns, verbosity, "all", api_key
+            )
 
             if success:
                 task.status = "COMPLETED"
@@ -115,6 +140,7 @@ class ProfileGenerator:
         turns_per_session: int,
         verbosity: str,
         graph_format: str = "all",  # Ask TRACER to generate all available formats in one go
+        api_key: str | None = None,
     ) -> bool:
         """Execute TRACER command and process results with dual storage."""
         try:
@@ -168,8 +194,17 @@ class ProfileGenerator:
 
             logger.info(f"Executing TRACER command: {shlex.join(cmd)}")
 
+            # Prepare environment for subprocess
+            env = os.environ.copy()
+            if api_key:
+                # Get the provider from the project's API key
+                provider = task.project.llm_provider
+                env_var_name = self._get_api_key_env_var(provider)
+                env[env_var_name] = api_key
+                logger.info(f"Setting {env_var_name} environment variable for provider: {provider}")
+
             # Execute TRACER
-            result = subprocess.run(cmd, check=False, capture_output=True, text=True)  # noqa: S603
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)  # noqa: S603
 
             # Store TRACER output for debugging
             execution.tracer_stdout = result.stdout
