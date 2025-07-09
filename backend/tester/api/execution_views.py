@@ -267,12 +267,17 @@ def check_generation_status(_request: Request, task_id: int) -> Response:
     """Check the status of a profile generation task."""
     try:
         task = ProfileGenerationTask.objects.get(id=task_id)
+        # Default to generated_file_ids (legacy, usually empty)
+        generated_files = len(task.generated_file_ids)
+        # If the task is completed and has a linked execution, use its generated_profiles_count
+        if task.status == "COMPLETED" and task.execution is not None:
+            generated_files = task.execution.generated_profiles_count
         return Response(
             {
                 "status": task.status,
                 "stage": task.stage,
                 "progress": task.progress_percentage,
-                "generated_files": len(task.generated_file_ids),
+                "generated_files": generated_files,
                 "error_message": task.error_message,
             }
         )
