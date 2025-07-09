@@ -836,7 +836,8 @@ function Home() {
                     {generationProgress}% complete
                   </p>
                   <p className="text-xs text-foreground/50 dark:text-foreground-dark/50 text-center mt-1">
-                    This process may take a few minutes depending on the complexity of your chatbot.
+                    This process may take a few minutes depending on the
+                    complexity of your chatbot.
                   </p>
                 </div>
               )}
