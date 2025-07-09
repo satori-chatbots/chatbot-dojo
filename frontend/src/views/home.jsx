@@ -677,16 +677,18 @@ function Home() {
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header with Dropdown */}
           <div className="flex items-center justify-center relative">
-            <h1 className="text-3xl font-bold text-foreground dark:text-foreground-dark">
-              {selectedProject.name}
-            </h1>
+            <div className="flex items-center justify-center flex-1 min-w-0">
+              <h1 className="text-3xl font-bold text-foreground dark:text-foreground-dark truncate text-center">
+                {selectedProject.name}
+              </h1>
+            </div>
             <Dropdown>
               <DropdownTrigger>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  className="project-dropdown-btn"
+                  className="project-dropdown-btn flex-shrink-0 ml-2"
                   aria-label="Project actions"
                 >
                   <ChevronDown className="w-4 h-4" />
