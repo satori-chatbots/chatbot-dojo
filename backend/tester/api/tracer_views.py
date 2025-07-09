@@ -119,17 +119,18 @@ def generate_profiles(request: Request) -> Response:
 
     # Start async generation
     tracer_generator = TracerGenerator()
+    from tester.api.tracer_generator import ProfileGenerationParams
+    params = ProfileGenerationParams(
+        technology=project.chatbot_connector.technology,
+        conversations=sessions,
+        turns=turns_per_session,
+        verbosity=verbosity,
+        user_id=request.user.id,
+        api_key=api_key,
+    )
     threading.Thread(
         target=tracer_generator.run_async_profile_generation,
-        args=(
-            task.id,
-            project.chatbot_connector.technology,
-            sessions,
-            turns_per_session,
-            verbosity,
-            request.user.id,
-            api_key,
-        ),
+        args=(task.id, params),
     ).start()
 
     return Response(

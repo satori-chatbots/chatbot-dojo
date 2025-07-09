@@ -7,11 +7,22 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from dataclasses import dataclass
 
 from django.conf import settings
 
 from tester.api.base import logger
 from tester.models import ProfileExecution, ProfileGenerationTask
+
+
+@dataclass
+class ProfileGenerationParams:
+    technology: str
+    conversations: int
+    turns: int
+    verbosity: str
+    user_id: Any
+    api_key: str | None
 
 
 class TracerGenerator:
@@ -41,12 +52,7 @@ class TracerGenerator:
     def run_async_profile_generation(
         self,
         task_id: int,
-        technology: str,
-        conversations: int,
-        turns: int,
-        verbosity: str,
-        _user_id: Any,  # noqa: ANN401
-        api_key: str | None,
+        params: ProfileGenerationParams,
     ) -> None:
         """Run profile generation asynchronously using real TRACER."""
         task = None
@@ -54,10 +60,10 @@ class TracerGenerator:
 
         try:
             task = self._initialize_task(task_id)
-            execution = self._create_execution(task, conversations, turns, verbosity)
+            execution = self._create_execution(task, params.conversations, params.turns, params.verbosity)
 
             success = self.execute_tracer_generation(
-                task, execution, technology, conversations, turns, verbosity, api_key
+                task, execution, params.technology, params.conversations, params.turns, params.verbosity, params.api_key
             )
 
             self._finalize_execution(task, execution, success)
