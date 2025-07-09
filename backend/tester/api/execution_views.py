@@ -586,10 +586,10 @@ def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
 
     except ProfileExecution.DoesNotExist:
         return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger.error(f"Error fetching TRACER report for execution {execution_id}: {e}")
+    except (OSError, PermissionError, FileNotFoundError) as e:
+        logger.error(f"Error reading report file for execution {execution_id}: {e}")
         return Response(
-            {"error": "An error occurred while fetching the report."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "An error occurred while reading the report file."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
