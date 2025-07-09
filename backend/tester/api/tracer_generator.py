@@ -12,6 +12,9 @@ from typing import Any
 from django.conf import settings
 
 from tester.api.base import logger
+
+# Import here to avoid circular imports in runtime, but linter prefers top-level
+from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import ProfileExecution, ProfileGenerationTask, Project
 
 
@@ -167,7 +170,7 @@ class TracerGenerator:
 
             if success:
                 self._post_process_results(task, execution, output_dir)
-
+                return success
             return success
 
         except (subprocess.SubprocessError, OSError, ValueError) as e:
@@ -262,6 +265,7 @@ class TracerGenerator:
         self, task: ProfileGenerationTask, execution: ProfileExecution, cmd: list[str], env: dict[str, str]
     ) -> bool:
         """Execute the TRACER subprocess and handle output."""
+        # S603: The command and environment are constructed from trusted, internal variables only
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -308,9 +312,6 @@ class TracerGenerator:
 
     def _post_process_results(self, task: ProfileGenerationTask, execution: ProfileExecution, output_dir: Path) -> None:
         """Post-process TRACER results."""
-        # Import here to avoid circular imports
-        from tester.api.tracer_parser import TracerResultsProcessor
-
         task.progress_percentage = 99
         task.stage = "SAVING_FILES"
         task.save()
@@ -328,41 +329,55 @@ class TracerGenerator:
         """Parse a line of TRACER output and update the task progress."""
         try:
             line = line.strip()
-
-            # Exploration Phase
-            if "Initializing Chatbot Exploration Agent" in line:
-                task.stage = "Initializing Agent"
-                task.progress_percentage = 5
-            elif "--- Starting Chatbot Exploration Phase ---" in line:
-                task.stage = "Exploration Phase"
-                task.progress_percentage = 10
-            elif "=== Starting Exploration Session" in line:
-                self._update_exploration_progress(task, line)
-            # Analysis Phase
-            elif "---   Starting Analysis Phase   ---" in line:
-                task.stage = "Analysis Phase"
-                task.progress_percentage = 55
-            elif "Step 1: Workflow structure inference" in line:
-                task.stage = "Analyzing: Workflow Inference"
-                task.progress_percentage = 65
-            elif "Step 2: User profile generation" in line:
-                task.stage = "Analyzing: Generating Profiles"
-                task.progress_percentage = 75
-            elif "Step 3: Conversation parameters generation" in line:
-                task.stage = "Analyzing: Generating Conversation Parameters"
-                task.progress_percentage = 85
-            elif "Step 4: Building user profiles" in line:
-                task.stage = "Analyzing: Building Profiles"
-                task.progress_percentage = 95
-            # Finalization
-            elif "---   Final Report Summary   ---" in line:
-                task.stage = "Finalizing Report"
-                task.progress_percentage = 98
-
+            if self._handle_exploration_phase(task, line) or self._handle_analysis_phase(task, line) or self._handle_finalization_phase(task, line):
+                pass
             task.save(update_fields=["stage", "progress_percentage"])
-
         except Exception as e:
             logger.warning(f"Error updating progress from TRACER output: {e!s}")
+
+    def _handle_exploration_phase(self, task: ProfileGenerationTask, line: str) -> bool:
+        if "Initializing Chatbot Exploration Agent" in line:
+            task.stage = "Initializing Agent"
+            task.progress_percentage = 5
+            return True
+        if "--- Starting Chatbot Exploration Phase ---" in line:
+            task.stage = "Exploration Phase"
+            task.progress_percentage = 10
+            return True
+        if "=== Starting Exploration Session" in line:
+            self._update_exploration_progress(task, line)
+            return True
+        return False
+
+    def _handle_analysis_phase(self, task: ProfileGenerationTask, line: str) -> bool:
+        if "---   Starting Analysis Phase   ---" in line:
+            task.stage = "Analysis Phase"
+            task.progress_percentage = 55
+            return True
+        if "Step 1: Workflow structure inference" in line:
+            task.stage = "Analyzing: Workflow Inference"
+            task.progress_percentage = 65
+            return True
+        if "Step 2: User profile generation" in line:
+            task.stage = "Analyzing: Generating Profiles"
+            task.progress_percentage = 75
+            return True
+        if "Step 3: Conversation parameters generation" in line:
+            task.stage = "Analyzing: Generating Conversation Parameters"
+            task.progress_percentage = 85
+            return True
+        if "Step 4: Building user profiles" in line:
+            task.stage = "Analyzing: Building Profiles"
+            task.progress_percentage = 95
+            return True
+        return False
+
+    def _handle_finalization_phase(self, task: ProfileGenerationTask, line: str) -> bool:
+        if "---   Final Report Summary   ---" in line:
+            task.stage = "Finalizing Report"
+            task.progress_percentage = 98
+            return True
+        return False
 
     def _update_exploration_progress(self, task: ProfileGenerationTask, line: str) -> None:
         """Update progress during exploration phase."""
