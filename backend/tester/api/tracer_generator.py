@@ -170,7 +170,6 @@ class TracerGenerator:
 
             if success:
                 self._post_process_results(task, execution, output_dir)
-                return success
             return success
 
         except (subprocess.SubprocessError, OSError, ValueError) as e:
@@ -266,7 +265,7 @@ class TracerGenerator:
     ) -> bool:
         """Execute the TRACER subprocess and handle output."""
         # S603: The command and environment are constructed from trusted, internal variables only
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # noqa: S603
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
