@@ -170,12 +170,13 @@ class TracerGenerator:
 
             if success:
                 self._post_process_results(task, execution, output_dir)
-            return success
         except (subprocess.SubprocessError, OSError, ValueError) as e:
             logger.error(f"TRACER execution error: {e!s}")
             task.error_message = f"TRACER execution error: {e!s}"
             task.save()
             return False
+        else:
+            return success
 
     def _validate_project_configuration(self, project: Project) -> None:
         """Validate that project has required configuration."""
