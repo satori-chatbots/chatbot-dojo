@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronRight,
   AlertTriangle,
-  Clock,
   Users,
   Settings,
   Trash2,
@@ -53,7 +52,7 @@ const ExecutionFolder = ({
   };
 
   const getStatusChip = () => {
-    if (execution.execution_type !== "tracer" || !execution.status) return null;
+    if (execution.execution_type !== "tracer" || !execution.status) return;
 
     const statusConfig = {
       COMPLETED: { color: "success", label: "Done" },
@@ -113,6 +112,14 @@ const ExecutionFolder = ({
       <div
         className="flex items-center justify-between py-2 px-1 cursor-pointer hover:bg-default-50 rounded-md transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {isExpanded ? (

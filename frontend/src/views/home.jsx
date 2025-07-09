@@ -13,15 +13,7 @@ import {
   Select,
   SelectItem,
 } from "@heroui/react";
-import {
-  Upload,
-  File,
-  Trash,
-  Play,
-  Plus,
-  X,
-  Sparkles,
-} from "lucide-react";
+import { Upload, File, Trash, Play, Plus, X, Sparkles } from "lucide-react";
 import {
   uploadFiles,
   deleteFiles,

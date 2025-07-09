@@ -246,7 +246,7 @@ export const fetchTracerAnalysisReport = async (executionId) => {
   }
 };
 
-export const fetchTracerWorkflowGraph = async (executionId, format = null) => {
+export const fetchTracerWorkflowGraph = async (executionId, format) => {
   try {
     let url = `${API_BASE_URL}/tracer-workflow-graph/${executionId}/`;
     if (format) {

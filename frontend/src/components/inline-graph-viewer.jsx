@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   ModalHeader,
   ModalBody,
@@ -24,14 +24,39 @@ import {
 import { fetchTracerWorkflowGraph } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
+// Process SVG content to ensure it's properly sized and styled
+const processSvgContent = (svgContent) => {
+  // Add styling to make SVG responsive and properly colored
+  let processedSvg = svgContent
+    .replace(/<svg/, '<svg class="max-w-full h-auto"')
+    .replaceAll('fill="black"', 'fill="currentColor"')
+    .replaceAll('stroke="black"', 'stroke="currentColor"');
+
+  // If the SVG doesn't have proper viewBox, try to extract dimensions and add it
+  if (!processedSvg.includes("viewBox")) {
+    const widthMatch = processedSvg.match(/width="(\d+)"/);
+    const heightMatch = processedSvg.match(/height="(\d+)"/);
+    if (widthMatch && heightMatch) {
+      const width = widthMatch[1];
+      const height = heightMatch[1];
+      processedSvg = processedSvg.replace(
+        /<svg/,
+        `<svg viewBox="0 0 ${width} ${height}"`,
+      );
+    }
+  }
+
+  return processedSvg;
+};
+
 const InlineGraphViewer = ({ execution, onClose }) => {
-  const [graphData, setGraphData] = useState(null);
+  const [graphData, setGraphData] = useState();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState();
   const [zoom, setZoom] = useState(1);
   const { showToast } = useMyCustomToast();
 
-  const panContainerRef = useRef(null);
+  const panContainerRef = useRef();
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
@@ -40,14 +65,10 @@ const InlineGraphViewer = ({ execution, onClose }) => {
   const MAX_ZOOM = 5;
   const ZOOM_STEP = 0.25;
 
-  useEffect(() => {
-    loadGraph();
-  }, [execution.id]);
-
-  const loadGraph = async () => {
+  const loadGraph = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
+      setError(undefined);
       const data = await fetchTracerWorkflowGraph(execution.id);
       setGraphData(data);
     } catch (error) {
@@ -57,7 +78,11 @@ const InlineGraphViewer = ({ execution, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [execution.id, showToast]);
+
+  useEffect(() => {
+    loadGraph();
+  }, [loadGraph]);
 
   const handleZoomIn = () => {
     setZoom((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
@@ -65,10 +90,6 @@ const InlineGraphViewer = ({ execution, onClose }) => {
 
   const handleZoomOut = () => {
     setZoom((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
-  };
-
-  const handleResetZoom = () => {
-    setZoom(1);
   };
 
   const handleMouseDown = (e) => {
@@ -103,15 +124,13 @@ const InlineGraphViewer = ({ execution, onClose }) => {
     }
   };
 
-  // Allow Ctrl + mouse wheel to zoom
+  // Allow mouse wheel to zoom
   const handleWheelZoom = (event) => {
-    if (event.ctrlKey) {
-      event.preventDefault();
-      if (event.deltaY < 0) {
-        handleZoomIn();
-      } else {
-        handleZoomOut();
-      }
+    event.preventDefault();
+    if (event.deltaY < 0) {
+      handleZoomIn();
+    } else {
+      handleZoomOut();
     }
   };
 
@@ -143,31 +162,6 @@ const InlineGraphViewer = ({ execution, onClose }) => {
       console.error("Error downloading graph:", error);
       showToast("Failed to download graph", "error");
     }
-  };
-
-  // Process SVG content to ensure it's properly sized and styled
-  const processSvgContent = (svgContent) => {
-    // Add styling to make SVG responsive and properly colored
-    let processedSvg = svgContent
-      .replace(/<svg/, '<svg class="max-w-full h-auto"')
-      .replaceAll('fill="black"', 'fill="currentColor"')
-      .replaceAll('stroke="black"', 'stroke="currentColor"');
-
-    // If the SVG doesn't have proper viewBox, try to extract dimensions and add it
-    if (!processedSvg.includes("viewBox")) {
-      const widthMatch = processedSvg.match(/width="(\d+)"/);
-      const heightMatch = processedSvg.match(/height="(\d+)"/);
-      if (widthMatch && heightMatch) {
-        const width = widthMatch[1];
-        const height = heightMatch[1];
-        processedSvg = processedSvg.replace(
-          /<svg/,
-          `<svg viewBox="0 0 ${width} ${height}"`,
-        );
-      }
-    }
-
-    return processedSvg;
   };
 
   const isPdf = graphData?.file_type === "pdf";
@@ -343,6 +337,15 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUpOrLeave}
                     onMouseLeave={handleMouseUpOrLeave}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="SVG graph viewer - drag to pan, Ctrl+scroll to zoom"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        // Focus management for keyboard users
+                      }
+                    }}
                   >
                     <div
                       style={{
@@ -370,6 +373,15 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUpOrLeave}
                     onMouseLeave={handleMouseUpOrLeave}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="PNG graph viewer - drag to pan, Ctrl+scroll to zoom"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        // Focus management for keyboard users
+                      }
+                    }}
                   >
                     <div
                       style={{

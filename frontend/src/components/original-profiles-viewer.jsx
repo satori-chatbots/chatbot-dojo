@@ -10,13 +10,7 @@ import {
   Accordion,
   AccordionItem,
 } from "@heroui/react";
-import {
-  Users,
-  ArrowLeft,
-  AlertCircle,
-  FileText,
-  Copy,
-} from "lucide-react";
+import { Users, ArrowLeft, AlertCircle, FileText, Copy } from "lucide-react";
 import { fetchTracerOriginalProfiles } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 

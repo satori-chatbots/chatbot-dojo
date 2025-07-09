@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ModalHeader,
   ModalBody,
@@ -13,6 +13,7 @@ import {
 import { Terminal, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { fetchTracerExecutionLogs } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+
 const LogContent = React.memo(({ content, variant }) => {
   // Memoise log lines to avoid re-splitting on every render
   const lines = React.useMemo(
@@ -69,21 +70,48 @@ const LogContent = React.memo(({ content, variant }) => {
   );
 });
 
+LogContent.displayName = "LogContent";
+
+// Move arrow functions to outer scope
+const getStatusIcon = (status) => {
+  switch (status) {
+    case "COMPLETED": {
+      return <CheckCircle className="w-5 h-5 text-success" />;
+    }
+    case "ERROR": {
+      return <AlertCircle className="w-5 h-5 text-danger" />;
+    }
+    default: {
+      return <Terminal className="w-5 h-5 text-default-500" />;
+    }
+  }
+};
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case "COMPLETED": {
+      return "text-success";
+    }
+    case "ERROR": {
+      return "text-danger";
+    }
+    default: {
+      return "text-default-500";
+    }
+  }
+};
+
 const ExecutionLogsViewer = ({ execution, onClose }) => {
-  const [logsData, setLogsData] = useState(null);
+  const [logsData, setLogsData] = useState();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState();
   const [selectedTab, setSelectedTab] = useState("summary");
   const { showToast } = useMyCustomToast();
 
-  useEffect(() => {
-    loadLogs();
-  }, [execution.id]);
-
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
+      setError(undefined);
       const data = await fetchTracerExecutionLogs(execution.id);
       setLogsData(data);
 
@@ -100,35 +128,11 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [execution.id, execution.status, showToast]);
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "COMPLETED": {
-        return <CheckCircle className="w-5 h-5 text-success" />;
-      }
-      case "ERROR": {
-        return <AlertCircle className="w-5 h-5 text-danger" />;
-      }
-      default: {
-        return <Terminal className="w-5 h-5 text-default-500" />;
-      }
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "COMPLETED": {
-        return "text-success";
-      }
-      case "ERROR": {
-        return "text-danger";
-      }
-      default: {
-        return "text-default-500";
-      }
-    }
-  };
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   // Cache line counts to prevent repeated split operations
   const stdoutLinesCount = React.useMemo(
@@ -318,7 +322,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                         No Logs Available
                       </h3>
                       <p>
-                        This execution doesn't have any captured output logs.
+                        {`This execution doesn't have any captured output logs.`}
                       </p>
                     </div>
                   )}
