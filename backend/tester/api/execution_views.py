@@ -542,25 +542,33 @@ def get_tracer_executions(request: Request) -> Response:
         )
 
 
+def _validate_tracer_execution_access(request: Request, execution: ProfileExecution) -> Response | None:
+    """Validate user access to a TRACER execution and its analysis result."""
+    if execution.project.owner != request.user:
+        return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
+
+    if not hasattr(execution, "analysis_result"):
+        return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+    analysis = execution.analysis_result
+    if not analysis.report_file_path:
+        return Response({"error": "No report file found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+
+    return None
+
+
 @api_view(["GET"])
 def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
     """Get the analysis report content for a TRACER execution."""
     try:
         execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
 
-        # Check ownership
-        if execution.project.owner != request.user:
-            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Check if analysis result exists
-        if not hasattr(execution, "analysis_result"):
-            return Response({"error": "No analysis result found for this execution."}, status=status.HTTP_404_NOT_FOUND)
-
-        analysis = execution.analysis_result
-        if not analysis.report_file_path:
-            return Response({"error": "No report file found for this execution."}, status=status.HTTP_404_NOT_FOUND)
+        # Validate access and analysis result
+        if error_response := _validate_tracer_execution_access(request, execution):
+            return error_response
 
         # Read report content
+        analysis = execution.analysis_result
         report_path = Path(settings.MEDIA_ROOT) / analysis.report_file_path
         if not report_path.exists():
             return Response({"error": "Report file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
