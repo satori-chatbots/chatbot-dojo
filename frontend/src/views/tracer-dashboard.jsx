@@ -2,27 +2,18 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardBody,
-  CardHeader,
   Button,
   Select,
   SelectItem,
-  Progress,
   Modal,
   ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   useDisclosure,
   Spinner,
 } from "@heroui/react";
 import { FixedSizeList as List } from "react-window";
 import {
-  FileText,
   BarChart3,
-  Users,
   Clock,
-  Activity,
-  ChevronRight,
   AlertCircle,
   CheckCircle,
   Loader,
@@ -40,6 +31,27 @@ import OriginalProfilesViewer from "../components/original-profiles-viewer";
 import ExecutionLogsViewer from "../components/execution-logs-viewer";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
+// Move getStatusColor to outer scope
+const getStatusColor = (status) => {
+  switch (status) {
+    case "COMPLETED": {
+      return "success";
+    }
+    case "RUNNING": {
+      return "primary";
+    }
+    case "ERROR": {
+      return "danger";
+    }
+    case "PENDING": {
+      return "warning";
+    }
+    default: {
+      return "default";
+    }
+  }
+};
+
 const TracerDashboard = () => {
   const [executions, setExecutions] = useState([]);
   const [filteredExecutions, setFilteredExecutions] = useState([]);
@@ -47,7 +59,7 @@ const TracerDashboard = () => {
   const [selectedProject, setSelectedProject] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [uniqueProjects, setUniqueProjects] = useState([]);
-  const [viewingContent, setViewingContent] = useState(null);
+  const [viewingContent, setViewingContent] = useState();
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { showToast } = useMyCustomToast();
 
@@ -57,7 +69,7 @@ const TracerDashboard = () => {
   // Clear the modal content once the modal has been closed to avoid leftover overlays
   useEffect(() => {
     if (!isOpen) {
-      setTimeout(() => setViewingContent(null), 300);
+      setTimeout(() => setViewingContent(undefined), 300);
     }
   }, [isOpen]);
 
@@ -119,11 +131,6 @@ const TracerDashboard = () => {
                 return newMap;
               });
 
-              // Reload all executions to get the final state
-              setTimeout(() => {
-                loadTracerExecutions();
-              }, 1000);
-
               if (status.status === "COMPLETED") {
                 showToast(
                   `TRACER execution completed successfully!`,
@@ -163,22 +170,6 @@ const TracerDashboard = () => {
     [pollingIntervals, showToast],
   );
 
-  // Function to stop polling an execution
-  const stopPollingExecution = useCallback(
-    (executionId) => {
-      const intervalId = pollingIntervals.get(executionId);
-      if (intervalId) {
-        clearInterval(intervalId);
-        setPollingIntervals((prev) => {
-          const newMap = new Map(prev);
-          newMap.delete(executionId);
-          return newMap;
-        });
-      }
-    },
-    [pollingIntervals],
-  );
-
   const loadTracerExecutions = useCallback(async () => {
     try {
       setLoading(true);
@@ -201,11 +192,12 @@ const TracerDashboard = () => {
       setUniqueProjects(projects);
 
       // Start polling for any running executions
-      if (data.executions) for (const execution of data.executions) {
-        if (execution.status === "RUNNING") {
-          startPollingExecution(execution);
+      if (data.executions)
+        for (const execution of data.executions) {
+          if (execution.status === "RUNNING") {
+            startPollingExecution(execution);
+          }
         }
-      }
     } catch (error) {
       console.error("Error loading TRACER executions:", error);
       showToast("Error loading TRACER executions", "error");
@@ -224,7 +216,8 @@ const TracerDashboard = () => {
 
     if (selectedProject !== "all") {
       filtered = filtered.filter(
-        (execution) => execution.project_id === Number.parseInt(selectedProject),
+        (execution) =>
+          execution.project_id === Number.parseInt(selectedProject),
       );
     }
 
@@ -289,26 +282,6 @@ const TracerDashboard = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "COMPLETED": {
-        return "success";
-      }
-      case "RUNNING": {
-        return "primary";
-      }
-      case "ERROR": {
-        return "danger";
-      }
-      case "PENDING": {
-        return "warning";
-      }
-      default: {
-        return "default";
-      }
-    }
-  };
-
   // Handler for deleting a TRACER execution
   const handleDeleteExecution = useCallback(
     async (execution) => {
@@ -340,11 +313,11 @@ const TracerDashboard = () => {
         showToast(errorMessage, "error");
       }
     },
-    [showToast],
+    [showToast, loadTracerExecutions],
   );
 
   const renderModalContent = () => {
-    if (!viewingContent) return null;
+    if (!viewingContent) return;
 
     switch (viewingContent.type) {
       case "report": {
@@ -380,7 +353,7 @@ const TracerDashboard = () => {
         );
       }
       default: {
-        return null;
+        return;
       }
     }
   };
