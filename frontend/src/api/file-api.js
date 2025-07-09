@@ -154,8 +154,9 @@ export const generateProfiles = async (projectId, parameters = {}) => {
       },
       body: JSON.stringify({
         project_id: projectId,
-        conversations: parameters.conversations || 5,
-        turns: parameters.turns || 5,
+        sessions: parameters.sessions || 3,
+        turns_per_session: parameters.turns_per_session || 8,
+        verbosity: parameters.verbosity || "normal",
       }),
     });
     return await response.json();
@@ -185,6 +186,125 @@ export const checkOngoingGeneration = async (projectId) => {
     return await response.json();
   } catch (error) {
     console.error("Error checking ongoing generation:", error);
+    throw error;
+  }
+};
+
+export const fetchProfileExecutions = async (projectId) => {
+  if (!projectId) {
+    return { executions: [] };
+  }
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/profile-executions/${projectId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching profile executions:", error);
+    throw error;
+  }
+};
+
+export const deleteProfileExecution = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/profile-execution/${executionId}/delete/`,
+      {
+        method: "DELETE",
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting profile execution:", error);
+    throw error;
+  }
+};
+
+// TRACER Dashboard API functions
+export const fetchTracerExecutions = async () => {
+  try {
+    const response = await apiClient(`${API_BASE_URL}/tracer-executions/`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER executions:", error);
+    throw error;
+  }
+};
+
+export const fetchTracerAnalysisReport = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-analysis-report/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER analysis report:", error);
+    throw error;
+  }
+};
+
+export const fetchTracerWorkflowGraph = async (executionId, format) => {
+  try {
+    let url = `${API_BASE_URL}/tracer-workflow-graph/${executionId}/`;
+    if (format) {
+      url += `?graph_format=${format}`;
+    }
+    const response = await apiClient(url);
+
+    // If a format is requested, it's for download, so we expect a blob.
+    if (format) {
+      return response.blob();
+    }
+    // Otherwise, it's the initial load for the viewer, which expects JSON with inline SVG.
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching TRACER workflow graph:", error);
+    throw error;
+  }
+};
+
+export const fetchTracerOriginalProfiles = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-original-profiles/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER original profiles:", error);
+    throw error;
+  }
+};
+
+// Delete a TRACER execution
+export const deleteTracerExecution = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-execution/${executionId}/delete/`,
+      {
+        method: "DELETE",
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting TRACER execution:", error);
+    throw error;
+  }
+};
+
+// Fetch TRACER execution logs
+export const fetchTracerExecutionLogs = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-execution-logs/${executionId}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching TRACER execution logs:", error);
     throw error;
   }
 };

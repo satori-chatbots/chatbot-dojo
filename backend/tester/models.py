@@ -146,6 +146,20 @@ def upload_to_types(instance: "TypeFile", filename: str) -> str:
     return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
 
 
+def upload_to_execution(instance: "TestFile", filename: str) -> str:
+    """Returns the path where Test Files are stored in execution folders."""
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+
+    # If execution is provided, use execution-based path
+    if instance.execution:
+        execution_name = instance.execution.execution_name.lower()
+        return f"projects/user_{user_id}/project_{project_id}/executions/{execution_name}/profiles/{filename}"
+
+    # Fallback to old path structure (backward compatibility)
+    return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
+
+
 class TestFile(models.Model):
     """Model to store the uploaded User Profiles YAML files.
 
@@ -153,13 +167,16 @@ class TestFile(models.Model):
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
     """
 
-    file = models.FileField(upload_to=upload_to)
+    file = models.FileField(upload_to=upload_to_execution)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
     is_valid = models.BooleanField(
         default=False,
         help_text="Whether the YAML file is valid for execution in Sensei",
+    )
+    execution = models.ForeignKey(
+        "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="test_files"
     )
 
     def __str__(self) -> str:
@@ -168,6 +185,10 @@ class TestFile(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TestFile instance."""
+        # If no execution is assigned and this is a new file, create/assign a manual execution
+        if not self.execution and not self.pk:
+            self.execution = self.project.get_or_create_current_manual_execution()
+
         super().save(*args, **kwargs)
 
         # After saving, try to read and process the file
@@ -178,7 +199,6 @@ class TestFile(models.Model):
                     yaml_content = file.read()
 
                 # Validate using YamlValidator
-
                 validator = YamlValidator()
                 validation_errors = validator.validate(yaml_content)
 
@@ -192,16 +212,25 @@ class TestFile(models.Model):
                     return
 
                 # Create new filename and change the extension to yaml
-                # To avoid having yaml and yml files with the same name
                 new_filename = f"{test_name}.yaml"
-                # Get user and project id
+
+                # Generate new path using execution folder structure
                 user_id = self.project.owner.id
                 project_id = self.project.id
-                new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
+
+                if self.execution:
+                    execution_name = self.execution.execution_name.lower()
+                    new_path = f"projects/user_{user_id}/project_{project_id}/executions/{execution_name}/profiles/{new_filename}"
+                else:
+                    # Fallback to old structure
+                    new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
 
                 # Rename the file
                 old_path = self.file.path
                 new_full_path = Path(settings.MEDIA_ROOT) / new_path
+
+                # Create parent directories if they don't exist
+                new_full_path.parent.mkdir(parents=True, exist_ok=True)
                 Path(old_path).rename(new_full_path)
 
                 # Update the model
@@ -211,19 +240,17 @@ class TestFile(models.Model):
                 # Set validation status - only boolean flag
                 self.is_valid = not bool(validation_errors)
 
-                # Update all fields in the database
-                TestFile.objects.filter(pk=self.pk).update(
-                    file=self.file.name,
-                    name=test_name,
-                    is_valid=self.is_valid,
-                )
+                # Update execution profile count
+                if self.execution:
+                    profile_count = self.execution.test_files.count()
+                    self.execution.generated_profiles_count = profile_count
+                    self.execution.save(update_fields=["generated_profiles_count"])
 
-            except yaml.YAMLError:
-                # Set as invalid but don't raise exception
-                self.is_valid = False
-                TestFile.objects.filter(pk=self.pk).update(is_valid=False)
-            except OSError:
-                # Set as invalid but don't raise exception
+                # Save again with updated fields
+                TestFile.objects.filter(pk=self.pk).update(file=self.file.name, name=self.name, is_valid=self.is_valid)
+
+            except (FileNotFoundError, yaml.YAMLError) as e:
+                logger.warning("Error processing TestFile %s: %s", self.pk, e)
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
 
@@ -343,6 +370,35 @@ class Project(models.Model):
             logger.info("Updated run.yml at %s", run_yml_path)
         except yaml.YAMLError:
             logger.exception("Error creating run.yml")
+
+    def create_manual_execution_folder(self) -> "ProfileExecution":
+        """Create a new manual profile execution folder for organizing profiles."""
+        # Use a fixed name for manual executions - no timestamp
+        execution_name = "Manual_Profiles"
+
+        # Create directory structure
+        user_id = self.owner.id
+        project_id = self.id
+        execution_dir = f"projects/user_{user_id}/project_{project_id}/executions/manual_profiles"
+
+        # Create execution record
+        return ProfileExecution.objects.create(
+            project=self,
+            execution_name=execution_name,
+            execution_type="manual",
+            status="COMPLETED",  # Manual executions are always completed
+            profiles_directory=execution_dir,
+        )
+
+    def get_or_create_current_manual_execution(self) -> "ProfileExecution":
+        """Get the single manual execution folder for this project, or create one if none exists."""
+        # Look for THE manual execution for this project (there should only be one)
+        manual_execution = self.profile_executions.filter(execution_type="manual").first()
+
+        if manual_execution:
+            return manual_execution
+
+        return self.create_manual_execution_folder()
 
 
 @receiver(post_delete, sender=Project)
@@ -652,6 +708,9 @@ class ProfileGenerationTask(models.Model):
     turns = models.PositiveIntegerField(default=5)
     generated_file_ids = models.JSONField(default=list)
     process_id = models.IntegerField(null=True, blank=True)
+    execution = models.ForeignKey(
+        "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="generation_tasks"
+    )
 
     def __str__(self) -> str:
         """Return a string representation of the task."""
@@ -749,5 +808,130 @@ def delete_rule_file_from_media(sender: type[RuleFile], instance: RuleFile, **_k
 
 @receiver(post_delete, sender=TypeFile)
 def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **_kwargs: Any) -> None:  # noqa: ANN401
-    """Delete the type file from media when the TypeFile is deleted."""
-    instance.file.delete(save=False)
+    """Delete the file from media when the TypeFile is deleted."""
+    try:
+        if instance.file and Path(instance.file.path).exists():
+            Path(instance.file.path).unlink()
+            logger.info("Deleted file %s from media.", instance.file.path)
+    except (FileNotFoundError, PermissionError, OSError):
+        logger.exception("Error deleting file %s", instance.file.path)
+
+
+class ProfileExecution(models.Model):
+    """Represents a profile generation execution (TRACER or Manual)."""
+
+    EXECUTION_TYPE_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("tracer", "TRACER"),
+        ("manual", "Manual"),
+    ]
+
+    STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("PENDING", "Pending"),
+        ("RUNNING", "Running"),
+        ("COMPLETED", "Completed"),
+        ("ERROR", "Error"),
+    ]
+
+    VERBOSITY_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("normal", "Normal"),
+        ("verbose", "Verbose (-v)"),
+        ("debug", "Debug (-vv)"),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="profile_executions")
+    execution_name = models.CharField(max_length=255)  # "TRACER_2024-01-16_11:30" or "Manual_2024-01-16_11:30"
+    execution_type = models.CharField(max_length=20, choices=EXECUTION_TYPE_CHOICES)  # "tracer" or "manual"
+
+    # TRACER specific parameters (null for manual)
+    sessions = models.IntegerField(null=True, blank=True)  # TRACER sessions
+    turns_per_session = models.IntegerField(null=True, blank=True)  # TRACER turns
+    verbosity = models.CharField(
+        max_length=10,
+        choices=VERBOSITY_CHOICES,
+        default="normal",
+        blank=True,
+        help_text="TRACER verbosity level for debugging",
+    )  # TRACER verbosity level
+
+    # Status and timing
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
+    execution_time_minutes = models.IntegerField(null=True, blank=True)
+
+    # File organization
+    profiles_directory = models.CharField(max_length=500)
+    generated_profiles_count = models.IntegerField(default=0)
+
+    # TRACER process output for debugging
+    tracer_stdout = models.TextField(blank=True)
+    tracer_stderr = models.TextField(blank=True)
+
+    class Meta:
+        """Meta options for the ProfileExecution model."""
+
+        ordering: ClassVar[list[str]] = ["execution_type", "-created_at"]  # Manual first, then by date desc
+
+    def __str__(self) -> str:
+        """Return a string representation of the ProfileExecution."""
+        return f"{self.execution_name} - {self.project.name}"
+
+    @property
+    def display_info(self) -> str:
+        """Returns display info for the folder header."""
+        if self.execution_type == "tracer":
+            return f"({self.sessions} sessions, {self.turns_per_session} turns)"
+        return f"({self.generated_profiles_count} profiles)"
+
+
+class TracerAnalysisResult(models.Model):
+    """Stores TRACER-specific analysis data (reports, graphs)."""
+
+    execution = models.OneToOneField(ProfileExecution, on_delete=models.CASCADE, related_name="analysis_result")
+
+    # TRACER output files
+    report_file_path = models.CharField(max_length=500, blank=True, default="")  # report.md
+
+    # Multiple graph format files
+    workflow_graph_svg_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.svg
+    workflow_graph_png_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.png
+    workflow_graph_pdf_path = models.CharField(max_length=500, blank=True, default="")  # workflow_graph.pdf
+
+    # Analysis metadata
+    total_interactions = models.IntegerField(default=0)
+    coverage_percentage = models.FloatField(null=True, blank=True)
+    unique_paths_discovered = models.IntegerField(default=0)
+    categories_count = models.IntegerField(default=0)
+    estimated_cost_usd = models.FloatField(default=0.0)
+
+    def __str__(self) -> str:
+        """Return a string representation of the TracerAnalysisResult."""
+        return f"Analysis for {self.execution.execution_name}"
+
+    @property
+    def has_any_graph(self) -> bool:
+        """Return True if any graph format is available."""
+        return bool(self.workflow_graph_svg_path or self.workflow_graph_png_path or self.workflow_graph_pdf_path)
+
+    def get_available_formats(self) -> list[str]:
+        """Return a list of available graph formats."""
+        formats = []
+        if self.workflow_graph_svg_path:
+            formats.append("svg")
+        if self.workflow_graph_png_path:
+            formats.append("png")
+        if self.workflow_graph_pdf_path:
+            formats.append("pdf")
+        return formats
+
+
+class OriginalTracerProfile(models.Model):
+    """Stores original TRACER-generated profiles for read-only viewing in dashboard."""
+
+    execution = models.ForeignKey(ProfileExecution, on_delete=models.CASCADE, related_name="original_profiles")
+    original_filename = models.CharField(max_length=255)
+    original_content = models.TextField()  # Original YAML content
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        """Return a string representation of the OriginalTracerProfile."""
+        return f"Original {self.original_filename} - {self.execution.execution_name}"

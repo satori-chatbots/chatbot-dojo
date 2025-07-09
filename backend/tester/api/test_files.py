@@ -223,10 +223,18 @@ class TestFileViewSet(viewsets.ModelViewSet):
     def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
         """Save processed file data to the database in a single transaction."""
         saved_instances = []
+
+        # Create or get a manual execution folder for grouping these uploads
+        manual_execution = project.get_or_create_current_manual_execution()
+
         with transaction.atomic():
             for data in file_data:
                 instance = TestFile(
-                    file=data["file"], name=data["test_name"], project=project, is_valid=data["is_valid"]
+                    file=data["file"],
+                    name=data["test_name"],
+                    project=project,
+                    is_valid=data["is_valid"],
+                    execution=manual_execution,  # Assign to manual execution
                 )
                 saved_instances.append(instance)
             TestFile.objects.bulk_create(saved_instances)

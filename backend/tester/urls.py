@@ -28,8 +28,8 @@ urlpatterns = [
     # Custom Routes First
     path(
         "execute-selected/",
-        api.ExecuteSelectedAPIView.as_view(),
-        name="execute-selected",
+        api.ExecuteSelectedProfilesAPIView.as_view(),
+        name="execute-selected-profiles",
     ),
     path(
         "chatbotconnectors/choices/",
@@ -38,8 +38,8 @@ urlpatterns = [
     ),
     path(
         "test-cases-stop/",
-        api.stop_test_execution,
-        name="stop-test-execution",
+        api.stop_sensei_execution,
+        name="stop-sensei-execution",
     ),
     path(
         "validate-token/",
@@ -75,6 +75,41 @@ urlpatterns = [
         "ongoing-generation/<int:project_id>/",
         api.check_ongoing_generation,
         name="check-ongoing-generation",
+    ),
+    path(
+        "profile-executions/<int:project_id>/",
+        api.get_profile_executions,
+        name="get-profile-executions",
+    ),
+    path(
+        "profile-execution/<int:execution_id>/delete/",
+        api.delete_profile_execution,
+        name="delete-profile-execution",
+    ),
+    path(
+        "tracer-executions/",
+        api.get_tracer_executions,
+        name="get-tracer-executions",
+    ),
+    path(
+        "tracer-analysis-report/<int:execution_id>/",
+        api.get_tracer_analysis_report,
+        name="get-tracer-analysis-report",
+    ),
+    path(
+        "tracer-workflow-graph/<int:execution_id>/",
+        api.get_tracer_workflow_graph,
+        name="get-tracer-workflow-graph",
+    ),
+    path(
+        "tracer-original-profiles/<int:execution_id>/",
+        api.get_tracer_original_profiles,
+        name="get-tracer-original-profiles",
+    ),
+    path(
+        "tracer-execution-logs/<int:execution_id>/",
+        api.get_tracer_execution_logs,
+        name="get-tracer-execution-logs",
     ),
     path(
         "llm-models/",

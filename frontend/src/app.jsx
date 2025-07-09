@@ -6,6 +6,7 @@ import ChatbotConnectors from "./views/chatbot-connectors";
 import ProjectsDashboard from "./views/projects-dashboard";
 import TestCase from "./views/test-case";
 import LoginView from "./views/login-view";
+import TracerDashboard from "./views/tracer-dashboard";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button, Switch } from "@heroui/react";
@@ -16,6 +17,10 @@ import {
   NavbarMenuToggle,
   NavbarMenu,
   NavbarMenuItem,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@heroui/react";
 import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from "react-router-dom";
@@ -27,6 +32,7 @@ import { MyCustomToastProvider } from "./contexts/my-custom-toast-context";
 import { SetupProvider } from "./contexts/setup-context";
 import YamlEditor from "./views/yaml-editor-view";
 import SetupGuide from "./views/setup-guide";
+import { ChevronDown } from "lucide-react";
 
 export const MoonIcon = (properties) => {
   return (
@@ -115,34 +121,94 @@ function AppContent() {
           <NavbarContent className="hidden sm:flex" justify="start">
             {user && (
               <NavbarItem isActive={location.pathname === "/"}>
-                <Link to="/" className="hover:underline">
+                <Link to="/" className="hover:underline text-sm">
                   Test Center
                 </Link>
               </NavbarItem>
             )}
+            <NavbarItem isActive={location.pathname === "/dashboard"}>
+              <Link to="/dashboard" className="hover:underline text-sm">
+                Sensei Results
+              </Link>
+            </NavbarItem>
             {user && (
-              <NavbarItem isActive={location.pathname === "/setup"}>
-                <Link to="/setup" className="hover:underline">
-                  Setup Guide
+              <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
+                <Link
+                  to="/tracer-dashboard"
+                  className="hover:underline text-sm"
+                >
+                  TRACER Dashboard
                 </Link>
               </NavbarItem>
             )}
-            <NavbarItem isActive={location.pathname === "/dashboard"}>
-              <Link to="/dashboard" className="hover:underline">
-                Results
-              </Link>
-            </NavbarItem>
-            <NavbarItem isActive={location.pathname === "/chatbot-connectors"}>
-              <Link to="/chatbot-connectors" className="hover:underline">
-                Chatbot Connectors
-              </Link>
-            </NavbarItem>
             {user && (
-              <NavbarItem isActive={location.pathname === "/projects"}>
-                <Link to="/projects" className="hover:underline">
-                  Projects
-                </Link>
-              </NavbarItem>
+              <Dropdown>
+                <NavbarItem>
+                  <DropdownTrigger>
+                    <Button
+                      disableRipple
+                      className="p-0 bg-transparent data-[hover=true]:bg-transparent"
+                      endContent={<ChevronDown className="w-4 h-4" />}
+                      radius="sm"
+                      variant="light"
+                    >
+                      Setup
+                    </Button>
+                  </DropdownTrigger>
+                </NavbarItem>
+                <DropdownMenu
+                  aria-label="Setup options"
+                  className="w-[340px]"
+                  itemClasses={{
+                    base: "gap-4",
+                  }}
+                >
+                  <DropdownItem
+                    key="setup-guide"
+                    onPress={() => navigate("/setup")}
+                    className={
+                      location.pathname === "/setup" ? "bg-primary/10" : ""
+                    }
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">Setup Guide</span>
+                      <span className="text-tiny text-default-400">
+                        Follow the step-by-step setup process
+                      </span>
+                    </div>
+                  </DropdownItem>
+                  <DropdownItem
+                    key="chatbot-connectors"
+                    onPress={() => navigate("/chatbot-connectors")}
+                    className={
+                      location.pathname === "/chatbot-connectors"
+                        ? "bg-primary/10"
+                        : ""
+                    }
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">Chatbot Connectors</span>
+                      <span className="text-tiny text-default-400">
+                        Configure chatbot API connections
+                      </span>
+                    </div>
+                  </DropdownItem>
+                  <DropdownItem
+                    key="projects"
+                    onPress={() => navigate("/projects")}
+                    className={
+                      location.pathname === "/projects" ? "bg-primary/10" : ""
+                    }
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">Projects</span>
+                      <span className="text-tiny text-default-400">
+                        Manage your testing projects
+                      </span>
+                    </div>
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
             )}
           </NavbarContent>
 
@@ -157,13 +223,13 @@ function AppContent() {
             {user ? (
               <>
                 <NavbarItem>
-                  <span>Welcome, </span>
+                  <span className="text-sm">Welcome, </span>
                 </NavbarItem>
                 <NavbarItem
                   isActive={location.pathname === "/profile"}
                   className="text-primary"
                 >
-                  <Link to="/profile" className="hover:underline">
+                  <Link to="/profile" className="hover:underline text-sm">
                     {user.first_name}
                   </Link>
                 </NavbarItem>
@@ -228,58 +294,80 @@ function AppContent() {
           </NavbarContent>
 
           <NavbarMenu>
-            <NavbarMenuItem isActive={location.pathname === "/"}>
-              <Link
-                to="/"
-                className="hover:underline"
-                onClick={handleLinkClick}
-              >
-                Test Center
-              </Link>
-            </NavbarMenuItem>
-            <NavbarMenuItem isActive={location.pathname === "/setup"}>
-              <Link
-                to="/setup"
-                className="hover:underline"
-                onClick={handleLinkClick}
-              >
-                Setup Guide
-              </Link>
-            </NavbarMenuItem>
+            {user && (
+              <NavbarMenuItem isActive={location.pathname === "/"}>
+                <Link
+                  to="/"
+                  className="hover:underline text-sm"
+                  onClick={handleLinkClick}
+                >
+                  Test Center
+                </Link>
+              </NavbarMenuItem>
+            )}
             <NavbarMenuItem isActive={location.pathname === "/dashboard"}>
               <Link
                 to="/dashboard"
-                className="hover:underline"
+                className="hover:underline text-sm"
                 onClick={handleLinkClick}
               >
-                Results
+                Sensei Results
               </Link>
             </NavbarMenuItem>
-            <NavbarMenuItem
-              isActive={location.pathname === "/chatbot-connectors"}
-            >
-              <Link
-                to="/chatbot-connectors"
-                className="hover:underline"
-                onClick={handleLinkClick}
+            {user && (
+              <NavbarMenuItem
+                isActive={location.pathname === "/tracer-dashboard"}
               >
-                Chatbot Connectors
-              </Link>
-            </NavbarMenuItem>
-            <NavbarMenuItem isActive={location.pathname === "/projects"}>
-              <Link
-                to="/projects"
-                className="hover:underline"
-                onClick={handleLinkClick}
-              >
-                Projects
-              </Link>
-            </NavbarMenuItem>
+                <Link
+                  to="/tracer-dashboard"
+                  className="hover:underline text-sm"
+                  onClick={handleLinkClick}
+                >
+                  TRACER Dashboard
+                </Link>
+              </NavbarMenuItem>
+            )}
+            {user && (
+              <>
+                <div className="px-4 py-2 text-tiny text-default-400 font-medium">
+                  SETUP
+                </div>
+                <NavbarMenuItem isActive={location.pathname === "/setup"}>
+                  <Link
+                    to="/setup"
+                    className="hover:underline text-sm"
+                    onClick={handleLinkClick}
+                  >
+                    Setup Guide
+                  </Link>
+                </NavbarMenuItem>
+                <NavbarMenuItem
+                  isActive={location.pathname === "/chatbot-connectors"}
+                >
+                  <Link
+                    to="/chatbot-connectors"
+                    className="hover:underline text-sm"
+                    onClick={handleLinkClick}
+                  >
+                    Chatbot Connectors
+                  </Link>
+                </NavbarMenuItem>
+                <NavbarMenuItem isActive={location.pathname === "/projects"}>
+                  <Link
+                    to="/projects"
+                    className="hover:underline text-sm"
+                    onClick={handleLinkClick}
+                  >
+                    Projects
+                  </Link>
+                </NavbarMenuItem>
+              </>
+            )}
             {user ? (
               <NavbarMenuItem isActive={location.pathname === "/profile"}>
                 <Link
                   to="/profile"
-                  className="hover:underline"
+                  className="hover:underline text-sm"
                   onClick={handleLinkClick}
                 >
                   Profile
@@ -290,7 +378,7 @@ function AppContent() {
                 <NavbarMenuItem isActive={location.pathname === "/login"}>
                   <Link
                     to="/login"
-                    className="hover:underline"
+                    className="hover:underline text-sm"
                     onClick={handleLinkClick}
                   >
                     Login
@@ -299,7 +387,7 @@ function AppContent() {
                 <NavbarMenuItem isActive={location.pathname === "/signup"}>
                   <Link
                     to="/signup"
-                    className="hover:underline"
+                    className="hover:underline text-sm"
                     onClick={handleLinkClick}
                   >
                     Sign Up
@@ -322,6 +410,14 @@ function AppContent() {
               }
             />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/tracer-dashboard"
+              element={
+                <PrivateRoute>
+                  <TracerDashboard />
+                </PrivateRoute>
+              }
+            />
             <Route path="/chatbot-connectors" element={<ChatbotConnectors />} />
             <Route
               path="/projects"
