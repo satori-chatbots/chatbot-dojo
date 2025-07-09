@@ -41,9 +41,10 @@ class ExecuteSelectedAPIView(APIView):
                 logger.info(f"API key successfully loaded for project {project.name}")
                 return decrypted_key
             logger.warning(f"No API key found for project {project.name}")
-            return None
         except (InvalidToken, ValueError, TypeError) as e:
             logger.error(f"Error loading/decrypting API key for project {project.name}: {e}")
+            return None
+        else:
             return None
 
     def _copy_and_prepare_files(self, test_files: list[TestFile], user_profiles_path: Path) -> list[dict[str, str]]:
@@ -195,6 +196,7 @@ def generate_profiles(request: Request) -> Response:
     turns_per_session = request.data.get("turns_per_session", 8)  # Default to 8 turns per session
     verbosity = request.data.get("verbosity", "normal")  # Default to normal verbosity
 
+    # Validate required parameters
     if not project_id:
         return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -206,12 +208,18 @@ def generate_profiles(request: Request) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # Consolidate project validation
+    project = None
+    project_error = None
     try:
         project = Project.objects.get(id=project_id)
         if project.owner != request.user:
-            return Response({"error": "You do not own this project."}, status=status.HTTP_403_FORBIDDEN)
+            project_error = ("You do not own this project.", status.HTTP_403_FORBIDDEN)
     except Project.DoesNotExist:
-        return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+        project_error = ("Project not found.", status.HTTP_404_NOT_FOUND)
+
+    if project_error:
+        return Response({"error": project_error[0]}, status=project_error[1])
 
     # Validate project configuration
     if not project.chatbot_connector:
@@ -388,44 +396,66 @@ def stop_test_execution(request: Request) -> Response:
         return Response({"error": "Test case not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
+def _validate_execution_deletion(request: Request, execution_id: int) -> tuple[Response | None, ProfileExecution | None]:
+    """Validate that the execution can be deleted by the current user."""
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id)
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND), None
+
+    # Check ownership
+    if execution.project.owner != request.user:
+        return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN), None
+
+    # Prevent deletion of manual executions - they are permanent
+    if execution.execution_type == "manual":
+        return (
+            Response(
+                {"error": "Manual execution folders cannot be deleted. Delete individual profiles instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            ),
+            None,
+        )
+
+    return None, execution
+
+
+def _delete_execution_files(execution: ProfileExecution) -> None:
+    """Delete files associated with the execution from the filesystem."""
+    # Delete associated files from filesystem
+    try:
+        if execution.profiles_directory:
+            profiles_dir = Path(settings.MEDIA_ROOT) / execution.profiles_directory
+            if profiles_dir.exists():
+                shutil.rmtree(profiles_dir)
+                logger.info(f"Deleted execution directory: {profiles_dir}")
+    except (OSError, PermissionError, FileNotFoundError) as e:
+        logger.warning(f"Failed to delete execution directory: {e}")
+        # Continue with database deletion even if file deletion fails
+
+    # Delete related database objects (cascade will handle most of this)
+    # But we'll explicitly delete TestFiles to clean up their file references
+    test_files = TestFile.objects.filter(execution=execution)
+    for test_file in test_files:
+        try:
+            if test_file.file:
+                test_file.file.delete(save=False)
+        except (OSError, PermissionError, FileNotFoundError) as e:
+            logger.warning(f"Failed to delete file {test_file.file.name}: {e}")
+
+
 @api_view(["DELETE"])
 def delete_profile_execution(request: Request, execution_id: int) -> Response:
     """Delete a profile execution and all its associated profiles and files."""
+    # Validate the execution can be deleted
+    error_response, execution = _validate_execution_deletion(request, execution_id)
+    if error_response:
+        return error_response
+
     try:
-        execution = ProfileExecution.objects.get(id=execution_id)
-
-        # Check ownership
-        if execution.project.owner != request.user:
-            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Prevent deletion of manual executions - they are permanent
-        if execution.execution_type == "manual":
-            return Response(
-                {"error": "Manual execution folders cannot be deleted. Delete individual profiles instead."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         with transaction.atomic():
-            # Delete associated files from filesystem
-            try:
-                if execution.profiles_directory:
-                    profiles_dir = Path(settings.MEDIA_ROOT) / execution.profiles_directory
-                    if profiles_dir.exists():
-                        shutil.rmtree(profiles_dir)
-                        logger.info(f"Deleted execution directory: {profiles_dir}")
-            except Exception as e:
-                logger.warning(f"Failed to delete execution directory: {e}")
-                # Continue with database deletion even if file deletion fails
-
-            # Delete related database objects (cascade will handle most of this)
-            # But we'll explicitly delete TestFiles to clean up their file references
-            test_files = TestFile.objects.filter(execution=execution)
-            for test_file in test_files:
-                try:
-                    if test_file.file:
-                        test_file.file.delete(save=False)
-                except Exception as e:
-                    logger.warning(f"Failed to delete file {test_file.file.name}: {e}")
+            # Delete associated files
+            _delete_execution_files(execution)
 
             # Delete the execution (cascade will handle related objects)
             execution_name = execution.execution_name
@@ -437,9 +467,7 @@ def delete_profile_execution(request: Request, execution_id: int) -> Response:
                 {"message": f"Execution '{execution_name}' deleted successfully"}, status=status.HTTP_200_OK
             )
 
-    except ProfileExecution.DoesNotExist:
-        return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
+    except (OSError, PermissionError, DatabaseError) as e:
         logger.error(f"Error deleting execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while deleting the execution."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -506,7 +534,7 @@ def get_tracer_executions(request: Request) -> Response:
 
         return Response({"executions": execution_data})
 
-    except Exception as e:
+    except (DatabaseError, OSError) as e:
         logger.error(f"Error fetching TRACER executions: {e!s}")
         return Response(
             {"error": "An error occurred while fetching TRACER executions."},
