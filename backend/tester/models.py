@@ -250,7 +250,7 @@ class TestFile(models.Model):
                 TestFile.objects.filter(pk=self.pk).update(file=self.file.name, name=self.name, is_valid=self.is_valid)
 
             except (FileNotFoundError, yaml.YAMLError) as e:
-                logger.warning(f"Error processing TestFile {self.pk}: {e}")
+                logger.warning("Error processing TestFile %s: %s", self.pk, e)
                 self.is_valid = False
                 TestFile.objects.filter(pk=self.pk).update(is_valid=False)
 
@@ -382,15 +382,13 @@ class Project(models.Model):
         execution_dir = f"projects/user_{user_id}/project_{project_id}/executions/manual_profiles"
 
         # Create execution record
-        execution = ProfileExecution.objects.create(
+        return ProfileExecution.objects.create(
             project=self,
             execution_name=execution_name,
             execution_type="manual",
             status="COMPLETED",  # Manual executions are always completed
             profiles_directory=execution_dir,
         )
-
-        return execution
 
     def get_or_create_current_manual_execution(self) -> "ProfileExecution":
         """Get the single manual execution folder for this project, or create one if none exists."""
@@ -851,7 +849,6 @@ class ProfileExecution(models.Model):
         max_length=10,
         choices=VERBOSITY_CHOICES,
         default="normal",
-        null=True,
         blank=True,
         help_text="TRACER verbosity level for debugging",
     )  # TRACER verbosity level
@@ -866,8 +863,8 @@ class ProfileExecution(models.Model):
     generated_profiles_count = models.IntegerField(default=0)
 
     # TRACER process output for debugging
-    tracer_stdout = models.TextField(null=True, blank=True)
-    tracer_stderr = models.TextField(null=True, blank=True)
+    tracer_stdout = models.TextField(blank=True)
+    tracer_stderr = models.TextField(blank=True)
 
     class Meta:
         """Meta options for the ProfileExecution model."""
