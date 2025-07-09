@@ -12,8 +12,22 @@ import {
   useDisclosure,
   Select,
   SelectItem,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@heroui/react";
-import { Upload, File, Trash, Play, Plus, X, Sparkles } from "lucide-react";
+import {
+  Upload,
+  File,
+  Trash,
+  Play,
+  Plus,
+  X,
+  Sparkles,
+  ChevronDown,
+  Settings,
+} from "lucide-react";
 import {
   uploadFiles,
   deleteFiles,
@@ -648,10 +662,52 @@ function Home() {
 
       {selectedProject ? (
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
-          {/* Header */}
-          <h1 className="text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-            {selectedProject.name}
-          </h1>
+          {/* Header with Dropdown */}
+          <div className="flex items-center justify-center relative">
+            <h1 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+              {selectedProject.name}
+            </h1>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="absolute right-0 text-foreground/60 dark:text-foreground-dark/60 hover:text-foreground dark:hover:text-foreground-dark bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="Project actions">
+                <DropdownItem
+                  key="edit"
+                  startContent={<Settings className="w-4 h-4" />}
+                  onPress={() => {
+                    setEditProjectId(selectedProject.id);
+                    setIsEditOpen(true);
+                  }}
+                >
+                  Edit Project
+                </DropdownItem>
+                <DropdownItem
+                  key="change"
+                  startContent={<X className="w-4 h-4" />}
+                  onPress={() => setSelectedProject(undefined)}
+                >
+                  Change Project
+                </DropdownItem>
+                <DropdownItem
+                  key="delete"
+                  startContent={<Trash className="w-4 h-4" />}
+                  className="text-danger"
+                  color="danger"
+                  onPress={() => handleProjectDelete(selectedProject.id)}
+                >
+                  Remove Project
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </div>
 
           {/* LLM Model Information */}
           <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-3 border border-border dark:border-border-dark backdrop-blur-sm">
@@ -696,18 +752,6 @@ function Home() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Project Dropdown */}
-          <div className="flex flex-col space-y-4">
-            <Button
-              color="default"
-              variant="ghost"
-              onPress={() => setSelectedProject(undefined)}
-              startContent={<X className="w-4 h-4" />}
-            >
-              Change Project
-            </Button>
           </div>
 
           {/* Project Details */}
