@@ -365,7 +365,9 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response |
         )
 
 
-def _handle_graph_request(request: Request, execution: ProfileExecution, analysis: TracerAnalysisResult) -> Response | FileResponse:
+def _handle_graph_request(
+    request: Request, execution: ProfileExecution, analysis: TracerAnalysisResult
+) -> Response | FileResponse:
     """Handle graph request logic for different formats and download modes."""
     requested_format = _get_requested_graph_format(request, analysis)
     if requested_format is None:
@@ -398,6 +400,7 @@ def _handle_graph_request(request: Request, execution: ProfileExecution, analysi
         status=status.HTTP_400_BAD_REQUEST,
     )
 
+
 def _get_requested_graph_format(request: Request, analysis: TracerAnalysisResult) -> str | None:
     requested_format = request.GET.get("graph_format", "").lower()
     if not requested_format:
@@ -409,6 +412,7 @@ def _get_requested_graph_format(request: Request, analysis: TracerAnalysisResult
         return available_formats[0] if available_formats else None
     return requested_format
 
+
 def _get_graph_path(analysis: TracerAnalysisResult, requested_format: str) -> Path | None:
     graph_path_field = f"workflow_graph_{requested_format}_path"
     graph_path_str = getattr(analysis, graph_path_field, "")
@@ -416,7 +420,10 @@ def _get_graph_path(analysis: TracerAnalysisResult, requested_format: str) -> Pa
         return None
     return Path(settings.MEDIA_ROOT) / graph_path_str
 
-def _serve_graph_file_for_download(graph_path: Path, execution: ProfileExecution, requested_format: str) -> FileResponse | Response:
+
+def _serve_graph_file_for_download(
+    graph_path: Path, execution: ProfileExecution, requested_format: str
+) -> FileResponse | Response:
     if not graph_path.exists():
         return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
     try:
@@ -428,7 +435,10 @@ def _serve_graph_file_for_download(graph_path: Path, execution: ProfileExecution
     except FileNotFoundError:
         return Response({"error": "File not found on server."}, status=status.HTTP_404_NOT_FOUND)
 
-def _serve_inline_svg(graph_path: Path, execution: ProfileExecution, requested_format: str, analysis: TracerAnalysisResult) -> Response:
+
+def _serve_inline_svg(
+    graph_path: Path, execution: ProfileExecution, requested_format: str, analysis: TracerAnalysisResult
+) -> Response:
     if not graph_path.exists():
         return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
     with graph_path.open("r", encoding="utf-8") as f:

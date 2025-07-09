@@ -164,13 +164,13 @@ class TracerResultsProcessor:
 
         return final_graph_paths
 
-    def _process_report_files(self, output_dir: Path, analysis_dir: Path) -> tuple[str | None, dict[str, int]]:
+    def _process_report_files(self, output_dir: Path, analysis_dir: Path) -> tuple[str | None, dict[str, int | float]]:
         """Process report files and return final path and metadata."""
         readme_path = output_dir / "README.md"
         report_txt_path = output_dir / "report.txt"
 
         final_report_path = None
-        report_metadata = {}
+        report_metadata: dict[str, int | float] = {}
         report_source_path = None
 
         # Prioritize report.txt, fall back to README.md
@@ -195,9 +195,14 @@ class TracerResultsProcessor:
 class TracerReportParser:
     """Handles parsing of TRACER report files to extract metadata."""
 
-    def parse_report_metadata(self, report_path: Path) -> dict[str, int]:
+    def parse_report_metadata(self, report_path: Path) -> dict[str, int | float]:
         """Parse TRACER report files to extract metadata."""
-        metadata = {"total_interactions": 0, "unique_paths": 0, "categories_count": 0, "estimated_cost_usd": 0.0}
+        metadata: dict[str, int | float] = {
+            "total_interactions": 0,
+            "unique_paths": 0,
+            "categories_count": 0,
+            "estimated_cost_usd": 0.0,
+        }
 
         try:
             # First try to parse functionalities.json if it exists (structured data)
@@ -226,9 +231,9 @@ class TracerReportParser:
 
         return metadata
 
-    def _parse_txt_format(self, content: str) -> dict[str, int]:
+    def _parse_txt_format(self, content: str) -> dict[str, int | float]:
         """Parse .txt format TRACER reports."""
-        metadata = {}
+        metadata: dict[str, int | float] = {}
         lines = content.split("\n")
 
         # Count categories by finding "### CATEGORY:" lines
@@ -262,7 +267,7 @@ class TracerReportParser:
 
         return total_functions
 
-    def _parse_token_statistics_txt(self, lines: list[str], metadata: dict) -> None:
+    def _parse_token_statistics_txt(self, lines: list[str], metadata: dict[str, int | float]) -> None:
         """Parse token usage statistics from txt format."""
         min_parts_for_llm_calls = 2
         for line in lines:
@@ -282,9 +287,9 @@ class TracerReportParser:
                 if cost_match:
                     metadata["estimated_cost_usd"] = float(cost_match.group(1))
 
-    def _parse_md_format(self, content: str) -> dict[str, int]:
+    def _parse_md_format(self, content: str) -> dict[str, int | float]:
         """Parse .md format TRACER reports (legacy)."""
-        metadata = {}
+        metadata: dict[str, int | float] = {}
         lines = content.split("\n")
 
         # Look for "X functionalities discovered" pattern and categories count
@@ -299,7 +304,7 @@ class TracerReportParser:
 
         return metadata
 
-    def _parse_functionality_counts_md(self, lines: list[str], metadata: dict) -> None:
+    def _parse_functionality_counts_md(self, lines: list[str], metadata: dict[str, int | float]) -> None:
         """Parse functionality counts from md format."""
         for raw_line in lines:
             line = raw_line.strip()
@@ -328,7 +333,7 @@ class TracerReportParser:
                 except (ValueError, AttributeError):
                     pass
 
-    def _parse_performance_statistics_md(self, lines: list[str], metadata: dict) -> None:
+    def _parse_performance_statistics_md(self, lines: list[str], metadata: dict[str, int | float]) -> None:
         """Parse performance statistics from md format."""
         for line in lines:
             stripped_line = line.strip()
@@ -352,7 +357,7 @@ class TracerReportParser:
             elif "Estimated cost:" in stripped_line and "USD" in stripped_line:
                 self._parse_cost_from_text(stripped_line, metadata)
 
-    def _parse_cost_from_table(self, line: str, metadata: dict) -> None:
+    def _parse_cost_from_table(self, line: str, metadata: dict[str, int | float]) -> None:
         """Parse cost from markdown table format."""
         try:
             # Format: | Estimated Cost | $0.0368 USD |
@@ -374,7 +379,7 @@ class TracerReportParser:
         except (ValueError, AttributeError, IndexError):
             pass
 
-    def _parse_cost_from_text(self, line: str, metadata: dict) -> None:
+    def _parse_cost_from_text(self, line: str, metadata: dict[str, int | float]) -> None:
         """Parse cost from text format."""
         try:
             # Format: Estimated cost:      $0.1602 USD
@@ -387,7 +392,7 @@ class TracerReportParser:
         except (ValueError, AttributeError):
             pass
 
-    def _count_categories_from_section(self, content: str, metadata: dict) -> None:
+    def _count_categories_from_section(self, content: str, metadata: dict[str, int | float]) -> None:
         """Count categories from FUNCTIONALITIES section."""
         category_section_match = re.search(r"## FUNCTIONALITIES \(By Category\)(.*?)(?=##|$)", content, re.DOTALL)
         if category_section_match:
@@ -396,9 +401,9 @@ class TracerReportParser:
             category_lines = [line for line in category_section.split("\n") if line.strip().startswith("### CATEGORY:")]
             metadata["categories_count"] = len(category_lines)
 
-    def _parse_functionalities_json(self, json_path: Path) -> dict[str, int]:
+    def _parse_functionalities_json(self, json_path: Path) -> dict[str, int | float]:
         """Parse functionalities.json for structured metadata."""
-        metadata = {}
+        metadata: dict[str, int | float] = {}
         try:
             with json_path.open("r", encoding="utf-8") as f:
                 data = json.load(f)

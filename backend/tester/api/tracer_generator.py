@@ -21,6 +21,7 @@ from tester.models import ProfileExecution, ProfileGenerationTask, Project
 @dataclass
 class ProfileGenerationParams:
     """Parameter object for TRACER profile generation configuration."""
+
     technology: str
     conversations: int
     turns: int
@@ -67,9 +68,7 @@ class TracerGenerator:
             task = self._initialize_task(task_id)
             execution = self._create_execution(task, params.conversations, params.turns, params.verbosity)
 
-            success = self.execute_tracer_generation(
-                task, execution, params
-            )
+            success = self.execute_tracer_generation(task, execution, params)
 
             self._finalize_execution(task, execution, success=success)
 
@@ -164,9 +163,7 @@ class TracerGenerator:
             task.stage = "CREATING_PROFILES"
             task.save()
 
-            success = self._run_tracer_command(
-                task, execution, params, output_dir
-            )
+            success = self._run_tracer_command(task, execution, params, output_dir)
 
             if success:
                 self._post_process_results(task, execution, output_dir)
@@ -206,9 +203,7 @@ class TracerGenerator:
         chatbot_url = project.chatbot_connector.link if project.chatbot_connector else "http://localhost:5000"
         model = project.llm_model or "gpt-4o-mini"
 
-        cmd = self._build_tracer_command(
-            params, chatbot_url, model, output_dir
-        )
+        cmd = self._build_tracer_command(params, chatbot_url, model, output_dir)
 
         env = self._prepare_environment(params.api_key, project.llm_provider)
 
@@ -328,7 +323,11 @@ class TracerGenerator:
         """Parse a line of TRACER output and update the task progress."""
         try:
             line = line.strip()
-            if self._handle_exploration_phase(task, line) or self._handle_analysis_phase(task, line) or self._handle_finalization_phase(task, line):
+            if (
+                self._handle_exploration_phase(task, line)
+                or self._handle_analysis_phase(task, line)
+                or self._handle_finalization_phase(task, line)
+            ):
                 pass
             task.save(update_fields=["stage", "progress_percentage"])
         except (ValueError, AttributeError, TypeError) as e:
