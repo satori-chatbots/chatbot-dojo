@@ -15,12 +15,22 @@ from .auth import (
 from .connectors import ChatbotConnectorViewSet, get_technology_choices
 from .conversations import ConversationViewSet
 from .errors import TestErrorViewSet
+from .project_files import (
+    PersonalityFileViewSet,
+    ProjectConfigViewSet,
+    RuleFileViewSet,
+    TypeFileViewSet,
+)
+from .projects import ProjectViewSet, fetch_file_content, validate_yaml
+from .reports import GlobalReportViewSet, ProfileReportViewSet
 from .sensei_execution_views import (
     ExecuteSelectedProfilesAPIView,
     delete_profile_execution,
     get_profile_executions,
     stop_sensei_execution,
 )
+from .test_cases import TestCaseViewSet
+from .test_files import TestFileViewSet
 from .tracer_views import (
     check_generation_status,
     check_ongoing_generation,
@@ -31,16 +41,6 @@ from .tracer_views import (
     get_tracer_original_profiles,
     get_tracer_workflow_graph,
 )
-from .project_files import (
-    PersonalityFileViewSet,
-    ProjectConfigViewSet,
-    RuleFileViewSet,
-    TypeFileViewSet,
-)
-from .projects import ProjectViewSet, fetch_file_content, validate_yaml
-from .reports import GlobalReportViewSet, ProfileReportViewSet
-from .test_cases import TestCaseViewSet
-from .test_files import TestFileViewSet
 
 __all__ = [
     "ChatbotConnectorViewSet",
