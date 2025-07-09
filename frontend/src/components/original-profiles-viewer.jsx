@@ -7,7 +7,6 @@ import {
   Spinner,
   Card,
   CardBody,
-  CardHeader,
   Accordion,
   AccordionItem,
 } from "@heroui/react";
@@ -17,7 +16,6 @@ import {
   AlertCircle,
   FileText,
   Copy,
-  Check,
 } from "lucide-react";
 import { fetchTracerOriginalProfiles } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
@@ -65,7 +63,7 @@ const formatDate = (dateString) => {
 
 const YamlHighlighter = ({ content }) => {
   return (
-    <pre className="bg-default-50 dark:bg-default-900 rounded-lg p-4 overflow-x-auto text-sm whitespace-pre-wrap break-words">
+    <pre className="bg-default-50 dark:bg-default-900/10 rounded-lg p-4 overflow-x-auto text-sm whitespace-pre-wrap break-words border border-default-200 dark:border-default-700">
       <code
         className="text-foreground"
         dangerouslySetInnerHTML={{ __html: highlightYaml(content) }}
@@ -75,9 +73,9 @@ const YamlHighlighter = ({ content }) => {
 };
 
 const OriginalProfilesViewer = ({ execution, onClose }) => {
-  const [profilesData, setProfilesData] = useState(undefined);
+  const [profilesData, setProfilesData] = useState();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(undefined);
+  const [error, setError] = useState();
   const { showToast } = useMyCustomToast();
 
   const loadProfiles = useCallback(async () => {
@@ -181,10 +179,10 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
         {profilesData && !loading && !error && (
           <div className="space-y-4">
             {profilesData.profiles.length === 0 ? (
-              <Card className="border-default-200">
+              <Card className="border-default-200 dark:border-default-700">
                 <CardBody className="text-center py-8">
                   <FileText className="w-12 h-12 text-default-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-default-600 mb-2">
+                  <h3 className="text-lg font-semibold text-default-600 dark:text-default-400 mb-2">
                     No Original Profiles Found
                   </h3>
                   <p className="text-default-500">
@@ -226,11 +224,11 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
                           </span>
                         </div>
                       }
-                      className="border-default-200"
+                      className="border-default-200 dark:border-default-700"
                     >
                       <div className="px-4 pb-4">
                         <div className="flex justify-between items-center mb-3">
-                          <p className="text-sm text-default-600">
+                          <p className="text-sm text-default-600 dark:text-default-400">
                             Original TRACER-generated profile content
                             (read-only)
                           </p>
