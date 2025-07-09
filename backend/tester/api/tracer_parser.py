@@ -182,7 +182,7 @@ class TracerResultsProcessor:
             logger.info(f"Found README.md, parsing metadata from: {readme_path}")
 
         if report_source_path:
-            report_metadata = self._parse_report_metadata(report_source_path)
+            report_metadata = TracerReportParser().parse_report_metadata(report_source_path)
             # Move the report file to the analysis directory
             final_report_dest = analysis_dir / "report.md"
             shutil.move(report_source_path, final_report_dest)
@@ -195,7 +195,7 @@ class TracerResultsProcessor:
 class TracerReportParser:
     """Handles parsing of TRACER report files to extract metadata."""
 
-    def _parse_report_metadata(self, report_path: Path) -> dict[str, int]:
+    def parse_report_metadata(self, report_path: Path) -> dict[str, int]:
         """Parse TRACER report files to extract metadata."""
         metadata = {"total_interactions": 0, "unique_paths": 0, "categories_count": 0, "estimated_cost_usd": 0.0}
 
@@ -264,14 +264,14 @@ class TracerReportParser:
 
     def _parse_token_statistics_txt(self, lines: list[str], metadata: dict) -> None:
         """Parse token usage statistics from txt format."""
-        MIN_PARTS_FOR_LLM_CALLS = 2
+        min_parts_for_llm_calls = 2
         for line in lines:
             stripped_line = line.strip()
 
             # Look for total LLM calls in TOTAL TOKEN CONSUMPTION section
             if "Total LLM calls:" in stripped_line:
                 parts = stripped_line.split(":")
-                if len(parts) >= MIN_PARTS_FOR_LLM_CALLS:
+                if len(parts) >= min_parts_for_llm_calls:
                     calls_str = parts[1].strip().replace(",", "")
                     if calls_str.isdigit():
                         metadata["total_llm_calls"] = int(calls_str)
@@ -425,7 +425,3 @@ class TracerReportParser:
             logger.warning(f"Could not parse functionalities.json: {e!s}")
 
         return metadata
-
-
-# Add the parsing method to TracerResultsProcessor
-TracerResultsProcessor._parse_report_metadata = TracerReportParser()._parse_report_metadata
