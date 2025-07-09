@@ -687,6 +687,7 @@ function Home() {
                   size="sm"
                   variant="light"
                   className="project-dropdown-btn"
+                  aria-label="Project actions"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>
