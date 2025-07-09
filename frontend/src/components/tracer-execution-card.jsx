@@ -14,6 +14,31 @@ import {
   Terminal,
 } from "lucide-react";
 
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+
+  return `TRACER • ${dateStr} ${timeStr}`;
+};
+
+const formatDuration = (minutes) => {
+  if (!minutes) return "N/A";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0
+    ? `${hours}h ${remainingMinutes}m`
+    : `${hours}h`;
+};
+
 const TracerExecutionCard = ({
   execution,
   onViewReport,
@@ -27,31 +52,6 @@ const TracerExecutionCard = ({
   progressPercentage,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const timeStr = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const dateStr = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    return `TRACER • ${dateStr} ${timeStr}`;
-  };
-
-  const formatDuration = (minutes) => {
-    if (!minutes) return "N/A";
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0
-      ? `${hours}h ${remainingMinutes}m`
-      : `${hours}h`;
-  };
 
   const isCompleted = execution.status === "COMPLETED";
   const isRunning = execution.status === "RUNNING";
