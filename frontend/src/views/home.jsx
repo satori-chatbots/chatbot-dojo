@@ -664,7 +664,7 @@ function Home() {
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header with Dropdown */}
           <div className="flex items-center justify-center relative">
-            <h1 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+            <h1 className="text-3xl font-bold text-foreground dark:text-foreground-dark">
               {selectedProject.name}
             </h1>
             <Dropdown>
@@ -673,7 +673,7 @@ function Home() {
                   isIconOnly
                   size="sm"
                   variant="light"
-                  className="absolute right-0 text-foreground/60 dark:text-foreground-dark/60 hover:text-foreground dark:hover:text-foreground-dark bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700"
+                  className="project-dropdown-btn"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -731,10 +731,7 @@ function Home() {
                       API Key
                     </span>
                     <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      {getApiKeyName(
-                        selectedProject.api_key,
-                        availableApiKeys,
-                      ) || "Unknown"}
+                      {getApiKeyName(selectedProject.api_key, availableApiKeys)}
                     </span>
                   </div>
                 </div>
