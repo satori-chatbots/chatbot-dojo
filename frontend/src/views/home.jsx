@@ -10,7 +10,6 @@ import {
   ModalHeader,
   Form,
   useDisclosure,
-  Link,
   Select,
   SelectItem,
 } from "@heroui/react";
@@ -21,7 +20,6 @@ import {
   Play,
   Plus,
   X,
-  AlertTriangle,
   Sparkles,
 } from "lucide-react";
 import {
@@ -105,11 +103,12 @@ function Home() {
 
       // Flatten all profiles for easy selection management
       const profiles = [];
-      if (data.executions) for (const execution of data.executions) {
-        for (const profile of execution.profiles) {
-          profiles.push(profile);
+      if (data.executions)
+        for (const execution of data.executions) {
+          for (const profile of execution.profiles) {
+            profiles.push(profile);
+          }
         }
-      }
       setAllProfiles(profiles);
     } catch (error) {
       console.error("Error fetching executions:", error);
@@ -136,9 +135,9 @@ function Home() {
           (exec) => exec.id === executionId,
         );
         if (executionToDelete) {
-          const profilesToDeselect = new Set(executionToDelete.profiles.map(
-            (p) => p.id,
-          ));
+          const profilesToDeselect = new Set(
+            executionToDelete.profiles.map((p) => p.id),
+          );
           setSelectedFiles((prev) =>
             prev.filter((id) => !profilesToDeselect.has(id)),
           );
@@ -386,8 +385,7 @@ function Home() {
   // When the selected project changes, reload the executions
   useEffect(() => {
     reloadExecutions();
-    // We don't want to trigger this when reloadExecutions changes, only when the project selection changes.
-  }, [selectedProject]);
+  }, [selectedProject, reloadExecutions]);
 
   // When the list of projects changes, verify that the selected project still exists
   useEffect(() => {
