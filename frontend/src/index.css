@@ -71,6 +71,19 @@
 
   /* Project dropdown button styling */
   .project-dropdown-btn {
-    @apply absolute right-0 text-foreground/60 dark:text-foreground-dark/60 hover:text-foreground dark:hover:text-foreground-dark bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700;
+    @apply absolute right-0 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700;
+    color: rgb(var(--foreground) / 0.6);
+  }
+
+  .dark .project-dropdown-btn {
+    color: rgb(var(--foreground-dark) / 0.6);
+  }
+
+  .project-dropdown-btn:hover {
+    color: rgb(var(--foreground));
+  }
+
+  .dark .project-dropdown-btn:hover {
+    color: rgb(var(--foreground-dark));
   }
 }
