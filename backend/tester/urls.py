@@ -28,8 +28,8 @@ urlpatterns = [
     # Custom Routes First
     path(
         "execute-selected/",
-        api.ExecuteSelectedAPIView.as_view(),
-        name="execute-selected",
+        api.ExecuteSelectedProfilesAPIView.as_view(),
+        name="execute-selected-profiles",
     ),
     path(
         "chatbotconnectors/choices/",
@@ -38,8 +38,8 @@ urlpatterns = [
     ),
     path(
         "test-cases-stop/",
-        api.stop_test_execution,
-        name="stop-test-execution",
+        api.stop_sensei_execution,
+        name="stop-sensei-execution",
     ),
     path(
         "validate-token/",

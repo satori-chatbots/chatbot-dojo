@@ -1,7 +1,7 @@
 """API module for tester app.
 
 This package provides API views and viewsets for authentication, project management,
-test execution, reporting, and related functionalities in the tester application.
+TRACER profile generation, Sensei profile execution, reporting, and related functionalities.
 """
 
 # Import all ViewSets and API views from split modules
@@ -15,19 +15,21 @@ from .auth import (
 from .connectors import ChatbotConnectorViewSet, get_technology_choices
 from .conversations import ConversationViewSet
 from .errors import TestErrorViewSet
-from .execution_views import (
-    ExecuteSelectedAPIView,
+from .sensei_execution_views import (
+    ExecuteSelectedProfilesAPIView,
+    delete_profile_execution,
+    get_profile_executions,
+    stop_sensei_execution,
+)
+from .tracer_views import (
     check_generation_status,
     check_ongoing_generation,
-    delete_profile_execution,
     generate_profiles,
-    get_profile_executions,
     get_tracer_analysis_report,
     get_tracer_execution_logs,
     get_tracer_executions,
     get_tracer_original_profiles,
     get_tracer_workflow_graph,
-    stop_test_execution,
 )
 from .project_files import (
     PersonalityFileViewSet,
@@ -43,7 +45,7 @@ from .test_files import TestFileViewSet
 __all__ = [
     "ChatbotConnectorViewSet",
     "ConversationViewSet",
-    "ExecuteSelectedAPIView",
+    "ExecuteSelectedProfilesAPIView",
     "GlobalReportViewSet",
     "LoginViewSet",
     "PersonalityFileViewSet",
@@ -70,7 +72,7 @@ __all__ = [
     "get_tracer_executions",
     "get_tracer_original_profiles",
     "get_tracer_workflow_graph",
-    "stop_test_execution",
+    "stop_sensei_execution",
     "validate_token",
     "validate_yaml",
 ]
