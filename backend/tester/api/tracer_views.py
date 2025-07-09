@@ -366,81 +366,82 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response |
 
 def _handle_graph_request(request: Request, execution: ProfileExecution, analysis) -> Response | FileResponse:
     """Handle graph request logic for different formats and download modes."""
-    # Get requested format from query parameter
-    requested_format = request.GET.get("graph_format", "").lower()
-    # Backward-compatibility: fall back to legacy 'format' param if provided
-    if not requested_format:
-        requested_format = request.GET.get("format", "").lower()
+    requested_format = _get_requested_graph_format(request, analysis)
+    if requested_format is None:
+        return Response({"error": "No graph formats available."}, status=status.HTTP_404_NOT_FOUND)
 
-    is_download = bool(requested_format)
+    is_download = bool(request.GET.get("graph_format", "") or request.GET.get("format", ""))
     available_formats = analysis.get_available_formats()
 
-    if not is_download:
-        # For initial inline view, default to SVG if available
-        if "svg" in available_formats:
-            requested_format = "svg"
-        else:
-            # If no SVG, return the first available format's data in JSON (might not render)
-            requested_format = available_formats[0] if available_formats else None
-    elif requested_format not in available_formats:
+    if is_download and requested_format not in available_formats:
         return Response(
             {"error": f"Format '{requested_format}' not available for this execution."},
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    if not requested_format:
-        return Response({"error": "No graph formats available."}, status=status.HTTP_404_NOT_FOUND)
-
-    # Get the path for the requested format
-    graph_path_field = f"workflow_graph_{requested_format}_path"
-    graph_path_str = getattr(analysis, graph_path_field, "")
-
-    logger.debug("Using graph_path_field=%s, value=%s", graph_path_field, graph_path_str)
-
-    if not graph_path_str:
+    graph_path = _get_graph_path(analysis, requested_format)
+    if not graph_path:
         return Response(
             {"error": f"No {requested_format.upper()} graph found for this execution."},
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    graph_path = Path(settings.MEDIA_ROOT) / graph_path_str
-
-    # If for download, serve the file directly
     if is_download:
-        if not graph_path.exists():
-            return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
-        try:
-            response = FileResponse(
-                graph_path.open("rb"),
-                as_attachment=True,
-                filename=f"{execution.execution_name}_workflow_graph.{requested_format}",
-            )
-            return response
-        except FileNotFoundError:
-            return Response({"error": "File not found on server."}, status=status.HTTP_404_NOT_FOUND)
+        return _serve_graph_file_for_download(graph_path, execution, requested_format)
 
-    # For inline display (only SVG is supported)
     if requested_format == "svg":
-        if not graph_path.exists():
-            return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+        return _serve_inline_svg(graph_path, execution, requested_format, analysis)
 
-        with graph_path.open("r", encoding="utf-8") as f:
-            graph_content = f.read()
-
-        return Response(
-            {
-                "file_type": "svg",
-                "graph_content": graph_content,
-                "execution_name": execution.execution_name,
-                "project_name": execution.project.name,
-                "available_formats": available_formats,
-            }
-        )
-
-    # Fallback for non-download, non-svg requests
     return Response(
         {"error": f"Unsupported request for format: {requested_format}"},
         status=status.HTTP_400_BAD_REQUEST,
+    )
+
+def _get_requested_graph_format(request: Request, analysis) -> str | None:
+    requested_format = request.GET.get("graph_format", "").lower()
+    if not requested_format:
+        requested_format = request.GET.get("format", "").lower()
+    available_formats = analysis.get_available_formats()
+    if not requested_format:
+        if "svg" in available_formats:
+            return "svg"
+        return available_formats[0] if available_formats else None
+    return requested_format
+
+def _get_graph_path(analysis, requested_format: str) -> Path | None:
+    from pathlib import Path
+    graph_path_field = f"workflow_graph_{requested_format}_path"
+    graph_path_str = getattr(analysis, graph_path_field, "")
+    if not graph_path_str:
+        return None
+    return Path(settings.MEDIA_ROOT) / graph_path_str
+
+def _serve_graph_file_for_download(graph_path: Path, execution: ProfileExecution, requested_format: str) -> FileResponse | Response:
+    if not graph_path.exists():
+        return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        response = FileResponse(
+            graph_path.open("rb"),
+            as_attachment=True,
+            filename=f"{execution.execution_name}_workflow_graph.{requested_format}",
+        )
+        return response
+    except FileNotFoundError:
+        return Response({"error": "File not found on server."}, status=status.HTTP_404_NOT_FOUND)
+
+def _serve_inline_svg(graph_path: Path, execution: ProfileExecution, requested_format: str, analysis) -> Response:
+    if not graph_path.exists():
+        return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
+    with graph_path.open("r", encoding="utf-8") as f:
+        graph_content = f.read()
+    return Response(
+        {
+            "file_type": "svg",
+            "graph_content": graph_content,
+            "execution_name": execution.execution_name,
+            "project_name": execution.project.name,
+            "available_formats": analysis.get_available_formats(),
+        }
     )
 
 
