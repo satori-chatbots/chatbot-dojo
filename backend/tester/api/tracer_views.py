@@ -13,7 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from tester.api.base import logger
-from tester.api.tracer_generator import TracerGenerator
+from tester.api.tracer_generator import ProfileGenerationParams, TracerGenerator
 from tester.models import (
     ProfileExecution,
     ProfileGenerationTask,
@@ -119,7 +119,6 @@ def generate_profiles(request: Request) -> Response:
 
     # Start async generation
     tracer_generator = TracerGenerator()
-    from tester.api.tracer_generator import ProfileGenerationParams
     params = ProfileGenerationParams(
         technology=project.chatbot_connector.technology,
         conversations=sessions,
@@ -357,7 +356,7 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response |
         # Handle graph format and download logic
         return _handle_graph_request(request, execution, analysis)
 
-    except Exception as e:
+    except (OSError, PermissionError, FileNotFoundError, DatabaseError) as e:
         logger.error(f"Error fetching TRACER graph for execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while fetching the workflow graph."},
