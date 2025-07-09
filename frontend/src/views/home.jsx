@@ -12,8 +12,22 @@ import {
   useDisclosure,
   Select,
   SelectItem,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@heroui/react";
-import { Upload, File, Trash, Play, Plus, X, Sparkles } from "lucide-react";
+import {
+  Upload,
+  File,
+  Trash,
+  Play,
+  Plus,
+  Sparkles,
+  ChevronDown,
+  Settings,
+  ArrowRight,
+} from "lucide-react";
 import {
   uploadFiles,
   deleteFiles,
@@ -25,6 +39,7 @@ import {
 } from "../api/file-api";
 import { deleteProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
+import { getUserApiKeys } from "../api/authentication-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import { executeTest, checkTestCaseName } from "../api/test-cases-api";
 import useSelectedProject from "../hooks/use-selected-projects";
@@ -42,6 +57,13 @@ import { getProviderDisplayName } from "../constants/providers";
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
 
+// Helper function to get API key name
+const getApiKeyName = (apiKeyId, apiKeys) => {
+  if (!apiKeyId || !apiKeys) return "Unknown";
+  const apiKey = apiKeys.find((key) => key.id === apiKeyId);
+  return apiKey ? apiKey.name : "Unknown";
+};
+
 function Home() {
   const { showToast } = useMyCustomToast();
   const { reloadProjects: reloadSetupProjects, reloadProfiles } = useSetup();
@@ -49,6 +71,9 @@ function Home() {
   // List of available chatbot connectors (eg Taskyto, Rasa, etc.)
   const [availableConnectors, setAvailableConnectors] = useState([]);
   const [loadingConnectors, setLoadingConnectors] = useState(true);
+
+  // List of available API keys
+  const [availableApiKeys, setAvailableApiKeys] = useState([]);
 
   // Fetch the list of projects
   const { projects, loadingProjects, reloadProjects } =
@@ -357,16 +382,33 @@ function Home() {
     isLoading: false,
   });
 
-  // Initialize with the available connectors
+  // Initialize with the available connectors and API keys
   useEffect(() => {
     const loadData = async () => {
       setLoadingConnectors(true);
       try {
-        const connectors = await fetchChatbotConnectors();
+        const [connectors, apiKeys] = await Promise.all([
+          fetchChatbotConnectors(),
+          getUserApiKeys(),
+        ]);
         setAvailableConnectors(connectors);
+        setAvailableApiKeys(apiKeys);
       } catch (error) {
         console.error("Error loading data:", error);
-        showToast("error", "Error loading connectors.");
+        // Provide more specific error messages based on the error
+        if (
+          error.message?.includes("connector") ||
+          error.message?.includes("chatbot")
+        ) {
+          showToast("error", "Error loading chatbot connectors.");
+        } else if (
+          error.message?.includes("api") ||
+          error.message?.includes("key")
+        ) {
+          showToast("error", "Error loading API keys.");
+        } else {
+          showToast("error", "Error loading project data.");
+        }
       } finally {
         setLoadingConnectors(false);
       }
@@ -633,59 +675,96 @@ function Home() {
 
       {selectedProject ? (
         <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
-          {/* Header */}
-          <h1 className="text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-            {selectedProject.name}
-          </h1>
+          {/* Header with Dropdown */}
+          <div className="flex items-center justify-center relative">
+            <div className="flex items-center justify-center flex-1 min-w-0">
+              <h1 className="text-3xl font-bold text-foreground dark:text-foreground-dark truncate text-center">
+                {selectedProject.name}
+              </h1>
+            </div>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="project-dropdown-btn flex-shrink-0 ml-2"
+                  aria-label="Project actions"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="Project actions">
+                <DropdownItem
+                  key="edit"
+                  startContent={<Settings className="w-4 h-4" />}
+                  onPress={() => {
+                    setEditProjectId(selectedProject.id);
+                    setIsEditOpen(true);
+                  }}
+                >
+                  Edit Project
+                </DropdownItem>
+                <DropdownItem
+                  key="change"
+                  startContent={<ArrowRight className="w-4 h-4" />}
+                  onPress={() => setSelectedProject(undefined)}
+                >
+                  Change Project
+                </DropdownItem>
+                <DropdownItem
+                  key="delete"
+                  startContent={<Trash className="w-4 h-4" />}
+                  className="text-danger"
+                  color="danger"
+                  onPress={() => handleProjectDelete(selectedProject.id)}
+                >
+                  Remove Project
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </div>
 
           {/* LLM Model Information */}
-          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-4 border border-border dark:border-border-dark backdrop-blur-sm">
-            <div className="flex flex-col space-y-2">
-              <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark">
+          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-3 border border-border dark:border-border-dark backdrop-blur-sm">
+            <div className="flex flex-col space-y-1">
+              <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark mb-2">
                 LLM Configuration
               </h3>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-foreground/70 dark:text-foreground-dark/70">
-                  Model:
-                </span>
-                <div className="flex flex-col items-end">
-                  {selectedProject.api_key && selectedProject.llm_model ? (
-                    <>
-                      <span className="font-medium text-foreground dark:text-foreground-dark">
-                        {selectedProject.llm_model}
-                      </span>
-                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                        {getProviderDisplayName(selectedProject.llm_provider)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-red-500 text-sm font-medium">
-                      ⚠️ No model configured
+              {selectedProject.api_key && selectedProject.llm_model ? (
+                <div className="flex justify-between items-center">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                      Provider & Model
                     </span>
-                  )}
+                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                      {getProviderDisplayName(selectedProject.llm_provider)} •{" "}
+                      {selectedProject.llm_model}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                      API Key
+                    </span>
+                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                      {getApiKeyName(selectedProject.api_key, availableApiKeys)}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-red-500 text-sm font-medium">
+                    ⚠️ No model configured
+                  </span>
+                </div>
+              )}
               {selectedProject.api_key && selectedProject.llm_model && (
-                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
-                  💡 <strong>Important:</strong> API provider (
-                  {getProviderDisplayName(selectedProject.llm_provider)}) must
-                  match the provider in your profiles. Check costs before
-                  running tests.
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm mt-2">
+                  💡 <strong>Important:</strong> API provider must match the
+                  provider in your profiles. Check costs before running tests.
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Project Dropdown */}
-          <div className="flex flex-col space-y-4">
-            <Button
-              color="default"
-              variant="ghost"
-              onPress={() => setSelectedProject(undefined)}
-              startContent={<X className="w-4 h-4" />}
-            >
-              Change Project
-            </Button>
           </div>
 
           {/* Project Details */}
