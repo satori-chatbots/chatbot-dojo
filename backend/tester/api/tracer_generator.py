@@ -4,25 +4,27 @@ import os
 import re
 import shlex
 import subprocess
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from dataclasses import dataclass
 
 from django.conf import settings
 
 from tester.api.base import logger
-from tester.models import ProfileExecution, ProfileGenerationTask
+from tester.models import ProfileExecution, ProfileGenerationTask, Project
 
 
 @dataclass
 class ProfileGenerationParams:
+    """Parameter object for TRACER profile generation configuration."""
     technology: str
     conversations: int
     turns: int
     verbosity: str
     user_id: Any
     api_key: str | None
+    graph_format: str = "all"
 
 
 class TracerGenerator:
@@ -63,10 +65,10 @@ class TracerGenerator:
             execution = self._create_execution(task, params.conversations, params.turns, params.verbosity)
 
             success = self.execute_tracer_generation(
-                task, execution, params.technology, params.conversations, params.turns, params.verbosity, params.api_key
+                task, execution, params
             )
 
-            self._finalize_execution(task, execution, success)
+            self._finalize_execution(task, execution, success=success)
 
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error in TRACER profile generation for task {task_id}: {e!s}")
@@ -104,7 +106,7 @@ class TracerGenerator:
         task.save()
         return execution
 
-    def _finalize_execution(self, task: ProfileGenerationTask, execution: ProfileExecution, success: bool) -> None:
+    def _finalize_execution(self, task: ProfileGenerationTask, execution: ProfileExecution, *, success: bool) -> None:
         """Finalize task and execution status based on success."""
         if success:
             task.status = "COMPLETED"
@@ -147,12 +149,7 @@ class TracerGenerator:
         self,
         task: ProfileGenerationTask,
         execution: ProfileExecution,
-        technology: str,
-        sessions: int,
-        turns_per_session: int,
-        verbosity: str,
-        api_key: str | None = None,
-        graph_format: str = "all",
+        params: ProfileGenerationParams,
     ) -> bool:
         """Execute TRACER command and process results."""
         try:
@@ -165,7 +162,7 @@ class TracerGenerator:
             task.save()
 
             success = self._run_tracer_command(
-                task, execution, technology, sessions, turns_per_session, verbosity, output_dir, graph_format, api_key
+                task, execution, params, output_dir
             )
 
             if success:
@@ -179,13 +176,15 @@ class TracerGenerator:
             task.save()
             return False
 
-    def _validate_project_configuration(self, project) -> None:
+    def _validate_project_configuration(self, project: Project) -> None:
         """Validate that project has required configuration."""
         if not project.chatbot_connector:
-            raise ValueError("Project must have a chatbot connector configured")
+            msg = "Project must have a chatbot connector configured"
+            raise ValueError(msg)
 
         if not project.llm_model:
-            raise ValueError("Project must have an LLM model configured")
+            msg = "Project must have an LLM model configured"
+            raise ValueError(msg)
 
     def _setup_output_directory(self, execution: ProfileExecution) -> Path:
         """Set up and return the output directory for TRACER results."""
@@ -197,13 +196,8 @@ class TracerGenerator:
         self,
         task: ProfileGenerationTask,
         execution: ProfileExecution,
-        technology: str,
-        sessions: int,
-        turns_per_session: int,
-        verbosity: str,
+        params: ProfileGenerationParams,
         output_dir: Path,
-        graph_format: str,
-        api_key: str | None,
     ) -> bool:
         """Execute the TRACER command and handle output."""
         project = task.project
@@ -211,33 +205,29 @@ class TracerGenerator:
         model = project.llm_model or "gpt-4o-mini"
 
         cmd = self._build_tracer_command(
-            sessions, turns_per_session, technology, chatbot_url, model, output_dir, graph_format, verbosity
+            params, chatbot_url, model, output_dir
         )
 
-        env = self._prepare_environment(api_key, project.llm_provider)
+        env = self._prepare_environment(params.api_key, project.llm_provider)
 
         return self._execute_subprocess(task, execution, cmd, env)
 
     def _build_tracer_command(
         self,
-        sessions: int,
-        turns_per_session: int,
-        technology: str,
+        params: ProfileGenerationParams,
         chatbot_url: str,
         model: str,
         output_dir: Path,
-        graph_format: str,
-        verbosity: str,
     ) -> list[str]:
         """Build the TRACER command with all parameters."""
         cmd = [
             "tracer",
             "-s",
-            str(sessions),
+            str(params.conversations),
             "-n",
-            str(turns_per_session),
+            str(params.turns),
             "-t",
-            technology,
+            params.technology,
             "-u",
             chatbot_url,
             "-m",
@@ -245,13 +235,13 @@ class TracerGenerator:
             "-o",
             str(output_dir),
             "--graph-format",
-            graph_format,
+            params.graph_format,
         ]
 
         # Add verbosity flags
-        if verbosity == "verbose":
+        if params.verbosity == "verbose":
             cmd.append("-v")
-        elif verbosity == "debug":
+        elif params.verbosity == "debug":
             cmd.append("-vv")
 
         logger.info(f"Executing TRACER command: {shlex.join(cmd)}")
