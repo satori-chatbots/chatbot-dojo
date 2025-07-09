@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ModalHeader,
   ModalBody,
@@ -23,45 +23,49 @@ import { fetchTracerOriginalProfiles } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
 // Simple YAML syntax highlighter
+const highlightYaml = (yaml) => {
+  let highlighted = yaml
+    // Comments
+    .replaceAll(
+      /(#.*$)/gm,
+      '<span class="text-success-600 dark:text-success-400">$1</span>',
+    )
+    // Keys (before colon)
+    .replaceAll(
+      /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/gm,
+      '$1<span class="text-primary-600 dark:text-primary-400 font-semibold">$2</span>:',
+    )
+    // String values (quoted)
+    .replaceAll(
+      /:\s*["']([^"']*?)["']/g,
+      ': <span class="text-warning-600 dark:text-warning-400">"$1"</span>',
+    )
+    // Numbers
+    .replaceAll(
+      /:\s*(\d+\.?\d*)\s*$/gm,
+      ': <span class="text-secondary-600 dark:text-secondary-400">$1</span>',
+    )
+    // Booleans
+    .replaceAll(
+      /:\s*(true|false)\s*$/gm,
+      ': <span class="text-danger-600 dark:text-danger-400">$1</span>',
+    )
+    // Array items
+    .replaceAll(
+      /^(\s*)-\s+/gm,
+      '$1<span class="text-default-600 dark:text-default-400">-</span> ',
+    );
+
+  return highlighted;
+};
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString();
+};
+
 const YamlHighlighter = ({ content }) => {
-  const highlightYaml = (yaml) => {
-    let highlighted = yaml
-      // Comments
-      .replaceAll(
-        /(#.*$)/gm,
-        '<span class="text-success-600 dark:text-success-400">$1</span>',
-      )
-      // Keys (before colon)
-      .replaceAll(
-        /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/gm,
-        '$1<span class="text-primary-600 dark:text-primary-400 font-semibold">$2</span>:',
-      )
-      // String values (quoted)
-      .replaceAll(
-        /:\s*["']([^"']*?)["']/g,
-        ': <span class="text-warning-600 dark:text-warning-400">"$1"</span>',
-      )
-      // Numbers
-      .replaceAll(
-        /:\s*(\d+\.?\d*)\s*$/gm,
-        ': <span class="text-secondary-600 dark:text-secondary-400">$1</span>',
-      )
-      // Booleans
-      .replaceAll(
-        /:\s*(true|false)\s*$/gm,
-        ': <span class="text-danger-600 dark:text-danger-400">$1</span>',
-      )
-      // Array items
-      .replaceAll(
-        /^(\s*)-\s+/gm,
-        '$1<span class="text-default-600 dark:text-default-400">-</span> ',
-      );
-
-    return highlighted;
-  };
-
   return (
-    <pre className="bg-default-50 dark:bg-default-900 rounded-lg p-4 overflow-x-auto text-sm">
+    <pre className="bg-default-50 dark:bg-default-900 rounded-lg p-4 overflow-x-auto text-sm whitespace-pre-wrap break-words">
       <code
         className="text-foreground"
         dangerouslySetInnerHTML={{ __html: highlightYaml(content) }}
@@ -70,78 +74,16 @@ const YamlHighlighter = ({ content }) => {
   );
 };
 
-const ProfileCard = ({ profile, index }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(profile.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy profile content:", error);
-    }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  return (
-    <Card className="border-default-200">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-success-100 dark:bg-success-900/20">
-              <span className="text-sm font-semibold text-success-700 dark:text-success-400">
-                {index + 1}
-              </span>
-            </div>
-            <div>
-              <h4 className="text-md font-semibold text-foreground">
-                {profile.filename}
-              </h4>
-              <p className="text-xs text-default-500">
-                Original created: {formatDate(profile.created_at)}
-              </p>
-            </div>
-          </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={handleCopy}
-            title="Copy profile content"
-          >
-            {copied ? (
-              <Check className="w-4 h-4 text-success" />
-            ) : (
-              <Copy className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardBody className="pt-0">
-        <YamlHighlighter content={profile.content} />
-      </CardBody>
-    </Card>
-  );
-};
-
 const OriginalProfilesViewer = ({ execution, onClose }) => {
-  const [profilesData, setProfilesData] = useState(null);
+  const [profilesData, setProfilesData] = useState(undefined);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(undefined);
   const { showToast } = useMyCustomToast();
 
-  useEffect(() => {
-    loadProfiles();
-  }, [execution.id]);
-
-  const loadProfiles = async () => {
+  const loadProfiles = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
+      setError(undefined);
       const data = await fetchTracerOriginalProfiles(execution.id);
       setProfilesData(data);
     } catch (error) {
@@ -151,7 +93,11 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [execution.id, showToast]);
+
+  useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
 
   const handleCopyAll = async () => {
     if (!profilesData?.profiles) return;
@@ -276,7 +222,7 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
                             {profile.filename}
                           </span>
                           <span className="text-xs text-default-500 ml-auto">
-                            {new Date(profile.created_at).toLocaleDateString()}
+                            {formatDate(profile.created_at)}
                           </span>
                         </div>
                       }
