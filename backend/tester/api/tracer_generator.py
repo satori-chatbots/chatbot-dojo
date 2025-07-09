@@ -77,11 +77,7 @@ class TracerGenerator:
         return task
 
     def _create_execution(
-        self,
-        task: ProfileGenerationTask,
-        conversations: int,
-        turns: int,
-        verbosity: str
+        self, task: ProfileGenerationTask, conversations: int, turns: int, verbosity: str
     ) -> ProfileExecution:
         """Create execution record for the task."""
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -102,12 +98,7 @@ class TracerGenerator:
         task.save()
         return execution
 
-    def _finalize_execution(
-        self,
-        task: ProfileGenerationTask,
-        execution: ProfileExecution,
-        success: bool
-    ) -> None:
+    def _finalize_execution(self, task: ProfileGenerationTask, execution: ProfileExecution, success: bool) -> None:
         """Finalize task and execution status based on success."""
         if success:
             task.status = "COMPLETED"
@@ -125,10 +116,7 @@ class TracerGenerator:
         execution.save()
 
     def _handle_execution_error(
-        self,
-        task: ProfileGenerationTask | None,
-        execution: ProfileExecution | None,
-        error_message: str
+        self, task: ProfileGenerationTask | None, execution: ProfileExecution | None, error_message: str
     ) -> None:
         """Handle errors during execution."""
         if task:
@@ -171,8 +159,7 @@ class TracerGenerator:
             task.save()
 
             success = self._run_tracer_command(
-                task, execution, technology, sessions, turns_per_session,
-                verbosity, output_dir, graph_format, api_key
+                task, execution, technology, sessions, turns_per_session, verbosity, output_dir, graph_format, api_key
             )
 
             if success:
@@ -218,8 +205,7 @@ class TracerGenerator:
         model = project.llm_model or "gpt-4o-mini"
 
         cmd = self._build_tracer_command(
-            sessions, turns_per_session, technology, chatbot_url,
-            model, output_dir, graph_format, verbosity
+            sessions, turns_per_session, technology, chatbot_url, model, output_dir, graph_format, verbosity
         )
 
         env = self._prepare_environment(api_key, project.llm_provider)
@@ -240,13 +226,20 @@ class TracerGenerator:
         """Build the TRACER command with all parameters."""
         cmd = [
             "tracer",
-            "-s", str(sessions),
-            "-n", str(turns_per_session),
-            "-t", technology,
-            "-u", chatbot_url,
-            "-m", model,
-            "-o", str(output_dir),
-            "--graph-format", graph_format,
+            "-s",
+            str(sessions),
+            "-n",
+            str(turns_per_session),
+            "-t",
+            technology,
+            "-u",
+            chatbot_url,
+            "-m",
+            model,
+            "-o",
+            str(output_dir),
+            "--graph-format",
+            graph_format,
         ]
 
         # Add verbosity flags
@@ -270,11 +263,7 @@ class TracerGenerator:
         return env
 
     def _execute_subprocess(
-        self,
-        task: ProfileGenerationTask,
-        execution: ProfileExecution,
-        cmd: list[str],
-        env: dict[str, str]
+        self, task: ProfileGenerationTask, execution: ProfileExecution, cmd: list[str], env: dict[str, str]
     ) -> bool:
         """Execute the TRACER subprocess and handle output."""
         process = subprocess.Popen(
@@ -308,11 +297,7 @@ class TracerGenerator:
         logger.info(f"TRACER execution successful for task {task.id}")
         return True
 
-    def _handle_process_output(
-        self,
-        task: ProfileGenerationTask,
-        process: subprocess.Popen
-    ) -> list[str]:
+    def _handle_process_output(self, task: ProfileGenerationTask, process: subprocess.Popen) -> list[str]:
         """Handle process output and update progress."""
         full_stdout = []
 
@@ -325,12 +310,7 @@ class TracerGenerator:
 
         return full_stdout
 
-    def _post_process_results(
-        self,
-        task: ProfileGenerationTask,
-        execution: ProfileExecution,
-        output_dir: Path
-    ) -> None:
+    def _post_process_results(self, task: ProfileGenerationTask, execution: ProfileExecution, output_dir: Path) -> None:
         """Post-process TRACER results."""
         # Import here to avoid circular imports
         from tester.api.tracer_parser import TracerResultsProcessor

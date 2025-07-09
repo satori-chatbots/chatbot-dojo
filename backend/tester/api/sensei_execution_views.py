@@ -55,7 +55,9 @@ class SenseiExecutionValidator:
     """Handles validation for Sensei profile execution requests."""
 
     @staticmethod
-    def validate_execution_request(request: Request) -> tuple[Response | None, Project | None, QuerySet[TestFile] | None]:
+    def validate_execution_request(
+        request: Request,
+    ) -> tuple[Response | None, Project | None, QuerySet[TestFile] | None]:
         """Validate the incoming Sensei execution request and return an error Response or the required data."""
         if not request.user.is_authenticated:
             return (
@@ -72,7 +74,10 @@ class SenseiExecutionValidator:
 
         if not selected_ids or not project_id:
             return (
-                Response({"error": "Project and profile file IDs are required for Sensei execution."}, status=status.HTTP_400_BAD_REQUEST),
+                Response(
+                    {"error": "Project and profile file IDs are required for Sensei execution."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                ),
                 None,
                 None,
             )
@@ -298,7 +303,9 @@ class ProfileExecutionDeletionValidator:
     """Handles validation for profile execution deletion requests."""
 
     @staticmethod
-    def validate_execution_deletion(request: Request, execution_id: int) -> tuple[Response | None, ProfileExecution | None]:
+    def validate_execution_deletion(
+        request: Request, execution_id: int
+    ) -> tuple[Response | None, ProfileExecution | None]:
         """Validate that the profile execution can be deleted by the current user."""
         try:
             execution = ProfileExecution.objects.get(id=execution_id)

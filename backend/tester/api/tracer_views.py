@@ -67,15 +67,11 @@ class TracerProjectValidator:
         """Validate project has required configuration for TRACER."""
         if not project.chatbot_connector:
             return Response(
-                {"error": "Project must have a chatbot connector configured."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Project must have a chatbot connector configured."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if not project.llm_model:
-            return Response(
-                {"error": "Project must have an LLM model configured."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Project must have an LLM model configured."}, status=status.HTTP_400_BAD_REQUEST)
 
         return None
 
@@ -267,7 +263,9 @@ class TracerExecutionAccessValidator:
     """Validates access to TRACER execution resources."""
 
     @staticmethod
-    def validate_tracer_execution_access(request: Request, execution_id: int) -> tuple[Response | None, ProfileExecution | None]:
+    def validate_tracer_execution_access(
+        request: Request, execution_id: int
+    ) -> tuple[Response | None, ProfileExecution | None]:
         """Validate user access to a TRACER execution."""
         try:
             execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
@@ -293,7 +291,9 @@ def get_tracer_analysis_report(request: Request, execution_id: int) -> Response:
     """Get the analysis report content for a TRACER execution."""
     try:
         # Validate access
-        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(request, execution_id)
+        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(
+            request, execution_id
+        )
         if error_response:
             return error_response
 
@@ -338,7 +338,9 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response |
     """
     try:
         # Validate access
-        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(request, execution_id)
+        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(
+            request, execution_id
+        )
         if error_response:
             return error_response
 
@@ -447,7 +449,9 @@ def get_tracer_original_profiles(request: Request, execution_id: int) -> Respons
     """Get the original read-only profiles for a TRACER execution."""
     try:
         # Validate access
-        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(request, execution_id)
+        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(
+            request, execution_id
+        )
         if error_response:
             return error_response
 
@@ -486,7 +490,9 @@ def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
     """Get the TRACER execution logs (stdout and stderr) for debugging failed executions."""
     try:
         # Validate access
-        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(request, execution_id)
+        error_response, execution = TracerExecutionAccessValidator.validate_tracer_execution_access(
+            request, execution_id
+        )
         if error_response:
             return error_response
 

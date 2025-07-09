@@ -36,9 +36,7 @@ class TracerResultsProcessor:
 
         # Create editable profiles directory for TestFiles
         editable_profiles_dir = self._create_editable_profiles_directory(execution)
-        profile_count = self._process_profile_files(
-            execution, profiles_dir, originals_dir, editable_profiles_dir
-        )
+        profile_count = self._process_profile_files(execution, profiles_dir, originals_dir, editable_profiles_dir)
 
         # Update execution with profile count
         execution.generated_profiles_count = profile_count
@@ -75,9 +73,7 @@ class TracerResultsProcessor:
             return profile_count
 
         for yaml_file in profiles_dir.glob("*.yaml"):
-            self._process_single_profile(
-                execution, yaml_file, originals_dir, editable_profiles_dir
-            )
+            self._process_single_profile(execution, yaml_file, originals_dir, editable_profiles_dir)
             profile_count += 1
 
         return profile_count
@@ -96,18 +92,14 @@ class TracerResultsProcessor:
 
         # Store read-only original for TRACER dashboard
         OriginalTracerProfile.objects.create(
-            execution=execution,
-            original_filename=yaml_file.name,
-            original_content=original_content
+            execution=execution, original_filename=yaml_file.name, original_content=original_content
         )
 
         # Copy original to originals directory
         shutil.copy(yaml_file, originals_dir / yaml_file.name)
 
         # Create editable copy for TestFile
-        self._create_editable_test_file(
-            execution, yaml_file, editable_profiles_dir
-        )
+        self._create_editable_test_file(execution, yaml_file, editable_profiles_dir)
 
     def _create_editable_test_file(
         self,
@@ -141,9 +133,7 @@ class TracerResultsProcessor:
         final_graph_paths = self._move_workflow_graphs(output_dir, analysis_dir)
 
         # Process report files
-        final_report_path, report_metadata = self._process_report_files(
-            output_dir, analysis_dir
-        )
+        final_report_path, report_metadata = self._process_report_files(output_dir, analysis_dir)
 
         # Create analysis result record
         TracerAnalysisResult.objects.create(
@@ -174,9 +164,7 @@ class TracerResultsProcessor:
 
         return final_graph_paths
 
-    def _process_report_files(
-        self, output_dir: Path, analysis_dir: Path
-    ) -> tuple[str | None, dict[str, int]]:
+    def _process_report_files(self, output_dir: Path, analysis_dir: Path) -> tuple[str | None, dict[str, int]]:
         """Process report files and return final path and metadata."""
         readme_path = output_dir / "README.md"
         report_txt_path = output_dir / "report.txt"
@@ -415,9 +403,7 @@ class TracerReportParser:
         if category_section_match:
             category_section = category_section_match.group(1)
             # Count lines that start with "### CATEGORY:"
-            category_lines = [
-                line for line in category_section.split("\n") if line.strip().startswith("### CATEGORY:")
-            ]
+            category_lines = [line for line in category_section.split("\n") if line.strip().startswith("### CATEGORY:")]
             metadata["categories_count"] = len(category_lines)
 
     def _parse_functionalities_json(self, json_path: Path) -> dict[str, int]:
