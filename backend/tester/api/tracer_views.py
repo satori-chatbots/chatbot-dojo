@@ -18,6 +18,7 @@ from tester.models import (
     ProfileExecution,
     ProfileGenerationTask,
     Project,
+    TracerAnalysisResult,
     cipher_suite,
 )
 
@@ -364,7 +365,7 @@ def get_tracer_workflow_graph(request: Request, execution_id: int) -> Response |
         )
 
 
-def _handle_graph_request(request: Request, execution: ProfileExecution, analysis) -> Response | FileResponse:
+def _handle_graph_request(request: Request, execution: ProfileExecution, analysis: TracerAnalysisResult) -> Response | FileResponse:
     """Handle graph request logic for different formats and download modes."""
     requested_format = _get_requested_graph_format(request, analysis)
     if requested_format is None:
@@ -397,7 +398,7 @@ def _handle_graph_request(request: Request, execution: ProfileExecution, analysi
         status=status.HTTP_400_BAD_REQUEST,
     )
 
-def _get_requested_graph_format(request: Request, analysis) -> str | None:
+def _get_requested_graph_format(request: Request, analysis: TracerAnalysisResult) -> str | None:
     requested_format = request.GET.get("graph_format", "").lower()
     if not requested_format:
         requested_format = request.GET.get("format", "").lower()
@@ -408,7 +409,7 @@ def _get_requested_graph_format(request: Request, analysis) -> str | None:
         return available_formats[0] if available_formats else None
     return requested_format
 
-def _get_graph_path(analysis, requested_format: str) -> Path | None:
+def _get_graph_path(analysis: TracerAnalysisResult, requested_format: str) -> Path | None:
     from pathlib import Path
     graph_path_field = f"workflow_graph_{requested_format}_path"
     graph_path_str = getattr(analysis, graph_path_field, "")
