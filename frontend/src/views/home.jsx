@@ -25,6 +25,7 @@ import {
 } from "../api/file-api";
 import { deleteProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
+import { getUserApiKeys } from "../api/authentication-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import { executeTest, checkTestCaseName } from "../api/test-cases-api";
 import useSelectedProject from "../hooks/use-selected-projects";
@@ -42,6 +43,13 @@ import { getProviderDisplayName } from "../constants/providers";
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
 
+// Helper function to get API key name
+const getApiKeyName = (apiKeyId, apiKeys) => {
+  if (!apiKeyId || !apiKeys) return;
+  const apiKey = apiKeys.find((key) => key.id === apiKeyId);
+  return apiKey ? apiKey.name : undefined;
+};
+
 function Home() {
   const { showToast } = useMyCustomToast();
   const { reloadProjects: reloadSetupProjects, reloadProfiles } = useSetup();
@@ -49,6 +57,9 @@ function Home() {
   // List of available chatbot connectors (eg Taskyto, Rasa, etc.)
   const [availableConnectors, setAvailableConnectors] = useState([]);
   const [loadingConnectors, setLoadingConnectors] = useState(true);
+
+  // List of available API keys
+  const [availableApiKeys, setAvailableApiKeys] = useState([]);
 
   // Fetch the list of projects
   const { projects, loadingProjects, reloadProjects } =
@@ -357,16 +368,20 @@ function Home() {
     isLoading: false,
   });
 
-  // Initialize with the available connectors
+  // Initialize with the available connectors and API keys
   useEffect(() => {
     const loadData = async () => {
       setLoadingConnectors(true);
       try {
-        const connectors = await fetchChatbotConnectors();
+        const [connectors, apiKeys] = await Promise.all([
+          fetchChatbotConnectors(),
+          getUserApiKeys(),
+        ]);
         setAvailableConnectors(connectors);
+        setAvailableApiKeys(apiKeys);
       } catch (error) {
         console.error("Error loading data:", error);
-        showToast("error", "Error loading connectors.");
+        showToast("error", "Error loading data.");
       } finally {
         setLoadingConnectors(false);
       }
@@ -639,38 +654,45 @@ function Home() {
           </h1>
 
           {/* LLM Model Information */}
-          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-4 border border-border dark:border-border-dark backdrop-blur-sm">
-            <div className="flex flex-col space-y-2">
-              <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark">
+          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-3 border border-border dark:border-border-dark backdrop-blur-sm">
+            <div className="flex flex-col space-y-1">
+              <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark mb-2">
                 LLM Configuration
               </h3>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-foreground/70 dark:text-foreground-dark/70">
-                  Model:
-                </span>
-                <div className="flex flex-col items-end">
-                  {selectedProject.api_key && selectedProject.llm_model ? (
-                    <>
-                      <span className="font-medium text-foreground dark:text-foreground-dark">
-                        {selectedProject.llm_model}
-                      </span>
-                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                        {getProviderDisplayName(selectedProject.llm_provider)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-red-500 text-sm font-medium">
-                      ⚠️ No model configured
+              {selectedProject.api_key && selectedProject.llm_model ? (
+                <div className="flex justify-between items-center">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                      Provider & Model
                     </span>
-                  )}
+                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                      {getProviderDisplayName(selectedProject.llm_provider)} •{" "}
+                      {selectedProject.llm_model}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                      API Key
+                    </span>
+                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                      {getApiKeyName(
+                        selectedProject.api_key,
+                        availableApiKeys,
+                      ) || "Unknown"}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-red-500 text-sm font-medium">
+                    ⚠️ No model configured
+                  </span>
+                </div>
+              )}
               {selectedProject.api_key && selectedProject.llm_model && (
-                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
-                  💡 <strong>Important:</strong> API provider (
-                  {getProviderDisplayName(selectedProject.llm_provider)}) must
-                  match the provider in your profiles. Check costs before
-                  running tests.
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm mt-2">
+                  💡 <strong>Important:</strong> API provider must match the
+                  provider in your profiles. Check costs before running tests.
                 </div>
               )}
             </div>
