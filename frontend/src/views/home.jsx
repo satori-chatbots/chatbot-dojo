@@ -23,10 +23,10 @@ import {
   Trash,
   Play,
   Plus,
-  X,
   Sparkles,
   ChevronDown,
   Settings,
+  ArrowRight,
 } from "lucide-react";
 import {
   uploadFiles,
@@ -395,7 +395,20 @@ function Home() {
         setAvailableApiKeys(apiKeys);
       } catch (error) {
         console.error("Error loading data:", error);
-        showToast("error", "Error loading data.");
+        // Provide more specific error messages based on the error
+        if (
+          error.message?.includes("connector") ||
+          error.message?.includes("chatbot")
+        ) {
+          showToast("error", "Error loading chatbot connectors.");
+        } else if (
+          error.message?.includes("api") ||
+          error.message?.includes("key")
+        ) {
+          showToast("error", "Error loading API keys.");
+        } else {
+          showToast("error", "Error loading project data.");
+        }
       } finally {
         setLoadingConnectors(false);
       }
@@ -691,7 +704,7 @@ function Home() {
                 </DropdownItem>
                 <DropdownItem
                   key="change"
-                  startContent={<X className="w-4 h-4" />}
+                  startContent={<ArrowRight className="w-4 h-4" />}
                   onPress={() => setSelectedProject(undefined)}
                 >
                   Change Project
