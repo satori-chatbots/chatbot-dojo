@@ -410,7 +410,6 @@ def _get_requested_graph_format(request: Request, analysis: TracerAnalysisResult
     return requested_format
 
 def _get_graph_path(analysis: TracerAnalysisResult, requested_format: str) -> Path | None:
-    from pathlib import Path
     graph_path_field = f"workflow_graph_{requested_format}_path"
     graph_path_str = getattr(analysis, graph_path_field, "")
     if not graph_path_str:
@@ -421,16 +420,15 @@ def _serve_graph_file_for_download(graph_path: Path, execution: ProfileExecution
     if not graph_path.exists():
         return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
     try:
-        response = FileResponse(
+        return FileResponse(
             graph_path.open("rb"),
             as_attachment=True,
             filename=f"{execution.execution_name}_workflow_graph.{requested_format}",
         )
-        return response
     except FileNotFoundError:
         return Response({"error": "File not found on server."}, status=status.HTTP_404_NOT_FOUND)
 
-def _serve_inline_svg(graph_path: Path, execution: ProfileExecution, requested_format: str, analysis) -> Response:
+def _serve_inline_svg(graph_path: Path, execution: ProfileExecution, requested_format: str, analysis: TracerAnalysisResult) -> Response:
     if not graph_path.exists():
         return Response({"error": "Workflow graph file not found on disk."}, status=status.HTTP_404_NOT_FOUND)
     with graph_path.open("r", encoding="utf-8") as f:
@@ -460,16 +458,16 @@ def get_tracer_original_profiles(request: Request, execution_id: int) -> Respons
         # Get original profiles
         original_profiles = execution.original_profiles.all().order_by("original_filename")
 
-        profiles_data = []
-        for profile in original_profiles:
-            profiles_data.append(
-                {
-                    "id": profile.id,
-                    "filename": profile.original_filename,
-                    "content": profile.original_content,
-                    "created_at": profile.created_at.isoformat(),
-                }
-            )
+        # In get_tracer_original_profiles, replace the for loop with a list comprehension
+        profiles_data = [
+            {
+                "id": profile.id,
+                "filename": profile.original_filename,
+                "content": profile.original_content,
+                "created_at": profile.created_at.isoformat(),
+            }
+            for profile in original_profiles
+        ]
 
         return Response(
             {
@@ -479,7 +477,7 @@ def get_tracer_original_profiles(request: Request, execution_id: int) -> Respons
             }
         )
 
-    except Exception as e:
+    except (OSError, DatabaseError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Error fetching original profiles for execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while fetching the original profiles."},
@@ -510,7 +508,7 @@ def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
             }
         )
 
-    except Exception as e:
+    except (OSError, DatabaseError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Error fetching TRACER logs for execution {execution_id}: {e}")
         return Response(
             {"error": "An error occurred while fetching the execution logs."},
