@@ -59,9 +59,9 @@ const preventDefault = (event) => event.preventDefault();
 
 // Helper function to get API key name
 const getApiKeyName = (apiKeyId, apiKeys) => {
-  if (!apiKeyId || !apiKeys) return;
+  if (!apiKeyId || !apiKeys) return "Unknown";
   const apiKey = apiKeys.find((key) => key.id === apiKeyId);
-  return apiKey ? apiKey.name : undefined;
+  return apiKey ? apiKey.name : "Unknown";
 };
 
 function Home() {
