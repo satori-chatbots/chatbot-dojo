@@ -204,7 +204,7 @@ def generate_profiles(request: Request) -> Response:
     if verbosity not in valid_verbosity_levels:
         return Response(
             {"error": f"Invalid verbosity level. Must be one of: {', '.join(valid_verbosity_levels)}"},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     try:

@@ -234,7 +234,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
                     name=data["test_name"],
                     project=project,
                     is_valid=data["is_valid"],
-                    execution=manual_execution  # Assign to manual execution
+                    execution=manual_execution,  # Assign to manual execution
                 )
                 saved_instances.append(instance)
             TestFile.objects.bulk_create(saved_instances)

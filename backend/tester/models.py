@@ -853,7 +853,7 @@ class ProfileExecution(models.Model):
         default="normal",
         null=True,
         blank=True,
-        help_text="TRACER verbosity level for debugging"
+        help_text="TRACER verbosity level for debugging",
     )  # TRACER verbosity level
 
     # Status and timing
