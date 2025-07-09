@@ -237,6 +237,7 @@ function Home() {
             // Update the stage information in the UI
             setGenerationStage(status.stage || "Processing");
             setGenerationProgress(status.progress || 0);
+            await reloadExecutions();
           }
         } catch {
           clearInterval(statusIntervalReference.current);
@@ -270,6 +271,9 @@ function Home() {
       // Start polling for status
       const taskId = response.task_id;
       pollGenerationStatus(taskId);
+
+      // Reload executions to show the new one
+      await reloadExecutions();
 
       // Close modal but keep "generating" state active
       setIsGenerateModalOpen(false);
