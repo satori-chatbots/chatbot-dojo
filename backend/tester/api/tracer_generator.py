@@ -332,7 +332,7 @@ class TracerGenerator:
             if self._handle_exploration_phase(task, line) or self._handle_analysis_phase(task, line) or self._handle_finalization_phase(task, line):
                 pass
             task.save(update_fields=["stage", "progress_percentage"])
-        except Exception as e:
+        except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Error updating progress from TRACER output: {e!s}")
 
     def _handle_exploration_phase(self, task: ProfileGenerationTask, line: str) -> bool:

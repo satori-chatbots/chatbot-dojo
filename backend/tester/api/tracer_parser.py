@@ -264,33 +264,23 @@ class TracerReportParser:
 
     def _parse_token_statistics_txt(self, lines: list[str], metadata: dict) -> None:
         """Parse token usage statistics from txt format."""
+        MIN_PARTS_FOR_LLM_CALLS = 2
         for line in lines:
-            line = line.strip()
+            stripped_line = line.strip()
 
             # Look for total LLM calls in TOTAL TOKEN CONSUMPTION section
-            if "Total LLM calls:" in line:
-                try:
-                    # Format: "Total LLM calls:     2,479"
-                    parts = line.split(":")
-                    if len(parts) >= 2:
-                        calls_str = parts[1].strip().replace(",", "")
-                        if calls_str.isdigit():
-                            metadata["total_interactions"] = int(calls_str)
-                except (ValueError, IndexError):
-                    pass
+            if "Total LLM calls:" in stripped_line:
+                parts = stripped_line.split(":")
+                if len(parts) >= MIN_PARTS_FOR_LLM_CALLS:
+                    calls_str = parts[1].strip().replace(",", "")
+                    if calls_str.isdigit():
+                        metadata["total_llm_calls"] = int(calls_str)
 
             # Look for estimated cost in TOTAL TOKEN CONSUMPTION section
-            elif "Estimated cost:" in line and "USD" in line:
-                try:
-                    # Format: "Estimated cost:      $0.1602 USD"
-                    cost_match = re.search(r"Estimated cost:\s*\$([0-9]+\.?[0-9]*)\s*USD", line)
-                    if cost_match:
-                        cost_value = float(cost_match.group(1))
-                        # Only update if this is in the TOTAL section (usually the last/largest one)
-                        if cost_value > metadata.get("estimated_cost_usd", 0.0):
-                            metadata["estimated_cost_usd"] = cost_value
-                except (ValueError, AttributeError):
-                    pass
+            elif "Estimated cost:" in stripped_line and "USD" in stripped_line:
+                cost_match = re.search(r"Estimated cost:\s*\$([0-9]+\.?[0-9]*)\s*USD", stripped_line)
+                if cost_match:
+                    metadata["estimated_cost_usd"] = float(cost_match.group(1))
 
     def _parse_md_format(self, content: str) -> dict[str, int]:
         """Parse .md format TRACER reports (legacy)."""
@@ -341,26 +331,26 @@ class TracerReportParser:
     def _parse_performance_statistics_md(self, lines: list[str], metadata: dict) -> None:
         """Parse performance statistics from md format."""
         for line in lines:
-            line = line.strip()
+            stripped_line = line.strip()
 
             # Look for Performance Statistics table values
-            if "Total LLM Calls" in line and "|" in line:
+            if "Total LLM Calls" in stripped_line and "|" in stripped_line:
                 try:
                     # Format: | Total LLM Calls | 76 |
-                    parts = [part.strip() for part in line.split("|")]
+                    parts = [part.strip() for part in stripped_line.split("|")]
                     min_markdown_table_columns = 3
                     if len(parts) >= min_markdown_table_columns and parts[2].isdigit():
-                        metadata["total_interactions"] = int(parts[2])
+                        metadata["total_llm_calls"] = int(parts[2])
                 except (ValueError, IndexError):
                     pass
 
             # Look for estimated cost in table format
-            elif "Estimated Cost" in line and "|" in line and "USD" in line:
-                self._parse_cost_from_table(line, metadata)
+            elif "Estimated Cost" in stripped_line and "|" in stripped_line and "USD" in stripped_line:
+                self._parse_cost_from_table(stripped_line, metadata)
 
             # Look for total estimated cost in non-table format (backup)
-            elif "Estimated cost:" in line and "USD" in line:
-                self._parse_cost_from_text(line, metadata)
+            elif "Estimated cost:" in stripped_line and "USD" in stripped_line:
+                self._parse_cost_from_text(stripped_line, metadata)
 
     def _parse_cost_from_table(self, line: str, metadata: dict) -> None:
         """Parse cost from markdown table format."""
