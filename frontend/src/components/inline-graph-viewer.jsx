@@ -127,16 +127,16 @@ const InlineGraphViewer = ({ execution, onClose }) => {
       const blob = await fetchTracerWorkflowGraph(execution.id, targetFormat);
 
       // Create a URL for the blob
-      const url = window.URL.createObjectURL(blob);
+      const url = globalThis.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `${execution.execution_name}_workflow_graph.${targetFormat}`;
-      document.body.appendChild(link);
+      document.body.append(link);
       link.click();
 
       // Clean up
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      globalThis.URL.revokeObjectURL(url);
+      link.remove();
 
       showToast(`Download started (${targetFormat.toUpperCase()})`, "success");
     } catch (error) {
@@ -150,8 +150,8 @@ const InlineGraphViewer = ({ execution, onClose }) => {
     // Add styling to make SVG responsive and properly colored
     let processedSvg = svgContent
       .replace(/<svg/, '<svg class="max-w-full h-auto"')
-      .replace(/fill="black"/g, 'fill="currentColor"')
-      .replace(/stroke="black"/g, 'stroke="currentColor"');
+      .replaceAll('fill="black"', 'fill="currentColor"')
+      .replaceAll('stroke="black"', 'stroke="currentColor"');
 
     // If the SVG doesn't have proper viewBox, try to extract dimensions and add it
     if (!processedSvg.includes("viewBox")) {
@@ -261,7 +261,7 @@ const InlineGraphViewer = ({ execution, onClose }) => {
                     max={MAX_ZOOM}
                     step={ZOOM_STEP}
                     value={zoom}
-                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    onChange={(e) => setZoom(Number.parseFloat(e.target.value))}
                     className="w-[100px] sm:w-[150px] cursor-pointer accent-secondary"
                     aria-label="Zoom slider"
                   />

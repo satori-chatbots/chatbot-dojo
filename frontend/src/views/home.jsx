@@ -105,11 +105,11 @@ function Home() {
 
       // Flatten all profiles for easy selection management
       const profiles = [];
-      data.executions?.forEach((execution) => {
-        execution.profiles.forEach((profile) => {
+      if (data.executions) for (const execution of data.executions) {
+        for (const profile of execution.profiles) {
           profiles.push(profile);
-        });
-      });
+        }
+      }
       setAllProfiles(profiles);
     } catch (error) {
       console.error("Error fetching executions:", error);
@@ -136,11 +136,11 @@ function Home() {
           (exec) => exec.id === executionId,
         );
         if (executionToDelete) {
-          const profilesToDeselect = executionToDelete.profiles.map(
+          const profilesToDeselect = new Set(executionToDelete.profiles.map(
             (p) => p.id,
-          );
+          ));
           setSelectedFiles((prev) =>
-            prev.filter((id) => !profilesToDeselect.includes(id)),
+            prev.filter((id) => !profilesToDeselect.has(id)),
           );
         }
 
@@ -155,7 +155,7 @@ function Home() {
           if (errorData.error) {
             errorMessage = errorData.error;
           }
-        } catch (parseError) {
+        } catch {
           // Use default message if parsing fails
         }
         showToast("error", errorMessage);
@@ -975,7 +975,7 @@ function Home() {
                     label="Log Verbosity"
                     selectedKeys={[profileGenParameters.verbosity]}
                     onSelectionChange={(selection) => {
-                      const verbosity = Array.from(selection)[0];
+                      const verbosity = [...selection][0];
                       handleProfileGenParameterChange("verbosity", verbosity);
                     }}
                     description="Choose log detail level for debugging"

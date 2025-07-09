@@ -64,9 +64,9 @@ const TracerDashboard = () => {
   // Cleanup polling intervals on unmount
   useEffect(() => {
     return () => {
-      pollingIntervals.forEach((intervalId) => {
+      for (const intervalId of pollingIntervals) {
         clearInterval(intervalId);
-      });
+      }
     };
   }, [pollingIntervals]);
 
@@ -201,11 +201,11 @@ const TracerDashboard = () => {
       setUniqueProjects(projects);
 
       // Start polling for any running executions
-      data.executions?.forEach((execution) => {
+      if (data.executions) for (const execution of data.executions) {
         if (execution.status === "RUNNING") {
           startPollingExecution(execution);
         }
-      });
+      }
     } catch (error) {
       console.error("Error loading TRACER executions:", error);
       showToast("Error loading TRACER executions", "error");
@@ -224,7 +224,7 @@ const TracerDashboard = () => {
 
     if (selectedProject !== "all") {
       filtered = filtered.filter(
-        (execution) => execution.project_id === parseInt(selectedProject),
+        (execution) => execution.project_id === Number.parseInt(selectedProject),
       );
     }
 
@@ -271,31 +271,41 @@ const TracerDashboard = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "COMPLETED":
+      case "COMPLETED": {
         return <CheckCircle className="w-4 h-4 text-success" />;
-      case "RUNNING":
+      }
+      case "RUNNING": {
         return <Loader className="w-4 h-4 text-primary animate-spin" />;
-      case "ERROR":
+      }
+      case "ERROR": {
         return <AlertCircle className="w-4 h-4 text-danger" />;
-      case "PENDING":
+      }
+      case "PENDING": {
         return <Clock className="w-4 h-4 text-warning" />;
-      default:
+      }
+      default: {
         return <Clock className="w-4 h-4 text-default-400" />;
+      }
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "COMPLETED":
+      case "COMPLETED": {
         return "success";
-      case "RUNNING":
+      }
+      case "RUNNING": {
         return "primary";
-      case "ERROR":
+      }
+      case "ERROR": {
         return "danger";
-      case "PENDING":
+      }
+      case "PENDING": {
         return "warning";
-      default:
+      }
+      default: {
         return "default";
+      }
     }
   };
 
@@ -305,7 +315,7 @@ const TracerDashboard = () => {
       if (!execution?.id) return;
 
       if (
-        !window.confirm(
+        !globalThis.confirm(
           "Delete TRACER execution? This action cannot be undone.",
         )
       ) {
@@ -337,36 +347,41 @@ const TracerDashboard = () => {
     if (!viewingContent) return null;
 
     switch (viewingContent.type) {
-      case "report":
+      case "report": {
         return (
           <InlineReportViewer
             execution={viewingContent.execution}
             onClose={() => onOpenChange(false)}
           />
         );
-      case "graph":
+      }
+      case "graph": {
         return (
           <InlineGraphViewer
             execution={viewingContent.execution}
             onClose={() => onOpenChange(false)}
           />
         );
-      case "profiles":
+      }
+      case "profiles": {
         return (
           <OriginalProfilesViewer
             execution={viewingContent.execution}
             onClose={() => onOpenChange(false)}
           />
         );
-      case "logs":
+      }
+      case "logs": {
         return (
           <ExecutionLogsViewer
             execution={viewingContent.execution}
             onClose={() => onOpenChange(false)}
           />
         );
-      default:
+      }
+      default: {
         return null;
+      }
     }
   };
 
@@ -420,10 +435,10 @@ const TracerDashboard = () => {
                 label="Filter by Project"
                 placeholder="All Projects"
                 selectedKeys={
-                  selectedProject !== "all" ? [selectedProject] : []
+                  selectedProject === "all" ? [] : [selectedProject]
                 }
                 onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0];
+                  const selected = [...keys][0];
                   setSelectedProject(selected || "all");
                 }}
                 size="sm"
@@ -447,9 +462,9 @@ const TracerDashboard = () => {
               <Select
                 label="Filter by Status"
                 placeholder="All Statuses"
-                selectedKeys={selectedStatus !== "all" ? [selectedStatus] : []}
+                selectedKeys={selectedStatus === "all" ? [] : [selectedStatus]}
                 onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0];
+                  const selected = [...keys][0];
                   setSelectedStatus(selected || "all");
                 }}
                 size="sm"

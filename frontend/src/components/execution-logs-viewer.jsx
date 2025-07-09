@@ -104,23 +104,29 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "COMPLETED":
+      case "COMPLETED": {
         return <CheckCircle className="w-5 h-5 text-success" />;
-      case "ERROR":
+      }
+      case "ERROR": {
         return <AlertCircle className="w-5 h-5 text-danger" />;
-      default:
+      }
+      default: {
         return <Terminal className="w-5 h-5 text-default-500" />;
+      }
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "COMPLETED":
+      case "COMPLETED": {
         return "text-success";
-      case "ERROR":
+      }
+      case "ERROR": {
         return "text-danger";
-      default:
+      }
+      default: {
         return "text-default-500";
+      }
     }
   };
 

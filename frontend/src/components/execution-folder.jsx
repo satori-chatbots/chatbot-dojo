@@ -90,7 +90,7 @@ const ExecutionFolder = ({
         ? `Delete manual execution "${execution.execution_name}"?\n\nThis will only work if no profiles are in this execution.`
         : `Delete TRACER execution "${execution.execution_name}"?\n\nThis will permanently delete all ${profiles.length} profiles.`;
 
-    if (!window.confirm(confirmMessage)) {
+    if (!globalThis.confirm(confirmMessage)) {
       return;
     }
 

@@ -27,32 +27,32 @@ const YamlHighlighter = ({ content }) => {
   const highlightYaml = (yaml) => {
     let highlighted = yaml
       // Comments
-      .replace(
+      .replaceAll(
         /(#.*$)/gm,
         '<span class="text-success-600 dark:text-success-400">$1</span>',
       )
       // Keys (before colon)
-      .replace(
+      .replaceAll(
         /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/gm,
         '$1<span class="text-primary-600 dark:text-primary-400 font-semibold">$2</span>:',
       )
       // String values (quoted)
-      .replace(
+      .replaceAll(
         /:\s*["']([^"']*?)["']/g,
         ': <span class="text-warning-600 dark:text-warning-400">"$1"</span>',
       )
       // Numbers
-      .replace(
+      .replaceAll(
         /:\s*(\d+\.?\d*)\s*$/gm,
         ': <span class="text-secondary-600 dark:text-secondary-400">$1</span>',
       )
       // Booleans
-      .replace(
+      .replaceAll(
         /:\s*(true|false)\s*$/gm,
         ': <span class="text-danger-600 dark:text-danger-400">$1</span>',
       )
       // Array items
-      .replace(
+      .replaceAll(
         /^(\s*)-\s+/gm,
         '$1<span class="text-default-600 dark:text-default-400">-</span> ',
       );
@@ -78,8 +78,8 @@ const ProfileCard = ({ profile, index }) => {
       await navigator.clipboard.writeText(profile.content);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy profile content:", err);
+    } catch (error) {
+      console.error("Failed to copy profile content:", error);
     }
   };
 
@@ -163,8 +163,8 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
 
       await navigator.clipboard.writeText(allContent);
       showToast("All profiles copied to clipboard", "success");
-    } catch (err) {
-      console.error("Failed to copy all profiles:", err);
+    } catch (error_) {
+      console.error("Failed to copy all profiles:", error_);
       showToast("Failed to copy profiles", "error");
     }
   };
@@ -301,7 +301,7 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
                                   `${profile.filename} copied to clipboard`,
                                   "success",
                                 );
-                              } catch (err) {
+                              } catch {
                                 showToast("Failed to copy profile", "error");
                               }
                             }}

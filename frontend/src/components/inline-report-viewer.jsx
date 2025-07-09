@@ -21,8 +21,7 @@ const MarkdownRenderer = ({ content }) => {
     let inList = false;
     let listItems = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    for (const line of lines) {
       let processedLine = line;
 
       // Handle headers (process from most specific to least specific)
@@ -117,32 +116,32 @@ const MarkdownRenderer = ({ content }) => {
     }
 
     // Convert bold text
-    html = html.replace(
+    html = html.replaceAll(
       /\*\*(.*?)\*\*/gim,
       '<strong class="font-semibold">$1</strong>',
     );
 
     // Convert italic text (but avoid matching ** patterns)
-    html = html.replace(
+    html = html.replaceAll(
       /(?<!\*)\*([^*]+)\*(?!\*)/gim,
       '<em class="italic">$1</em>',
     );
 
     // Convert code blocks
-    html = html.replace(
+    html = html.replaceAll(
       /```([\s\S]*?)```/gim,
       '<pre class="bg-default-100 dark:bg-default-800 rounded-lg p-4 overflow-x-auto my-4"><code class="text-sm text-default-700 dark:text-default-300">$1</code></pre>',
     );
 
     // Convert inline code
-    html = html.replace(
+    html = html.replaceAll(
       /`([^`]+)`/gim,
       '<code class="bg-default-100 dark:bg-default-800 text-default-700 dark:text-default-300 px-2 py-1 rounded text-sm">$1</code>',
     );
 
     // Convert tables
     const tableRegex = /\|(.+)\|\n\|[-\s\|]+\|\n((\|.+\|\n?)*)/gim;
-    html = html.replace(tableRegex, (match, header, body) => {
+    html = html.replaceAll(tableRegex, (match, header, body) => {
       const headerCells = header
         .split("|")
         .filter((cell) => cell.trim())
@@ -172,10 +171,10 @@ const MarkdownRenderer = ({ content }) => {
     });
 
     // Convert horizontal rules
-    html = html.replace(/^---$/gm, '<hr class="my-6 border-default-200" />');
+    html = html.replaceAll(/^---$/gm, '<hr class="my-6 border-default-200" />');
 
     // Clean up multiple consecutive <br /> tags
-    html = html.replace(/(<br \/>\s*){3,}/g, "<br /><br />");
+    html = html.replaceAll(/(<br \/>\s*){3,}/g, "<br /><br />");
 
     return html;
   };
