@@ -27,7 +27,7 @@ import {
   CheckCircle,
   Loader,
 } from "lucide-react";
-import { fetchTracerExecutions, deleteProfileExecution } from "../api/file-api";
+import { fetchTracerExecutions, deleteProfileExecution, checkGenerationStatus, checkOngoingGeneration } from "../api/file-api";
 import TracerExecutionCard from "../components/tracer-execution-card";
 import InlineReportViewer from "../components/inline-report-viewer";
 import InlineGraphViewer from "../components/inline-graph-viewer";
@@ -46,6 +46,9 @@ const TracerDashboard = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { showToast } = useMyCustomToast();
 
+  // Progress polling state
+  const [pollingIntervals, setPollingIntervals] = useState(new Map());
+
   // Clear the modal content once the modal has been closed to avoid leftover overlays
   useEffect(() => {
     if (!isOpen) {
@@ -53,9 +56,145 @@ const TracerDashboard = () => {
     }
   }, [isOpen]);
 
+  // Cleanup polling intervals on unmount
+  useEffect(() => {
+    return () => {
+      pollingIntervals.forEach((intervalId) => {
+        clearInterval(intervalId);
+      });
+    };
+  }, [pollingIntervals]);
+
+  // Function to start polling an execution's progress
+  const startPollingExecution = useCallback(async (execution) => {
+    if (!execution.id || execution.status !== "RUNNING") return;
+
+    // Check if we're already polling this execution
+    if (pollingIntervals.has(execution.id)) return;
+
+    // We need to find the task ID from the execution
+    // For now, we'll check the ongoing generation status for the project
+    try {
+      const ongoingResponse = await checkOngoingGeneration(execution.project_id);
+
+      if (!ongoingResponse.ongoing || !ongoingResponse.task_id) {
+        return;
+      }
+
+      const taskId = ongoingResponse.task_id;
+
+      const intervalId = setInterval(async () => {
+        try {
+          const status = await checkGenerationStatus(taskId);
+
+          // Update the execution in our state
+          setExecutions(prevExecutions =>
+            prevExecutions.map(exec => {
+              if (exec.id === execution.id) {
+                return {
+                  ...exec,
+                  status: status.status,
+                  progress_stage: status.stage,
+                  progress_percentage: status.progress,
+                };
+              }
+              return exec;
+            })
+          );
+
+          // Stop polling if completed or failed
+          if (status.status === "COMPLETED" || status.status === "ERROR") {
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(execution.id);
+              return newMap;
+            });
+
+            // Reload all executions to get the final state
+            setTimeout(() => {
+              loadTracerExecutions();
+            }, 1000);
+
+            if (status.status === "COMPLETED") {
+              showToast(`TRACER execution completed successfully!`, "success");
+            } else if (status.status === "ERROR") {
+              showToast(`TRACER execution failed: ${status.error_message || "Unknown error"}`, "error");
+            }
+          }
+        } catch (error) {
+          console.error(`Error polling execution ${execution.id}:`, error);
+          // Stop polling on error
+          clearInterval(intervalId);
+          setPollingIntervals(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(execution.id);
+            return newMap;
+          });
+        }
+      }, 2000); // Poll every 2 seconds
+
+      setPollingIntervals(prev => {
+        const newMap = new Map(prev);
+        newMap.set(execution.id, intervalId);
+        return newMap;
+      });
+    } catch (error) {
+      console.error(`Error starting polling for execution ${execution.id}:`, error);
+    }
+  }, [pollingIntervals, showToast]);
+
+  // Function to stop polling an execution
+  const stopPollingExecution = useCallback((executionId) => {
+    const intervalId = pollingIntervals.get(executionId);
+    if (intervalId) {
+      clearInterval(intervalId);
+      setPollingIntervals(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(executionId);
+        return newMap;
+      });
+    }
+  }, [pollingIntervals]);
+
+  const loadTracerExecutions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchTracerExecutions();
+      setExecutions(data.executions || []);
+
+      // Extract unique projects for filtering
+      const projects =
+        data.executions?.reduce((acc, execution) => {
+          const existing = acc.find((p) => p.id === execution.project_id);
+          if (!existing) {
+            acc.push({
+              id: execution.project_id,
+              name: execution.project_name,
+            });
+          }
+          return acc;
+        }, []) || [];
+
+      setUniqueProjects(projects);
+
+      // Start polling for any running executions
+      data.executions?.forEach(execution => {
+        if (execution.status === "RUNNING") {
+          startPollingExecution(execution);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading TRACER executions:", error);
+      showToast("Error loading TRACER executions", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [startPollingExecution, showToast]);
+
   useEffect(() => {
     loadTracerExecutions();
-  }, []);
+  }, [loadTracerExecutions]);
 
   useEffect(() => {
     // Apply filters when executions or filter criteria change
@@ -76,33 +215,7 @@ const TracerDashboard = () => {
     setFilteredExecutions(filtered);
   }, [executions, selectedProject, selectedStatus]);
 
-  const loadTracerExecutions = async () => {
-    try {
-      setLoading(true);
-      const data = await fetchTracerExecutions();
-      setExecutions(data.executions || []);
 
-      // Extract unique projects for filtering
-      const projects =
-        data.executions?.reduce((acc, execution) => {
-          const existing = acc.find((p) => p.id === execution.project_id);
-          if (!existing) {
-            acc.push({
-              id: execution.project_id,
-              name: execution.project_name,
-            });
-          }
-          return acc;
-        }, []) || [];
-
-      setUniqueProjects(projects);
-    } catch (error) {
-      console.error("Error loading TRACER executions:", error);
-      showToast("Error loading TRACER executions", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleViewReport = (execution) => {
     setViewingContent({
@@ -238,21 +351,26 @@ const TracerDashboard = () => {
   };
 
   // Virtualised row renderer for the executions list
-  const ExecutionRow = ({ index, style }) => (
-    <div style={style}>
-      <TracerExecutionCard
-        key={filteredExecutions[index].id}
-        execution={filteredExecutions[index]}
-        onViewReport={handleViewReport}
-        onViewGraph={handleViewGraph}
-        onViewProfiles={handleViewProfiles}
-        onViewLogs={handleViewLogs}
-        onDelete={handleDeleteExecution}
-        getStatusIcon={getStatusIcon}
-        getStatusColor={getStatusColor}
-      />
-    </div>
-  );
+  const ExecutionRow = ({ index, style }) => {
+    const execution = filteredExecutions[index];
+    return (
+      <div style={style}>
+        <TracerExecutionCard
+          key={execution.id}
+          execution={execution}
+          onViewReport={handleViewReport}
+          onViewGraph={handleViewGraph}
+          onViewProfiles={handleViewProfiles}
+          onViewLogs={handleViewLogs}
+          onDelete={handleDeleteExecution}
+          getStatusIcon={getStatusIcon}
+          getStatusColor={getStatusColor}
+          progressStage={execution.progress_stage}
+          progressPercentage={execution.progress_percentage}
+        />
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -389,6 +507,8 @@ const TracerDashboard = () => {
               onDelete={handleDeleteExecution}
               getStatusIcon={getStatusIcon}
               getStatusColor={getStatusColor}
+              progressStage={execution.progress_stage}
+              progressPercentage={execution.progress_percentage}
             />
           ))}
         </div>

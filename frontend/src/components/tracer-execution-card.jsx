@@ -23,6 +23,8 @@ const TracerExecutionCard = ({
   onDelete,
   getStatusIcon,
   getStatusColor,
+  progressStage,
+  progressPercentage,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -122,10 +124,27 @@ const TracerExecutionCard = ({
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Running Progress */}
             {isRunning && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Zap className="w-4 h-4 text-primary animate-pulse" />
-                <div className="w-16">
-                  <Progress size="sm" color="primary" isIndeterminate />
+                <div className="flex flex-col gap-1 min-w-0">
+                  {progressStage && (
+                    <span className="text-xs text-primary font-medium truncate max-w-32">
+                      {progressStage}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <div className="w-16">
+                      <Progress
+                        size="sm"
+                        color="primary"
+                        value={progressPercentage || 0}
+                        className="transition-all duration-500 ease-out"
+                      />
+                    </div>
+                    <span className="text-xs text-default-500 font-mono">
+                      {progressPercentage || 0}%
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

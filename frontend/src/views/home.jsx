@@ -237,7 +237,7 @@ function Home() {
             // Update the stage information in the UI
             setGenerationStage(status.stage || "Processing");
             setGenerationProgress(status.progress || 0);
-            await reloadExecutions();
+            // Don't reload executions during progress updates to avoid page jumping
           }
         } catch {
           clearInterval(statusIntervalReference.current);
@@ -245,7 +245,7 @@ function Home() {
           setIsGenerating(false);
           showToast("error", "Error checking generation status");
         }
-      }, 3000); // Check every 3 seconds
+      }, 2000); // Check every 2 seconds for more responsive progress updates
     },
     [reloadExecutions, reloadProfiles, showToast],
   );
@@ -822,21 +822,21 @@ function Home() {
                     Generating Profiles
                   </h3>
                   {generationStage && (
-                    <p className="text-sm font-medium text-primary mb-1">
+                    <p className="text-sm font-medium text-primary mb-2 text-center">
                       {generationStage}
                     </p>
                   )}
                   <div className="w-full bg-muted dark:bg-muted-dark rounded-full h-2.5 mb-2">
                     <div
-                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                      className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out"
                       style={{ width: `${generationProgress}%` }}
                     ></div>
                   </div>
                   <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 text-center">
                     {generationProgress}% complete
                   </p>
-                  <p className="text-sm text-foreground/60 dark:text-foreground-dark/60 text-center mt-1">
-                    This might take a few minutes. Please wait...
+                  <p className="text-xs text-foreground/50 dark:text-foreground-dark/50 text-center mt-1">
+                    This process may take a few minutes depending on the complexity of your chatbot.
                   </p>
                 </div>
               )}

@@ -87,11 +87,6 @@ class ProfileGenerator:
             task.execution = execution
             task.save()
 
-            # Update progress
-            task.progress_percentage = 10
-            task.stage = "GENERATING_CONVERSATIONS"
-            task.save()
-
             # Run TRACER generation
             success = self.run_tracer_generation(
                 task, execution, technology, conversations, turns, verbosity, "all", api_key
@@ -204,16 +199,38 @@ class ProfileGenerator:
                 logger.info(f"Setting {env_var_name} environment variable for provider: {provider}")
 
             # Execute TRACER
-            result = subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)  # noqa: S603
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            full_stdout = []
+            if process.stdout:
+                for line in iter(process.stdout.readline, ""):
+                    full_stdout.append(line)
+                    if line.strip():
+                        logger.info(f"TRACER (task {task.id}): {line.strip()}")
+                        self._update_progress_from_tracer_output(task, line)
+
+            process.wait()
+
+            full_stderr = []
+            if process.stderr:
+                full_stderr = process.stderr.readlines()
 
             # Store TRACER output for debugging
-            execution.tracer_stdout = result.stdout
-            execution.tracer_stderr = result.stderr
+            execution.tracer_stdout = "".join(full_stdout)
+            execution.tracer_stderr = "".join(full_stderr)
             execution.save(update_fields=["tracer_stdout", "tracer_stderr"])
 
-            if result.returncode != 0:
-                logger.error(f"TRACER execution failed: {result.stderr}")
-                task.error_message = f"TRACER failed: {result.stderr}"
+            if process.returncode != 0:
+                logger.error(f"TRACER execution failed: {''.join(full_stderr)}")
+                task.error_message = f"TRACER failed: {''.join(full_stderr)}"
                 task.save()
                 return False
 
@@ -221,7 +238,7 @@ class ProfileGenerator:
             logger.info(f"TRACER execution successful for task {task.id}")
 
             # Update progress
-            task.progress_percentage = 80
+            task.progress_percentage = 99
             task.stage = "SAVING_FILES"
             task.save()
 
@@ -241,8 +258,54 @@ class ProfileGenerator:
             task.save()
             return False
 
-        else:
-            return True
+        return True
+
+    def _update_progress_from_tracer_output(self, task: ProfileGenerationTask, line: str) -> None:
+        """Parse a line of TRACER output and update the task progress."""
+        try:
+            line = line.strip()
+            # Exploration Phase
+            if "Initializing Chatbot Exploration Agent" in line:
+                task.stage = "Initializing Agent"
+                task.progress_percentage = 5
+            elif "--- Starting Chatbot Exploration Phase ---" in line:
+                task.stage = "Exploration Phase"
+                task.progress_percentage = 10
+            elif "=== Starting Exploration Session" in line:
+                match = re.search(r"Exploration Session (\d+)/(\d+)", line)
+                if match:
+                    current_session = int(match.group(1))
+                    total_sessions_from_log = int(match.group(2))
+                    task.stage = f"Exploring: Session {current_session}/{total_sessions_from_log}"
+                    # Exploration is from 10% to 50%
+                    progress = 10 + int((current_session / total_sessions_from_log) * 40)
+                    task.progress_percentage = progress
+
+            # Analysis Phase
+            elif "---   Starting Analysis Phase   ---" in line:
+                task.stage = "Analysis Phase"
+                task.progress_percentage = 55
+            elif "Step 1: Workflow structure inference" in line:
+                task.stage = "Analyzing: Workflow Inference"
+                task.progress_percentage = 65
+            elif "Step 2: User profile generation" in line:
+                task.stage = "Analyzing: Generating Profiles"
+                task.progress_percentage = 75
+            elif "Step 3: Conversation parameters generation" in line:
+                task.stage = "Analyzing: Generating Conversation Parameters"
+                task.progress_percentage = 85
+            elif "Step 4: Building user profiles" in line:
+                task.stage = "Analyzing: Building Profiles"
+                task.progress_percentage = 95
+
+            # Finalization
+            elif "---   Final Report Summary   ---" in line:
+                task.stage = "Finalizing Report"
+                task.progress_percentage = 98
+
+            task.save(update_fields=["stage", "progress_percentage"])
+        except Exception as e:
+            logger.warning(f"Error updating progress from TRACER output: {e!s}")
 
     def process_tracer_results_dual_storage(self, execution: ProfileExecution, output_dir: Path) -> None:
         """Process TRACER results with dual storage: editable + read-only originals.
