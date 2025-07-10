@@ -121,13 +121,14 @@ class ChatbotConnectorSerializer(serializers.ModelSerializer):
 
         model = ChatbotConnector
         fields = "__all__"
+        read_only_fields: ClassVar[list[str]] = ["owner"]
 
 
 class ProjectSerializer(serializers.ModelSerializer):
     """Serializer for the Project model."""
 
     test_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    chatbot_connector = serializers.PrimaryKeyRelatedField(queryset=ChatbotConnector.objects.all())
+    chatbot_connector = serializers.PrimaryKeyRelatedField(queryset=ChatbotConnector.objects.none())
     is_owner = serializers.SerializerMethodField()
     llm_provider = serializers.ReadOnlyField()  # Derived from API key
     # Add the API key field to the serializer
@@ -139,6 +140,20 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = "__all__"
         read_only_fields: ClassVar[list[str]] = ["owner"]
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        """Initialize the serializer and filter querysets based on the user."""
+        super().__init__(*args, **kwargs)
+        if (
+            self.context.get("request")
+            and hasattr(self.context["request"], "user")
+            and self.context["request"].user.is_authenticated
+        ):
+            user = self.context["request"].user
+            # Filter chatbot connectors to only show those owned by the user
+            self.fields["chatbot_connector"].queryset = ChatbotConnector.objects.filter(owner=user)
+            # Filter API keys to only show those owned by the user
+            self.fields["api_key"].queryset = UserAPIKey.objects.filter(user=user)
 
     def get_is_owner(self, obj: Project) -> bool:
         """Check if the request user is the owner of the project."""

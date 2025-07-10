@@ -121,10 +121,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return obj
 
     @action(detail=False, methods=["get"], url_path="connectors")
-    def list_connectors(self, _request: Request) -> Response:
-        """List all available Chatbot Connectors."""
-        connectors = ChatbotConnector.objects.all()
-        serializer = ChatbotConnectorSerializer(connectors, many=True)
+    def list_connectors(self, request: Request) -> Response:
+        """List all available Chatbot Connectors for the authenticated user."""
+        connectors = ChatbotConnector.objects.filter(owner=request.user)
+        serializer = ChatbotConnectorSerializer(connectors, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"], url_path="check-name")

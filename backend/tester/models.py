@@ -434,10 +434,19 @@ class ChatbotConnector(models.Model):
     Contains the used technology and the link to access the chatbot, also a name to identify it
     """
 
-    # Name of the chatbot connector, must be unique
-    name = models.CharField(max_length=255, unique=True)
+    # Name of the chatbot connector, must be unique per user
+    name = models.CharField(max_length=255)
     technology = models.CharField(max_length=255, choices=CONNECTOR_CHOICES)
     link = models.URLField(blank=True)
+
+    # Owner of the chatbot connector
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="chatbot_connectors", on_delete=models.CASCADE)
+
+    class Meta:
+        """Meta options for the ChatbotConnector model."""
+
+        # Name should be unique per user
+        unique_together: ClassVar[list[str]] = ["name", "owner"]
 
     def __str__(self) -> str:
         """Return the name of the chatbot connector."""
