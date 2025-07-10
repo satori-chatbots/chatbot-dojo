@@ -38,6 +38,18 @@ export const SetupProvider = ({ children }) => {
   const loadSetupData = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Only load data if user is authenticated
+      if (!user) {
+        setSetupData({
+          apiKeys: [],
+          connectors: [],
+          projects: [],
+          profiles: [],
+        });
+        return;
+      }
+
       // Always fetch fresh data tied to the *current* authenticated user.
       const [apiKeysData, connectorsData, projectsData] = await Promise.all([
         getUserApiKeys().catch(() => []),
@@ -65,26 +77,28 @@ export const SetupProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // Individual reload functions
   const reloadApiKeys = useCallback(async () => {
     try {
+      if (!user) return; // Only reload if user is authenticated
       const apiKeysData = await getUserApiKeys();
       setSetupData((prev) => ({ ...prev, apiKeys: apiKeysData }));
     } catch (error) {
       console.error("Error reloading API keys:", error);
     }
-  }, []);
+  }, [user]);
 
   const reloadConnectors = useCallback(async () => {
     try {
+      if (!user) return; // Only reload if user is authenticated
       const connectorsData = await fetchChatbotConnectors();
       setSetupData((prev) => ({ ...prev, connectors: connectorsData }));
     } catch (error) {
       console.error("Error reloading connectors:", error);
     }
-  }, []);
+  }, [user]);
 
   // Reload projects for both the local hook (to keep UI in sync) and the setup context
   const reloadProjectsData = useCallback(async () => {

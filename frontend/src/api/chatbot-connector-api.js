@@ -1,14 +1,12 @@
 import API_BASE_URL, { ENDPOINTS } from "./config";
+import apiClient from "./api-client";
 
 const API_URL = `${API_BASE_URL}${ENDPOINTS.CHATBOTCONNECTOR}`;
 const CHOICES_URL = `${API_BASE_URL}${ENDPOINTS.CONNECTORS_CHOICES}`;
 
 export const fetchChatbotConnectors = async () => {
   try {
-    const response = await fetch(API_URL);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const response = await apiClient(API_URL);
     return await response.json();
   } catch (error) {
     console.error("Error fetching chatbot connectors:", error);
@@ -18,20 +16,10 @@ export const fetchChatbotConnectors = async () => {
 
 export const createChatbotConnector = async (data) => {
   try {
-    const response = await fetch(API_URL, {
+    const response = await apiClient(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = Object.entries(errorData)
-        .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
-        .join("; ");
-      throw new Error(errorMessage || `HTTP error! status: ${response.status}`);
-    }
     return await response.json();
   } catch (error) {
     console.error("Error creating chatbot connector:", error);
@@ -55,18 +43,10 @@ export const fetchTechnologyChoices = async () => {
 
 export const updateChatbotConnector = async (id, data) => {
   try {
-    const response = await fetch(`${API_URL}${id}/`, {
+    const response = await apiClient(`${API_URL}${id}/`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = Object.entries(errorData)
-        .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
-        .join("; ");
-      throw new Error(errorMessage || `HTTP error! status: ${response.status}`);
-    }
     return await response.json();
   } catch (error) {
     console.error("Error updating chatbot connector:", error);
@@ -76,12 +56,9 @@ export const updateChatbotConnector = async (id, data) => {
 
 export const deleteChatbotConnector = async (id) => {
   try {
-    const response = await fetch(`${API_URL}${id}/`, {
+    const response = await apiClient(`${API_URL}${id}/`, {
       method: "DELETE",
     });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
     // Handle empty (204) responses
     if (response.status === 204) {
       return;
@@ -95,12 +72,9 @@ export const deleteChatbotConnector = async (id) => {
 
 export const checkChatbotConnectorName = async (name) => {
   try {
-    const response = await fetch(
+    const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.CHECK_CHATBOT_NAME}?chatbot_name=${name}`,
     );
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
     return await response.json();
   } catch (error) {
     console.error("Error checking chatbot connector name:", error);

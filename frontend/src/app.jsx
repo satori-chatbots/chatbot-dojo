@@ -418,7 +418,14 @@ function AppContent() {
                 </PrivateRoute>
               }
             />
-            <Route path="/chatbot-connectors" element={<ChatbotConnectors />} />
+            <Route
+              path="/chatbot-connectors"
+              element={
+                <PrivateRoute>
+                  <ChatbotConnectors />
+                </PrivateRoute>
+              }
+            />
             <Route
               path="/projects"
               element={

@@ -52,9 +52,9 @@ class ProjectAdmin(admin.ModelAdmin):
 class ChatbotConnectorAdmin(admin.ModelAdmin):
     """Admin configuration for ChatbotConnector model."""
 
-    list_display = ("name", "technology", "link")
-    search_fields = ("name", "technology")
-    list_filter = ("technology",)
+    list_display = ("name", "technology", "link", "owner")
+    search_fields = ("name", "technology", "owner__email")
+    list_filter = ("technology", "owner")
 
 
 class ProfileReportInline(admin.TabularInline):
