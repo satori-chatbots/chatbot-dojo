@@ -198,31 +198,7 @@ def get_tracer_executions(request: Request) -> Response:
             .order_by("-created_at")
         )
 
-        data = [
-            {
-                "id": execution.id,
-                "project_id": execution.project.id,
-                "project_name": execution.project.name,
-                "execution_name": execution.execution_name,
-                "sessions": execution.sessions,
-                "turns_per_session": execution.turns_per_session,
-                "verbosity": execution.verbosity,
-                "status": execution.status,
-                "error_type": execution.error_type,
-                "error_message": execution.generation_tasks.first().error_message
-                if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message
-                else None,
-                "execution_time_minutes": execution.execution_time_minutes,
-                "created_at": execution.created_at.isoformat(),
-                "generated_profiles_count": execution.generated_profiles_count,
-                "has_report": hasattr(execution, "analysis_result")
-                and bool(execution.analysis_result.report_file_path),
-                "has_graph": hasattr(execution, "analysis_result") and execution.analysis_result.has_any_graph,
-                "has_profiles": execution.original_profiles.exists(),
-                "has_logs": bool(execution.tracer_stdout or execution.tracer_stderr),
-            }
-            for execution in executions
-        ]
+        data = [_build_tracer_execution_info(execution) for execution in executions]
         return Response({"executions": data})
 
     except (DatabaseError, OSError) as e:
@@ -257,7 +233,9 @@ def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
         "analysis": None,
         "has_logs": bool(execution.tracer_stdout or execution.tracer_stderr),
         "has_error": execution.status == "ERROR",
+        "error_type": execution.error_type,
         "error_message": error_message,
+        "has_profiles": execution.original_profiles.exists(),
     }
 
     # Add analysis data if available
