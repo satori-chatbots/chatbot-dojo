@@ -889,7 +889,7 @@ class ProfileExecution(models.Model):
         max_length=50,
         choices=ERROR_TYPE_CHOICES,
         blank=True,
-        null=True,
+        default="",
         help_text="Specific type of error encountered during TRACER execution.",
     )
 

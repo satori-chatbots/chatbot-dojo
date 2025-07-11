@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
+from django.db import DatabaseError, IntegrityError
 
 # Import TRACER custom exceptions for proper error handling
+# Use a more robust import approach to avoid redefinition issues
 try:
     from tracer import (
         ConnectorAuthenticationError,
@@ -24,37 +26,23 @@ try:
         TracerError,
     )
 except ImportError:
-    # Fallback if TRACER package is not available
-    class TracerError(Exception):
-        """Base TRACER error."""
+    # Create a simple base exception if TRACER is not available
+    # This is just for type checking and won't be used in practice
+    TracerError = Exception
+    GraphvizNotInstalledError = Exception
+    ConnectorError = Exception
+    ConnectorConnectionError = Exception
+    ConnectorAuthenticationError = Exception
+    ConnectorConfigurationError = Exception
+    ConnectorResponseError = Exception
+    LLMError = Exception
 
-    class GraphvizNotInstalledError(TracerError):
-        """Graphviz not installed error."""
-
-    class ConnectorError(TracerError):
-        """Base connector error."""
-
-    class ConnectorConnectionError(ConnectorError):
-        """Connector connection error."""
-
-    class ConnectorAuthenticationError(ConnectorError):
-        """Connector authentication error."""
-
-    class ConnectorConfigurationError(ConnectorError):
-        """Connector configuration error."""
-
-    class ConnectorResponseError(ConnectorError):
-        """Connector response error."""
-
-    class LLMError(TracerError):
-        """LLM error."""
 
 from tester.api.base import logger
 
 # Import here to avoid circular imports in runtime, but linter prefers top-level
 from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import ProfileExecution, ProfileGenerationTask, Project
-
 
 # Mapping of TRACER exceptions to error type codes for the database
 TRACER_EXCEPTION_MAPPING = {
@@ -126,7 +114,7 @@ class TracerGenerator:
         except ProfileGenerationTask.DoesNotExist:
             logger.error(f"ProfileGenerationTask with ID {task_id} not found")
             # Task doesn't exist, can't update it - this IS a Django app error
-        except Exception as e:
+        except (DatabaseError, IntegrityError, OSError) as e:
             # This is likely a Django application error, not a user execution error
             logger.error(f"Unexpected Django error in TRACER profile generation for task {task_id}: {e!s}")
 
@@ -139,14 +127,14 @@ class TracerGenerator:
                     task.status = "ERROR"
                     task.error_message = error_message
                     task.save()
-                except Exception as save_error:
+                except (DatabaseError, IntegrityError) as save_error:
                     logger.critical(f"Failed to save error status to task {task_id}: {save_error!s}")
 
             if execution:
                 try:
                     execution.status = "ERROR"
                     execution.save()
-                except Exception as save_error:
+                except (DatabaseError, IntegrityError) as save_error:
                     logger.critical(f"Failed to save error status to execution: {save_error!s}")
 
             # Don't re-raise the exception to prevent console spam
@@ -223,8 +211,8 @@ class TracerGenerator:
 
             if success:
                 self._post_process_results(task, execution, output_dir)
-
-            return success
+            else:
+                return False
 
         except ValueError as e:
             # Project configuration errors - user execution error
@@ -238,12 +226,14 @@ class TracerGenerator:
             task.error_message = "File system error occurred. Please check permissions and try again."
             task.save()
             return False
-        except Exception as e:
+        except (DatabaseError, IntegrityError) as e:
             # Any other unexpected errors - likely Django app errors
             logger.error(f"Unexpected Django error in TRACER execution for task {task.id}: {e!s}")
             task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
             task.save()
             return False
+        else:
+            return True
 
     def _validate_project_configuration(self, project: Project) -> None:
         """Validate that project has required configuration."""
@@ -362,7 +352,7 @@ class TracerGenerator:
                 update_fields.append("error_type")
 
                 # Generate user-friendly error message
-                user_friendly_error = self._generate_user_friendly_error_message(error_type, full_stderr)
+                user_friendly_error = self._generate_user_friendly_error_message(error_type)
 
                 # TRACER execution failure - user execution error, log at info level
                 logger.info(f"TRACER execution failed for task {task.id} (error_type: {error_type})")
@@ -375,12 +365,13 @@ class TracerGenerator:
                 return False
 
             logger.info(f"TRACER execution successful for task {task.id}")
-            return True
 
         except subprocess.SubprocessError as e:
             # TRACER command execution issues - user execution error
             logger.info(f"TRACER subprocess error for task {task.id}: {e!s}")
-            task.error_message = "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
+            task.error_message = (
+                "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
+            )
             task.save()
             execution.error_type = "SUBPROCESS_ERROR"
             execution.save(update_fields=["error_type"])
@@ -393,7 +384,7 @@ class TracerGenerator:
             execution.error_type = "SYSTEM_ERROR"
             execution.save(update_fields=["error_type"])
             return False
-        except Exception as e:
+        except (DatabaseError, IntegrityError) as e:
             # Unexpected errors - likely Django app errors
             logger.error(f"Unexpected Django error during TRACER subprocess for task {task.id}: {e!s}")
             task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
@@ -401,10 +392,11 @@ class TracerGenerator:
             execution.error_type = "OTHER"
             execution.save(update_fields=["error_type"])
             return False
+        else:
+            return True
 
     def _parse_tracer_error(self, stderr: str) -> str:
-        """
-        Parse TRACER stderr to identify specific exception types.
+        """Parse TRACER stderr to identify specific exception types.
 
         Since TRACER runs as a subprocess, we parse the traceback output
         to identify which specific exception was raised.
@@ -423,14 +415,11 @@ class TracerGenerator:
             ("connectorconfigurationerror", "CONNECTOR_CONFIGURATION"),
             ("connectorconnectionerror", "CONNECTOR_CONNECTION"),
             ("connectorresponseerror", "CONNECTOR_RESPONSE"),
-
             # General connector error (fallback for connector issues)
             ("connectorerror", "CONNECTOR_ERROR"),
-
             # Other specific errors
             ("graphviznotinstallederror", "GRAPHVIZ_NOT_INSTALLED"),
             ("llmerror", "LLM_ERROR"),
-
             # Base TRACER error (most general)
             ("tracererror", "TRACER_ERROR"),
         ]
@@ -556,81 +545,59 @@ class TracerGenerator:
             progress = 10 + int((current_session / total_sessions_from_log) * 40)
             task.progress_percentage = progress
 
-    def _generate_user_friendly_error_message(self, error_type: str, stderr: str) -> str:
-        """
-        Generate user-friendly error messages based on the error type.
+    def _generate_user_friendly_error_message(self, error_type: str) -> str:
+        """Generate user-friendly error messages based on the error type.
 
         Args:
             error_type: The parsed error type code
-            stderr: The raw stderr output for additional context
 
         Returns:
             A user-friendly error message
         """
         error_messages = {
             "GRAPHVIZ_NOT_INSTALLED": (
-                "Graphviz is not installed on the system. "
-                "Please install Graphviz to generate visualization graphs."
+                "Graphviz is not installed on the system. Contact the system administrator to install Graphviz on the backend server."
             ),
             "CONNECTOR_CONNECTION": (
-                "Unable to connect to the chatbot. "
-                "Please check the chatbot URL and ensure the service is running."
+                "Unable to connect to the chatbot. Please check the chatbot URL and ensure the service is running."
             ),
             "CONNECTOR_AUTHENTICATION": (
-                "Authentication failed with the chatbot. "
-                "Please verify the API key or authentication credentials."
+                "Authentication failed with the chatbot. Please verify the API key or authentication credentials."
             ),
             "CONNECTOR_CONFIGURATION": (
-                "The chatbot connector is not configured correctly. "
-                "Please check the connector settings and parameters."
+                "The chatbot connector is not configured correctly. Please check the connector settings and parameters."
             ),
             "CONNECTOR_RESPONSE": (
                 "The chatbot returned an invalid or unexpected response. "
                 "This may be a temporary issue with the chatbot service."
             ),
             "LLM_ERROR": (
-                "An error occurred with the Language Model API. "
-                "Please check your API key and model configuration."
+                "An error occurred with the Language Model API. Please check your API key and model configuration."
             ),
             "CONNECTOR_ERROR": (
                 "A general error occurred with the chatbot connector. "
                 "Please check the connector configuration and try again."
             ),
             "TRACER_ERROR": (
-                "An error occurred during TRACER execution. "
-                "Please check the configuration and try again."
+                "An error occurred during TRACER execution. Please check the configuration and try again."
             ),
             "PERMISSION_ERROR": (
-                "Permission denied during TRACER execution. "
-                "Please check file and directory permissions."
+                "Permission denied during TRACER execution. Please check file and directory permissions."
             ),
             "CONNECTION_ERROR": (
-                "Network connection error occurred. "
-                "Please check your internet connection and try again."
+                "Network connection error occurred. Please check your internet connection and try again."
             ),
-            "TIMEOUT_ERROR": (
-                "Operation timed out. "
-                "The chatbot or API may be responding slowly. Please try again."
-            ),
-            "API_KEY_ERROR": (
-                "API key error. "
-                "Please verify your API key is correct and has sufficient permissions."
-            ),
-            "AUTHENTICATION_ERROR": (
-                "Authentication error occurred. "
-                "Please check your credentials and try again."
-            ),
+            "TIMEOUT_ERROR": ("Operation timed out. The chatbot or API may be responding slowly. Please try again."),
+            "API_KEY_ERROR": ("API key error. Please verify your API key is correct and has sufficient permissions."),
+            "AUTHENTICATION_ERROR": ("Authentication error occurred. Please check your credentials and try again."),
             "NOT_FOUND_ERROR": (
-                "Required resource not found. "
-                "Please check the configuration and ensure all dependencies are available."
+                "Required resource not found. Please check the configuration and ensure all dependencies are available."
             ),
             "SUBPROCESS_ERROR": (
-                "Failed to execute TRACER command. "
-                "Please ensure TRACER is properly installed and accessible."
+                "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
             ),
             "SYSTEM_ERROR": (
-                "A system error occurred during execution. "
-                "Please try again or contact support if the issue persists."
+                "A system error occurred during execution. Please try again or contact support if the issue persists."
             ),
         }
 

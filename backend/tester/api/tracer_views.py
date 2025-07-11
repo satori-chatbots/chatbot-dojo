@@ -190,9 +190,6 @@ def check_ongoing_generation(_request: Request, project_id: int) -> Response:
 def get_tracer_executions(request: Request) -> Response:
     """Get all TRACER executions across all user projects for the dashboard."""
     try:
-        # Get all projects owned by the user
-        user_projects = Project.objects.filter(owner=request.user)
-
         # Get all TRACER executions for user's projects
         executions = (
             ProfileExecution.objects.filter(project__owner=request.user, execution_type="tracer")
@@ -203,25 +200,28 @@ def get_tracer_executions(request: Request) -> Response:
 
         data = [
             {
-                "id": exec.id,
-                "project_id": exec.project.id,
-                "project_name": exec.project.name,
-                "execution_name": exec.execution_name,
-                "sessions": exec.sessions,
-                "turns_per_session": exec.turns_per_session,
-                "verbosity": exec.verbosity,
-                "status": exec.status,
-                "error_type": exec.get_error_type_display() if exec.error_type else None,
-                "error_message": exec.generation_tasks.first().error_message if exec.generation_tasks.exists() and exec.generation_tasks.first().error_message else None,
-                "execution_time_minutes": exec.execution_time_minutes,
-                "created_at": exec.created_at.isoformat(),
-                "generated_profiles_count": exec.generated_profiles_count,
-                "has_report": hasattr(exec, "analysis_result") and bool(exec.analysis_result.report_file_path),
-                "has_graph": hasattr(exec, "analysis_result") and exec.analysis_result.has_any_graph,
-                "has_profiles": exec.original_profiles.exists(),
-                "has_logs": bool(exec.tracer_stdout or exec.tracer_stderr),
+                "id": execution.id,
+                "project_id": execution.project.id,
+                "project_name": execution.project.name,
+                "execution_name": execution.execution_name,
+                "sessions": execution.sessions,
+                "turns_per_session": execution.turns_per_session,
+                "verbosity": execution.verbosity,
+                "status": execution.status,
+                "error_type": execution.get_error_type_display() if execution.error_type else None,
+                "error_message": execution.generation_tasks.first().error_message
+                if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message
+                else None,
+                "execution_time_minutes": execution.execution_time_minutes,
+                "created_at": execution.created_at.isoformat(),
+                "generated_profiles_count": execution.generated_profiles_count,
+                "has_report": hasattr(execution, "analysis_result")
+                and bool(execution.analysis_result.report_file_path),
+                "has_graph": hasattr(execution, "analysis_result") and execution.analysis_result.has_any_graph,
+                "has_profiles": execution.original_profiles.exists(),
+                "has_logs": bool(execution.tracer_stdout or execution.tracer_stderr),
             }
-            for exec in executions
+            for execution in executions
         ]
         return Response({"executions": data})
 
@@ -533,7 +533,9 @@ def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
                 "verbosity": execution.verbosity,
                 "created_at": execution.created_at.isoformat(),
                 "error_type": execution.error_type,
-                "error_message": execution.generation_tasks.first().error_message if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message else None,
+                "error_message": execution.generation_tasks.first().error_message
+                if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message
+                else None,
             }
         )
 
