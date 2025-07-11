@@ -7,4 +7,41 @@ export default defineConfig({
   server: {
     host: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React libraries
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+
+          // UI Framework
+          "ui-vendor": ["@heroui/react", "framer-motion", "next-themes"],
+
+          // Code Editor
+          "codemirror-vendor": [
+            "@uiw/react-codemirror",
+            "@codemirror/lang-yaml",
+            "@codemirror/search",
+            "@uiw/codemirror-theme-github",
+            "@uiw/codemirror-theme-material",
+            "thememirror",
+          ],
+
+          // Utilities
+          "utils-vendor": [
+            "lodash",
+            "date-fns",
+            "js-yaml",
+            "react-dropzone",
+            "react-window",
+          ],
+
+          // Icons
+          "icons-vendor": ["lucide-react", "react-icons"],
+        },
+      },
+    },
+    // Increase chunk size warning limit to 700 since heroui is already 500+
+    chunkSizeWarningLimit: 700,
+  },
 });

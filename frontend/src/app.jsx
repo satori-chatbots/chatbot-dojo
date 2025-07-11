@@ -1,15 +1,8 @@
 import React from "react";
 import { Routes, Route, Link, useNavigate, useHref } from "react-router-dom";
-import Home from "./views/home";
-import Dashboard from "./views/dashboard";
-import ChatbotConnectors from "./views/chatbot-connectors";
-import ProjectsDashboard from "./views/projects-dashboard";
-import TestCase from "./views/test-case";
-import LoginView from "./views/login-view";
-import TracerDashboard from "./views/tracer-dashboard";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
-import { Button, Switch } from "@heroui/react";
+import { useEffect, useState, Suspense } from "react";
+import { Button, Switch, Spinner } from "@heroui/react";
 import {
   Navbar,
   NavbarContent,
@@ -24,15 +17,35 @@ import {
 } from "@heroui/react";
 import { HeroUIProvider } from "@heroui/react";
 import { useLocation } from "react-router-dom";
-import SignupView from "./views/signup-view";
 import { AuthProvider, useAuth } from "./contexts/auth-context";
 import PrivateRoute from "./components/private-route";
-import UserProfileView from "./views/user-profile-view";
 import { MyCustomToastProvider } from "./contexts/my-custom-toast-context";
 import { SetupProvider } from "./contexts/setup-context";
-import YamlEditor from "./views/yaml-editor-view";
-import SetupGuide from "./views/setup-guide";
 import { ChevronDown } from "lucide-react";
+
+// Lazy load components for code splitting
+const Home = React.lazy(() => import("./views/home"));
+const Dashboard = React.lazy(() => import("./views/dashboard"));
+const ChatbotConnectors = React.lazy(
+  () => import("./views/chatbot-connectors"),
+);
+const ProjectsDashboard = React.lazy(
+  () => import("./views/projects-dashboard"),
+);
+const TestCase = React.lazy(() => import("./views/test-case"));
+const LoginView = React.lazy(() => import("./views/login-view"));
+const TracerDashboard = React.lazy(() => import("./views/tracer-dashboard"));
+const SignupView = React.lazy(() => import("./views/signup-view"));
+const UserProfileView = React.lazy(() => import("./views/user-profile-view"));
+const YamlEditor = React.lazy(() => import("./views/yaml-editor-view"));
+const SetupGuide = React.lazy(() => import("./views/setup-guide"));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <Spinner size="lg" color="primary" />
+  </div>
+);
 
 export const MoonIcon = (properties) => {
   return (
@@ -400,76 +413,78 @@ function AppContent() {
 
         {/* Main Content */}
         <main className="flex-1 w-full m-auto flex">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Home />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route
-              path="/tracer-dashboard"
-              element={
-                <PrivateRoute>
-                  <TracerDashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/chatbot-connectors"
-              element={
-                <PrivateRoute>
-                  <ChatbotConnectors />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/projects"
-              element={
-                <PrivateRoute>
-                  <ProjectsDashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/test-case/:id" element={<TestCase />} />
-            <Route path="/login" element={<LoginView />} />
-            <Route path="/signup" element={<SignupView />} />
-            <Route
-              path="/profile"
-              element={
-                <PrivateRoute>
-                  <UserProfileView />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/yaml-editor"
-              element={
-                <PrivateRoute>
-                  <YamlEditor />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/yaml-editor/:fileId"
-              element={
-                <PrivateRoute>
-                  <YamlEditor />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/setup"
-              element={
-                <PrivateRoute>
-                  <SetupGuide />
-                </PrivateRoute>
-              }
-            />
-          </Routes>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/tracer-dashboard"
+                element={
+                  <PrivateRoute>
+                    <TracerDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/chatbot-connectors"
+                element={
+                  <PrivateRoute>
+                    <ChatbotConnectors />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/projects"
+                element={
+                  <PrivateRoute>
+                    <ProjectsDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="/test-case/:id" element={<TestCase />} />
+              <Route path="/login" element={<LoginView />} />
+              <Route path="/signup" element={<SignupView />} />
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute>
+                    <UserProfileView />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/yaml-editor"
+                element={
+                  <PrivateRoute>
+                    <YamlEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/yaml-editor/:fileId"
+                element={
+                  <PrivateRoute>
+                    <YamlEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/setup"
+                element={
+                  <PrivateRoute>
+                    <SetupGuide />
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
+          </Suspense>
         </main>
 
         {/* Footer */}
