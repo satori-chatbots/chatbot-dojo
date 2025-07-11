@@ -190,23 +190,16 @@ def check_ongoing_generation(_request: Request, project_id: int) -> Response:
 def get_tracer_executions(request: Request) -> Response:
     """Get all TRACER executions across all user projects for the dashboard."""
     try:
-        # Get all projects owned by the user
-        user_projects = Project.objects.filter(owner=request.user)
-
         # Get all TRACER executions for user's projects
-        tracer_executions = (
-            ProfileExecution.objects.filter(project__in=user_projects, execution_type="tracer")
+        executions = (
+            ProfileExecution.objects.filter(project__owner=request.user, execution_type="tracer")
             .select_related("project", "analysis_result")
             .prefetch_related("generation_tasks")
             .order_by("-created_at")
         )
 
-        execution_data = []
-        for execution in tracer_executions:
-            execution_info = _build_tracer_execution_info(execution)
-            execution_data.append(execution_info)
-
-        return Response({"executions": execution_data})
+        data = [_build_tracer_execution_info(execution) for execution in executions]
+        return Response({"executions": data})
 
     except (DatabaseError, OSError) as e:
         logger.error(f"Error fetching TRACER executions: {e!s}")
@@ -240,7 +233,9 @@ def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
         "analysis": None,
         "has_logs": bool(execution.tracer_stdout or execution.tracer_stderr),
         "has_error": execution.status == "ERROR",
+        "error_type": execution.error_type,
         "error_message": error_message,
+        "has_profiles": execution.original_profiles.exists(),
     }
 
     # Add analysis data if available
@@ -515,6 +510,10 @@ def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
                 "stderr": execution.tracer_stderr or "",
                 "verbosity": execution.verbosity,
                 "created_at": execution.created_at.isoformat(),
+                "error_type": execution.error_type,
+                "error_message": execution.generation_tasks.first().error_message
+                if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message
+                else None,
             }
         )
 

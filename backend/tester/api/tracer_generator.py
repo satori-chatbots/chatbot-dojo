@@ -10,12 +10,51 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
+from django.db import DatabaseError, IntegrityError
+
+# Import TRACER custom exceptions for proper error handling
+# Use a more robust import approach to avoid redefinition issues
+try:
+    from tracer import (
+        ConnectorAuthenticationError,
+        ConnectorConfigurationError,
+        ConnectorConnectionError,
+        ConnectorError,
+        ConnectorResponseError,
+        GraphvizNotInstalledError,
+        LLMError,
+        TracerError,
+    )
+except ImportError:
+    # Create a simple base exception if TRACER is not available
+    # This is just for type checking and won't be used in practice
+    TracerError = Exception
+    GraphvizNotInstalledError = Exception
+    ConnectorError = Exception
+    ConnectorConnectionError = Exception
+    ConnectorAuthenticationError = Exception
+    ConnectorConfigurationError = Exception
+    ConnectorResponseError = Exception
+    LLMError = Exception
+
 
 from tester.api.base import logger
 
 # Import here to avoid circular imports in runtime, but linter prefers top-level
 from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import ProfileExecution, ProfileGenerationTask, Project
+
+# Mapping of TRACER exceptions to error type codes for the database
+TRACER_EXCEPTION_MAPPING = {
+    "GraphvizNotInstalledError": "GRAPHVIZ_NOT_INSTALLED",
+    "ConnectorConnectionError": "CONNECTOR_CONNECTION",
+    "ConnectorAuthenticationError": "CONNECTOR_AUTHENTICATION",
+    "ConnectorConfigurationError": "CONNECTOR_CONFIGURATION",
+    "ConnectorResponseError": "CONNECTOR_RESPONSE",
+    "LLMError": "LLM_ERROR",
+    "ConnectorError": "CONNECTOR_ERROR",
+    "TracerError": "TRACER_ERROR",
+}
 
 
 @dataclass
@@ -72,9 +111,34 @@ class TracerGenerator:
 
             self._finalize_execution(task, execution, success=success)
 
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error in TRACER profile generation for task {task_id}: {e!s}")
-            self._handle_execution_error(task, execution, str(e))
+        except ProfileGenerationTask.DoesNotExist:
+            logger.error(f"ProfileGenerationTask with ID {task_id} not found")
+            # Task doesn't exist, can't update it - this IS a Django app error
+        except (DatabaseError, IntegrityError, OSError) as e:
+            # This is likely a Django application error, not a user execution error
+            logger.error(f"Unexpected Django error in TRACER profile generation for task {task_id}: {e!s}")
+
+            # Generate a user-friendly error message for unexpected errors
+            error_message = "An unexpected error occurred during profile generation. Please try again or contact support if the issue persists."
+
+            # Try to update task and execution if they exist
+            if task:
+                try:
+                    task.status = "ERROR"
+                    task.error_message = error_message
+                    task.save()
+                except (DatabaseError, IntegrityError) as save_error:
+                    logger.critical(f"Failed to save error status to task {task_id}: {save_error!s}")
+
+            if execution:
+                try:
+                    execution.status = "ERROR"
+                    execution.save()
+                except (DatabaseError, IntegrityError) as save_error:
+                    logger.critical(f"Failed to save error status to execution: {save_error!s}")
+
+            # Don't re-raise the exception to prevent console spam
+            # The error is logged and stored in the database for user visibility
 
     def _initialize_task(self, task_id: int) -> ProfileGenerationTask:
         """Initialize and update task status."""
@@ -118,34 +182,14 @@ class TracerGenerator:
             logger.info(f"TRACER profile generation completed for task {task.id}")
         else:
             task.status = "ERROR"
-            task.error_message = "TRACER execution failed"
+            # Only set a generic error message if we don't already have a specific one
+            if not task.error_message or task.error_message.strip() == "":
+                task.error_message = "TRACER execution failed - check logs for details"
             execution.status = "ERROR"
-            logger.error(f"TRACER profile generation failed for task {task.id}")
+            logger.info(f"TRACER profile generation failed for task {task.id}: {task.error_message}")
 
         task.save()
         execution.save()
-
-    def _handle_execution_error(
-        self, task: ProfileGenerationTask | None, execution: ProfileExecution | None, error_message: str
-    ) -> None:
-        """Handle errors during execution."""
-        if task:
-            try:
-                task.status = "ERROR"
-                task.error_message = error_message
-                task.save()
-            except Exception as update_exc:  # noqa: BLE001
-                logger.critical(
-                    f"Failed to update task {task.id} to ERROR status after an error. "
-                    f"Initial error: {error_message}. Update error: {update_exc!s}"
-                )
-
-        if execution:
-            try:
-                execution.status = "ERROR"
-                execution.save()
-            except Exception:  # noqa: BLE001
-                logger.critical(f"Failed to update execution {execution.id} to ERROR status")
 
     def execute_tracer_generation(
         self,
@@ -167,13 +211,29 @@ class TracerGenerator:
 
             if success:
                 self._post_process_results(task, execution, output_dir)
-        except (subprocess.SubprocessError, OSError, ValueError) as e:
-            logger.error(f"TRACER execution error: {e!s}")
-            task.error_message = f"TRACER execution error: {e!s}"
+            else:
+                return False
+
+        except ValueError as e:
+            # Project configuration errors - user execution error
+            logger.info(f"TRACER project configuration error for task {task.id}: {e!s}")
+            task.error_message = f"Project configuration error: {e!s}"
+            task.save()
+            return False
+        except OSError as e:
+            # File system errors - could be user execution error or system issue
+            logger.info(f"TRACER file system error for task {task.id}: {e!s}")
+            task.error_message = "File system error occurred. Please check permissions and try again."
+            task.save()
+            return False
+        except (DatabaseError, IntegrityError) as e:
+            # Any other unexpected errors - likely Django app errors
+            logger.error(f"Unexpected Django error in TRACER execution for task {task.id}: {e!s}")
+            task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
             task.save()
             return False
         else:
-            return success
+            return True
 
     def _validate_project_configuration(self, project: Project) -> None:
         """Validate that project has required configuration."""
@@ -259,37 +319,134 @@ class TracerGenerator:
         self, task: ProfileGenerationTask, execution: ProfileExecution, cmd: list[str], env: dict[str, str]
     ) -> bool:
         """Execute the TRACER subprocess and handle output."""
-        # S603: The command and environment are constructed from trusted, internal variables only
-        process = subprocess.Popen(  # noqa: S603
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-            bufsize=1,
-            universal_newlines=True,
-        )
+        try:
+            # S603: The command and environment are constructed from trusted, internal variables only
+            process = subprocess.Popen(  # noqa: S603
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+                bufsize=1,
+                universal_newlines=True,
+            )
 
-        full_stdout = self._handle_process_output(task, process)
-        process.wait()
+            full_stdout = self._handle_process_output(task, process)
+            process.wait()
 
-        full_stderr = []
-        if process.stderr:
-            full_stderr = process.stderr.readlines()
+            full_stderr_lines = []
+            if process.stderr:
+                full_stderr_lines = process.stderr.readlines()
 
-        # Store TRACER output for debugging
-        execution.tracer_stdout = "".join(full_stdout)
-        execution.tracer_stderr = "".join(full_stderr)
-        execution.save(update_fields=["tracer_stdout", "tracer_stderr"])
+            full_stderr = "".join(full_stderr_lines)
 
-        if process.returncode != 0:
-            logger.error(f"TRACER execution failed: {''.join(full_stderr)}")
-            task.error_message = f"TRACER failed: {''.join(full_stderr)}"
+            # Store TRACER output for debugging
+            execution.tracer_stdout = "".join(full_stdout)
+            execution.tracer_stderr = full_stderr
+            update_fields = ["tracer_stdout", "tracer_stderr"]
+
+            if process.returncode != 0:
+                # Parse the specific error type from stderr
+                error_type = self._parse_tracer_error(full_stderr)
+                execution.error_type = error_type
+                update_fields.append("error_type")
+
+                # Generate user-friendly error message
+                user_friendly_error = self._generate_user_friendly_error_message(error_type)
+
+                # TRACER execution failure - user execution error, log at info level
+                logger.info(f"TRACER execution failed for task {task.id} (error_type: {error_type})")
+                task.error_message = user_friendly_error
+                task.save()
+
+            execution.save(update_fields=update_fields)
+
+            if process.returncode != 0:
+                return False
+
+            logger.info(f"TRACER execution successful for task {task.id}")
+
+        except subprocess.SubprocessError as e:
+            # TRACER command execution issues - user execution error
+            logger.info(f"TRACER subprocess error for task {task.id}: {e!s}")
+            task.error_message = (
+                "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
+            )
             task.save()
+            execution.error_type = "SUBPROCESS_ERROR"
+            execution.save(update_fields=["error_type"])
             return False
+        except OSError as e:
+            # System errors - could be user or system issue
+            logger.info(f"TRACER system error for task {task.id}: {e!s}")
+            task.error_message = "A system error occurred during TRACER execution. Please try again or contact support if the issue persists."
+            task.save()
+            execution.error_type = "SYSTEM_ERROR"
+            execution.save(update_fields=["error_type"])
+            return False
+        except (DatabaseError, IntegrityError) as e:
+            # Unexpected errors - likely Django app errors
+            logger.error(f"Unexpected Django error during TRACER subprocess for task {task.id}: {e!s}")
+            task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
+            task.save()
+            execution.error_type = "OTHER"
+            execution.save(update_fields=["error_type"])
+            return False
+        else:
+            return True
 
-        logger.info(f"TRACER execution successful for task {task.id}")
-        return True
+    def _parse_tracer_error(self, stderr: str) -> str:
+        """Parse TRACER stderr to identify specific exception types.
+
+        Since TRACER runs as a subprocess, we parse the traceback output
+        to identify which specific exception was raised.
+        """
+        if not stderr.strip():
+            return "OTHER"
+
+        # Normalize the stderr for consistent parsing
+        stderr_lower = stderr.lower()
+
+        # Look for exception class names in the traceback
+        # Order matters - check more specific exceptions first
+        exception_patterns = [
+            # Specific connector errors (check before generic ConnectorError)
+            ("connectorauthenticationerror", "CONNECTOR_AUTHENTICATION"),
+            ("connectorconfigurationerror", "CONNECTOR_CONFIGURATION"),
+            ("connectorconnectionerror", "CONNECTOR_CONNECTION"),
+            ("connectorresponseerror", "CONNECTOR_RESPONSE"),
+            # General connector error (fallback for connector issues)
+            ("connectorerror", "CONNECTOR_ERROR"),
+            # Other specific errors
+            ("graphviznotinstallederror", "GRAPHVIZ_NOT_INSTALLED"),
+            ("llmerror", "LLM_ERROR"),
+            # Base TRACER error (most general)
+            ("tracererror", "TRACER_ERROR"),
+        ]
+
+        for pattern, error_code in exception_patterns:
+            if pattern in stderr_lower:
+                logger.info(f"Identified TRACER exception: {pattern} -> {error_code}")
+                return error_code
+
+        # Check for common error indicators if no specific exception is found
+        error_indicators = [
+            ("permission denied", "PERMISSION_ERROR"),
+            ("connection refused", "CONNECTION_ERROR"),
+            ("timeout", "TIMEOUT_ERROR"),
+            ("api key", "API_KEY_ERROR"),
+            ("authentication", "AUTHENTICATION_ERROR"),
+            ("not found", "NOT_FOUND_ERROR"),
+        ]
+
+        for indicator, error_code in error_indicators:
+            if indicator in stderr_lower:
+                logger.info(f"Identified error indicator: {indicator} -> {error_code}")
+                return error_code
+
+        # Log the unrecognized error for debugging
+        logger.debug(f"Could not categorize TRACER error type from stderr. stderr preview: {stderr[:200]}...")
+        return "OTHER"
 
     def _handle_process_output(self, task: ProfileGenerationTask, process: subprocess.Popen) -> list[str]:
         """Handle process output and update progress."""
@@ -331,7 +488,7 @@ class TracerGenerator:
                 pass
             task.save(update_fields=["stage", "progress_percentage"])
         except (ValueError, AttributeError, TypeError) as e:
-            logger.warning(f"Error updating progress from TRACER output: {e!s}")
+            logger.debug(f"Non-critical: Could not parse TRACER progress from output for task {task.id}: {e!s}")
 
     def _handle_exploration_phase(self, task: ProfileGenerationTask, line: str) -> bool:
         if "Initializing Chatbot Exploration Agent" in line:
@@ -387,3 +544,64 @@ class TracerGenerator:
             # Exploration is from 10% to 50%
             progress = 10 + int((current_session / total_sessions_from_log) * 40)
             task.progress_percentage = progress
+
+    def _generate_user_friendly_error_message(self, error_type: str) -> str:
+        """Generate user-friendly error messages based on the error type.
+
+        Args:
+            error_type: The parsed error type code
+
+        Returns:
+            A user-friendly error message
+        """
+        error_messages = {
+            "GRAPHVIZ_NOT_INSTALLED": (
+                "Graphviz is not installed on the system. Contact the system administrator to install Graphviz on the backend server."
+            ),
+            "CONNECTOR_CONNECTION": (
+                "Unable to connect to the chatbot. Please check the chatbot URL and ensure the service is running."
+            ),
+            "CONNECTOR_AUTHENTICATION": (
+                "Authentication failed with the chatbot. Please verify the API key or authentication credentials."
+            ),
+            "CONNECTOR_CONFIGURATION": (
+                "The chatbot connector is not configured correctly. Please check the connector settings and parameters."
+            ),
+            "CONNECTOR_RESPONSE": (
+                "The chatbot returned an invalid or unexpected response. "
+                "This may be a temporary issue with the chatbot service."
+            ),
+            "LLM_ERROR": (
+                "An error occurred with the Language Model API. Please check your API key and model configuration."
+            ),
+            "CONNECTOR_ERROR": (
+                "A general error occurred with the chatbot connector. "
+                "Please check the connector configuration and try again."
+            ),
+            "TRACER_ERROR": (
+                "An error occurred during TRACER execution. Please check the configuration and try again."
+            ),
+            "PERMISSION_ERROR": (
+                "Permission denied during TRACER execution. Please check file and directory permissions."
+            ),
+            "CONNECTION_ERROR": (
+                "Network connection error occurred. Please check your internet connection and try again."
+            ),
+            "TIMEOUT_ERROR": ("Operation timed out. The chatbot or API may be responding slowly. Please try again."),
+            "API_KEY_ERROR": ("API key error. Please verify your API key is correct and has sufficient permissions."),
+            "AUTHENTICATION_ERROR": ("Authentication error occurred. Please check your credentials and try again."),
+            "NOT_FOUND_ERROR": (
+                "Required resource not found. Please check the configuration and ensure all dependencies are available."
+            ),
+            "SUBPROCESS_ERROR": (
+                "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
+            ),
+            "SYSTEM_ERROR": (
+                "A system error occurred during execution. Please try again or contact support if the issue persists."
+            ),
+        }
+
+        user_message = error_messages.get(error_type, "An unknown error occurred during TRACER execution.")
+
+        # For debugging, include the error type in the message
+        return f"{user_message} (Error type: {error_type})"

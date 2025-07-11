@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, Button, Chip } from "@heroui/react";
+import { Link, Button, Chip, Tooltip } from "@heroui/react";
 import {
   ChevronDown,
   ChevronRight,
@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getErrorTypeDisplay } from "../utils/error-types";
 
 const ExecutionFolder = ({
   execution,
@@ -61,6 +62,32 @@ const ExecutionFolder = ({
       PENDING: { color: "default", label: "Pending" },
     };
 
+    // For error status, show specific error type if available
+    if (execution.status === "ERROR" && execution.error_type) {
+      const errorLabel = getErrorTypeDisplay(execution.error_type);
+      const chip = (
+        <Chip size="sm" color="danger" variant="flat">
+          {errorLabel}
+        </Chip>
+      );
+
+      // If we have a user-friendly error message, wrap in tooltip
+      if (execution.error_message) {
+        return (
+          <Tooltip
+            content={execution.error_message}
+            placement="top"
+            className="max-w-xs"
+          >
+            <span className="cursor-help">{chip}</span>
+          </Tooltip>
+        );
+      }
+
+      return chip;
+    }
+
+    // Default status display
     const config = statusConfig[execution.status] || statusConfig["PENDING"];
 
     return (

@@ -13,6 +13,7 @@ import {
   Trash2,
   Terminal,
 } from "lucide-react";
+import { getErrorTypeDisplay } from "../utils/error-types";
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);
@@ -74,15 +75,36 @@ const TracerExecutionCard = ({
                 <h3 className="text-sm font-semibold text-foreground truncate">
                   {formatDate(execution.created_at)}
                 </h3>
-                <Chip
-                  color={getStatusColor(execution.status)}
-                  variant="flat"
-                  startContent={getStatusIcon(execution.status)}
-                  size="sm"
-                  className="flex-shrink-0"
-                >
-                  {execution.status}
-                </Chip>
+                {execution.status === "ERROR" && execution.error_type ? (
+                  <Tooltip
+                    content={
+                      execution.error_message ||
+                      "An error occurred during execution"
+                    }
+                    placement="top"
+                    className="max-w-xs"
+                  >
+                    <Chip
+                      color={getStatusColor(execution.status)}
+                      variant="flat"
+                      startContent={getStatusIcon(execution.status)}
+                      size="sm"
+                      className="flex-shrink-0 cursor-help"
+                    >
+                      {getErrorTypeDisplay(execution.error_type)}
+                    </Chip>
+                  </Tooltip>
+                ) : (
+                  <Chip
+                    color={getStatusColor(execution.status)}
+                    variant="flat"
+                    startContent={getStatusIcon(execution.status)}
+                    size="sm"
+                    className="flex-shrink-0"
+                  >
+                    {execution.status}
+                  </Chip>
+                )}
               </div>
 
               <div className="flex items-center gap-4 text-xs text-default-500">

@@ -9,10 +9,12 @@ import {
   CardBody,
   Tabs,
   Tab,
+  Chip,
 } from "@heroui/react";
 import { Terminal, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { fetchTracerExecutionLogs } from "../api/file-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import { getErrorTypeInfo } from "../utils/error-types";
 
 const LogContent = React.memo(({ content, variant }) => {
   // Memoise log lines to avoid re-splitting on every render
@@ -71,35 +73,6 @@ const LogContent = React.memo(({ content, variant }) => {
 });
 
 LogContent.displayName = "LogContent";
-
-// Move arrow functions to outer scope
-const getStatusIcon = (status) => {
-  switch (status) {
-    case "COMPLETED": {
-      return <CheckCircle className="w-5 h-5 text-success" />;
-    }
-    case "ERROR": {
-      return <AlertCircle className="w-5 h-5 text-danger" />;
-    }
-    default: {
-      return <Terminal className="w-5 h-5 text-default-500" />;
-    }
-  }
-};
-
-const getStatusColor = (status) => {
-  switch (status) {
-    case "COMPLETED": {
-      return "text-success";
-    }
-    case "ERROR": {
-      return "text-danger";
-    }
-    default: {
-      return "text-default-500";
-    }
-  }
-};
 
 const ExecutionLogsViewer = ({ execution, onClose }) => {
   const [logsData, setLogsData] = useState();
@@ -188,195 +161,142 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {/* Execution Summary */}
-            <Card>
-              <CardBody className="pb-3">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Execution Summary</h3>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(logsData?.status)}
-                    <span
-                      className={`font-medium ${getStatusColor(logsData?.status)}`}
-                    >
-                      {logsData?.status}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-default-500">Execution Name</p>
-                    <p className="font-medium">{logsData?.execution_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-default-500">Created At</p>
-                    <p className="font-medium">
-                      {logsData?.created_at
-                        ? new Date(logsData.created_at).toLocaleString()
-                        : "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-default-500">Log Verbosity</p>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium capitalize">
-                        {logsData?.verbosity || "normal"}
-                      </span>
-                      {logsData?.verbosity === "verbose" && (
-                        <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">
-                          -v
-                        </span>
-                      )}
-                      {logsData?.verbosity === "debug" && (
-                        <span className="text-xs bg-warning-100 text-warning-700 px-2 py-0.5 rounded">
-                          -vv
-                        </span>
+            {/* Error Summary Section */}
+            {execution.status === "ERROR" && logsData?.error_type && (
+              <Card className="border-danger-200 bg-danger-50 dark:bg-danger-900/20">
+                <CardBody className="p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-danger mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="text-lg font-semibold text-danger">
+                          Execution Failed
+                        </h4>
+                        <Chip color="danger" variant="flat" size="sm">
+                          {getErrorTypeInfo(logsData.error_type).name}
+                        </Chip>
+                      </div>
+                      <p className="text-danger-700 dark:text-danger-300 mb-2">
+                        {getErrorTypeInfo(logsData.error_type).description}
+                      </p>
+                      {logsData.error_message && (
+                        <p className="text-sm text-danger-600 dark:text-danger-400 bg-danger-100 dark:bg-danger-800 p-3 rounded-md">
+                          {logsData.error_message}
+                        </p>
                       )}
                     </div>
                   </div>
-                </div>
-              </CardBody>
-            </Card>
+                </CardBody>
+              </Card>
+            )}
 
-            {/* Log Tabs */}
-            <Tabs
-              selectedKey={selectedTab}
-              onSelectionChange={setSelectedTab}
-              variant="underlined"
-              classNames={{
-                tabList:
-                  "gap-6 w-full relative rounded-none p-0 border-b border-divider",
-                cursor: "w-full bg-primary",
-                tab: "max-w-fit px-0 h-12",
-                tabContent: "group-data-[selected=true]:text-primary",
-              }}
-            >
-              <Tab key="summary" title="Summary">
-                <div className="space-y-4 pt-4">
-                  {/* Verbosity Level Explanation */}
-                  {logsData?.verbosity && (
-                    <Card className="border">
-                      <CardBody className="p-4">
-                        <h4 className="font-semibold mb-2">
-                          Log Verbosity Level
-                        </h4>
-                        <div className="text-sm space-y-2">
-                          {logsData.verbosity === "normal" && (
-                            <p className="text-default-600">
-                              <strong>Normal:</strong> Standard output with
-                              basic execution information.
-                            </p>
-                          )}
-                          {logsData.verbosity === "verbose" && (
-                            <p className="text-default-600">
-                              <strong>Verbose (-v):</strong> Shows conversations
-                              and interactions between TRACER and the chatbot,
-                              including dialogue content and response analysis.
-                            </p>
-                          )}
-                          {logsData.verbosity === "debug" && (
-                            <p className="text-default-600">
-                              <strong>Debug (-vv):</strong> Debug mode with
-                              detailed technical information, internal
-                              operations, API calls, and low-level debugging
-                              data.
-                            </p>
-                          )}
+            {/* Logs Tabs */}
+            <Card className="border-default-200">
+              <CardBody className="p-0">
+                <Tabs
+                  selectedKey={selectedTab}
+                  onSelectionChange={setSelectedTab}
+                  className="w-full"
+                >
+                  <Tab
+                    key="summary"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Summary
+                      </div>
+                    }
+                  >
+                    <div className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-default-600 mb-1">
+                            Status
+                          </h4>
+                          <Chip
+                            color={
+                              execution.status === "COMPLETED"
+                                ? "success"
+                                : execution.status === "ERROR"
+                                  ? "danger"
+                                  : "default"
+                            }
+                            variant="flat"
+                          >
+                            {execution.status}
+                          </Chip>
                         </div>
-                      </CardBody>
-                    </Card>
-                  )}
+                        <div>
+                          <h4 className="text-sm font-medium text-default-600 mb-1">
+                            Project
+                          </h4>
+                          <p className="text-sm text-foreground">
+                            {logsData?.project_name || execution.project_name}
+                          </p>
+                        </div>
+                      </div>
 
-                  {logsData?.stdout || logsData?.stderr ? (
-                    <div className="space-y-3">
-                      <p className="text-default-600">
-                        View the detailed output from the TRACER execution using
-                        the tabs above.
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Card className="border">
-                          <CardBody className="text-center p-4">
-                            <div className="text-2xl font-bold text-success">
-                              {stdoutLinesCount}
-                            </div>
-                            <div className="text-sm text-default-500">
-                              STDOUT Lines
-                            </div>
-                          </CardBody>
-                        </Card>
-                        <Card className="border">
-                          <CardBody className="text-center p-4">
-                            <div className="text-2xl font-bold text-danger">
-                              {stderrLinesCount}
-                            </div>
-                            <div className="text-sm text-default-500">
-                              STDERR Lines
-                            </div>
-                          </CardBody>
-                        </Card>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <h4 className="font-medium text-default-600 mb-1">
+                            Standard Output
+                          </h4>
+                          <p className="text-default-500">
+                            {stdoutLinesCount > 0
+                              ? `${stdoutLinesCount} lines`
+                              : "No output"}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-default-600 mb-1">
+                            Error Output
+                          </h4>
+                          <p className="text-default-500">
+                            {stderrLinesCount > 0
+                              ? `${stderrLinesCount} lines`
+                              : "No errors"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-default-500">
-                      <Terminal className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <h3 className="text-lg font-semibold mb-2">
-                        No Logs Available
-                      </h3>
-                      <p>
-                        {`This execution doesn't have any captured output logs.`}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </Tab>
+                  </Tab>
 
-              <Tab
-                key="stdout"
-                title={
-                  <div className="flex items-center gap-2">
-                    <span>STDOUT</span>
-                    {stdoutLinesCount > 0 && (
-                      <span className="bg-success text-success-foreground text-xs px-1.5 py-0.5 rounded">
-                        {stdoutLinesCount}
-                      </span>
-                    )}
-                  </div>
-                }
-              >
-                <div className="pt-4">
-                  {selectedTab === "stdout" && (
-                    <LogContent
-                      key="stdout-panel"
-                      content={logsData?.stdout}
-                      variant="STDOUT"
-                    />
-                  )}
-                </div>
-              </Tab>
+                  <Tab
+                    key="stdout"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-4 h-4" />
+                        Output
+                        {stdoutLinesCount > 0 && (
+                          <span className="text-xs bg-default-200 dark:bg-default-700 px-1.5 py-0.5 rounded">
+                            {stdoutLinesCount}
+                          </span>
+                        )}
+                      </div>
+                    }
+                  >
+                    <LogContent content={logsData?.stdout} variant="stdout" />
+                  </Tab>
 
-              <Tab
-                key="stderr"
-                title={
-                  <div className="flex items-center gap-2">
-                    <span>STDERR</span>
-                    {stderrLinesCount > 0 && (
-                      <span className="bg-danger text-danger-foreground text-xs px-1.5 py-0.5 rounded">
-                        {stderrLinesCount}
-                      </span>
-                    )}
-                  </div>
-                }
-              >
-                <div className="pt-4">
-                  {selectedTab === "stderr" && (
-                    <LogContent
-                      key="stderr-panel"
-                      content={logsData?.stderr}
-                      variant="STDERR"
-                    />
-                  )}
-                </div>
-              </Tab>
-            </Tabs>
+                  <Tab
+                    key="stderr"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        Errors
+                        {stderrLinesCount > 0 && (
+                          <span className="text-xs bg-danger-200 dark:bg-danger-700 px-1.5 py-0.5 rounded">
+                            {stderrLinesCount}
+                          </span>
+                        )}
+                      </div>
+                    }
+                  >
+                    <LogContent content={logsData?.stderr} variant="stderr" />
+                  </Tab>
+                </Tabs>
+              </CardBody>
+            </Card>
           </div>
         )}
       </ModalBody>
