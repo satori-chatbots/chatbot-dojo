@@ -193,8 +193,8 @@ def get_tracer_executions(request: Request) -> Response:
         # Get all TRACER executions for user's projects
         executions = (
             ProfileExecution.objects.filter(project__owner=request.user, execution_type="tracer")
-            .select_related("project")
-            .prefetch_related("analysis_result")
+            .select_related("project", "analysis_result")
+            .prefetch_related("generation_tasks")
             .order_by("-created_at")
         )
 
@@ -208,7 +208,7 @@ def get_tracer_executions(request: Request) -> Response:
                 "turns_per_session": execution.turns_per_session,
                 "verbosity": execution.verbosity,
                 "status": execution.status,
-                "error_type": execution.get_error_type_display() if execution.error_type else None,
+                "error_type": execution.error_type,
                 "error_message": execution.generation_tasks.first().error_message
                 if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message
                 else None,
