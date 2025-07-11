@@ -273,23 +273,49 @@ class TracerGenerator:
         full_stdout = self._handle_process_output(task, process)
         process.wait()
 
-        full_stderr = []
+        full_stderr_lines = []
         if process.stderr:
-            full_stderr = process.stderr.readlines()
+            full_stderr_lines = process.stderr.readlines()
+
+        full_stderr = "".join(full_stderr_lines)
 
         # Store TRACER output for debugging
         execution.tracer_stdout = "".join(full_stdout)
-        execution.tracer_stderr = "".join(full_stderr)
-        execution.save(update_fields=["tracer_stdout", "tracer_stderr"])
+        execution.tracer_stderr = full_stderr
+        update_fields = ["tracer_stdout", "tracer_stderr"]
 
         if process.returncode != 0:
-            logger.error(f"TRACER execution failed: {''.join(full_stderr)}")
-            task.error_message = f"TRACER failed: {''.join(full_stderr)}"
+            execution.error_type = self._parse_tracer_error(full_stderr)
+            update_fields.append("error_type")
+            logger.error(f"TRACER execution failed: {full_stderr}")
+            task.error_message = f"TRACER failed: {full_stderr}"
             task.save()
+
+        execution.save(update_fields=update_fields)
+
+        if process.returncode != 0:
             return False
 
         logger.info(f"TRACER execution successful for task {task.id}")
         return True
+
+    def _parse_tracer_error(self, stderr: str) -> str:
+        """Parse TRACER stderr to identify a specific error type."""
+        if "GraphvizNotInstalledError" in stderr:
+            return "GRAPHVIZ_NOT_INSTALLED"
+        if "ConnectorConnectionError" in stderr:
+            return "CONNECTOR_CONNECTION"
+        if "ConnectorAuthenticationError" in stderr:
+            return "CONNECTOR_AUTHENTICATION"
+        if "ConnectorConfigurationError" in stderr:
+            return "CONNECTOR_CONFIGURATION"
+        if "ConnectorResponseError" in stderr:
+            return "CONNECTOR_RESPONSE"
+        if "LLMError" in stderr:
+            return "LLM_ERROR"
+        if "TracerError" in stderr:
+            return "UNKNOWN_TRACER_ERROR"
+        return "OTHER"
 
     def _handle_process_output(self, task: ProfileGenerationTask, process: subprocess.Popen) -> list[str]:
         """Handle process output and update progress."""

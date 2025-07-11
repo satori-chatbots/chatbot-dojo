@@ -194,19 +194,35 @@ def get_tracer_executions(request: Request) -> Response:
         user_projects = Project.objects.filter(owner=request.user)
 
         # Get all TRACER executions for user's projects
-        tracer_executions = (
-            ProfileExecution.objects.filter(project__in=user_projects, execution_type="tracer")
-            .select_related("project", "analysis_result")
-            .prefetch_related("generation_tasks")
+        executions = (
+            ProfileExecution.objects.filter(project__owner=request.user, execution_type="tracer")
+            .select_related("project")
+            .prefetch_related("analysis_result")
             .order_by("-created_at")
         )
 
-        execution_data = []
-        for execution in tracer_executions:
-            execution_info = _build_tracer_execution_info(execution)
-            execution_data.append(execution_info)
-
-        return Response({"executions": execution_data})
+        data = [
+            {
+                "id": exec.id,
+                "project_id": exec.project.id,
+                "project_name": exec.project.name,
+                "execution_name": exec.execution_name,
+                "sessions": exec.sessions,
+                "turns_per_session": exec.turns_per_session,
+                "verbosity": exec.verbosity,
+                "status": exec.status,
+                "error_type": exec.get_error_type_display() if exec.error_type else None,
+                "execution_time_minutes": exec.execution_time_minutes,
+                "created_at": exec.created_at.isoformat(),
+                "generated_profiles_count": exec.generated_profiles_count,
+                "has_report": hasattr(exec, "analysis_result") and bool(exec.analysis_result.report_file_path),
+                "has_graph": hasattr(exec, "analysis_result") and exec.analysis_result.has_any_graph,
+                "has_profiles": exec.original_profiles.exists(),
+                "has_logs": bool(exec.tracer_stdout or exec.tracer_stderr),
+            }
+            for exec in executions
+        ]
+        return Response({"executions": data})
 
     except (DatabaseError, OSError) as e:
         logger.error(f"Error fetching TRACER executions: {e!s}")

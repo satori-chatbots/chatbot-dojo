@@ -81,7 +81,9 @@ const TracerExecutionCard = ({
                   size="sm"
                   className="flex-shrink-0"
                 >
-                  {execution.status}
+                  {execution.status === "ERROR" && execution.error_type
+                    ? execution.error_type
+                    : execution.status}
                 </Chip>
               </div>
 

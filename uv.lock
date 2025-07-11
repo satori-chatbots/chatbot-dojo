@@ -238,7 +238,7 @@ wheels = [
 
 [[package]]
 name = "chatbot-tracer"
-version = "0.2.11"
+version = "0.2.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bs4" },
@@ -250,9 +250,8 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langgraph" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/78/db5f7758301e0c1ad58d6263915ccf71e2445b7f48c6fe4a1ea61a399066/chatbot_tracer-0.2.11.tar.gz", hash = "sha256:3d1300822f03a9ef2d7dcb870829011d07244ee79edb11c0fb0ca5556c4a1f26", size = 163839, upload-time = "2025-07-10T20:18:36.924Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/71/46bc5765cfedcedef0fa25ae67cb821b5f7ccfaa3d2fdbc9a247442dba3d/chatbot_tracer-0.2.11-py3-none-any.whl", hash = "sha256:ac7d0be96656ee2cb4bed2b658ba1306408ed872e1fd2dd90f5230b6cc14d533", size = 198344, upload-time = "2025-07-10T20:18:35.609Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/d3/4df070d9ce81647351bd7a814225adcc858f762fa875092f2448f96474d7/chatbot_tracer-0.2.13-py3-none-any.whl", hash = "sha256:86d4de956f876f7281a7d09e00350d91a1c574d77f0352441d85b3da64cd6a24", size = 199283, upload-time = "2025-07-11T09:40:34.918Z" },
 ]
 
 [[package]]
@@ -489,7 +488,7 @@ wheels = [
 
 [[package]]
 name = "google-cloud-aiplatform"
-version = "1.102.0"
+version = "1.103.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docstring-parser" },
@@ -506,9 +505,9 @@ dependencies = [
     { name = "shapely" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/92/39d02f7bd7e79b061cafd8184803365b6b69f2520acd07b7e89e2ba4be37/google_cloud_aiplatform-1.102.0.tar.gz", hash = "sha256:0a606d5365e31d5393d90517387edcb0fb5876fa5a142bfd8d271fee007a79e2", size = 9443787, upload-time = "2025-07-08T22:40:15.944Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/f1/deec517e3b10992d3b07e729f2682303c4c999499a1819fde90a57b44e48/google_cloud_aiplatform-1.103.0.tar.gz", hash = "sha256:0d0c0db3bde6182097f4db8ddcbfb2ab382009458cf594c09cfb4406896b9795", size = 9449712, upload-time = "2025-07-10T22:52:55.329Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/df/fe4448630f740b2b41a22d29939c7dcc91e19a0c1b6dea16c82b30f0eb33/google_cloud_aiplatform-1.102.0-py2.py3-none-any.whl", hash = "sha256:f1557954d106f18a8ce8858643cf077e88674115e79ae7ff9a214596c2fa0318", size = 7853988, upload-time = "2025-07-08T22:40:12.981Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/8e/0779ce9d733c9073a00e2815c82e444f60332c2aac36148f62e2f3418b78/google_cloud_aiplatform-1.103.0-py2.py3-none-any.whl", hash = "sha256:bc14d90caed44580192ad8b60cf74c5a7089562a0dfa6425cad163971d3ae759", size = 7854846, upload-time = "2025-07-10T22:52:52.899Z" },
 ]
 
 [[package]]
@@ -1090,7 +1089,7 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.4.4"
+version = "0.4.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1101,9 +1100,9 @@ dependencies = [
     { name = "requests-toolbelt" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/c8/8d2e0fc438d2d3d8d4300f7684ea30a754344ed00d7ba9cc2705241d2a5f/langsmith-0.4.4.tar.gz", hash = "sha256:70c53bbff24a7872e88e6fa0af98270f4986a6e364f9e85db1cc5636defa4d66", size = 352105, upload-time = "2025-06-27T19:20:36.207Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/92/7885823f3d13222f57773921f0da19b37d628c64607491233dc853a0f6ea/langsmith-0.4.5.tar.gz", hash = "sha256:49444bd8ccd4e46402f1b9ff1d686fa8e3a31b175e7085e72175ab8ec6164a34", size = 352235, upload-time = "2025-07-10T22:08:04.505Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/33/a3337eb70d795495a299a1640d7a75f17fb917155a64309b96106e7b9452/langsmith-0.4.4-py3-none-any.whl", hash = "sha256:014c68329bd085bd6c770a6405c61bb6881f82eb554ce8c4d1984b0035fd1716", size = 367687, upload-time = "2025-06-27T19:20:33.839Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/10/ad3107b666c3203b7938d10ea6b8746b9735c399cf737a51386d58e41d34/langsmith-0.4.5-py3-none-any.whl", hash = "sha256:4167717a2cccc4dff5809dbddc439628e836f6fd13d4fdb31ea013bc8d5cfaf5", size = 367795, upload-time = "2025-07-10T22:08:02.548Z" },
 ]
 
 [[package]]

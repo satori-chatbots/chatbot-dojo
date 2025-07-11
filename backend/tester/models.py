@@ -847,6 +847,17 @@ class ProfileExecution(models.Model):
         ("debug", "Debug (-vv)"),
     ]
 
+    ERROR_TYPE_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("GRAPHVIZ_NOT_INSTALLED", "Graphviz Not Installed"),
+        ("CONNECTOR_CONNECTION", "Connector Connection Error"),
+        ("CONNECTOR_AUTHENTICATION", "Connector Authentication Error"),
+        ("CONNECTOR_CONFIGURATION", "Connector Configuration Error"),
+        ("CONNECTOR_RESPONSE", "Connector Response Error"),
+        ("LLM_ERROR", "LLM Error"),
+        ("UNKNOWN_TRACER_ERROR", "Unknown TRACER Error"),
+        ("OTHER", "Other Error"),
+    ]
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="profile_executions")
     execution_name = models.CharField(max_length=255)  # "TRACER_2024-01-16_11:30" or "Manual_2024-01-16_11:30"
     execution_type = models.CharField(max_length=20, choices=EXECUTION_TYPE_CHOICES)  # "tracer" or "manual"
@@ -874,6 +885,13 @@ class ProfileExecution(models.Model):
     # TRACER process output for debugging
     tracer_stdout = models.TextField(blank=True)
     tracer_stderr = models.TextField(blank=True)
+    error_type = models.CharField(
+        max_length=50,
+        choices=ERROR_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Specific type of error encountered during TRACER execution.",
+    )
 
     class Meta:
         """Meta options for the ProfileExecution model."""
