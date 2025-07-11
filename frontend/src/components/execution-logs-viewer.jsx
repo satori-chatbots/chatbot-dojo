@@ -18,77 +18,82 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 // Map TRACER error types to user-friendly names and descriptions
 const getErrorTypeInfo = (errorType) => {
   const errorTypeMap = {
-    "GRAPHVIZ_NOT_INSTALLED": {
+    GRAPHVIZ_NOT_INSTALLED: {
       name: "Graphviz Missing",
-      description: "Graphviz is required for generating workflow graphs"
+      description: "Graphviz is required for generating workflow graphs",
     },
-    "CONNECTOR_CONNECTION": {
+    CONNECTOR_CONNECTION: {
       name: "Connection Failed",
-      description: "Unable to connect to the chatbot endpoint"
+      description: "Unable to connect to the chatbot endpoint",
     },
-    "CONNECTOR_AUTHENTICATION": {
+    CONNECTOR_AUTHENTICATION: {
       name: "Authentication Failed",
-      description: "Failed to authenticate with the chatbot"
+      description: "Failed to authenticate with the chatbot",
     },
-    "CONNECTOR_CONFIGURATION": {
+    CONNECTOR_CONFIGURATION: {
       name: "Configuration Error",
-      description: "Chatbot connector is not configured correctly"
+      description: "Chatbot connector is not configured correctly",
     },
-    "CONNECTOR_RESPONSE": {
+    CONNECTOR_RESPONSE: {
       name: "Response Error",
-      description: "Chatbot returned an unexpected response"
+      description: "Chatbot returned an unexpected response",
     },
-    "LLM_ERROR": {
+    LLM_ERROR: {
       name: "LLM Error",
-      description: "Error occurred with the Language Model API"
+      description: "Error occurred with the Language Model API",
     },
-    "CONNECTOR_ERROR": {
+    CONNECTOR_ERROR: {
       name: "Connector Error",
-      description: "General error with the chatbot connector"
+      description: "General error with the chatbot connector",
     },
-    "TRACER_ERROR": {
+    TRACER_ERROR: {
       name: "TRACER Error",
-      description: "Error occurred during TRACER execution"
+      description: "Error occurred during TRACER execution",
     },
-    "PERMISSION_ERROR": {
+    PERMISSION_ERROR: {
       name: "Permission Denied",
-      description: "Insufficient permissions to execute operation"
+      description: "Insufficient permissions to execute operation",
     },
-    "CONNECTION_ERROR": {
+    CONNECTION_ERROR: {
       name: "Network Error",
-      description: "Network connection issue occurred"
+      description: "Network connection issue occurred",
     },
-    "TIMEOUT_ERROR": {
+    TIMEOUT_ERROR: {
       name: "Timeout",
-      description: "Operation timed out"
+      description: "Operation timed out",
     },
-    "API_KEY_ERROR": {
+    API_KEY_ERROR: {
       name: "API Key Error",
-      description: "Issue with the API key configuration"
+      description: "Issue with the API key configuration",
     },
-    "AUTHENTICATION_ERROR": {
+    AUTHENTICATION_ERROR: {
       name: "Authentication Error",
-      description: "Failed to authenticate with the service"
+      description: "Failed to authenticate with the service",
     },
-    "NOT_FOUND_ERROR": {
+    NOT_FOUND_ERROR: {
       name: "Not Found",
-      description: "Required resource was not found"
+      description: "Required resource was not found",
     },
-    "SUBPROCESS_ERROR": {
+    SUBPROCESS_ERROR: {
       name: "Execution Error",
-      description: "Failed to execute TRACER command"
+      description: "Failed to execute TRACER command",
     },
-    "SYSTEM_ERROR": {
+    SYSTEM_ERROR: {
       name: "System Error",
-      description: "System-level error occurred"
+      description: "System-level error occurred",
     },
-    "OTHER": {
+    OTHER: {
       name: "Unknown Error",
-      description: "An unrecognized error occurred"
-    }
+      description: "An unrecognized error occurred",
+    },
   };
 
-  return errorTypeMap[errorType] || { name: errorType, description: "Error details available in logs" };
+  return (
+    errorTypeMap[errorType] || {
+      name: errorType,
+      description: "Error details available in logs",
+    }
+  );
 };
 
 const LogContent = React.memo(({ content, variant }) => {
@@ -148,35 +153,6 @@ const LogContent = React.memo(({ content, variant }) => {
 });
 
 LogContent.displayName = "LogContent";
-
-// Move arrow functions to outer scope
-const getStatusIcon = (status) => {
-  switch (status) {
-    case "COMPLETED": {
-      return <CheckCircle className="w-5 h-5 text-success" />;
-    }
-    case "ERROR": {
-      return <AlertCircle className="w-5 h-5 text-danger" />;
-    }
-    default: {
-      return <Terminal className="w-5 h-5 text-default-500" />;
-    }
-  }
-};
-
-const getStatusColor = (status) => {
-  switch (status) {
-    case "COMPLETED": {
-      return "text-success";
-    }
-    case "ERROR": {
-      return "text-danger";
-    }
-    default: {
-      return "text-default-500";
-    }
-  }
-};
 
 const ExecutionLogsViewer = ({ execution, onClose }) => {
   const [logsData, setLogsData] = useState();
@@ -273,7 +249,9 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                     <AlertCircle className="w-5 h-5 text-danger mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h4 className="text-lg font-semibold text-danger">Execution Failed</h4>
+                        <h4 className="text-lg font-semibold text-danger">
+                          Execution Failed
+                        </h4>
                         <Chip color="danger" variant="flat" size="sm">
                           {getErrorTypeInfo(logsData.error_type).name}
                         </Chip>

@@ -137,11 +137,10 @@ const TracerDashboard = () => {
                   "TRACER execution completed successfully!",
                 );
               } else if (status.status === "ERROR") {
-                const errorMessage = status.error_message || "Unknown error occurred during execution";
-                showToast(
-                  "error",
-                  "TRACER execution failed: " + errorMessage,
-                );
+                const errorMessage =
+                  status.error_message ||
+                  "Unknown error occurred during execution";
+                showToast("error", "TRACER execution failed: " + errorMessage);
               }
             }
           } catch (error) {

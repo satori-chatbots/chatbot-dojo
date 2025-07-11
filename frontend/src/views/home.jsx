@@ -247,7 +247,9 @@ function Home() {
             // Reload executions to update the status in the UI
             await reloadExecutions();
             setIsGenerating(false);
-            const errorMessage = status.error_message || "An error occurred during profile generation";
+            const errorMessage =
+              status.error_message ||
+              "An error occurred during profile generation";
             showToast("error", errorMessage);
           } else {
             // Update the stage information in the UI

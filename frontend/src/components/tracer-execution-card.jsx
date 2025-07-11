@@ -17,23 +17,23 @@ import {
 // Map TRACER error types to user-friendly names
 const getErrorTypeDisplay = (errorType) => {
   const errorTypeMap = {
-    "GRAPHVIZ_NOT_INSTALLED": "Graphviz Missing",
-    "CONNECTOR_CONNECTION": "Connection Failed",
-    "CONNECTOR_AUTHENTICATION": "Auth Failed",
-    "CONNECTOR_CONFIGURATION": "Config Error",
-    "CONNECTOR_RESPONSE": "Response Error",
-    "LLM_ERROR": "LLM Error",
-    "CONNECTOR_ERROR": "Connector Error",
-    "TRACER_ERROR": "TRACER Error",
-    "PERMISSION_ERROR": "Permission Denied",
-    "CONNECTION_ERROR": "Network Error",
-    "TIMEOUT_ERROR": "Timeout",
-    "API_KEY_ERROR": "API Key Error",
-    "AUTHENTICATION_ERROR": "Auth Error",
-    "NOT_FOUND_ERROR": "Not Found",
-    "SUBPROCESS_ERROR": "Execution Error",
-    "SYSTEM_ERROR": "System Error",
-    "OTHER": "Unknown Error"
+    GRAPHVIZ_NOT_INSTALLED: "Graphviz Missing",
+    CONNECTOR_CONNECTION: "Connection Failed",
+    CONNECTOR_AUTHENTICATION: "Auth Failed",
+    CONNECTOR_CONFIGURATION: "Config Error",
+    CONNECTOR_RESPONSE: "Response Error",
+    LLM_ERROR: "LLM Error",
+    CONNECTOR_ERROR: "Connector Error",
+    TRACER_ERROR: "TRACER Error",
+    PERMISSION_ERROR: "Permission Denied",
+    CONNECTION_ERROR: "Network Error",
+    TIMEOUT_ERROR: "Timeout",
+    API_KEY_ERROR: "API Key Error",
+    AUTHENTICATION_ERROR: "Auth Error",
+    NOT_FOUND_ERROR: "Not Found",
+    SUBPROCESS_ERROR: "Execution Error",
+    SYSTEM_ERROR: "System Error",
+    OTHER: "Unknown Error",
   };
 
   return errorTypeMap[errorType] || errorType;
@@ -101,7 +101,10 @@ const TracerExecutionCard = ({
                 </h3>
                 {execution.status === "ERROR" && execution.error_type ? (
                   <Tooltip
-                    content={execution.error_message || "An error occurred during execution"}
+                    content={
+                      execution.error_message ||
+                      "An error occurred during execution"
+                    }
                     placement="top"
                     className="max-w-xs"
                   >
