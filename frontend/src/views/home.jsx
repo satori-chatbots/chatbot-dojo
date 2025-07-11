@@ -37,7 +37,7 @@ import {
   fetchProfileExecutions,
   deleteProfileExecution,
 } from "../api/file-api";
-import { deleteProject } from "../api/project-api";
+import { deleteProject, fetchProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
 import { getUserApiKeys } from "../api/authentication-api";
 import useFetchProjects from "../hooks/use-fetch-projects";
@@ -369,7 +369,6 @@ function Home() {
     // If the edited project is the currently selected project, fetch fresh data
     if (selectedProject && editProjectId === selectedProject.id) {
       try {
-        const { fetchProject } = await import("../api/project-api");
         const updatedProject = await fetchProject(editProjectId);
         setSelectedProject(updatedProject);
       } catch (error) {

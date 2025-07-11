@@ -3,7 +3,7 @@ import { Button } from "@heroui/react";
 import CreateProjectModal from "../components/create-project-modal";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
-import { deleteProject } from "../api/project-api";
+import { deleteProject, fetchProject } from "../api/project-api";
 import EditProjectModal from "../components/edit-project-modal";
 import useSelectedProject from "../hooks/use-selected-projects";
 import ProjectsList from "../components/project-list";
@@ -64,7 +64,6 @@ const ProjectsDashboard = () => {
     // If the edited project is the currently selected project, fetch fresh data
     if (selectedProject && editProjectId === selectedProject.id) {
       try {
-        const { fetchProject } = await import("../api/project-api");
         const updatedProject = await fetchProject(editProjectId);
         setSelectedProject(updatedProject);
       } catch (error) {
