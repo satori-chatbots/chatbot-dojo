@@ -31,11 +31,11 @@ dropdb:
 pull-submodules:
 	git pull --recurse-submodules
 
-npm-install:
-	cd $(FRONTEND_DIR) && npm install
+pnpm-install:
+	cd $(FRONTEND_DIR) && pnpm install
 
-npm-dev:
-	cd $(FRONTEND_DIR) && npm run dev
+pnpm-dev:
+	cd $(FRONTEND_DIR) && pnpm run dev
 
 env:
 	$(PYTHON) scripts/generate_env.py

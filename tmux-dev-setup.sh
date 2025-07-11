@@ -26,7 +26,7 @@ tmux new-window -t $SESSION_NAME -n "frontend"
 
 # Setup frontend window
 tmux send-keys -t $SESSION_NAME:frontend "cd frontend" Enter
-tmux send-keys -t $SESSION_NAME:frontend "npm run dev" Enter
+tmux send-keys -t $SESSION_NAME:frontend "pnpm run dev" Enter
 
 # Create third window for editor/general terminal (in root)
 tmux new-window -t $SESSION_NAME -n "editor"

@@ -134,7 +134,7 @@ python manage.py migrate
 
 ### Frontend setup
 
-To set up and run the frontend, you need to have Node.js and npm installed. Then, follow these steps:
+To set up and run the frontend, you need to have Node.js and pnpm installed. Then, follow these steps:
 
 1. Navigate to the `frontend` folder:
 
@@ -145,13 +145,13 @@ To set up and run the frontend, you need to have Node.js and npm installed. Then
 2. Install the dependencies:
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Run the development server:
 
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 The frontend will be running at `http://localhost:5173/`.
@@ -167,7 +167,7 @@ You can now access the webpage at [http://localhost:5173/](http://localhost:5173
 **Port already in use:**
 
 - Backend: Change port with `python manage.py runserver 8001`
-- Frontend: Change port with `npm run dev -- --port 5174`
+- Frontend: Change port with `pnpm run dev -- --port 5174`
 
 **Database migration errors:**
 
@@ -207,7 +207,12 @@ This project uses pre-commit hooks to ensure code quality and consistency. The h
 
 3. Ensure frontend dependencies are installed:
    ```bash
-   cd frontend && npm install
+   cd frontend && pnpm install
+   ```
+
+   **Note**: The project now uses pnpm instead of npm. Make sure you have pnpm installed globally:
+   ```bash
+   npm install -g pnpm
    ```
 
 #### Usage
