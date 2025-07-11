@@ -244,12 +244,11 @@ function Home() {
           } else if (status.status === "ERROR") {
             clearInterval(statusIntervalReference.current);
             statusIntervalReference.current = undefined;
+            // Reload executions to update the status in the UI
+            await reloadExecutions();
             setIsGenerating(false);
             const errorMessage = status.error_message || "An error occurred during profile generation";
-            showToast(
-              "error",
-              errorMessage,
-            );
+            showToast("error", errorMessage);
           } else {
             // Update the stage information in the UI
             setGenerationStage(status.stage || "Processing");

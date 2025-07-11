@@ -125,9 +125,10 @@ class TracerGenerator:
 
         except ProfileGenerationTask.DoesNotExist:
             logger.error(f"ProfileGenerationTask with ID {task_id} not found")
-            # Task doesn't exist, can't update it
+            # Task doesn't exist, can't update it - this IS a Django app error
         except Exception as e:
-            logger.error(f"Unexpected error in TRACER profile generation for task {task_id}: {e!s}")
+            # This is likely a Django application error, not a user execution error
+            logger.error(f"Unexpected Django error in TRACER profile generation for task {task_id}: {e!s}")
 
             # Generate a user-friendly error message for unexpected errors
             error_message = "An unexpected error occurred during profile generation. Please try again or contact support if the issue persists."
@@ -197,7 +198,7 @@ class TracerGenerator:
             if not task.error_message or task.error_message.strip() == "":
                 task.error_message = "TRACER execution failed - check logs for details"
             execution.status = "ERROR"
-            logger.error(f"TRACER profile generation failed for task {task.id}: {task.error_message}")
+            logger.info(f"TRACER profile generation failed for task {task.id}: {task.error_message}")
 
         task.save()
         execution.save()
@@ -226,23 +227,20 @@ class TracerGenerator:
             return success
 
         except ValueError as e:
-            # Project configuration errors
-            error_msg = f"Project configuration error: {e!s}"
-            logger.error(error_msg)
+            # Project configuration errors - user execution error
+            logger.info(f"TRACER project configuration error for task {task.id}: {e!s}")
             task.error_message = f"Project configuration error: {e!s}"
             task.save()
             return False
         except OSError as e:
-            # File system errors (directory creation, permissions, etc.)
-            error_msg = f"File system error during TRACER execution: {e!s}"
-            logger.error(error_msg)
+            # File system errors - could be user execution error or system issue
+            logger.info(f"TRACER file system error for task {task.id}: {e!s}")
             task.error_message = "File system error occurred. Please check permissions and try again."
             task.save()
             return False
         except Exception as e:
-            # Any other unexpected errors
-            error_msg = f"Unexpected error in TRACER execution: {e!s}"
-            logger.error(error_msg)
+            # Any other unexpected errors - likely Django app errors
+            logger.error(f"Unexpected Django error in TRACER execution for task {task.id}: {e!s}")
             task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
             task.save()
             return False
@@ -366,7 +364,8 @@ class TracerGenerator:
                 # Generate user-friendly error message
                 user_friendly_error = self._generate_user_friendly_error_message(error_type, full_stderr)
 
-                logger.error(f"TRACER execution failed (error_type: {error_type}): {full_stderr}")
+                # TRACER execution failure - user execution error, log at info level
+                logger.info(f"TRACER execution failed for task {task.id} (error_type: {error_type})")
                 task.error_message = user_friendly_error
                 task.save()
 
@@ -379,25 +378,24 @@ class TracerGenerator:
             return True
 
         except subprocess.SubprocessError as e:
-            error_msg = f"Failed to execute TRACER command: {e!s}"
-            logger.error(error_msg)
+            # TRACER command execution issues - user execution error
+            logger.info(f"TRACER subprocess error for task {task.id}: {e!s}")
             task.error_message = "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
             task.save()
             execution.error_type = "SUBPROCESS_ERROR"
             execution.save(update_fields=["error_type"])
             return False
         except OSError as e:
-            error_msg = f"System error during TRACER execution: {e!s}"
-            logger.error(error_msg)
+            # System errors - could be user or system issue
+            logger.info(f"TRACER system error for task {task.id}: {e!s}")
             task.error_message = "A system error occurred during TRACER execution. Please try again or contact support if the issue persists."
             task.save()
             execution.error_type = "SYSTEM_ERROR"
             execution.save(update_fields=["error_type"])
             return False
         except Exception as e:
-            # Catch any other unexpected errors
-            error_msg = f"Unexpected error during TRACER subprocess execution: {e!s}"
-            logger.error(error_msg)
+            # Unexpected errors - likely Django app errors
+            logger.error(f"Unexpected Django error during TRACER subprocess for task {task.id}: {e!s}")
             task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
             task.save()
             execution.error_type = "OTHER"
@@ -458,7 +456,7 @@ class TracerGenerator:
                 return error_code
 
         # Log the unrecognized error for debugging
-        logger.warning(f"Unrecognized TRACER error type. stderr: {stderr[:500]}...")
+        logger.debug(f"Could not categorize TRACER error type from stderr. stderr preview: {stderr[:200]}...")
         return "OTHER"
 
     def _handle_process_output(self, task: ProfileGenerationTask, process: subprocess.Popen) -> list[str]:
@@ -501,7 +499,7 @@ class TracerGenerator:
                 pass
             task.save(update_fields=["stage", "progress_percentage"])
         except (ValueError, AttributeError, TypeError) as e:
-            logger.warning(f"Error updating progress from TRACER output: {e!s}")
+            logger.debug(f"Non-critical: Could not parse TRACER progress from output for task {task.id}: {e!s}")
 
     def _handle_exploration_phase(self, task: ProfileGenerationTask, line: str) -> bool:
         if "Initializing Chatbot Exploration Agent" in line:
