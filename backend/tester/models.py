@@ -854,7 +854,7 @@ class ProfileExecution(models.Model):
         ("CONNECTOR_CONFIGURATION", "Connector Configuration Error"),
         ("CONNECTOR_RESPONSE", "Connector Response Error"),
         ("LLM_ERROR", "LLM Error"),
-        ("UNKNOWN_TRACER_ERROR", "Unknown TRACER Error"),
+        ("TRACER_ERROR", "TRACER Error"),
         ("OTHER", "Other Error"),
     ]
 
