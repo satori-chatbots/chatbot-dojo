@@ -212,6 +212,7 @@ def get_tracer_executions(request: Request) -> Response:
                 "verbosity": exec.verbosity,
                 "status": exec.status,
                 "error_type": exec.get_error_type_display() if exec.error_type else None,
+                "error_message": exec.generation_tasks.first().error_message if exec.generation_tasks.exists() and exec.generation_tasks.first().error_message else None,
                 "execution_time_minutes": exec.execution_time_minutes,
                 "created_at": exec.created_at.isoformat(),
                 "generated_profiles_count": exec.generated_profiles_count,
@@ -531,6 +532,8 @@ def get_tracer_execution_logs(request: Request, execution_id: int) -> Response:
                 "stderr": execution.tracer_stderr or "",
                 "verbosity": execution.verbosity,
                 "created_at": execution.created_at.isoformat(),
+                "error_type": execution.error_type,
+                "error_message": execution.generation_tasks.first().error_message if execution.generation_tasks.exists() and execution.generation_tasks.first().error_message else None,
             }
         )
 

@@ -287,12 +287,20 @@ def _build_execution_info(execution: ProfileExecution) -> dict:
 
     # Add TRACER-specific fields if it's a TRACER execution
     if execution.execution_type == "tracer":
+        # Get error message from associated task if available
+        error_message = ""
+        if execution.generation_tasks.exists():
+            task = execution.generation_tasks.first()
+            error_message = task.error_message if task.error_message else ""
+
         execution_info.update(
             {
                 "sessions": execution.sessions,
                 "turns_per_session": execution.turns_per_session,
                 "execution_time_minutes": execution.execution_time_minutes,
                 "verbosity": execution.verbosity,
+                "error_type": execution.error_type,
+                "error_message": error_message,
             }
         )
 

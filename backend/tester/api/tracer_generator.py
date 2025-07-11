@@ -123,9 +123,33 @@ class TracerGenerator:
 
             self._finalize_execution(task, execution, success=success)
 
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error in TRACER profile generation for task {task_id}: {e!s}")
-            self._handle_execution_error(task, execution, str(e))
+        except ProfileGenerationTask.DoesNotExist:
+            logger.error(f"ProfileGenerationTask with ID {task_id} not found")
+            # Task doesn't exist, can't update it
+        except Exception as e:
+            logger.error(f"Unexpected error in TRACER profile generation for task {task_id}: {e!s}")
+
+            # Generate a user-friendly error message for unexpected errors
+            error_message = "An unexpected error occurred during profile generation. Please try again or contact support if the issue persists."
+
+            # Try to update task and execution if they exist
+            if task:
+                try:
+                    task.status = "ERROR"
+                    task.error_message = error_message
+                    task.save()
+                except Exception as save_error:
+                    logger.critical(f"Failed to save error status to task {task_id}: {save_error!s}")
+
+            if execution:
+                try:
+                    execution.status = "ERROR"
+                    execution.save()
+                except Exception as save_error:
+                    logger.critical(f"Failed to save error status to execution: {save_error!s}")
+
+            # Don't re-raise the exception to prevent console spam
+            # The error is logged and stored in the database for user visibility
 
     def _initialize_task(self, task_id: int) -> ProfileGenerationTask:
         """Initialize and update task status."""
@@ -169,34 +193,14 @@ class TracerGenerator:
             logger.info(f"TRACER profile generation completed for task {task.id}")
         else:
             task.status = "ERROR"
-            task.error_message = "TRACER execution failed"
+            # Only set a generic error message if we don't already have a specific one
+            if not task.error_message or task.error_message.strip() == "":
+                task.error_message = "TRACER execution failed - check logs for details"
             execution.status = "ERROR"
-            logger.error(f"TRACER profile generation failed for task {task.id}")
+            logger.error(f"TRACER profile generation failed for task {task.id}: {task.error_message}")
 
         task.save()
         execution.save()
-
-    def _handle_execution_error(
-        self, task: ProfileGenerationTask | None, execution: ProfileExecution | None, error_message: str
-    ) -> None:
-        """Handle errors during execution."""
-        if task:
-            try:
-                task.status = "ERROR"
-                task.error_message = error_message
-                task.save()
-            except Exception as update_exc:  # noqa: BLE001
-                logger.critical(
-                    f"Failed to update task {task.id} to ERROR status after an error. "
-                    f"Initial error: {error_message}. Update error: {update_exc!s}"
-                )
-
-        if execution:
-            try:
-                execution.status = "ERROR"
-                execution.save()
-            except Exception:  # noqa: BLE001
-                logger.critical(f"Failed to update execution {execution.id} to ERROR status")
 
     def execute_tracer_generation(
         self,
@@ -218,13 +222,30 @@ class TracerGenerator:
 
             if success:
                 self._post_process_results(task, execution, output_dir)
-        except (subprocess.SubprocessError, OSError, ValueError) as e:
-            logger.error(f"TRACER execution error: {e!s}")
-            task.error_message = f"TRACER execution error: {e!s}"
+
+            return success
+
+        except ValueError as e:
+            # Project configuration errors
+            error_msg = f"Project configuration error: {e!s}"
+            logger.error(error_msg)
+            task.error_message = f"Project configuration error: {e!s}"
             task.save()
             return False
-        else:
-            return success
+        except OSError as e:
+            # File system errors (directory creation, permissions, etc.)
+            error_msg = f"File system error during TRACER execution: {e!s}"
+            logger.error(error_msg)
+            task.error_message = "File system error occurred. Please check permissions and try again."
+            task.save()
+            return False
+        except Exception as e:
+            # Any other unexpected errors
+            error_msg = f"Unexpected error in TRACER execution: {e!s}"
+            logger.error(error_msg)
+            task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
+            task.save()
+            return False
 
     def _validate_project_configuration(self, project: Project) -> None:
         """Validate that project has required configuration."""
@@ -358,9 +379,9 @@ class TracerGenerator:
             return True
 
         except subprocess.SubprocessError as e:
-            error_msg = f"Subprocess execution failed: {e!s}"
+            error_msg = f"Failed to execute TRACER command: {e!s}"
             logger.error(error_msg)
-            task.error_message = error_msg
+            task.error_message = "Failed to execute TRACER command. Please ensure TRACER is properly installed and accessible."
             task.save()
             execution.error_type = "SUBPROCESS_ERROR"
             execution.save(update_fields=["error_type"])
@@ -368,9 +389,18 @@ class TracerGenerator:
         except OSError as e:
             error_msg = f"System error during TRACER execution: {e!s}"
             logger.error(error_msg)
-            task.error_message = error_msg
+            task.error_message = "A system error occurred during TRACER execution. Please try again or contact support if the issue persists."
             task.save()
             execution.error_type = "SYSTEM_ERROR"
+            execution.save(update_fields=["error_type"])
+            return False
+        except Exception as e:
+            # Catch any other unexpected errors
+            error_msg = f"Unexpected error during TRACER subprocess execution: {e!s}"
+            logger.error(error_msg)
+            task.error_message = "An unexpected error occurred during TRACER execution. Please try again or contact support if the issue persists."
+            task.save()
+            execution.error_type = "OTHER"
             execution.save(update_fields=["error_type"])
             return False
 

@@ -245,9 +245,10 @@ function Home() {
             clearInterval(statusIntervalReference.current);
             statusIntervalReference.current = undefined;
             setIsGenerating(false);
+            const errorMessage = status.error_message || "An error occurred during profile generation";
             showToast(
               "error",
-              status.error_message || "Error generating profiles",
+              errorMessage,
             );
           } else {
             // Update the stage information in the UI
