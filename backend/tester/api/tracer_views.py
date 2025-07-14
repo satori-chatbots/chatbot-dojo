@@ -5,6 +5,7 @@ from pathlib import Path
 
 from cryptography.fernet import InvalidToken
 from django.conf import settings
+from django.db import models
 from django.db.utils import DatabaseError
 from django.http import FileResponse
 from rest_framework import status
@@ -47,10 +48,10 @@ class TracerProjectValidator:
 
     @staticmethod
     def validate_project_access(request: Request, project_id: int) -> tuple[Response | None, Project | None]:
-        """Validate project exists and user has access."""
+        """Validate project exists and user has access for TRACER generation (requires ownership)."""
         try:
             project = Project.objects.get(id=project_id)
-            if project.owner != request.user:
+            if not request.user.is_authenticated or project.owner != request.user:
                 return (
                     Response({"error": "You do not own this project."}, status=status.HTTP_403_FORBIDDEN),
                     None,
@@ -97,7 +98,7 @@ def generate_profiles(request: Request) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Validate project access
+    # Validate project access (requires ownership for generation)
     error_response, project = TracerProjectValidator.validate_project_access(request, project_id)
     if error_response:
         return error_response
@@ -188,15 +189,27 @@ def check_ongoing_generation(_request: Request, project_id: int) -> Response:
 
 @api_view(["GET"])
 def get_tracer_executions(request: Request) -> Response:
-    """Get all TRACER executions across all user projects for the dashboard."""
+    """Get all TRACER executions for the dashboard - includes public executions."""
     try:
-        # Get all TRACER executions for user's projects
-        executions = (
-            ProfileExecution.objects.filter(project__owner=request.user, execution_type="tracer")
-            .select_related("project", "analysis_result")
-            .prefetch_related("generation_tasks")
-            .order_by("-created_at")
-        )
+        # Filter based on user authentication and project visibility
+        if request.user.is_authenticated:
+            # Authenticated users see their own executions and public executions
+            executions = (
+                ProfileExecution.objects.filter(
+                    models.Q(project__public=True) | models.Q(project__owner=request.user), execution_type="tracer"
+                )
+                .select_related("project", "analysis_result")
+                .prefetch_related("generation_tasks")
+                .order_by("-created_at")
+            )
+        else:
+            # Unauthenticated users only see public executions
+            executions = (
+                ProfileExecution.objects.filter(project__public=True, execution_type="tracer")
+                .select_related("project", "analysis_result")
+                .prefetch_related("generation_tasks")
+                .order_by("-created_at")
+            )
 
         data = [_build_tracer_execution_info(execution) for execution in executions]
         return Response({"executions": data})
@@ -262,16 +275,17 @@ class TracerExecutionAccessValidator:
     def validate_tracer_execution_access(
         request: Request, execution_id: int
     ) -> tuple[Response | None, ProfileExecution | None]:
-        """Validate user access to a TRACER execution."""
+        """Validate user access to a TRACER execution - allows public access for public projects."""
         try:
             execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
         except ProfileExecution.DoesNotExist:
             return Response({"error": "Execution not found."}, status=status.HTTP_404_NOT_FOUND), None
 
-        if execution.project.owner != request.user:
-            return Response({"error": "You do not own this execution."}, status=status.HTTP_403_FORBIDDEN), None
+        # Allow access if project is public or user is the owner
+        if execution.project.public or (request.user.is_authenticated and execution.project.owner == request.user):
+            return None, execution
 
-        return None, execution
+        return Response({"error": "You do not have access to this execution."}, status=status.HTTP_403_FORBIDDEN), None
 
     @staticmethod
     def validate_analysis_result_access(execution: ProfileExecution) -> Response | None:
