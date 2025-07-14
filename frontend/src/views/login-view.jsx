@@ -152,7 +152,7 @@ function LoginView() {
           </Button>
         </Form>
         <div className="text-center text-sm text-foreground/60 dark:text-foreground-dark/60">
-          Don&apos;t have an account?{" "}
+          {"Don't have an account? "}
           <Link to="/signup" className="text-primary">
             Sign Up
           </Link>
