@@ -413,7 +413,10 @@ const EditProjectModal = ({
                   htmlFor="edit-project-profile-model"
                   className="text-sm mb-2 block text-foreground dark:text-foreground-dark"
                 >
-                  Profile Model
+                  Profile Model{" "}
+                  <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                    (optional)
+                  </span>
                 </label>
                 <Select
                   id="edit-project-profile-model"
@@ -422,7 +425,7 @@ const EditProjectModal = ({
                       ? "Loading models..."
                       : availableModels.length === 0
                         ? "No models available"
-                        : "Select profile model"
+                        : "Select profile model (optional)"
                   }
                   fullWidth
                   labelPlacement="outside"
@@ -450,8 +453,8 @@ const EditProjectModal = ({
                 )}
                 {availableModels.length > 0 && (
                   <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
-                    Model that will be embedded in the generated user profiles
-                    (recommended: more economic than exploration model)
+                    Optional. If not set, TRACER will use its default profile
+                    model.
                   </p>
                 )}
               </div>

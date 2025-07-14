@@ -669,10 +669,16 @@ function Home() {
 
   // Helper to get missing config message for LLM Configuration
   const getMissingConfigMessage = () => {
-    if (!selectedProject.api_key) return "No API key configured";
-    if (!selectedProject.llm_model) return "No exploration model configured";
-    if (!selectedProject.profile_model) return "No profile model configured";
-    return "No models configured";
+    if (!selectedProject.api_key)
+      return { color: "red", message: "No API key configured" };
+    if (!selectedProject.llm_model)
+      return { color: "red", message: "No exploration model configured" };
+    if (!selectedProject.profile_model)
+      return {
+        color: "amber",
+        message: "No profile model configured (optional)",
+      };
+    return { color: "", message: "No models configured" };
   };
 
   return (
@@ -786,9 +792,28 @@ function Home() {
                 </div>
               ) : (
                 <div className="flex justify-between items-center">
-                  <span className="text-red-500 text-sm font-medium">
-                    ⚠️ {getMissingConfigMessage()}
-                  </span>
+                  {(() => {
+                    const { color, message } = getMissingConfigMessage();
+                    if (color === "red") {
+                      return (
+                        <span className="text-red-500 text-sm font-medium">
+                          ⚠️ {message}
+                        </span>
+                      );
+                    }
+                    if (color === "amber") {
+                      return (
+                        <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">
+                          ℹ️ {message}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="text-default-600 text-sm font-medium">
+                        {message}
+                      </span>
+                    );
+                  })()}
                 </div>
               )}
               {selectedProject.api_key &&

@@ -77,11 +77,6 @@ class TracerProjectValidator:
                 {"error": "Project must have an exploration model configured."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        if not project.profile_model:
-            return Response(
-                {"error": "Project must have a profile model configured."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
         return None
 
 
