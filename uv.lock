@@ -2004,7 +2004,7 @@ dev = [
 requires-dist = [
     { name = "allpairspy", specifier = ">=2.5.1" },
     { name = "boto3", specifier = ">=1.38.30" },
-    { name = "chatbot-tracer", specifier = ">=0.2.7" },
+    { name = "chatbot-tracer", specifier = ">=0.3.0" },
     { name = "cryptography", specifier = ">=45.0.3" },
     { name = "django", specifier = ">=5.2.2" },
     { name = "django-cors-headers", specifier = ">=4.7.0" },
@@ -2309,7 +2309,7 @@ socks = [
 
 [[package]]
 name = "user-simulator"
-version = "0.1.0"
+version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "allpairspy" },
@@ -2327,9 +2327,9 @@ dependencies = [
     { name = "selenium" },
     { name = "webdriver-manager" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/04/c442e6564f12f514468740b76ebcce50cbf319a58a5409f716b935131c26/user_simulator-0.1.0.tar.gz", hash = "sha256:cbcdd66ab0b6455e43b5bbf258dce63258125e74d217224fbeae336a3a8023b3", size = 67059, upload-time = "2025-07-03T14:15:44.513Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/53/e6594a1713dfc2262f32c469d631f29a71c288780c55a0cc85e5cf88ac2e/user_simulator-0.1.1.tar.gz", hash = "sha256:b2a71567c023d604c060954da85ba442a3b9bc2844dc3f3de84d26a91ed008fc", size = 67109, upload-time = "2025-07-14T10:25:56.358Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/72/86a890b71b121728b0983c3b351654bb333117b30486099ace60ce46866d/user_simulator-0.1.0-py3-none-any.whl", hash = "sha256:639c13141e5368d576f6b9d03affb77ce0c714976799f23bda7b695d050f7e64", size = 68394, upload-time = "2025-07-03T14:15:43.112Z" },
+    { url = "https://files.pythonhosted.org/packages/db/fb/85f2deb56ad691dcb4132d1d37a3dd667c1fb0085b4d21bfa56b42e246a9/user_simulator-0.1.1-py3-none-any.whl", hash = "sha256:5113fe7ebfbec4d1224a2417f71ea14fbd23b2b3db4da89d9fdd063a167d6981", size = 68474, upload-time = "2025-07-14T10:25:54.962Z" },
 ]
 
 [[package]]
