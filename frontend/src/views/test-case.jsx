@@ -151,7 +151,7 @@ function TestCase() {
 
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
+        <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
         <Card shadow="sm" className="text-center p-4">
           <CardHeader className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Test Case is Running</h2>
@@ -192,23 +192,78 @@ function TestCase() {
   if (status === "ERROR") {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
-        <Card
-          shadow="sm"
-          className="text-center p-4 bg-red-100 dark:bg-red-500"
-        >
-          <CardHeader>
-            <h2 className="text-2xl font-bold text-red-600 dark:text-white">
-              Test Case Error
-            </h2>
-          </CardHeader>
-          <CardBody>
-            <p className="text-xl font-bold text-foreground">Error Output:</p>
-            <pre className="whitespace-pre-wrap text-left p-4 rounded-lg mt-4 bg-red-200 dark:bg-red-600">
-              {testCase[0].result}
-            </pre>
-          </CardBody>
-        </Card>
+        <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
+        <div className="space-y-4">
+          <Card
+            shadow="sm"
+            className="p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+          >
+            <CardHeader>
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                ❌ Sensei Execution Failed
+              </h2>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              {testCase[0].error_message && (
+                <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-lg border border-red-200 dark:border-red-700">
+                  <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
+                    Error Details
+                  </h3>
+                  <p className="text-red-800 dark:text-red-200 whitespace-pre-wrap">
+                    {testCase[0].error_message}
+                  </p>
+                </div>
+              )}
+
+              {/* Debug Information - Collapsible */}
+              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    🔍 Debug Information
+                  </h3>
+
+                  {/* Standard Output */}
+                  {testCase[0].stdout && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Standard Output (stdout):
+                      </h4>
+                      <pre className="bg-gray-800 text-gray-200 dark:bg-black dark:text-green-400 p-3 rounded text-sm whitespace-pre-wrap font-mono overflow-x-auto">
+                        {testCase[0].stdout}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Standard Error */}
+                  {testCase[0].stderr && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Standard Error (stderr):
+                      </h4>
+                      <pre className="bg-red-900 text-red-100 dark:bg-red-950 dark:text-red-200 p-3 rounded text-sm whitespace-pre-wrap font-mono overflow-x-auto">
+                        {testCase[0].stderr}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Fallback to result field if new fields are empty */}
+                  {!testCase[0].stdout &&
+                    !testCase[0].stderr &&
+                    testCase[0].result && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                          Raw Output:
+                        </h4>
+                        <pre className="bg-gray-800 text-gray-200 dark:bg-black dark:text-green-400 p-3 rounded text-sm whitespace-pre-wrap font-mono overflow-x-auto">
+                          {testCase[0].result}
+                        </pre>
+                      </div>
+                    )}
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -216,7 +271,7 @@ function TestCase() {
   if (status === "STOPPED") {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
+        <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
         <Card shadow="sm" className="text-center p-4">
           <CardHeader>
             <h2 className="text-2xl font-bold">Test Case Stopped</h2>
@@ -234,7 +289,7 @@ function TestCase() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Test Case {id}</h1>
+      <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
       <Tabs defaultValue="global" className="space-y-4">
         <Tab key="global" title="Global Details">
           <div className="space-y-4">
@@ -417,22 +472,58 @@ function TestCase() {
             <Card shadow="sm" className="bg-default-100 dark:bg-default-100">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-                  Terminal Output
+                  Sensei Execution Output
                 </h2>
               </CardHeader>
               <CardBody>
-                <Accordion>
-                  <AccordionItem
-                    title="Show Output"
-                    classNames={{
-                      title: "text-foreground dark:text-foreground-dark",
-                    }}
-                  >
-                    <pre className="bg-gray-800 text-gray-200 dark:bg-black dark:text-green-400 p-4 rounded-lg whitespace-pre-wrap text-left font-mono">
-                      {testCase[0].result}
-                    </pre>
-                  </AccordionItem>
-                </Accordion>
+                <div className="space-y-4">
+                  {/* Standard Output */}
+                  {testCase[0].stdout && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground dark:text-foreground-dark mb-2">
+                        📤 Standard Output
+                      </h3>
+                      <pre className="bg-gray-800 text-gray-200 dark:bg-black dark:text-green-400 p-4 rounded-lg whitespace-pre-wrap text-left font-mono overflow-x-auto">
+                        {testCase[0].stdout}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Standard Error */}
+                  {testCase[0].stderr && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground dark:text-foreground-dark mb-2">
+                        ⚠️ Standard Error
+                      </h3>
+                      <pre className="bg-red-900 text-red-100 dark:bg-red-950 dark:text-red-200 p-4 rounded-lg whitespace-pre-wrap text-left font-mono overflow-x-auto">
+                        {testCase[0].stderr}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Fallback to combined output if new fields are empty */}
+                  {!testCase[0].stdout &&
+                    !testCase[0].stderr &&
+                    testCase[0].result && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground dark:text-foreground-dark mb-2">
+                          📄 Combined Output
+                        </h3>
+                        <pre className="bg-gray-800 text-gray-200 dark:bg-black dark:text-green-400 p-4 rounded-lg whitespace-pre-wrap text-left font-mono overflow-x-auto">
+                          {testCase[0].result}
+                        </pre>
+                      </div>
+                    )}
+
+                  {/* No output message */}
+                  {!testCase[0].stdout &&
+                    !testCase[0].stderr &&
+                    !testCase[0].result && (
+                      <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                        No execution output available
+                      </div>
+                    )}
+                </div>
               </CardBody>
             </Card>
           </div>

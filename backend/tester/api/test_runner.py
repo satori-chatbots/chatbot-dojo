@@ -8,6 +8,7 @@ import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import psutil
 
@@ -16,6 +17,12 @@ from tester.models import TestCase
 from .base import logger
 from .execution_utils import ExecutionUtils, RunYmlConfigParams
 from .results_processor import ResultsProcessor
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+ERROR_MSG_TRUNCATE_LENGTH = 200
+TWO_ARGS = 2
 
 
 @dataclass
@@ -310,14 +317,18 @@ class TestRunner:
         test_case.refresh_from_db()
         if test_case.status == "STOPPED":
             logger.info("Test execution was stopped by the user.")
-            test_case.result = "Test execution was stopped by the user."
+            test_case.stdout = "Test execution was stopped by the user."
+            test_case.result = test_case.stdout  # For backward compatibility
             test_case.execution_time = execution_time
             test_case.save()
             return
 
         # Update execution results
         test_case.execution_time = execution_time
-        test_case.result = execution_result.stdout.decode().strip() or execution_result.stderr.decode().strip()
+        test_case.stdout = execution_result.stdout.decode().strip()
+        test_case.stderr = execution_result.stderr.decode().strip()
+        # Keep result field for backward compatibility (combine stdout and stderr)
+        test_case.result = test_case.stdout or test_case.stderr
         test_case.executed_conversations = execution_result.executed_conversations
 
         if execution_result.process.returncode == 0:
@@ -326,10 +337,69 @@ class TestRunner:
             logger.info("Test execution completed successfully")
             self.results_processor.process_test_results(test_case, results_path)
         else:
-            test_case.status = "FAILED"
-            test_case.error_message = execution_result.stderr.decode().strip()
+            test_case.status = "ERROR"
+            # Parse error message from stderr for better user display
+            error_output = test_case.stderr
+            test_case.error_message = self._parse_sensei_error_message(error_output)
             test_case.save()
-            logger.error(f"Test execution failed: {execution_result.stderr.decode().strip()}")
+            logger.error(f"Test execution failed: {error_output}")
+
+    def _parse_sensei_error_message(self, stderr_output: str) -> str:
+        """Parse Sensei error output to provide meaningful error messages."""
+        if not stderr_output:
+            return "Unknown error occurred during Sensei execution"
+
+        lower_output = stderr_output.lower()
+        error_patterns: list[tuple[Callable[..., bool], str]] = [
+            (
+                lambda lo: "connection" in lo and ("refused" in lo or "timeout" in lo),
+                "Connection failed: Unable to connect to the chatbot. Please check your connector configuration and ensure the chatbot is running.",
+            ),
+            (
+                lambda lo, so: "authentication" in lo or "unauthorized" in lo or "401" in so,
+                "Authentication failed: Please check your API key and connector authentication settings.",
+            ),
+            (
+                lambda lo: "api key" in lo or "openai_api_key" in lo,
+                "API key error: Please verify your API key configuration in the project settings.",
+            ),
+            (
+                lambda lo: "json" in lo and ("decode" in lo or "parse" in lo),
+                "Response parsing error: The chatbot returned an invalid response format. Please check your connector configuration.",
+            ),
+            (
+                lambda lo: "file not found" in lo or "no such file" in lo,
+                "File error: Required profile files are missing or inaccessible.",
+            ),
+            (
+                lambda lo: "permission denied" in lo,
+                "Permission error: Insufficient permissions to access required files or directories.",
+            ),
+            (
+                lambda lo: "module not found" in lo or "import" in lo,
+                "Dependency error: Required Python modules are missing. Please contact support.",
+            ),
+        ]
+
+        for condition, message in error_patterns:
+            try:
+                # Try calling with both arguments; fallback to one if TypeError
+                if condition.__code__.co_argcount == TWO_ARGS:
+                    if condition(lower_output, stderr_output):
+                        return message
+                elif condition(lower_output):
+                    return message
+            except TypeError as e:
+                logger.warning(f"Error calling error pattern lambda: {e}")
+                continue
+
+        # Extract the first line of error for concise display
+        first_line = stderr_output.split("\n")[0].strip()
+        if first_line:
+            return f"Execution error: {first_line}"
+        if len(stderr_output) > ERROR_MSG_TRUNCATE_LENGTH:
+            return stderr_output[:ERROR_MSG_TRUNCATE_LENGTH] + "..."
+        return stderr_output
 
     def _handle_execution_error(self, test_case_id: int, error: Exception) -> None:
         """Handle errors during test execution."""

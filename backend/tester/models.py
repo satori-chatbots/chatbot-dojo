@@ -475,6 +475,11 @@ class TestCase(models.Model):
     executed_at = models.DateTimeField(auto_now_add=True)
     # STDOUT of the test case
     result = models.TextField(blank=True)
+    # Separate stdout and stderr for Sensei execution (replaces result field)
+    stdout = models.TextField(blank=True, help_text="Standard output from Sensei execution")
+    stderr = models.TextField(blank=True, help_text="Standard error from Sensei execution")
+    # Detailed error message for failed executions (parsed from stderr)
+    error_message = models.TextField(blank=True, help_text="Parsed error message for user display")
     # Global execution time of the test case measured by the API, not the script
     execution_time = models.FloatField(blank=True, null=True)
     # If the execution was Successful, Failed or Running

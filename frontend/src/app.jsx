@@ -25,7 +25,7 @@ import { ChevronDown } from "lucide-react";
 
 // Lazy load components for code splitting
 const Home = React.lazy(() => import("./views/home"));
-const Dashboard = React.lazy(() => import("./views/dashboard"));
+const SenseiDashboard = React.lazy(() => import("./views/sensei-dashboard"));
 const ChatbotConnectors = React.lazy(
   () => import("./views/chatbot-connectors"),
 );
@@ -141,7 +141,7 @@ function AppContent() {
             )}
             <NavbarItem isActive={location.pathname === "/dashboard"}>
               <Link to="/dashboard" className="hover:underline text-sm">
-                Sensei Results
+                Sensei Dashboard
               </Link>
             </NavbarItem>
             <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
@@ -319,7 +319,7 @@ function AppContent() {
                 className="hover:underline text-sm"
                 onClick={handleLinkClick}
               >
-                Sensei Results
+                Sensei Dashboard
               </Link>
             </NavbarMenuItem>
             <NavbarMenuItem
@@ -416,7 +416,8 @@ function AppContent() {
                   </PrivateRoute>
                 }
               />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<SenseiDashboard />} />
+              <Route path="/sensei-dashboard" element={<SenseiDashboard />} />
               <Route path="/tracer-dashboard" element={<TracerDashboard />} />
               <Route
                 path="/chatbot-connectors"
