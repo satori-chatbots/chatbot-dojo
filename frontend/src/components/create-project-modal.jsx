@@ -31,6 +31,7 @@ const CreateProjectModal = ({
     connector: "",
     apiKey: undefined,
     llmModel: "",
+    profileModel: "",
     public: false,
   });
   const [loadingValidation, setLoadingValidation] = useState(false);
@@ -82,6 +83,7 @@ const CreateProjectModal = ({
       ...previous,
       apiKey: selectedKeyId,
       llmModel: "",
+      profileModel: "",
     }));
 
     // Find the selected API key to get its provider
@@ -108,6 +110,13 @@ const CreateProjectModal = ({
     setFormData((previous) => ({ ...previous, llmModel: event.target.value }));
   };
 
+  const handleProfileModelChange = (event) => {
+    setFormData((previous) => ({
+      ...previous,
+      profileModel: event.target.value,
+    }));
+  };
+
   const handlePublicChange = (value) => {
     setFormData((previous) => ({ ...previous, public: value }));
   };
@@ -118,6 +127,7 @@ const CreateProjectModal = ({
       connector: "",
       apiKey: undefined,
       llmModel: "",
+      profileModel: "",
       public: false,
     });
     setValidationErrors({});
@@ -161,6 +171,7 @@ const CreateProjectModal = ({
         chatbot_connector: formData.connector,
         api_key: formData.apiKey,
         llm_model: formData.llmModel,
+        profile_model: formData.profileModel,
         public: formData.public,
       });
       handleFormReset();
@@ -318,7 +329,7 @@ const CreateProjectModal = ({
                       htmlFor="project-llm-model"
                       className="text-sm mb-2 block text-foreground dark:text-foreground-dark"
                     >
-                      LLM Model
+                      Exploration Model
                     </label>
                     <Select
                       id="project-llm-model"
@@ -327,7 +338,7 @@ const CreateProjectModal = ({
                           ? "Loading models..."
                           : availableModels.length === 0
                             ? "No models available"
-                            : "Select LLM model"
+                            : "Select exploration model"
                       }
                       fullWidth
                       labelPlacement="outside"
@@ -352,7 +363,58 @@ const CreateProjectModal = ({
                     )}
                     {availableModels.length > 0 && (
                       <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
-                        This model will be used for TRACER (profile generation).
+                        Model for TRACER exploration (recommended: better than
+                        profile model).
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {formData.apiKey && (
+                  <div className="w-full">
+                    <label
+                      htmlFor="project-profile-model"
+                      className="text-sm mb-2 block text-foreground dark:text-foreground-dark"
+                    >
+                      Profile Model{" "}
+                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                        (optional)
+                      </span>
+                    </label>
+                    <Select
+                      id="project-profile-model"
+                      placeholder={
+                        loadingModels
+                          ? "Loading models..."
+                          : availableModels.length === 0
+                            ? "No models available"
+                            : "Select profile model (optional)"
+                      }
+                      fullWidth
+                      labelPlacement="outside"
+                      onChange={handleProfileModelChange}
+                      value={formData.profileModel}
+                      isDisabled={
+                        loadingValidation ||
+                        loadingModels ||
+                        availableModels.length === 0
+                      }
+                    >
+                      {availableModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    {availableModels.length === 0 && !loadingModels && (
+                      <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
+                        No models available for the selected API key provider.
+                      </p>
+                    )}
+                    {availableModels.length > 0 && (
+                      <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
+                        Optional. If not set, TRACER will use its default
+                        profile model.
                       </p>
                     )}
                   </div>

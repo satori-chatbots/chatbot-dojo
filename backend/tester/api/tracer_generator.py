@@ -242,7 +242,7 @@ class TracerGenerator:
             raise ValueError(msg)
 
         if not project.llm_model:
-            msg = "Project must have an LLM model configured"
+            msg = "Project must have an exploration model configured"
             raise ValueError(msg)
 
     def _setup_output_directory(self, execution: ProfileExecution) -> Path:
@@ -261,9 +261,10 @@ class TracerGenerator:
         """Execute the TRACER command and handle output."""
         project = task.project
         chatbot_url = project.chatbot_connector.link if project.chatbot_connector else "http://localhost:5000"
-        model = project.llm_model or "gpt-4o-mini"
+        exploration_model = project.llm_model or "gpt-4o-mini"
+        profile_model = project.profile_model or None  # None if not set
 
-        cmd = self._build_tracer_command(params, chatbot_url, model, output_dir)
+        cmd = self._build_tracer_command(params, chatbot_url, exploration_model, profile_model, output_dir)
 
         env = self._prepare_environment(params.api_key, project.llm_provider)
 
@@ -273,7 +274,8 @@ class TracerGenerator:
         self,
         params: ProfileGenerationParams,
         chatbot_url: str,
-        model: str,
+        exploration_model: str,
+        profile_model: str | None,
         output_dir: Path,
     ) -> list[str]:
         """Build the TRACER command with all parameters."""
@@ -288,12 +290,18 @@ class TracerGenerator:
             "-u",
             chatbot_url,
             "-m",
-            model,
-            "-o",
-            str(output_dir),
-            "--graph-format",
-            params.graph_format,
+            exploration_model,
         ]
+        if profile_model:
+            cmd.extend(["-pm", profile_model])
+        cmd.extend(
+            [
+                "-o",
+                str(output_dir),
+                "--graph-format",
+                params.graph_format,
+            ]
+        )
 
         # Add verbosity flags
         if params.verbosity == "verbose":

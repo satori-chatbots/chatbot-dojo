@@ -304,9 +304,18 @@ class Project(models.Model):
         null=True,
     )
 
-    # LLM Model to use for this project (provider comes from the API key)
+    # LLM Model to use for exploration (provider comes from the API key)
     llm_model = models.CharField(
-        max_length=100, blank=True, help_text="LLM model to use (e.g., gpt-4o-mini, gemini-2.0-flash)"
+        max_length=100,
+        blank=True,
+        help_text="LLM model for exploration in TRACER (e.g., gpt-4o-mini, gemini-2.0-flash)",
+    )
+
+    # LLM Model to use inside the generated profiles
+    profile_model = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="LLM model to embed in generated profiles (e.g., gpt-4o-mini, gemini-2.0-flash)",
     )
 
     def __str__(self) -> str:

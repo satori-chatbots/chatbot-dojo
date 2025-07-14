@@ -73,7 +73,9 @@ class TracerProjectValidator:
             )
 
         if not project.llm_model:
-            return Response({"error": "Project must have an LLM model configured."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Project must have an exploration model configured."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         return None
 
