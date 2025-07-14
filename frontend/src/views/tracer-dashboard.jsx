@@ -30,6 +30,7 @@ import InlineGraphViewer from "../components/inline-graph-viewer";
 import OriginalProfilesViewer from "../components/original-profiles-viewer";
 import ExecutionLogsViewer from "../components/execution-logs-viewer";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import { useAuth } from "../contexts/auth-context";
 
 // Move getStatusColor to outer scope
 const getStatusColor = (status) => {
@@ -62,6 +63,10 @@ const TracerDashboard = () => {
   const [viewingContent, setViewingContent] = useState();
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { showToast } = useMyCustomToast();
+  const { user } = useAuth();
+
+  // Public view state - true when user is not authenticated
+  const [publicView] = useState(!user);
 
   // Progress polling state
   const [pollingIntervals, setPollingIntervals] = useState(new Map());
@@ -85,7 +90,8 @@ const TracerDashboard = () => {
   // Function to start polling an execution's progress
   const startPollingExecution = useCallback(
     async (execution) => {
-      if (!execution.id || execution.status !== "RUNNING") return;
+      // Only poll if authenticated and execution is running
+      if (!user || !execution.id || execution.status !== "RUNNING") return;
 
       // Check if we're already polling this execution
       if (pollingIntervals.has(execution.id)) return;
@@ -167,7 +173,7 @@ const TracerDashboard = () => {
         );
       }
     },
-    [pollingIntervals, showToast],
+    [pollingIntervals, showToast, user],
   );
 
   const loadTracerExecutions = useCallback(async () => {
@@ -191,20 +197,21 @@ const TracerDashboard = () => {
 
       setUniqueProjects(projects);
 
-      // Start polling for any running executions
-      if (data.executions)
+      // Start polling for any running executions (only for authenticated users)
+      if (user && data.executions) {
         for (const execution of data.executions) {
           if (execution.status === "RUNNING") {
             startPollingExecution(execution);
           }
         }
+      }
     } catch (error) {
       console.error("Error loading TRACER executions:", error);
-      showToast("Error loading TRACER executions", "error");
+      showToast("error", "Error loading TRACER executions");
     } finally {
       setLoading(false);
     }
-  }, [startPollingExecution, showToast]);
+  }, [startPollingExecution, showToast, user]);
 
   useEffect(() => {
     loadTracerExecutions();
@@ -282,10 +289,10 @@ const TracerDashboard = () => {
     }
   };
 
-  // Handler for deleting a TRACER execution
+  // Handler for deleting a TRACER execution (only for authenticated users)
   const handleDeleteExecution = useCallback(
     async (execution) => {
-      if (!execution?.id) return;
+      if (!user || !execution?.id) return;
 
       if (
         !globalThis.confirm(
@@ -297,7 +304,7 @@ const TracerDashboard = () => {
 
       try {
         const response = await deleteProfileExecution(execution.id);
-        showToast(response.message || "Execution deleted", "success");
+        showToast("success", response.message || "Execution deleted");
         await loadTracerExecutions();
       } catch (error) {
         console.error("Error deleting TRACER execution:", error);
@@ -310,10 +317,10 @@ const TracerDashboard = () => {
         } catch {
           // ignore JSON parse failure
         }
-        showToast(errorMessage, "error");
+        showToast("error", errorMessage);
       }
     },
-    [showToast, loadTracerExecutions],
+    [showToast, loadTracerExecutions, user],
   );
 
   const renderModalContent = () => {
@@ -370,7 +377,7 @@ const TracerDashboard = () => {
           onViewGraph={handleViewGraph}
           onViewProfiles={handleViewProfiles}
           onViewLogs={handleViewLogs}
-          onDelete={handleDeleteExecution}
+          onDelete={publicView ? undefined : handleDeleteExecution} // Hide delete in public view
           getStatusIcon={getStatusIcon}
           getStatusColor={getStatusColor}
           progressStage={execution.progress_stage}
@@ -395,7 +402,7 @@ const TracerDashboard = () => {
       <div className="flex items-center gap-3">
         <BarChart3 className="w-6 h-6 text-primary" />
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-          TRACER Dashboard
+          {publicView ? "Public TRACER Dashboard" : "TRACER Dashboard"}
         </h1>
       </div>
 
@@ -405,8 +412,12 @@ const TracerDashboard = () => {
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div className="flex-1">
               <Select
-                label="Filter by Project"
-                placeholder="All Projects"
+                label={
+                  publicView ? "Filter by Public Project" : "Filter by Project"
+                }
+                placeholder={
+                  publicView ? "All Public Projects" : "All Projects"
+                }
                 selectedKeys={
                   selectedProject === "all" ? [] : [selectedProject]
                 }
@@ -418,7 +429,7 @@ const TracerDashboard = () => {
                 className="max-w-xs"
               >
                 <SelectItem key="all" value="all">
-                  All Projects
+                  {publicView ? "All Public Projects" : "All Projects"}
                 </SelectItem>
                 {uniqueProjects.map((project) => (
                   <SelectItem
@@ -487,7 +498,9 @@ const TracerDashboard = () => {
               </h3>
               <p className="text-default-500">
                 {executions.length === 0
-                  ? "No TRACER executions have been created yet."
+                  ? publicView
+                    ? "No public TRACER executions are available."
+                    : "No TRACER executions have been created yet."
                   : "No executions match the current filters."}
               </p>
             </CardBody>
@@ -512,7 +525,7 @@ const TracerDashboard = () => {
               onViewGraph={handleViewGraph}
               onViewProfiles={handleViewProfiles}
               onViewLogs={handleViewLogs}
-              onDelete={handleDeleteExecution}
+              onDelete={publicView ? undefined : handleDeleteExecution} // Hide delete in public view
               getStatusIcon={getStatusIcon}
               getStatusColor={getStatusColor}
               progressStage={execution.progress_stage}

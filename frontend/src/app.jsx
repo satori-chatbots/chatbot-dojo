@@ -144,16 +144,11 @@ function AppContent() {
                 Sensei Results
               </Link>
             </NavbarItem>
-            {user && (
-              <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
-                <Link
-                  to="/tracer-dashboard"
-                  className="hover:underline text-sm"
-                >
-                  TRACER Dashboard
-                </Link>
-              </NavbarItem>
-            )}
+            <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
+              <Link to="/tracer-dashboard" className="hover:underline text-sm">
+                TRACER Dashboard
+              </Link>
+            </NavbarItem>
             {user && (
               <Dropdown>
                 <NavbarItem>
@@ -327,19 +322,17 @@ function AppContent() {
                 Sensei Results
               </Link>
             </NavbarMenuItem>
-            {user && (
-              <NavbarMenuItem
-                isActive={location.pathname === "/tracer-dashboard"}
+            <NavbarMenuItem
+              isActive={location.pathname === "/tracer-dashboard"}
+            >
+              <Link
+                to="/tracer-dashboard"
+                className="hover:underline text-sm"
+                onClick={handleLinkClick}
               >
-                <Link
-                  to="/tracer-dashboard"
-                  className="hover:underline text-sm"
-                  onClick={handleLinkClick}
-                >
-                  TRACER Dashboard
-                </Link>
-              </NavbarMenuItem>
-            )}
+                TRACER Dashboard
+              </Link>
+            </NavbarMenuItem>
             {user && (
               <>
                 <div className="px-4 py-2 text-tiny text-default-400 font-medium">
@@ -424,14 +417,7 @@ function AppContent() {
                 }
               />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route
-                path="/tracer-dashboard"
-                element={
-                  <PrivateRoute>
-                    <TracerDashboard />
-                  </PrivateRoute>
-                }
-              />
+              <Route path="/tracer-dashboard" element={<TracerDashboard />} />
               <Route
                 path="/chatbot-connectors"
                 element={
