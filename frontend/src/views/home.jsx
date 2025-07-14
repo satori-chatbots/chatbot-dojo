@@ -667,6 +667,14 @@ function Home() {
     }
   };
 
+  // Helper to get missing config message for LLM Configuration
+  const getMissingConfigMessage = () => {
+    if (!selectedProject.api_key) return "No API key configured";
+    if (!selectedProject.llm_model) return "No exploration model configured";
+    if (!selectedProject.profile_model) return "No profile model configured";
+    return "No models configured";
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col items-center space-y-4 sm:space-y-6 w-full sm:max-w-4xl mx-auto my-auto">
       {/* Setup Progress - always visible when not complete */}
@@ -732,39 +740,65 @@ function Home() {
               <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark mb-2">
                 LLM Configuration
               </h3>
-              {selectedProject.api_key && selectedProject.llm_model ? (
-                <div className="flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                      Provider & Model
-                    </span>
-                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      {getProviderDisplayName(selectedProject.llm_provider)} •{" "}
-                      {selectedProject.llm_model}
-                    </span>
+              {selectedProject.api_key &&
+              selectedProject.llm_model &&
+              selectedProject.profile_model ? (
+                <div className="flex flex-col space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                        Provider
+                      </span>
+                      <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                        {getProviderDisplayName(selectedProject.llm_provider)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                        API Key
+                      </span>
+                      <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                        {getApiKeyName(
+                          selectedProject.api_key,
+                          availableApiKeys,
+                        )}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                      API Key
-                    </span>
-                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      {getApiKeyName(selectedProject.api_key, availableApiKeys)}
-                    </span>
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                        Exploration Model
+                      </span>
+                      <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                        {selectedProject.llm_model}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                        Profile Model
+                      </span>
+                      <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                        {selectedProject.profile_model}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-between items-center">
                   <span className="text-red-500 text-sm font-medium">
-                    ⚠️ No model configured
+                    ⚠️ {getMissingConfigMessage()}
                   </span>
                 </div>
               )}
-              {selectedProject.api_key && selectedProject.llm_model && (
-                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm mt-2">
-                  💡 <strong>Important:</strong> API provider must match the
-                  provider in your profiles. Check costs before running tests.
-                </div>
-              )}
+              {selectedProject.api_key &&
+                selectedProject.llm_model &&
+                selectedProject.profile_model && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded border border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm mt-2">
+                    💡 <strong>Important:</strong> API provider must match the
+                    provider in your profiles. Check costs before running tests.
+                  </div>
+                )}
             </div>
           </div>
 
@@ -1084,8 +1118,14 @@ function Home() {
                 </h4>
                 <div className="text-sm text-default-600 space-y-1">
                   <div>
-                    Model: {selectedProject?.llm_model || "gpt-4o-mini"} (from
-                    project settings)
+                    Exploration Model:{" "}
+                    {selectedProject?.llm_model || "gpt-4o-mini"} (TRACER
+                    exploration)
+                  </div>
+                  <div>
+                    Profile Model:{" "}
+                    {selectedProject?.profile_model || "gpt-4o-mini"} (embedded
+                    in profiles)
                   </div>
                   <div>
                     Technology:{" "}

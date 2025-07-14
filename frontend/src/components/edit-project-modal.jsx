@@ -31,6 +31,7 @@ const EditProjectModal = ({
     connector: project?.chatbot_connector || "",
     apiKey: project?.api_key || undefined,
     llmModel: project?.llm_model || "",
+    profileModel: project?.profile_model || "",
     public: project?.public || false,
   });
   const [loadingValidation, setLoadingValidation] = useState(false);
@@ -58,6 +59,7 @@ const EditProjectModal = ({
         connector: project.chatbot_connector,
         apiKey: project.api_key || undefined,
         llmModel: project.llm_model || "",
+        profileModel: project.profile_model || "",
         public: project.public || false,
       });
       //console.log('Project:', project);
@@ -145,6 +147,7 @@ const EditProjectModal = ({
         chatbot_connector: formData.connector,
         api_key: formData.apiKey,
         llm_model: formData.llmModel,
+        profile_model: formData.profileModel,
         public: formData.public,
       });
       onOpenChange(false);
@@ -167,6 +170,7 @@ const EditProjectModal = ({
       connector: project.chatbot_connector,
       apiKey: project.api_key || undefined,
       llmModel: project.llm_model || "",
+      profileModel: project.profile_model || "",
       public: project.public || false,
     });
     setValidationErrors({});
@@ -182,6 +186,7 @@ const EditProjectModal = ({
       ...previous,
       apiKey: apiKeyId,
       llmModel: "",
+      profileModel: "",
     }));
 
     // Find the selected API key to get its provider
@@ -206,6 +211,13 @@ const EditProjectModal = ({
 
   const handleModelChange = (event) => {
     setFormData((previous) => ({ ...previous, llmModel: event.target.value }));
+  };
+
+  const handleProfileModelChange = (event) => {
+    setFormData((previous) => ({
+      ...previous,
+      profileModel: event.target.value,
+    }));
   };
 
   const handlePublicChange = (value) => {
@@ -353,7 +365,7 @@ const EditProjectModal = ({
                   htmlFor="edit-project-llm-model"
                   className="text-sm mb-2 block text-foreground dark:text-foreground-dark"
                 >
-                  LLM Model
+                  Exploration Model
                 </label>
                 <Select
                   id="edit-project-llm-model"
@@ -362,7 +374,7 @@ const EditProjectModal = ({
                       ? "Loading models..."
                       : availableModels.length === 0
                         ? "No models available"
-                        : "Select LLM model"
+                        : "Select exploration model"
                   }
                   fullWidth
                   labelPlacement="outside"
@@ -388,7 +400,58 @@ const EditProjectModal = ({
                 )}
                 {availableModels.length > 0 && (
                   <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
-                    This model will be used for TRACER (profile generation).
+                    Model for TRACER exploration (recommended: better than
+                    profile model).
+                  </p>
+                )}
+              </div>
+            )}
+
+            {formData.apiKey && (
+              <div className="w-full">
+                <label
+                  htmlFor="edit-project-profile-model"
+                  className="text-sm mb-2 block text-foreground dark:text-foreground-dark"
+                >
+                  Profile Model
+                </label>
+                <Select
+                  id="edit-project-profile-model"
+                  placeholder={
+                    loadingModels
+                      ? "Loading models..."
+                      : availableModels.length === 0
+                        ? "No models available"
+                        : "Select profile model"
+                  }
+                  fullWidth
+                  labelPlacement="outside"
+                  onChange={handleProfileModelChange}
+                  value={formData.profileModel}
+                  selectedKeys={
+                    formData.profileModel ? [formData.profileModel] : []
+                  }
+                  isDisabled={
+                    loadingValidation ||
+                    loadingModels ||
+                    availableModels.length === 0
+                  }
+                >
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </Select>
+                {availableModels.length === 0 && !loadingModels && (
+                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
+                    No models available for the selected API key provider.
+                  </p>
+                )}
+                {availableModels.length > 0 && (
+                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 mt-1">
+                    Model that will be embedded in the generated user profiles
+                    (recommended: more economic than exploration model)
                   </p>
                 )}
               </div>
