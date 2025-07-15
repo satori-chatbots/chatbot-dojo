@@ -47,7 +47,7 @@ cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.4.2
     # via requests
-chatbot-tracer==0.2.11
+chatbot-tracer==0.3.0
     # via sensei-web
 colorama==0.4.6
     # via
@@ -110,7 +110,7 @@ google-auth==2.40.3
     #   google-generativeai
 google-auth-httplib2==0.2.0
     # via google-api-python-client
-google-cloud-aiplatform==1.102.0
+google-cloud-aiplatform==1.103.0
     # via langchain-google-vertexai
 google-cloud-bigquery==3.34.0
     # via google-cloud-aiplatform
@@ -229,7 +229,7 @@ langgraph-prebuilt==0.5.2
     # via langgraph
 langgraph-sdk==0.1.72
     # via langgraph
-langsmith==0.4.4
+langsmith==0.4.5
     # via
     #   langchain
     #   langchain-core
