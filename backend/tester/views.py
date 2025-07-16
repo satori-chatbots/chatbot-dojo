@@ -33,7 +33,7 @@ class ExecuteAPIView(APIView):
         file_path = Path(files.first().file.path).parent
         base_dir = Path(__file__).resolve().parents[3]
         extract_dir = file_path.parent
-        script_path = base_dir / "user-simulator" / "src" / "autotest.py"
+        script_path = base_dir / "user-simulator" / "src" / "user_sim" / "cli" / "sensei_chat.py"
         work_dir = script_path.parent.parent
         python_executable = sys.executable or shutil.which("python3") or shutil.which("python")
         if not python_executable:

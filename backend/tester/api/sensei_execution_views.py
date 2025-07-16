@@ -154,7 +154,7 @@ class ExecuteSelectedProfilesAPIView(APIView):
         api_key = SenseiApiKeyManager.setup_api_key(project)
 
         base_dir = Path(settings.BASE_DIR).parent
-        sensei_script_path = str(base_dir / "user-simulator" / "src" / "sensei_chat.py")
+        sensei_script_path = str(base_dir / "user-simulator" / "src" / "user_sim" / "cli" / "sensei_chat.py")
         project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{request.user.id}" / f"project_{project.id}"
 
         with transaction.atomic():

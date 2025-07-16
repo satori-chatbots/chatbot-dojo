@@ -72,7 +72,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         # Get the path of the script
         base_dir = Path(settings.BASE_DIR).parent
-        init_script_path = base_dir / "user-simulator" / "src" / "init_project.py"
+        init_script_path = base_dir / "user-simulator" / "src" / "user_sim" / "cli" / "init_project.py"
 
         # Create path structure: projects/user_{user_id}/project_{project_id}/
         # This should be consistent with the MEDIA_ROOT structure

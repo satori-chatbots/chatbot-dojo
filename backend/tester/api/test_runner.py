@@ -171,6 +171,32 @@ class TestRunner:
         except Exception as e:  # noqa: BLE001
             self._handle_execution_error(config.test_case_id, e)
 
+    def _build_command(self, config_data: dict, project_path: str, script_path: str) -> list[str]:
+        """Build the command to execute the test script."""
+        cmd = [
+            "python",
+            script_path,
+            "--technology",
+            config_data["technology"],
+            "--connector",
+            config_data["connector"],
+            "--project_path",
+            project_path,
+            "--user_profile",
+            config_data["user_profile"],
+            "--extract",
+            config_data["extract"],
+            "--verbose",
+        ]
+        if config_data.get("connector_parameters"):
+            cmd.extend(
+                [
+                    "--connector_parameters",
+                    json.dumps(config_data["connector_parameters"]),
+                ]
+            )
+        return cmd
+
     def _setup_test_execution(
         self, test_case: TestCase, config: TestExecutionConfig
     ) -> tuple[subprocess.Popen[bytes], threading.Thread, list[int]]:
@@ -193,8 +219,8 @@ class TestRunner:
             )
         )
 
-        # Build command
-        cmd = self._build_command(config_data, config.project_path)
+        # Build command (now passing the absolute script path)
+        cmd = self._build_command(config_data, config.project_path, config.script_path)
         logger.info(f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}")
 
         # Prepare environment for subprocess
@@ -225,32 +251,6 @@ class TestRunner:
         monitoring_thread = self._start_monitoring_thread(config.results_path, test_case, final_conversation_count)
 
         return process, monitoring_thread, final_conversation_count
-
-    def _build_command(self, config_data: dict, project_path: str) -> list[str]:
-        """Build the command to execute the test script."""
-        cmd = [
-            "python",
-            "src/sensei_chat.py",
-            "--technology",
-            config_data["technology"],
-            "--connector",
-            config_data["connector"],
-            "--project_path",
-            project_path,
-            "--user_profile",
-            config_data["user_profile"],
-            "--extract",
-            config_data["extract"],
-            "--verbose",
-        ]
-        if config_data.get("connector_parameters"):
-            cmd.extend(
-                [
-                    "--connector_parameters",
-                    json.dumps(config_data["connector_parameters"]),
-                ]
-            )
-        return cmd
 
     def _start_monitoring_thread(
         self, conversations_dir: str, test_case: TestCase, final_conversation_count: list[int]
