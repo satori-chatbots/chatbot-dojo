@@ -6,7 +6,6 @@ and executes them against chatbot systems for testing.
 """
 
 import shutil
-import threading
 from pathlib import Path
 
 import yaml
@@ -22,6 +21,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tester.api.base import logger
+from tester.api.tasks import execute_sensei_test_task
 from tester.api.test_runner import TestExecutionConfig, TestRunner
 from tester.models import (
     ProfileExecution,
@@ -195,10 +195,22 @@ class ExecuteSelectedProfilesAPIView(APIView):
                 api_key=api_key,
                 api_provider=project.llm_provider,
             )
-            threading.Thread(
-                target=TestRunner().execute_test_background,
-                args=(execution_config,),
-            ).start()
+
+            # Convert config to dict for Celery serialization
+            config_dict = {
+                "test_case_id": execution_config.test_case_id,
+                "script_path": execution_config.script_path,
+                "project_path": execution_config.project_path,
+                "profiles_directory": execution_config.profiles_directory,
+                "results_path": execution_config.results_path,
+                "technology": execution_config.technology,
+                "link": execution_config.link,
+                "api_key": execution_config.api_key,
+                "api_provider": execution_config.api_provider,
+            }
+
+            # Start Celery task for asynchronous execution
+            execute_sensei_test_task.delay(config_dict)
 
         return Response(
             {
