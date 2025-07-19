@@ -15,14 +15,17 @@ git submodule update
 
 ### Backend setup
 
-To make the server run, you need to have the project dependencies installed, but also the `user-simulator` ones. To do so, in a preferably new virtual environment, run the following commands:
+To make the server run, you need to have the project dependencies installed, but also the `user-simulator` ones.
 
+**With `pip`:**
 ```bash
 pip install -r requirements.txt
 pip install -r ../user-simulator/requirements.txt
 ```
 
-Or if you use `uv`:
+**With `uv`:**
+
+If you don't have `uv` installed, you can find instructions at [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
 uv sync
@@ -36,14 +39,12 @@ You must have a `.env` file in the `backend` directory with the following variab
 - `SECRET_KEY` — Django secret key (auto-generated)
 - `DEBUG` — Set to `True` or `False` (default: True)
 
-To generate or update your `.env` file with all required variables, run:
-
+To generate or update your `.env` file with all required variables, you can use `make`:
 ```bash
 make env
 ```
 
-This will run the script at `scripts/generate_env.py`, which will create or update `.env` with all necessary keys. You can also run the script directly:
-
+This will run the script at `scripts/generate_env.py`. You can also run the script directly:
 ```bash
 python scripts/generate_env.py
 ```
@@ -59,7 +60,7 @@ If you cannot run the script, you can manually generate the required keys and cr
    from cryptography.fernet import Fernet
    print(Fernet.generate_key().decode())
    ```
-   Copy the output (it will look like `EZsbc2bocfVw-1I8T-qq9gzrqiNv7_YtT0FOybwak2U=`).
+   Copy the output.
 
 2. **Generate Django SECRET_KEY:**
 
@@ -68,7 +69,7 @@ If you cannot run the script, you can manually generate the required keys and cr
    from django.core.management.utils import get_random_secret_key
    print(get_random_secret_key())
    ```
-   Copy the output (a long random string).
+   Copy the output.
 
 3. **Create the `.env` file in the `backend` directory** with the following content:
    ```env
@@ -80,17 +81,15 @@ If you cannot run the script, you can manually generate the required keys and cr
 
 #### Database setup and running the server
 
-After setting up the Fernet key, you can make the necessary migrations and then execute the server:
+After setting up the environment variables, you can make the necessary migrations and then execute the server.
 
-Using Make:
-
+**Using Make:**
 ```bash
 make migrations
 make run
 ```
 
-Without Make:
-
+**Without Make:**
 ```bash
 # Create and apply migrations
 python manage.py makemigrations tester
@@ -102,16 +101,14 @@ python manage.py runserver
 
 #### Database reset
 
-In case of problems, you can reset the database:
+In case of problems, you can reset the database.
 
-Using Make:
-
+**Using Make:**
 ```bash
 make full-reset
 ```
 
-Without Make:
-
+**Without Make (Windows):**
 ```bash
 # Delete migrations and database
 del /s /q */migrations/0*.py
@@ -121,8 +118,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-Without Make:
-
+**Without Make (Linux/macOS):**
 ```bash
 # Delete migrations and database
 rm -rf */migrations/0*.py
@@ -156,6 +152,35 @@ To set up and run the frontend, you need to have Node.js and pnpm installed. The
 
 The frontend will be running at `http://localhost:5173/`.
 
+## Running with Celery and Redis
+
+To run the application with background tasks using Celery and Redis, follow these steps:
+
+1.  **Install and run Redis:**
+
+    -   **Using Docker (recommended):**
+        ```bash
+        docker run -d -p 6379:6379 redis
+        ```
+    -   **Natively:**
+        Follow the official Redis installation instructions for your operating system.
+
+2.  **Start the Celery worker:**
+
+    In a new terminal, navigate to the `backend` directory and run:
+    ```bash
+    source .venv/bin/activate
+    celery -A senseiweb worker -l info
+    ```
+
+3.  **Start the Django development server:**
+
+    In another terminal, navigate to the `backend` directory and run:
+    ```bash
+    source .venv/bin/activate
+    python manage.py runserver
+    ```
+
 ## Usage
 
 You can now access the webpage at [http://localhost:5173/](http://localhost:5173/).
@@ -171,7 +196,7 @@ You can now access the webpage at [http://localhost:5173/](http://localhost:5173
 
 **Database migration errors:**
 
-- Run `make full-reset` or follow manual database reset steps above
+- Follow manual database reset steps above
 
 **Missing dependencies:**
 
@@ -187,22 +212,18 @@ You can now access the webpage at [http://localhost:5173/](http://localhost:5173
 
 ### Pre-commit Hooks
 
-This project uses pre-commit hooks to ensure code quality and consistency. The hooks include:
-
-- **Ruff** for Python linting and formatting (backend only)
-- **ESLint** for JavaScript/TypeScript linting (frontend)
-- **General hooks** for trailing whitespace, end-of-file fixes, and merge conflict detection
+This project uses pre-commit hooks to ensure code quality and consistency.
 
 #### Installation
 
-1. Install pre-commit using UV:
+1. Install pre-commit:
    ```bash
-   uv add --group dev pre-commit
+   pip install pre-commit
    ```
 
 2. Install the git hooks:
    ```bash
-   uv run pre-commit install
+   pre-commit install
    ```
 
 3. Ensure frontend dependencies are installed:
@@ -221,10 +242,10 @@ Pre-commit hooks will run automatically on `git commit`. You can also run them m
 
 ```bash
 # Run on all files
-uv run pre-commit run --all-files
+pre-commit run --all-files
 
 # Run on staged files only
-uv run pre-commit run
+pre-commit run
 ```
 
 To skip pre-commit hooks temporarily (not recommended):
