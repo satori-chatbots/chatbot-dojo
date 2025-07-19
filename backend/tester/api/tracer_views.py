@@ -1,6 +1,5 @@
 """API views for TRACER profile generation and analysis endpoints."""
 
-import threading
 from pathlib import Path
 
 from cryptography.fernet import InvalidToken
@@ -14,7 +13,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from tester.api.base import logger
-from tester.api.tracer_generator import ProfileGenerationParams, TracerGenerator
+from tester.api.tasks import generate_profiles_task
+from tester.api.tracer_generator import ProfileGenerationParams
 from tester.models import (
     ProfileExecution,
     ProfileGenerationTask,
@@ -121,8 +121,6 @@ def generate_profiles(request: Request) -> Response:
         turns=turns_per_session,
     )
 
-    # Start async generation
-    tracer_generator = TracerGenerator()
     params = ProfileGenerationParams(
         technology=project.chatbot_connector.technology,
         conversations=sessions,
@@ -131,10 +129,7 @@ def generate_profiles(request: Request) -> Response:
         user_id=request.user.id,
         api_key=api_key,
     )
-    threading.Thread(
-        target=tracer_generator.run_async_profile_generation,
-        args=(task.id, params),
-    ).start()
+    generate_profiles_task.delay(task.id, params.__dict__)
 
     return Response(
         {"message": "Profile generation started", "task_id": task.id},

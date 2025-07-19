@@ -709,7 +709,8 @@ class ProfileGenerationTask(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("RUNNING", "Running"),
-        ("COMPLETED", "Completed"),
+        ("SUCCESS", "Success"),
+        ("FAILURE", "Failure"),
         ("ERROR", "Error"),
     )
 

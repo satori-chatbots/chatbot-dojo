@@ -152,18 +152,32 @@ To set up and run the frontend, you need to have Node.js and pnpm installed. The
 
 The frontend will be running at `http://localhost:5173/`.
 
-## Running with Celery and Redis
+## Running with Celery and RabbitMQ
 
-To run the application with background tasks using Celery and Redis, follow these steps:
+To run the application with background tasks using Celery and RabbitMQ, follow these steps:
 
-1.  **Install and run Redis:**
+1.  **Install and run RabbitMQ:**
 
     -   **Using Docker (recommended):**
         ```bash
-        docker run -d -p 6379:6379 redis
+        docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management
         ```
-    -   **Natively:**
-        Follow the official Redis installation instructions for your operating system.
+        The management interface will be available at `http://localhost:15672` (user: `guest`, pass: `guest`).
+
+    -   **Natively (Debian/Ubuntu):**
+        ```bash
+        sudo apt-get update
+        sudo apt-get install rabbitmq-server
+        sudo systemctl enable rabbitmq-server
+        sudo systemctl start rabbitmq-server
+        ```
+
+    -   **Natively (Arch Linux):**
+        ```bash
+        sudo pacman -S rabbitmq
+        sudo systemctl enable rabbitmq.service
+        sudo systemctl start rabbitmq.service
+        ```
 
 2.  **Start the Celery worker:**
 

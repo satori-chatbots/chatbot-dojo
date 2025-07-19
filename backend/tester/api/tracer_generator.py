@@ -175,13 +175,13 @@ class TracerGenerator:
     def _finalize_execution(self, task: ProfileGenerationTask, execution: ProfileExecution, *, success: bool) -> None:
         """Finalize task and execution status based on success."""
         if success:
-            task.status = "COMPLETED"
+            task.status = "SUCCESS"
             task.progress_percentage = 100
             task.stage = "COMPLETED"
             execution.status = "COMPLETED"
             logger.info(f"TRACER profile generation completed for task {task.id}")
         else:
-            task.status = "ERROR"
+            task.status = "FAILURE"
             # Only set a generic error message if we don't already have a specific one
             if not task.error_message or task.error_message.strip() == "":
                 task.error_message = "TRACER execution failed - check logs for details"
