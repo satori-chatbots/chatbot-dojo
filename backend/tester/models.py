@@ -501,9 +501,7 @@ class TestCase(models.Model):
     # Name of the profiles so we can access the directories
     profiles_names = models.JSONField(blank=True, null=True)
     # Celery task ID for tracking execution progress
-    celery_task_id = models.CharField(
-        max_length=255, blank=True, default="", help_text="Celery task ID for progress tracking"
-    )
+    celery_task_id = models.CharField(max_length=255, blank=True, help_text="Celery task ID for progress tracking")
     # Number of total conversations
     total_conversations = models.IntegerField(blank=True, null=True)
     # Number of conversations that have already been
@@ -737,9 +735,7 @@ class ProfileGenerationTask(models.Model):
     execution = models.ForeignKey(
         "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="generation_tasks"
     )
-    celery_task_id = models.CharField(
-        max_length=255, blank=True, default="", help_text="Celery task ID for progress tracking"
-    )
+    celery_task_id = models.CharField(max_length=255, blank=True, help_text="Celery task ID for progress tracking")
 
     def __str__(self) -> str:
         """Return a string representation of the task."""
