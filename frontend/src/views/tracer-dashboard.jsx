@@ -21,7 +21,6 @@ import {
 import {
   fetchTracerExecutions,
   deleteProfileExecution,
-  checkOngoingGeneration,
   checkTracerGenerationStatus,
 } from "../api/file-api";
 import TracerExecutionCard from "../components/tracer-execution-card";
@@ -96,79 +95,67 @@ const TracerDashboard = () => {
       // Check if we're already polling this execution
       if (pollingIntervals.has(execution.id)) return;
 
-      // We need to find the Celery task ID from the execution
-      // Check the ongoing generation status for the project
-      try {
-        const ongoingResponse = await checkOngoingGeneration(
-          execution.project_id,
-        );
+      // Get the Celery task ID directly from the execution object
+      if (!execution.celery_task_id) {
+        return;
+      }
 
-        if (!ongoingResponse.ongoing || !ongoingResponse.celery_task_id) {
-          return;
-        }
+      const celeryTaskId = execution.celery_task_id;
 
-        const celeryTaskId = ongoingResponse.celery_task_id;
+      const intervalId = setInterval(async () => {
+        try {
+          const status = await checkTracerGenerationStatus(celeryTaskId);
 
-        const intervalId = setInterval(async () => {
-          try {
-            const status = await checkTracerGenerationStatus(celeryTaskId);
-
-            // Update the execution in our state
-            setExecutions((prevExecutions) =>
-              prevExecutions.map((exec) => {
-                if (exec.id === execution.id) {
-                  return {
-                    ...exec,
-                    status: status.status,
-                    progress_stage: status.stage,
-                    progress_percentage: status.progress,
-                  };
-                }
-                return exec;
-              }),
-            );
-
-            // Stop polling if completed or failed
-            if (status.status === "SUCCESS" || status.status === "FAILURE") {
-              clearInterval(intervalId);
-              setPollingIntervals((prev) => {
-                const newMap = new Map(prev);
-                newMap.delete(execution.id);
-                return newMap;
-              });
-
-              if (status.status === "SUCCESS") {
-                showToast("success", "TRACER execution succeeded!");
-              } else if (status.status === "FAILURE") {
-                const errorMessage =
-                  status.error_message ||
-                  "Unknown error occurred during execution";
-                showToast("error", "TRACER execution failed: " + errorMessage);
+          // Update the execution in our state
+          setExecutions((prevExecutions) =>
+            prevExecutions.map((exec) => {
+              if (exec.id === execution.id) {
+                return {
+                  ...exec,
+                  status: status.status,
+                  progress_stage: status.stage,
+                  progress_percentage: status.progress,
+                };
               }
-            }
-          } catch (error) {
-            console.error(`Error polling execution ${execution.id}:`, error);
-            // Stop polling on error
+              return exec;
+            }),
+          );
+
+          // Stop polling if completed or failed
+          if (status.status === "SUCCESS" || status.status === "FAILURE") {
             clearInterval(intervalId);
             setPollingIntervals((prev) => {
               const newMap = new Map(prev);
               newMap.delete(execution.id);
               return newMap;
             });
-          }
-        }, 2000); // Poll every 2 seconds
 
-        setPollingIntervals((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(execution.id, intervalId);
-          return newMap;
-        });
-      } catch (error) {
-        console.error(
-          `Error starting polling for execution ${execution.id}:`,
-          error,
-        );
-      }
+            if (status.status === "SUCCESS") {
+              showToast("success", "TRACER execution succeeded!");
+            } else if (status.status === "FAILURE") {
+              const errorMessage =
+                status.error_message ||
+                "Unknown error occurred during execution";
+              showToast("error", "TRACER execution failed: " + errorMessage);
+            }
+          }
+        } catch (error) {
+          console.error(`Error polling execution ${execution.id}:`, error);
+          // Stop polling on error
+          clearInterval(intervalId);
+          setPollingIntervals((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(execution.id);
+            return newMap;
+          });
+        }
+      }, 2000); // Poll every 2 seconds
+
+      setPollingIntervals((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(execution.id, intervalId);
+        return newMap;
+      });
     },
     [pollingIntervals, showToast, user],
   );

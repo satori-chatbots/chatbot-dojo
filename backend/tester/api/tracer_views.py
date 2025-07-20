@@ -301,11 +301,13 @@ def get_tracer_executions(request: Request) -> Response:
 
 def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
     """Build execution info dictionary for TRACER executions."""
-    # Get error message from associated task if available
+    # Get error message and celery task ID from associated task if available
     error_message = ""
+    celery_task_id = None
     if execution.generation_tasks.exists():
         task = execution.generation_tasks.first()
         error_message = task.error_message if task.error_message else ""
+        celery_task_id = task.celery_task_id
 
     execution_info = {
         "id": execution.id,
@@ -326,6 +328,7 @@ def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
         "error_type": execution.error_type,
         "error_message": error_message,
         "has_profiles": execution.original_profiles.exists(),
+        "celery_task_id": celery_task_id,
     }
 
     # Add analysis data if available
