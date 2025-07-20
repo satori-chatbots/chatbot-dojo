@@ -172,8 +172,8 @@ class TestRunner:
             logger.error(f"Error in monitor_conversations_celery: {e}")
             return 0
 
-        else:
-            return 0
+        # Return 0 if no conversations directory exists or no conversations found
+        return 0
 
     def _run_test_execution_with_celery(self, config: TestExecutionConfig, celery_task: "Task") -> None:
         """Run test execution with Celery progress tracking."""
