@@ -21,8 +21,8 @@ import {
 import {
   fetchTracerExecutions,
   deleteProfileExecution,
-  checkGenerationStatus,
   checkOngoingGeneration,
+  checkTracerGenerationStatus,
 } from "../api/file-api";
 import TracerExecutionCard from "../components/tracer-execution-card";
 import InlineReportViewer from "../components/inline-report-viewer";
@@ -96,22 +96,22 @@ const TracerDashboard = () => {
       // Check if we're already polling this execution
       if (pollingIntervals.has(execution.id)) return;
 
-      // We need to find the task ID from the execution
-      // For now, we'll check the ongoing generation status for the project
+      // We need to find the Celery task ID from the execution
+      // Check the ongoing generation status for the project
       try {
         const ongoingResponse = await checkOngoingGeneration(
           execution.project_id,
         );
 
-        if (!ongoingResponse.ongoing || !ongoingResponse.task_id) {
+        if (!ongoingResponse.ongoing || !ongoingResponse.celery_task_id) {
           return;
         }
 
-        const taskId = ongoingResponse.task_id;
+        const celeryTaskId = ongoingResponse.celery_task_id;
 
         const intervalId = setInterval(async () => {
           try {
-            const status = await checkGenerationStatus(taskId);
+            const status = await checkTracerGenerationStatus(celeryTaskId);
 
             // Update the execution in our state
             setExecutions((prevExecutions) =>

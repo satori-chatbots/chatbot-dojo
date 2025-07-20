@@ -166,18 +166,6 @@ export const generateProfiles = async (projectId, parameters = {}) => {
   }
 };
 
-export const checkGenerationStatus = async (taskId) => {
-  try {
-    const response = await apiClient(
-      `${API_BASE_URL}/generation-status/${taskId}/`,
-    );
-    return await response.json();
-  } catch (error) {
-    console.error("Error checking generation status:", error);
-    throw error;
-  }
-};
-
 export const checkOngoingGeneration = async (projectId) => {
   try {
     const response = await apiClient(
@@ -186,6 +174,18 @@ export const checkOngoingGeneration = async (projectId) => {
     return await response.json();
   } catch (error) {
     console.error("Error checking ongoing generation:", error);
+    throw error;
+  }
+};
+
+export const checkTracerGenerationStatus = async (celeryTaskId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}/tracer-generation-status/${celeryTaskId}/`,
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error checking TRACER generation status:", error);
     throw error;
   }
 };

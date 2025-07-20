@@ -6,12 +6,13 @@ from .test_runner import TestExecutionConfig, TestRunner
 from .tracer_generator import ProfileGenerationParams, TracerGenerator
 
 
-@shared_task
-def generate_profiles_task(task_id: int, params_dict: dict) -> None:
-    """Celery task to generate TRACER profiles asynchronously."""
+@shared_task(bind=True)
+def generate_profiles_task(self: Task, task_id: int, params_dict: dict) -> None:
+    """Celery task to generate TRACER profiles asynchronously with progress tracking."""
     params = ProfileGenerationParams(**params_dict)
     generator = TracerGenerator()
-    generator.run_async_profile_generation(task_id, params)
+    # Pass the Celery task instance for progress updates
+    generator.run_async_profile_generation(task_id, params, self)
 
 
 @shared_task(bind=True)

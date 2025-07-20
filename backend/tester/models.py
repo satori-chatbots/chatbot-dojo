@@ -735,9 +735,11 @@ class ProfileGenerationTask(models.Model):
     conversations = models.PositiveIntegerField(default=5)
     turns = models.PositiveIntegerField(default=5)
     generated_file_ids = models.JSONField(default=list)
-    process_id = models.IntegerField(null=True, blank=True)
     execution = models.ForeignKey(
         "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="generation_tasks"
+    )
+    celery_task_id = models.CharField(
+        max_length=255, blank=True, default="", help_text="Celery task ID for progress tracking"
     )
 
     def __str__(self) -> str:

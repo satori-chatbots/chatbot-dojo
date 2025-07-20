@@ -32,8 +32,8 @@ import {
   uploadFiles,
   deleteFiles,
   generateProfiles,
-  checkGenerationStatus,
   checkOngoingGeneration,
+  checkTracerGenerationStatus,
   fetchProfileExecutions,
   deleteProfileExecution,
 } from "../api/file-api";
@@ -219,16 +219,16 @@ function Home() {
   };
 
   const pollGenerationStatus = useCallback(
-    async (taskId) => {
+    async (celeryTaskId) => {
       // Clear any existing interval
       if (statusIntervalReference.current) {
         clearInterval(statusIntervalReference.current);
       }
 
-      // Set up interval to check status
+      // Set up interval to check status using Celery task ID
       statusIntervalReference.current = setInterval(async () => {
         try {
-          const status = await checkGenerationStatus(taskId);
+          const status = await checkTracerGenerationStatus(celeryTaskId);
 
           if (status.status === "COMPLETED") {
             clearInterval(statusIntervalReference.current);
@@ -239,7 +239,7 @@ function Home() {
             setIsGenerating(false);
             showToast(
               "success",
-              `Successfully generated ${status.generated_files} profiles!`,
+              `Successfully generated ${status.generated_files || 0} profiles!`,
             );
           } else if (status.status === "ERROR") {
             clearInterval(statusIntervalReference.current);
@@ -286,9 +286,9 @@ function Home() {
         verbosity: profileGenParameters.verbosity,
       });
 
-      // Start polling for status
-      const taskId = response.task_id;
-      pollGenerationStatus(taskId);
+      // Start polling for status using Celery task ID
+      const celeryTaskId = response.celery_task_id;
+      pollGenerationStatus(celeryTaskId);
 
       // Reload executions to show the new one
       await reloadExecutions();
@@ -322,13 +322,13 @@ function Home() {
 
       try {
         const response = await checkOngoingGeneration(projectId);
-        if (response.ongoing) {
+        if (response.ongoing && response.celery_task_id) {
           // There's an ongoing generation task
           setIsGenerating(true);
           // Reset progress indicators to avoid showing stale data
           setGenerationStage("Loading status...");
           setGenerationProgress(0);
-          pollGenerationStatus(response.task_id);
+          pollGenerationStatus(response.celery_task_id);
           showToast("info", "Profile generation is in progress");
         }
       } catch (error) {

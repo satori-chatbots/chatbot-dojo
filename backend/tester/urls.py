@@ -67,9 +67,9 @@ urlpatterns = [
         name="generate-profiles",
     ),
     path(
-        "generation-status/<int:task_id>/",
-        api.check_generation_status,
-        name="check-generation-status",
+        "tracer-generation-status/<str:celery_task_id>/",
+        api.check_tracer_generation_status,
+        name="check-tracer-generation-status",
     ),
     path(
         "sensei-execution-status/<str:task_id>/",

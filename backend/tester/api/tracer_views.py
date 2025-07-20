@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from celery.result import AsyncResult
 from cryptography.fernet import InvalidToken
 from django.conf import settings
 from django.db import models
@@ -129,35 +130,113 @@ def generate_profiles(request: Request) -> Response:
         user_id=request.user.id,
         api_key=api_key,
     )
-    generate_profiles_task.delay(task.id, params.__dict__)
+
+    # Start Celery task for asynchronous generation
+    celery_task = generate_profiles_task.delay(task.id, params.__dict__)
+
+    # Store the Celery task ID in the ProfileGenerationTask for progress tracking
+    task.celery_task_id = celery_task.id
+    task.save()
 
     return Response(
-        {"message": "Profile generation started", "task_id": task.id},
+        {"message": "Profile generation started", "task_id": task.id, "celery_task_id": celery_task.id},
         status=status.HTTP_202_ACCEPTED,
     )
 
 
 @api_view(["GET"])
-def check_generation_status(_request: Request, task_id: int) -> Response:
-    """Check the status of a profile generation task."""
+def check_tracer_generation_status(request: Request, celery_task_id: str) -> Response:
+    """Check the status of a TRACER generation task using Celery task ID and synchronize database status."""
     try:
-        task = ProfileGenerationTask.objects.get(id=task_id)
-        # Default to generated_file_ids (legacy, usually empty)
-        generated_files = len(task.generated_file_ids)
-        # If the task is completed and has a linked execution, use its generated_profiles_count
-        if task.status == "COMPLETED" and task.execution is not None:
-            generated_files = task.execution.generated_profiles_count
+        # Get the Celery task result
+        task_result = AsyncResult(celery_task_id)
+
+        # Try to find the associated ProfileGenerationTask for this Celery task
+        generation_task = None
+        try:
+            generation_task = ProfileGenerationTask.objects.get(celery_task_id=celery_task_id)
+        except ProfileGenerationTask.DoesNotExist:
+            logger.warning(f"No ProfileGenerationTask found for Celery task ID {celery_task_id}")
+
+        if task_result.state == "PENDING":
+            return Response(
+                {
+                    "status": "PENDING",
+                    "stage": "Task is waiting to be processed",
+                    "progress": 0,
+                    "generation_task_status": generation_task.status if generation_task else None,
+                }
+            )
+        if task_result.state == "PROGRESS":
+            # Task is running and sending progress updates
+            meta = task_result.info
+            return Response(
+                {
+                    "status": "RUNNING",
+                    "stage": meta.get("stage", "Processing"),
+                    "progress": meta.get("progress", 0),
+                    "generation_task_status": generation_task.status if generation_task else None,
+                }
+            )
+        if task_result.state == "SUCCESS":
+            # Task completed successfully - ensure database is also updated
+            if generation_task and generation_task.status == "RUNNING":
+                logger.info(
+                    f"Celery task {celery_task_id} completed, updating ProfileGenerationTask {generation_task.id} status to SUCCESS"
+                )
+                generation_task.status = "SUCCESS"
+                generation_task.progress_percentage = 100
+                generation_task.stage = "COMPLETED"
+                generation_task.save()
+
+            # Get generated files count
+            generated_files = 0
+            if generation_task and generation_task.execution:
+                generated_files = generation_task.execution.generated_profiles_count
+
+            return Response(
+                {
+                    "status": "COMPLETED",
+                    "stage": "Generation completed successfully",
+                    "progress": 100,
+                    "generated_files": generated_files,
+                    "generation_task_status": generation_task.status if generation_task else None,
+                }
+            )
+        if task_result.state == "FAILURE":
+            # Task failed - ensure database is also updated
+            meta = task_result.info
+            error_message = meta.get("error_message", str(meta)) if isinstance(meta, dict) else str(meta)
+
+            if generation_task and generation_task.status == "RUNNING":
+                logger.info(
+                    f"Celery task {celery_task_id} failed, updating ProfileGenerationTask {generation_task.id} status to FAILURE"
+                )
+                generation_task.status = "FAILURE"
+                generation_task.error_message = error_message
+                generation_task.save()
+
+            return Response(
+                {
+                    "status": "ERROR",
+                    "stage": "Generation failed",
+                    "progress": 0,
+                    "error_message": error_message,
+                    "generation_task_status": generation_task.status if generation_task else None,
+                }
+            )
         return Response(
             {
-                "status": task.status,
-                "stage": task.stage,
-                "progress": task.progress_percentage,
-                "generated_files": generated_files,
-                "error_message": task.error_message,
+                "status": task_result.state,
+                "stage": "Unknown state",
+                "progress": 0,
+                "generation_task_status": generation_task.status if generation_task else None,
             }
         )
-    except ProfileGenerationTask.DoesNotExist:
-        return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    except (ValueError, AttributeError, KeyError) as e:
+        logger.error(f"Error checking TRACER generation status for Celery task {celery_task_id}: {e}")
+        return Response({"error": "Error checking task status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(["GET"])
@@ -174,7 +253,8 @@ def check_ongoing_generation(_request: Request, project_id: int) -> Response:
             return Response(
                 {
                     "ongoing": True,
-                    "task_id": ongoing_task.id,
+                    "task_id": ongoing_task.id,  # Keep for backwards compatibility
+                    "celery_task_id": ongoing_task.celery_task_id,  # New Celery task ID
                     "status": ongoing_task.status,
                 }
             )
