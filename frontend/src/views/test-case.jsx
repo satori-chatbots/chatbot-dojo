@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, Tab } from "@heroui/react";
 import { Card, CardHeader, CardBody } from "@heroui/react";
+
+const POLLING_INTERVAL_MS = 2000;
 import {
   Accordion,
   AccordionItem,
@@ -255,7 +257,7 @@ function TestCase() {
 
       // Poll immediately, then set interval
       pollTaskStatus();
-      pollInterval = setInterval(pollTaskStatus, 2000);
+      pollInterval = setInterval(pollTaskStatus, POLLING_INTERVAL_MS);
     }
 
     return () => {
