@@ -72,6 +72,11 @@ urlpatterns = [
         name="check-generation-status",
     ),
     path(
+        "sensei-execution-status/<str:task_id>/",
+        api.check_sensei_execution_status,
+        name="check-sensei-execution-status",
+    ),
+    path(
         "ongoing-generation/<int:project_id>/",
         api.check_ongoing_generation,
         name="check-ongoing-generation",

@@ -500,6 +500,10 @@ class TestCase(models.Model):
     # To be able to track the progress of the execution
     # Name of the profiles so we can access the directories
     profiles_names = models.JSONField(blank=True, null=True)
+    # Celery task ID for tracking execution progress
+    celery_task_id = models.CharField(
+        max_length=255, blank=True, default="", help_text="Celery task ID for progress tracking"
+    )
     # Number of total conversations
     total_conversations = models.IntegerField(blank=True, null=True)
     # Number of conversations that have already been

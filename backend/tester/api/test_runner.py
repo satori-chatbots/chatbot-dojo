@@ -3,7 +3,6 @@
 import json
 import os
 import subprocess
-import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -20,6 +19,8 @@ from .results_processor import ResultsProcessor
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from celery import Task
 
 ERROR_MSG_TRUNCATE_LENGTH = 200
 TWO_ARGS = 2
@@ -79,9 +80,9 @@ class TestRunner:
         # Default to OpenAI for backward compatibility
         return "OPENAI_API_KEY"
 
-    def execute_test_background(self, config: TestExecutionConfig) -> None:
-        """Execute the test in a background thread."""
-        self._run_test_execution(config)
+    def execute_test_with_celery_progress(self, config: TestExecutionConfig, celery_task: "Task") -> None:
+        """Execute the test with Celery progress tracking."""
+        self._run_test_execution_with_celery(config, celery_task)
 
     def stop_test_execution(self, test_case: TestCase) -> bool:
         """Stop a running test execution."""
@@ -105,76 +106,148 @@ class TestRunner:
             return True
         return False
 
-    def _monitor_conversations(
+    def _monitor_conversations_celery(
         self,
         conversations_dir: str,
         total_conversations: int,
         test_case_id: int,
-        final_conversation_count: list[int],
-    ) -> None:
-        """Monitor conversation progress during execution."""
+        celery_task: "Task",
+    ) -> int:
+        """Monitor conversation progress during execution with Celery progress updates."""
         local_test_case = TestCase.objects.get(id=test_case_id)
-        while True:
-            local_test_case.refresh_from_db()
-            if local_test_case.status != "RUNNING":
-                logger.info("Monitoring stopped because status changed.")
-                break
 
-            try:
-                executed_conversations = 0
-                # NEW PATH: conversations are now in conversation_outputs/{profile}
-                conversation_outputs_dir = Path(conversations_dir) / "conversation_outputs"
-                if conversation_outputs_dir.exists():
-                    for profile in local_test_case.profiles_names:
-                        profile_dir = conversation_outputs_dir / profile
-                        if profile_dir.exists():
-                            subdirs = list(profile_dir.iterdir())
-                            if subdirs:
-                                # Assume the first subdirectory is the one we need
-                                date_hour_dir = subdirs[0]
-                                executed_conversations += len(list(date_hour_dir.iterdir()))
+        # Check if execution was stopped
+        local_test_case.refresh_from_db()
+        if local_test_case.status != "RUNNING":
+            logger.info("Monitoring stopped because status changed.")
+            return 0
 
-                    local_test_case.executed_conversations = executed_conversations
-                    local_test_case.save()
-                    final_conversation_count[0] = executed_conversations
+        try:
+            executed_conversations = 0
+            # NEW PATH: conversations are now in conversation_outputs/{profile}
+            conversation_outputs_dir = Path(conversations_dir) / "conversation_outputs"
+            if conversation_outputs_dir.exists():
+                for profile in local_test_case.profiles_names:
+                    profile_dir = conversation_outputs_dir / profile
+                    if profile_dir.exists():
+                        subdirs = list(profile_dir.iterdir())
+                        if subdirs:
+                            # Assume the first subdirectory is the one we need
+                            date_hour_dir = subdirs[0]
+                            executed_conversations += len(list(date_hour_dir.iterdir()))
 
-                    if executed_conversations >= total_conversations:
-                        logger.info("All conversations found. Exiting monitoring.")
-                        break
-            # BLE001: Catching broad exception in a monitoring loop is acceptable
-            # to prevent the monitor from crashing due to transient filesystem issues.
-            except Exception as e:  # noqa: BLE001
-                logger.error(f"Error in monitor_conversations: {e}")
-                break
+                # Update both database and Celery task state
+                local_test_case.executed_conversations = executed_conversations
+                local_test_case.save()
 
-            time.sleep(3)
+                # Calculate progress percentage based purely on conversations
+                progress_percentage = (
+                    int((executed_conversations / total_conversations) * 100) if total_conversations > 0 else 0
+                )
 
-    def _run_test_execution(self, config: TestExecutionConfig) -> None:
-        """Run the actual test execution with error handling."""
+                # Create meaningful stage message
+                if executed_conversations == 0:
+                    stage_message = f"Waiting for conversations to start (0 of {total_conversations})"
+                elif executed_conversations < total_conversations:
+                    stage_message = f"Executing conversations: {executed_conversations} of {total_conversations}"
+                else:
+                    stage_message = f"Completed all conversations: {executed_conversations} of {total_conversations}"
+
+                # Update Celery task state
+                celery_task.update_state(
+                    state="PROGRESS",
+                    meta={
+                        "stage": stage_message,
+                        "progress": progress_percentage,
+                        "executed_conversations": executed_conversations,
+                        "total_conversations": total_conversations,
+                    },
+                )
+
+                return executed_conversations
+
+        # BLE001: Catching broad exception in a monitoring loop is acceptable
+        # to prevent the monitor from crashing due to transient filesystem issues.
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error in monitor_conversations_celery: {e}")
+            return 0
+
+        else:
+            return 0
+
+    def _run_test_execution_with_celery(self, config: TestExecutionConfig, celery_task: "Task") -> None:
+        """Run test execution with Celery progress tracking."""
         try:
             test_case = TestCase.objects.get(id=config.test_case_id)
 
-            # Setup test execution
-            process, monitoring_thread, final_conversation_count = self._setup_test_execution(test_case, config)
+            # Update initial progress
+            celery_task.update_state(
+                state="PROGRESS",
+                meta={
+                    "stage": "Initializing test execution",
+                    "progress": 0,
+                    "executed_conversations": 0,
+                    "total_conversations": 0,
+                },
+            )
 
-            # Execute and monitor process
-            stdout, stderr = self._execute_and_monitor_process(process, test_case, monitoring_thread)
+            # Setup test execution
+            process, total_conversations = self._setup_test_execution_celery(test_case, config, celery_task)
+
+            # Update with total conversations known
+            celery_task.update_state(
+                state="PROGRESS",
+                meta={
+                    "stage": f"Starting execution: 0 of {total_conversations} conversations",
+                    "progress": 0,
+                    "executed_conversations": 0,
+                    "total_conversations": total_conversations,
+                },
+            )
+
+            # Execute and monitor process with Celery progress
+            stdout, stderr, executed_conversations = self._execute_and_monitor_process_celery(
+                process, test_case, total_conversations, config.results_path, celery_task
+            )
 
             # Process results
             execution_result = ExecutionResult(
-                process=process, stdout=stdout, stderr=stderr, executed_conversations=final_conversation_count[0]
+                process=process, stdout=stdout, stderr=stderr, executed_conversations=executed_conversations
             )
             self._process_execution_results(test_case, execution_result, config.results_path)
 
-        # BLE001: This is a top-level exception handler for a background thread.
-        # It's crucial to catch any unexpected error to prevent the thread from crashing silently.
+            # Final success state
+            celery_task.update_state(
+                state="SUCCESS",
+                meta={
+                    "stage": "Execution completed",
+                    "progress": 100,
+                    "executed_conversations": total_conversations,
+                    "total_conversations": total_conversations,
+                },
+            )
+
+        # BLE001: This is a top-level exception handler for async execution.
+        # It's crucial to catch any unexpected error to prevent the task from failing silently.
         except Exception as e:  # noqa: BLE001
             self._handle_execution_error(config.test_case_id, e)
+            # Update Celery task with error state
+            celery_task.update_state(
+                state="FAILURE",
+                meta={
+                    "stage": "Execution failed",
+                    "progress": 0,
+                    "error": str(e),
+                },
+            )
 
-    def _setup_test_execution(
-        self, test_case: TestCase, config: TestExecutionConfig
-    ) -> tuple[subprocess.Popen[bytes], threading.Thread, list[int]]:
-        """Setup test execution configuration and start monitoring."""
+    def _setup_test_execution_celery(
+        self,
+        test_case: TestCase,
+        config: TestExecutionConfig,
+        celery_task: "Task",  # noqa: ARG002
+    ) -> tuple[subprocess.Popen[bytes], int]:
+        """Setup test execution configuration for Celery version."""
         project = test_case.project
         user_simulator_dir = str(Path(config.script_path).parent.parent)
 
@@ -220,11 +293,7 @@ class TestRunner:
         test_case.status = "RUNNING"
         test_case.save()
 
-        # Start monitoring thread
-        final_conversation_count = [0]
-        monitoring_thread = self._start_monitoring_thread(config.results_path, test_case, final_conversation_count)
-
-        return process, monitoring_thread, final_conversation_count
+        return process, test_case.total_conversations
 
     def _build_command(self, config_data: dict, project_path: str) -> list[str]:
         """Build the command to execute the test script."""
@@ -252,30 +321,18 @@ class TestRunner:
             )
         return cmd
 
-    def _start_monitoring_thread(
-        self, conversations_dir: str, test_case: TestCase, final_conversation_count: list[int]
-    ) -> threading.Thread:
-        """Start the monitoring thread for conversation progress."""
-        logger.info(f"Monitoring conversations in: {conversations_dir}")
-        monitoring_thread = threading.Thread(
-            target=self._monitor_conversations,
-            args=(
-                conversations_dir,
-                test_case.total_conversations,
-                test_case.id,
-                final_conversation_count,
-            ),
-        )
-        monitoring_thread.daemon = True
-        monitoring_thread.start()
-        return monitoring_thread
-
-    def _execute_and_monitor_process(
-        self, process: subprocess.Popen[bytes], test_case: TestCase, monitoring_thread: threading.Thread
-    ) -> tuple[bytes, bytes]:
-        """Execute process and monitor it for completion or stop signals."""
+    def _execute_and_monitor_process_celery(
+        self,
+        process: subprocess.Popen[bytes],
+        test_case: TestCase,
+        total_conversations: int,
+        conversations_dir: str,
+        celery_task: "Task",
+    ) -> tuple[bytes, bytes, int]:
+        """Execute process and monitor it with Celery progress updates."""
         stdout, stderr = b"", b""
         timeout_seconds = 3
+        executed_conversations = 0
 
         while True:
             try:
@@ -287,9 +344,12 @@ class TestRunner:
                     self._terminate_process(test_case.process_id, timeout_seconds)
                     continue
 
-        # Wait for the monitoring thread to finish
-        monitoring_thread.join(timeout=10)
-        return stdout, stderr
+                # Update progress by checking conversations
+                executed_conversations = self._monitor_conversations_celery(
+                    conversations_dir, total_conversations, test_case.id, celery_task
+                )
+
+        return stdout, stderr, executed_conversations
 
     def _terminate_process(self, process_id: int, timeout_seconds: int) -> None:
         """Terminate the test process and its children."""
@@ -403,7 +463,7 @@ class TestRunner:
 
     def _handle_execution_error(self, test_case_id: int, error: Exception) -> None:
         """Handle errors during test execution."""
-        logger.error(f"Error in background test execution: {error!s}")
+        logger.error(f"Error in test execution: {error!s}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         try:
             test_case = TestCase.objects.get(id=test_case_id)

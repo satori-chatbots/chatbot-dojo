@@ -14,7 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { fetchTestCaseById } from "../api/test-cases-api";
+import {
+  fetchTestCaseById,
+  checkSenseiExecutionStatus,
+} from "../api/test-cases-api";
 import { fetchGlobalReportsByTestCase } from "../api/reports-api";
 import { fetchTestErrorByGlobalReport } from "../api/test-errors-api";
 import { fetchProfileReportByGlobalReportId } from "../api/profile-report-api";
@@ -39,9 +42,15 @@ function TestCase() {
   const [globalLoading, setGlobalLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [projectName, setProjectName] = useState("");
-  const POLLING_INTERVAL = 2500;
   const [startTime, setStartTime] = useState();
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  // New state for Celery task progress tracking
+  const [taskId, setTaskId] = useState();
+  const [progressStage, setProgressStage] = useState("");
+  const [progressPercentage, setProgressPercentage] = useState(0);
+  const [executedConversations, setExecutedConversations] = useState(0);
+  const [totalConversations, setTotalConversations] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,10 +66,29 @@ function TestCase() {
         const currentStatus = fetchedTestCase[0].status;
         setStatus(currentStatus);
 
+        // Store task ID if available for progress tracking
+        if (fetchedTestCase[0].celery_task_id) {
+          setTaskId(fetchedTestCase[0].celery_task_id);
+          console.log(
+            "Found Celery task ID:",
+            fetchedTestCase[0].celery_task_id,
+          );
+        } else {
+          console.log("No Celery task ID found for test case");
+        }
+
         if (fetchedTestCase[0].executed_at) {
           const executedAt = new Date(fetchedTestCase[0].executed_at);
           setStartTime(executedAt);
           setElapsedTime(calculateElapsedTime(executedAt));
+        }
+
+        // Set initial conversation counts from test case data
+        if (fetchedTestCase[0].executed_conversations !== undefined) {
+          setExecutedConversations(fetchedTestCase[0].executed_conversations);
+        }
+        if (fetchedTestCase[0].total_conversations !== undefined) {
+          setTotalConversations(fetchedTestCase[0].total_conversations);
         }
 
         if (["RUNNING", "ERROR"].includes(currentStatus)) {
@@ -103,10 +131,131 @@ function TestCase() {
     };
 
     fetchData();
+  }, [id, navigate]);
 
+  // Separate useEffect for polling to avoid dependency issues
+  useEffect(() => {
     let pollInterval;
+
     if (status === "RUNNING") {
-      pollInterval = setInterval(fetchData, POLLING_INTERVAL);
+      const pollTaskStatus = async () => {
+        if (taskId) {
+          try {
+            console.log("Polling Celery task:", taskId);
+            const taskStatus = await checkSenseiExecutionStatus(taskId);
+            console.log("Task status response:", taskStatus);
+
+            // Update progress stage from Celery task
+            setProgressStage(taskStatus.stage || "Processing");
+
+            // Update conversation counts if available
+            if (taskStatus.executed_conversations !== undefined) {
+              setExecutedConversations(taskStatus.executed_conversations);
+            }
+            if (taskStatus.total_conversations !== undefined) {
+              setTotalConversations(taskStatus.total_conversations);
+            }
+
+            // Calculate progress percentage based on conversations
+            if (taskStatus.total_conversations > 0) {
+              const conversationProgress = Math.round(
+                (taskStatus.executed_conversations /
+                  taskStatus.total_conversations) *
+                  100,
+              );
+              setProgressPercentage(conversationProgress);
+            } else {
+              // Fall back to task progress if no conversation data
+              setProgressPercentage(taskStatus.progress || 0);
+            }
+
+            // Use unified status from API response
+            const unifiedStatus =
+              taskStatus.test_case_status || taskStatus.status;
+            if (unifiedStatus && unifiedStatus !== status) {
+              console.log(`Status changed from ${status} to ${unifiedStatus}`);
+              setStatus(unifiedStatus);
+
+              // Update test case data with new status and error message if applicable
+              setTestCase((prevTestCase) => {
+                if (prevTestCase && prevTestCase[0]) {
+                  return [
+                    {
+                      ...prevTestCase[0],
+                      status: unifiedStatus,
+                      error_message:
+                        taskStatus.error_message ||
+                        prevTestCase[0].error_message,
+                    },
+                  ];
+                }
+                return prevTestCase;
+              });
+
+              // If task completed or failed, refresh full test case data
+              if (unifiedStatus === "COMPLETED" || unifiedStatus === "ERROR") {
+                console.log("Task completed, refreshing test case data");
+                const fetchedTestCase = await fetchTestCaseById(id);
+                if (fetchedTestCase && fetchedTestCase.length > 0) {
+                  setTestCase(fetchedTestCase);
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error polling Sensei task status:", error);
+            // On error, fall back to database polling
+            try {
+              const fetchedTestCase = await fetchTestCaseById(id);
+              if (fetchedTestCase && fetchedTestCase.length > 0) {
+                const currentStatus = fetchedTestCase[0].status;
+                if (currentStatus !== status) {
+                  console.log(
+                    `Fallback polling detected status change: ${status} -> ${currentStatus}`,
+                  );
+                  setTestCase(fetchedTestCase);
+                  setStatus(currentStatus);
+                }
+              }
+            } catch (fallbackError) {
+              console.error(
+                "Error in fallback polling after task error:",
+                fallbackError,
+              );
+            }
+          }
+        } else {
+          // Fallback polling if no task ID
+          try {
+            console.log("Fallback polling without task ID");
+            const fetchedTestCase = await fetchTestCaseById(id);
+            if (fetchedTestCase && fetchedTestCase.length > 0) {
+              const currentStatus = fetchedTestCase[0].status;
+
+              // Only update if status actually changed to avoid unnecessary re-renders
+              if (currentStatus !== status) {
+                console.log(`Status changed: ${status} -> ${currentStatus}`);
+                setTestCase(fetchedTestCase);
+                setStatus(currentStatus);
+              }
+
+              if (fetchedTestCase[0].executed_conversations !== undefined) {
+                setExecutedConversations(
+                  fetchedTestCase[0].executed_conversations,
+                );
+              }
+              if (fetchedTestCase[0].total_conversations !== undefined) {
+                setTotalConversations(fetchedTestCase[0].total_conversations);
+              }
+            }
+          } catch (error) {
+            console.error("Error in fallback polling:", error);
+          }
+        }
+      };
+
+      // Poll immediately, then set interval
+      pollTaskStatus();
+      pollInterval = setInterval(pollTaskStatus, 2000);
     }
 
     return () => {
@@ -114,7 +263,7 @@ function TestCase() {
         clearInterval(pollInterval);
       }
     };
-  }, [id, status, navigate]);
+  }, [status, taskId, id]);
 
   useEffect(() => {
     let timerInterval;
@@ -140,14 +289,11 @@ function TestCase() {
   }
 
   if (status === "RUNNING") {
+    // Use conversation-based progress if we have conversation data
     const progress =
-      testCase[0].total_conversations > 0
-        ? Math.round(
-            (testCase[0].executed_conversations /
-              testCase[0].total_conversations) *
-              100,
-          )
-        : 0;
+      totalConversations > 0
+        ? Math.round((executedConversations / totalConversations) * 100)
+        : progressPercentage || 0;
 
     return (
       <div className="container mx-auto p-4">
@@ -161,13 +307,30 @@ function TestCase() {
             <p className="text-foreground/70 mt-2">
               Please wait while the test case completes...
             </p>
+
+            {/* Progress Stage */}
+            {progressStage &&
+              progressStage !== "Task is waiting to be processed" && (
+                <div className="mb-2">
+                  <p className="text-sm font-medium text-primary">
+                    {progressStage}
+                  </p>
+                </div>
+              )}
+
             <div className="mt-6">
               <h3 className="text-sm font-medium mb-2">Progress</h3>
               <Progress value={progress} />
-              <p className="text-sm text-default-500 mt-2">
-                {progress.toFixed(0)}% - {testCase[0].executed_conversations} of{" "}
-                {testCase[0].total_conversations} conversations completed
-              </p>
+              {totalConversations > 0 ? (
+                <p className="text-sm text-default-500 mt-2">
+                  {progress}% - {executedConversations} of {totalConversations}{" "}
+                  conversations completed
+                </p>
+              ) : (
+                <p className="text-sm text-default-500 mt-2">
+                  {progress}% complete {progressStage && `- ${progressStage}`}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

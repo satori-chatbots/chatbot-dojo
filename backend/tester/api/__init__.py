@@ -25,6 +25,7 @@ from .projects import ProjectViewSet, fetch_file_content, validate_yaml
 from .reports import GlobalReportViewSet, ProfileReportViewSet
 from .sensei_execution_views import (
     ExecuteSelectedProfilesAPIView,
+    check_sensei_execution_status,
     delete_profile_execution,
     get_profile_executions,
     stop_sensei_execution,
@@ -62,6 +63,7 @@ __all__ = [
     "UserAPIKeyViewSet",
     "check_generation_status",
     "check_ongoing_generation",
+    "check_sensei_execution_status",
     "delete_profile_execution",
     "fetch_file_content",
     "generate_profiles",

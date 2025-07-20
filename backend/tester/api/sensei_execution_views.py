@@ -9,6 +9,8 @@ import shutil
 from pathlib import Path
 
 import yaml
+from celery import current_app
+from celery.result import AsyncResult
 from cryptography.fernet import InvalidToken
 from django.conf import settings
 from django.db import transaction
@@ -210,16 +212,106 @@ class ExecuteSelectedProfilesAPIView(APIView):
             }
 
             # Start Celery task for asynchronous execution
-            execute_sensei_test_task.delay(config_dict)
+            task = execute_sensei_test_task.delay(config_dict)
+
+            # Store the task ID in the test case for progress tracking
+            test_case.celery_task_id = task.id
+            test_case.save()
 
         return Response(
             {
                 "message": "Sensei profile execution started",
                 "test_case_id": test_case.id,
+                "task_id": task.id,
                 "total_conversations": "Calculating...",
             },
             status=status.HTTP_202_ACCEPTED,
         )
+
+
+@api_view(["GET"])
+def check_sensei_execution_status(request: Request, task_id: str) -> Response:
+    """Check the status of a Sensei execution task and synchronize database status."""
+    try:
+        # Get the Celery task result
+        task_result = AsyncResult(task_id)
+
+        # Try to find the associated test case for this task
+        test_case = None
+        try:
+            test_case = TestCase.objects.get(celery_task_id=task_id)
+        except TestCase.DoesNotExist:
+            logger.warning(f"No test case found for task ID {task_id}")
+
+        if task_result.state == "PENDING":
+            return Response(
+                {
+                    "status": "PENDING",
+                    "stage": "Task is waiting to be processed",
+                    "progress": 0,
+                    "test_case_status": test_case.status if test_case else None,
+                }
+            )
+        if task_result.state == "PROGRESS":
+            # Task is running and sending progress updates
+            meta = task_result.info
+            return Response(
+                {
+                    "status": "RUNNING",
+                    "stage": meta.get("stage", "Processing"),
+                    "progress": meta.get("progress", 0),
+                    "executed_conversations": meta.get("executed_conversations", 0),
+                    "total_conversations": meta.get("total_conversations", 0),
+                    "test_case_status": test_case.status if test_case else None,
+                }
+            )
+        if task_result.state == "SUCCESS":
+            # Task completed successfully - ensure database is also updated
+            if test_case and test_case.status == "RUNNING":
+                logger.info(f"Celery task {task_id} completed, updating test case {test_case.id} status to COMPLETED")
+                test_case.status = "COMPLETED"
+                test_case.save()
+
+            return Response(
+                {
+                    "status": "COMPLETED",
+                    "stage": "Execution completed successfully",
+                    "progress": 100,
+                    "test_case_status": test_case.status if test_case else None,
+                }
+            )
+        if task_result.state == "FAILURE":
+            # Task failed - ensure database is also updated
+            meta = task_result.info
+            error_message = meta.get("error", str(meta)) if isinstance(meta, dict) else str(meta)
+
+            if test_case and test_case.status == "RUNNING":
+                logger.info(f"Celery task {task_id} failed, updating test case {test_case.id} status to ERROR")
+                test_case.status = "ERROR"
+                test_case.error_message = error_message
+                test_case.save()
+
+            return Response(
+                {
+                    "status": "ERROR",
+                    "stage": "Execution failed",
+                    "progress": 0,
+                    "error_message": error_message,
+                    "test_case_status": test_case.status if test_case else None,
+                }
+            )
+        return Response(
+            {
+                "status": task_result.state,
+                "stage": "Unknown state",
+                "progress": 0,
+                "test_case_status": test_case.status if test_case else None,
+            }
+        )
+
+    except (ValueError, AttributeError, KeyError) as e:
+        logger.error(f"Error checking Sensei execution status for task {task_id}: {e}")
+        return Response({"error": "Error checking task status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(["POST"])
@@ -237,6 +329,14 @@ def stop_sensei_execution(request: Request) -> Response:
 
         test_runner = TestRunner()
         success = test_runner.stop_test_execution(test_case)
+
+        # Also revoke the Celery task if we have a task ID
+        if hasattr(test_case, "celery_task_id") and test_case.celery_task_id:
+            try:
+                current_app.control.revoke(test_case.celery_task_id, terminate=True)
+                logger.info(f"Revoked Celery task {test_case.celery_task_id} for test case {test_case.id}")
+            except (ValueError, AttributeError, KeyError) as e:
+                logger.warning(f"Could not revoke Celery task {test_case.celery_task_id}: {e}")
 
         if success:
             return Response({"message": "Sensei execution stopped"}, status=status.HTTP_200_OK)
