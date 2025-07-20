@@ -60,8 +60,8 @@ class TestFileViewSet(viewsets.ModelViewSet):
         else:
             queryset = self.filter_queryset(self.get_queryset())
 
-        # Eagerly load related project to avoid N+1 queries
-        queryset = queryset.select_related("project")
+        # Eagerly load related project and execution to avoid N+1 queries
+        queryset = queryset.select_related("project", "execution")
 
         # Check if files exist on disk and delete the DB entry if not
         for test_file in list(queryset):

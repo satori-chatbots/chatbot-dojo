@@ -14,6 +14,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { getErrorTypeDisplay } from "../utils/error-types";
+import { getStatusLabel } from "../utils/status-labels";
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);
@@ -52,7 +53,7 @@ const TracerExecutionCard = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const isCompleted = execution.status === "COMPLETED";
+  const isCompleted = execution.status === "SUCCESS";
   const isRunning = execution.status === "RUNNING";
   const hasAnalysis = execution.has_analysis && execution.analysis;
   const hasActions =
@@ -75,7 +76,7 @@ const TracerExecutionCard = ({
                 <h3 className="text-sm font-semibold text-foreground truncate">
                   {formatDate(execution.created_at)}
                 </h3>
-                {execution.status === "ERROR" && execution.error_type ? (
+                {execution.status === "FAILURE" && execution.error_type ? (
                   <Tooltip
                     content={
                       execution.error_message ||
@@ -102,7 +103,7 @@ const TracerExecutionCard = ({
                     size="sm"
                     className="flex-shrink-0"
                   >
-                    {execution.status}
+                    {getStatusLabel(execution.status)}
                   </Chip>
                 )}
               </div>
@@ -468,9 +469,9 @@ const TracerExecutionCard = ({
         {/* Status Messages for Non-completed */}
         {!isCompleted && !isRunning && (
           <div className="mt-2 text-xs text-default-500 italic">
-            {execution.status === "ERROR"
+            {execution.status === "FAILURE"
               ? "Execution failed"
-              : "Execution pending"}
+              : `Execution ${getStatusLabel(execution.status).toLowerCase()}`}
           </div>
         )}
       </CardBody>

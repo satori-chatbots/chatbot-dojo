@@ -196,7 +196,7 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
 
             return Response(
                 {
-                    "status": "COMPLETED",
+                    "status": "SUCCESS",
                     "stage": "Generation completed successfully",
                     "progress": 100,
                     "generated_files": generated_files,
@@ -218,7 +218,7 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
 
             return Response(
                 {
-                    "status": "ERROR",
+                    "status": "FAILURE",
                     "stage": "Generation failed",
                     "progress": 0,
                     "error_message": error_message,
@@ -322,7 +322,7 @@ def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
         "has_analysis": hasattr(execution, "analysis_result"),
         "analysis": None,
         "has_logs": bool(execution.tracer_stdout or execution.tracer_stderr),
-        "has_error": execution.status == "ERROR",
+        "has_error": execution.status == "FAILURE",
         "error_type": execution.error_type,
         "error_message": error_message,
         "has_profiles": execution.original_profiles.exists(),

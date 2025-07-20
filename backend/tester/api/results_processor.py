@@ -21,7 +21,7 @@ class ResultsProcessor:
             # NEW PATH: reports are now in reports/__stats_reports__
             report_path = Path(results_path) / "reports" / "__stats_reports__"
             if not report_path.exists():
-                test_case.status = "ERROR"
+                test_case.status = "FAILURE"
                 test_case.error_message = "Error accessing __stats_reports__ directory"
                 test_case.save()
                 return
@@ -33,13 +33,13 @@ class ResultsProcessor:
                         report_file = file.name
                         break
             except OSError:
-                test_case.status = "ERROR"
+                test_case.status = "FAILURE"
                 test_case.error_message = "Error accessing report directory"
                 test_case.save()
                 return
 
             if report_file is None:
-                test_case.status = "ERROR"
+                test_case.status = "FAILURE"
                 test_case.error_message = "Report file not found"
                 test_case.save()
                 return
@@ -60,7 +60,7 @@ class ResultsProcessor:
         except Exception as e:  # noqa: BLE001
             # Catching broad Exception for logging and error reporting
             logger.error(f"Error processing test results: {e!s}")
-            test_case.status = "ERROR"
+            test_case.status = "FAILURE"
             test_case.error_message = f"Error processing results: {e!s}"
             test_case.save()
 

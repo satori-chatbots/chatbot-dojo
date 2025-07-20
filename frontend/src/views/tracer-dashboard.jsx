@@ -35,13 +35,13 @@ import { useAuth } from "../contexts/auth-context";
 // Move getStatusColor to outer scope
 const getStatusColor = (status) => {
   switch (status) {
-    case "COMPLETED": {
+    case "SUCCESS": {
       return "success";
     }
     case "RUNNING": {
       return "primary";
     }
-    case "ERROR": {
+    case "FAILURE": {
       return "danger";
     }
     case "PENDING": {
@@ -129,7 +129,7 @@ const TracerDashboard = () => {
             );
 
             // Stop polling if completed or failed
-            if (status.status === "COMPLETED" || status.status === "ERROR") {
+            if (status.status === "SUCCESS" || status.status === "FAILURE") {
               clearInterval(intervalId);
               setPollingIntervals((prev) => {
                 const newMap = new Map(prev);
@@ -137,12 +137,9 @@ const TracerDashboard = () => {
                 return newMap;
               });
 
-              if (status.status === "COMPLETED") {
-                showToast(
-                  "success",
-                  "TRACER execution completed successfully!",
-                );
-              } else if (status.status === "ERROR") {
+              if (status.status === "SUCCESS") {
+                showToast("success", "TRACER execution succeeded!");
+              } else if (status.status === "FAILURE") {
                 const errorMessage =
                   status.error_message ||
                   "Unknown error occurred during execution";
@@ -271,13 +268,13 @@ const TracerDashboard = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "COMPLETED": {
+      case "SUCCESS": {
         return <CheckCircle className="w-4 h-4 text-success" />;
       }
       case "RUNNING": {
         return <Loader className="w-4 h-4 text-primary animate-spin" />;
       }
-      case "ERROR": {
+      case "FAILURE": {
         return <AlertCircle className="w-4 h-4 text-danger" />;
       }
       case "PENDING": {
@@ -457,14 +454,14 @@ const TracerDashboard = () => {
                 <SelectItem key="all" value="all">
                   All Statuses
                 </SelectItem>
-                <SelectItem key="COMPLETED" value="COMPLETED">
-                  Completed
+                <SelectItem key="SUCCESS" value="SUCCESS">
+                  Success
                 </SelectItem>
                 <SelectItem key="RUNNING" value="RUNNING">
                   Running
                 </SelectItem>
-                <SelectItem key="ERROR" value="ERROR">
-                  Error
+                <SelectItem key="FAILURE" value="FAILURE">
+                  Failure
                 </SelectItem>
                 <SelectItem key="PENDING" value="PENDING">
                   Pending

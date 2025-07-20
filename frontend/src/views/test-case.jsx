@@ -91,11 +91,11 @@ function TestCase() {
           setTotalConversations(fetchedTestCase[0].total_conversations);
         }
 
-        if (["RUNNING", "ERROR"].includes(currentStatus)) {
+        if (["RUNNING", "FAILURE"].includes(currentStatus)) {
           return;
         }
 
-        if (currentStatus === "COMPLETED") {
+        if (currentStatus === "SUCCESS") {
           const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
           setGlobalReport(fetchedGlobalReport);
 
@@ -193,7 +193,7 @@ function TestCase() {
               });
 
               // If task completed or failed, refresh full test case data
-              if (unifiedStatus === "COMPLETED" || unifiedStatus === "ERROR") {
+              if (unifiedStatus === "SUCCESS" || unifiedStatus === "FAILURE") {
                 console.log("Task completed, refreshing test case data");
                 const fetchedTestCase = await fetchTestCaseById(id);
                 if (fetchedTestCase && fetchedTestCase.length > 0) {
@@ -352,7 +352,7 @@ function TestCase() {
     );
   }
 
-  if (status === "ERROR") {
+  if (status === "FAILURE") {
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>

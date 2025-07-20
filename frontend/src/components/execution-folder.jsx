@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getErrorTypeDisplay } from "../utils/error-types";
+import { getStatusLabel } from "../utils/status-labels";
 
 const ExecutionFolder = ({
   execution,
@@ -56,14 +57,14 @@ const ExecutionFolder = ({
     if (execution.execution_type !== "tracer" || !execution.status) return;
 
     const statusConfig = {
-      COMPLETED: { color: "success", label: "Done" },
-      RUNNING: { color: "warning", label: "Running" },
-      ERROR: { color: "danger", label: "Failed" },
-      PENDING: { color: "default", label: "Pending" },
+      SUCCESS: { color: "success", label: getStatusLabel("SUCCESS") },
+      RUNNING: { color: "warning", label: getStatusLabel("RUNNING") },
+      FAILURE: { color: "danger", label: getStatusLabel("FAILURE") },
+      PENDING: { color: "default", label: getStatusLabel("PENDING") },
     };
 
     // For error status, show specific error type if available
-    if (execution.status === "ERROR" && execution.error_type) {
+    if (execution.status === "FAILURE" && execution.error_type) {
       const errorLabel = getErrorTypeDisplay(execution.error_type);
       const chip = (
         <Chip size="sm" color="danger" variant="flat">

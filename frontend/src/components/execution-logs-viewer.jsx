@@ -162,7 +162,7 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
         ) : (
           <div className="space-y-4">
             {/* Error Summary Section */}
-            {execution.status === "ERROR" && logsData?.error_type && (
+            {execution.status === "FAILURE" && logsData?.error_type && (
               <Card className="border-danger-200 bg-danger-50 dark:bg-danger-900/20">
                 <CardBody className="p-4">
                   <div className="flex items-start gap-3">
@@ -215,9 +215,9 @@ const ExecutionLogsViewer = ({ execution, onClose }) => {
                           </h4>
                           <Chip
                             color={
-                              execution.status === "COMPLETED"
+                              execution.status === "SUCCESS"
                                 ? "success"
-                                : execution.status === "ERROR"
+                                : execution.status === "FAILURE"
                                   ? "danger"
                                   : "default"
                             }

@@ -392,12 +392,12 @@ class TestRunner:
         test_case.executed_conversations = execution_result.executed_conversations
 
         if execution_result.process.returncode == 0:
-            test_case.status = "COMPLETED"
+            test_case.status = "SUCCESS"
             test_case.save()
             logger.info("Test execution completed successfully")
             self.results_processor.process_test_results(test_case, results_path)
         else:
-            test_case.status = "ERROR"
+            test_case.status = "FAILURE"
             # Parse error message from stderr for better user display
             error_output = test_case.stderr
             test_case.error_message = self._parse_sensei_error_message(error_output)
@@ -467,10 +467,10 @@ class TestRunner:
         logger.error(f"Traceback: {traceback.format_exc()}")
         try:
             test_case = TestCase.objects.get(id=test_case_id)
-            test_case.status = "ERROR"
+            test_case.status = "FAILURE"
             test_case.error_message = f"Error: {error}\n{traceback.format_exc()}"
             test_case.execution_time = 0
             test_case.save()
         # BLE001: If updating the DB fails during critical error handling, we can't do much more.
         except Exception:  # noqa: BLE001
-            logger.exception("Failed to update test case status to ERROR after a critical failure.")
+            logger.exception("Failed to update test case status to FAILURE after a critical failure.")

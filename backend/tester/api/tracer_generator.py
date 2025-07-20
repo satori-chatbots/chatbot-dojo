@@ -128,7 +128,7 @@ class TracerGenerator:
             # Try to update task and execution if they exist
             if task:
                 try:
-                    task.status = "ERROR"
+                    task.status = "FAILURE"
                     task.error_message = error_message
                     task.save()
                 except (DatabaseError, IntegrityError) as save_error:
@@ -136,7 +136,7 @@ class TracerGenerator:
 
             if execution:
                 try:
-                    execution.status = "ERROR"
+                    execution.status = "FAILURE"
                     execution.save()
                 except (DatabaseError, IntegrityError) as save_error:
                     logger.critical(f"Failed to save error status to execution: {save_error!s}")
@@ -199,7 +199,7 @@ class TracerGenerator:
             task.status = "SUCCESS"
             task.progress_percentage = 100
             task.stage = "COMPLETED"
-            execution.status = "COMPLETED"
+            execution.status = "SUCCESS"
 
             # Update Celery task state if available
             if celery_task:
@@ -217,7 +217,7 @@ class TracerGenerator:
             # Only set a generic error message if we don't already have a specific one
             if not task.error_message or task.error_message.strip() == "":
                 task.error_message = "TRACER execution failed - check logs for details"
-            execution.status = "ERROR"
+            execution.status = "FAILURE"
 
             # Update Celery task state if available
             if celery_task:

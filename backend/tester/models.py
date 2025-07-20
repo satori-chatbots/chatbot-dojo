@@ -395,7 +395,7 @@ class Project(models.Model):
             project=self,
             execution_name=execution_name,
             execution_type="manual",
-            status="COMPLETED",  # Manual executions are always completed
+            status="SUCCESS",  # Manual executions are always successful
             profiles_directory=execution_dir,
         )
 
@@ -715,7 +715,6 @@ class ProfileGenerationTask(models.Model):
         ("RUNNING", "Running"),
         ("SUCCESS", "Success"),
         ("FAILURE", "Failure"),
-        ("ERROR", "Error"),
     )
 
     STAGE_CHOICES = (
@@ -858,8 +857,8 @@ class ProfileExecution(models.Model):
     STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
         ("PENDING", "Pending"),
         ("RUNNING", "Running"),
-        ("COMPLETED", "Completed"),
-        ("ERROR", "Error"),
+        ("SUCCESS", "Success"),
+        ("FAILURE", "Failure"),
     ]
 
     VERBOSITY_CHOICES: ClassVar[list[tuple[str, str]]] = [

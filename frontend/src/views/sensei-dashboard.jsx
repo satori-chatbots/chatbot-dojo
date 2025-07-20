@@ -50,9 +50,9 @@ import SetupProgress from "../components/setup-progress";
 
 const statusOptions = [
   { label: "All", value: "ALL" },
-  { label: "Completed", value: "COMPLETED" },
+  { label: "Success", value: "SUCCESS" },
   { label: "Running", value: "RUNNING" },
-  { label: "Error", value: "ERROR" },
+  { label: "Failure", value: "FAILURE" },
   { label: "Stopped", value: "STOPPED" },
 ];
 
@@ -111,8 +111,8 @@ function Dashboard() {
   const { projects, loadingProjects, errorProjects } = useFetchProjects("all");
 
   const statusColorMap = {
-    COMPLETED: "success",
-    ERROR: "danger",
+    SUCCESS: "success",
+    FAILURE: "danger",
     RUNNING: "warning",
     STOPPED: "default",
   };
@@ -349,7 +349,7 @@ function Dashboard() {
               if (!r || !r.taskStatus) return false;
               const unifiedStatus =
                 r.taskStatus.test_case_status || r.taskStatus.status;
-              return unifiedStatus === "COMPLETED" || unifiedStatus === "ERROR";
+              return unifiedStatus === "SUCCESS" || unifiedStatus === "FAILURE";
             });
 
             if (completedTaskResults.length > 0) {
@@ -385,8 +385,8 @@ function Dashboard() {
             const newlyCompletedTestCases = updatedTestCases.filter(
               (tc) =>
                 runningTestCaseIds.has(tc.id) &&
-                (tc.status === "COMPLETED" ||
-                  tc.status === "ERROR" ||
+                (tc.status === "SUCCESS" ||
+                  tc.status === "FAILURE" ||
                   tc.status === "STOPPED"),
             );
 
@@ -810,7 +810,7 @@ function Dashboard() {
                           )}
                         </div>
                       )}
-                      {testCase.status === "ERROR" &&
+                      {testCase.status === "FAILURE" &&
                         testCase.error_message && (
                           <div
                             className="text-xs text-red-600 dark:text-red-400 max-w-48 truncate"

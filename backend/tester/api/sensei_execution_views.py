@@ -286,12 +286,12 @@ class SenseiExecutionStatusManager:
     def _handle_success(self) -> Response:
         """Handle the SUCCESS state and update the database."""
         if self.test_case and self.test_case.status == "RUNNING":
-            logger.info(f"Celery task {self.task_id} completed, updating test case {self.test_case.id} to COMPLETED")
-            self.test_case.status = "COMPLETED"
+            logger.info(f"Celery task {self.task_id} completed, updating test case {self.test_case.id} to SUCCESS")
+            self.test_case.status = "SUCCESS"
             self.test_case.save()
         return Response(
             {
-                "status": "COMPLETED",
+                "status": "SUCCESS",
                 "stage": "Execution completed successfully",
                 "progress": 100,
                 "test_case_status": self.test_case.status if self.test_case else None,
@@ -303,13 +303,13 @@ class SenseiExecutionStatusManager:
         meta = self.task_result.info
         error_message = meta.get("error", str(meta)) if isinstance(meta, dict) else str(meta)
         if self.test_case and self.test_case.status == "RUNNING":
-            logger.info(f"Celery task {self.task_id} failed, updating test case {self.test_case.id} to ERROR")
-            self.test_case.status = "ERROR"
+            logger.info(f"Celery task {self.task_id} failed, updating test case {self.test_case.id} to FAILURE")
+            self.test_case.status = "FAILURE"
             self.test_case.error_message = error_message
             self.test_case.save()
         return Response(
             {
-                "status": "ERROR",
+                "status": "FAILURE",
                 "stage": "Execution failed",
                 "progress": 0,
                 "error_message": error_message,
@@ -382,7 +382,7 @@ def stop_sensei_execution(request: Request) -> Response:
                 logger.info(f"Revoked Celery task {test_case.celery_task_id} for test case {test_case.id}")
 
                 # Manually update the status to reflect cancellation
-                test_case.status = "ERROR"
+                test_case.status = "FAILURE"
                 test_case.error_message = "Execution cancelled by user."
                 test_case.save()
 
