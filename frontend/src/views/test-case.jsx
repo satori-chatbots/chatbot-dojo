@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, Tab } from "@heroui/react";
 import { Card, CardHeader, CardBody } from "@heroui/react";
 
+// Constants
 const POLLING_INTERVAL_MS = 2000;
 import {
   Accordion,
