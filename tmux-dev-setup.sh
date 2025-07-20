@@ -1,13 +1,12 @@
 #!/bin/bash
 
-
 SESSION_NAME="sensei-dev"
 
 # Check if tmux session already exists
 if tmux has-session -t $SESSION_NAME 2>/dev/null; then
-    echo "Session '$SESSION_NAME' already exists. Attaching..."
-    tmux attach-session -t $SESSION_NAME
-    exit 0
+  echo "Session '$SESSION_NAME' already exists. Attaching..."
+  tmux attach-session -t $SESSION_NAME
+  exit 0
 fi
 
 # Create new tmux session
@@ -20,6 +19,12 @@ tmux new-session -d -s $SESSION_NAME -n "backend"
 tmux send-keys -t $SESSION_NAME:backend "cd backend" Enter
 tmux send-keys -t $SESSION_NAME:backend "source ../.venv/bin/activate" Enter
 tmux send-keys -t $SESSION_NAME:backend "python manage.py runserver" Enter
+
+# Setup Celery
+tmux split-window -h
+tmux send-keys -t $SESSION_NAME:backend "cd backend" Enter
+tmux send-keys -t $SESSION_NAME:backend "source ../.venv/bin/activate" Enter
+tmux send-keys -t $SESSION_NAME:backend "celery -A senseiweb worker -l info" Enter
 
 # Create second window for frontend
 tmux new-window -t $SESSION_NAME -n "frontend"
