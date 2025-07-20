@@ -21,8 +21,7 @@ import {
 import {
   fetchTracerExecutions,
   deleteProfileExecution,
-  checkGenerationStatus,
-  checkOngoingGeneration,
+  checkTracerGenerationStatus,
 } from "../api/file-api";
 import TracerExecutionCard from "../components/tracer-execution-card";
 import InlineReportViewer from "../components/inline-report-viewer";
@@ -35,13 +34,13 @@ import { useAuth } from "../contexts/auth-context";
 // Move getStatusColor to outer scope
 const getStatusColor = (status) => {
   switch (status) {
-    case "COMPLETED": {
+    case "SUCCESS": {
       return "success";
     }
     case "RUNNING": {
       return "primary";
     }
-    case "ERROR": {
+    case "FAILURE": {
       return "danger";
     }
     case "PENDING": {
@@ -96,82 +95,67 @@ const TracerDashboard = () => {
       // Check if we're already polling this execution
       if (pollingIntervals.has(execution.id)) return;
 
-      // We need to find the task ID from the execution
-      // For now, we'll check the ongoing generation status for the project
-      try {
-        const ongoingResponse = await checkOngoingGeneration(
-          execution.project_id,
-        );
+      // Get the Celery task ID directly from the execution object
+      if (!execution.celery_task_id) {
+        return;
+      }
 
-        if (!ongoingResponse.ongoing || !ongoingResponse.task_id) {
-          return;
-        }
+      const celeryTaskId = execution.celery_task_id;
 
-        const taskId = ongoingResponse.task_id;
+      const intervalId = setInterval(async () => {
+        try {
+          const status = await checkTracerGenerationStatus(celeryTaskId);
 
-        const intervalId = setInterval(async () => {
-          try {
-            const status = await checkGenerationStatus(taskId);
-
-            // Update the execution in our state
-            setExecutions((prevExecutions) =>
-              prevExecutions.map((exec) => {
-                if (exec.id === execution.id) {
-                  return {
-                    ...exec,
-                    status: status.status,
-                    progress_stage: status.stage,
-                    progress_percentage: status.progress,
-                  };
-                }
-                return exec;
-              }),
-            );
-
-            // Stop polling if completed or failed
-            if (status.status === "COMPLETED" || status.status === "ERROR") {
-              clearInterval(intervalId);
-              setPollingIntervals((prev) => {
-                const newMap = new Map(prev);
-                newMap.delete(execution.id);
-                return newMap;
-              });
-
-              if (status.status === "COMPLETED") {
-                showToast(
-                  "success",
-                  "TRACER execution completed successfully!",
-                );
-              } else if (status.status === "ERROR") {
-                const errorMessage =
-                  status.error_message ||
-                  "Unknown error occurred during execution";
-                showToast("error", "TRACER execution failed: " + errorMessage);
+          // Update the execution in our state
+          setExecutions((prevExecutions) =>
+            prevExecutions.map((exec) => {
+              if (exec.id === execution.id) {
+                return {
+                  ...exec,
+                  status: status.status,
+                  progress_stage: status.stage,
+                  progress_percentage: status.progress,
+                };
               }
-            }
-          } catch (error) {
-            console.error(`Error polling execution ${execution.id}:`, error);
-            // Stop polling on error
+              return exec;
+            }),
+          );
+
+          // Stop polling if completed or failed
+          if (status.status === "SUCCESS" || status.status === "FAILURE") {
             clearInterval(intervalId);
             setPollingIntervals((prev) => {
               const newMap = new Map(prev);
               newMap.delete(execution.id);
               return newMap;
             });
-          }
-        }, 2000); // Poll every 2 seconds
 
-        setPollingIntervals((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(execution.id, intervalId);
-          return newMap;
-        });
-      } catch (error) {
-        console.error(
-          `Error starting polling for execution ${execution.id}:`,
-          error,
-        );
-      }
+            if (status.status === "SUCCESS") {
+              showToast("success", "TRACER execution succeeded!");
+            } else if (status.status === "FAILURE") {
+              const errorMessage =
+                status.error_message ||
+                "Unknown error occurred during execution";
+              showToast("error", "TRACER execution failed: " + errorMessage);
+            }
+          }
+        } catch (error) {
+          console.error(`Error polling execution ${execution.id}:`, error);
+          // Stop polling on error
+          clearInterval(intervalId);
+          setPollingIntervals((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(execution.id);
+            return newMap;
+          });
+        }
+      }, 2000); // Poll every 2 seconds
+
+      setPollingIntervals((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(execution.id, intervalId);
+        return newMap;
+      });
     },
     [pollingIntervals, showToast, user],
   );
@@ -271,13 +255,13 @@ const TracerDashboard = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "COMPLETED": {
+      case "SUCCESS": {
         return <CheckCircle className="w-4 h-4 text-success" />;
       }
       case "RUNNING": {
         return <Loader className="w-4 h-4 text-primary animate-spin" />;
       }
-      case "ERROR": {
+      case "FAILURE": {
         return <AlertCircle className="w-4 h-4 text-danger" />;
       }
       case "PENDING": {
@@ -457,14 +441,14 @@ const TracerDashboard = () => {
                 <SelectItem key="all" value="all">
                   All Statuses
                 </SelectItem>
-                <SelectItem key="COMPLETED" value="COMPLETED">
-                  Completed
+                <SelectItem key="SUCCESS" value="SUCCESS">
+                  Success
                 </SelectItem>
                 <SelectItem key="RUNNING" value="RUNNING">
                   Running
                 </SelectItem>
-                <SelectItem key="ERROR" value="ERROR">
-                  Error
+                <SelectItem key="FAILURE" value="FAILURE">
+                  Failure
                 </SelectItem>
                 <SelectItem key="PENDING" value="PENDING">
                   Pending

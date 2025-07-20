@@ -26,6 +26,7 @@ export const ENDPOINTS = {
   VALIDATE_YAML: "/validate-yaml/",
   LLM_MODELS: "/llm-models/",
   LLM_PROVIDERS: "/llm-providers/",
+  SENSEI_EXECUTION_STATUS: "/sensei-execution-status/",
 };
 
 export default API_BASE_URL;

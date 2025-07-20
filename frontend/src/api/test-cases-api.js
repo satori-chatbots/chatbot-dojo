@@ -89,3 +89,37 @@ export const fetchPaginatedTestCases = async (parameters) => {
   );
   return response.json();
 };
+
+export const checkSenseiExecutionStatus = async (taskId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_EXECUTION_STATUS}${taskId}/`,
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error checking Sensei execution status:", error);
+    throw error;
+  }
+};
+
+export const checkOngoingSenseiExecution = async (testCaseId) => {
+  try {
+    const testCase = await fetchTestCaseById(testCaseId);
+    if (
+      testCase &&
+      testCase.length > 0 &&
+      testCase[0].celery_task_id &&
+      testCase[0].status === "RUNNING"
+    ) {
+      return {
+        ongoing: true,
+        task_id: testCase[0].celery_task_id,
+        status: testCase[0].status,
+      };
+    }
+    return { ongoing: false };
+  } catch (error) {
+    console.error("Error checking ongoing Sensei execution:", error);
+    throw error;
+  }
+};

@@ -395,7 +395,7 @@ class Project(models.Model):
             project=self,
             execution_name=execution_name,
             execution_type="manual",
-            status="COMPLETED",  # Manual executions are always completed
+            status="SUCCESS",  # Manual executions are always successful
             profiles_directory=execution_dir,
         )
 
@@ -500,6 +500,8 @@ class TestCase(models.Model):
     # To be able to track the progress of the execution
     # Name of the profiles so we can access the directories
     profiles_names = models.JSONField(blank=True, null=True)
+    # Celery task ID for tracking execution progress
+    celery_task_id = models.CharField(max_length=255, blank=True, help_text="Celery task ID for progress tracking")
     # Number of total conversations
     total_conversations = models.IntegerField(blank=True, null=True)
     # Number of conversations that have already been
@@ -709,8 +711,8 @@ class ProfileGenerationTask(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("RUNNING", "Running"),
-        ("COMPLETED", "Completed"),
-        ("ERROR", "Error"),
+        ("SUCCESS", "Success"),
+        ("FAILURE", "Failure"),
     )
 
     STAGE_CHOICES = (
@@ -730,10 +732,10 @@ class ProfileGenerationTask(models.Model):
     conversations = models.PositiveIntegerField(default=5)
     turns = models.PositiveIntegerField(default=5)
     generated_file_ids = models.JSONField(default=list)
-    process_id = models.IntegerField(null=True, blank=True)
     execution = models.ForeignKey(
         "ProfileExecution", on_delete=models.CASCADE, null=True, blank=True, related_name="generation_tasks"
     )
+    celery_task_id = models.CharField(max_length=255, blank=True, help_text="Celery task ID for progress tracking")
 
     def __str__(self) -> str:
         """Return a string representation of the task."""
@@ -851,8 +853,8 @@ class ProfileExecution(models.Model):
     STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
         ("PENDING", "Pending"),
         ("RUNNING", "Running"),
-        ("COMPLETED", "Completed"),
-        ("ERROR", "Error"),
+        ("SUCCESS", "Success"),
+        ("FAILURE", "Failure"),
     ]
 
     VERBOSITY_CHOICES: ClassVar[list[tuple[str, str]]] = [

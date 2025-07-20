@@ -25,6 +25,7 @@ from .projects import ProjectViewSet, fetch_file_content, validate_yaml
 from .reports import GlobalReportViewSet, ProfileReportViewSet
 from .sensei_execution_views import (
     ExecuteSelectedProfilesAPIView,
+    check_sensei_execution_status,
     delete_profile_execution,
     get_profile_executions,
     stop_sensei_execution,
@@ -32,8 +33,8 @@ from .sensei_execution_views import (
 from .test_cases import TestCaseViewSet
 from .test_files import TestFileViewSet
 from .tracer_views import (
-    check_generation_status,
     check_ongoing_generation,
+    check_tracer_generation_status,
     generate_profiles,
     get_tracer_analysis_report,
     get_tracer_execution_logs,
@@ -60,8 +61,9 @@ __all__ = [
     "TypeFileViewSet",
     "UpdateProfileView",
     "UserAPIKeyViewSet",
-    "check_generation_status",
     "check_ongoing_generation",
+    "check_sensei_execution_status",
+    "check_tracer_generation_status",
     "delete_profile_execution",
     "fetch_file_content",
     "generate_profiles",

@@ -32,10 +32,12 @@ import {
   uploadFiles,
   deleteFiles,
   generateProfiles,
-  checkGenerationStatus,
   checkOngoingGeneration,
+  checkTracerGenerationStatus,
   fetchProfileExecutions,
+  fetchTracerExecutions,
   deleteProfileExecution,
+  fetchFiles,
 } from "../api/file-api";
 import { deleteProject, fetchProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
@@ -115,17 +117,105 @@ function Home() {
 
     setLoadingExecutions(true);
     try {
-      const data = await fetchProfileExecutions(selectedProject.id);
-      setExecutions(data.executions || []);
+      // Fetch both profile executions (for manual) and tracer executions (for tracer)
+      const [profileData, tracerData] = await Promise.all([
+        fetchProfileExecutions(selectedProject.id),
+        fetchTracerExecutions(),
+      ]);
 
-      // Flatten all profiles for easy selection management
+      // Filter tracer executions to only include those for the current project
+      const projectTracerExecutions = (tracerData.executions || []).filter(
+        (execution) => execution.project_id === selectedProject.id,
+      );
+
+      // Fetch profiles for tracer executions
+      const tracerExecutionsWithProfiles = await Promise.all(
+        projectTracerExecutions.map(async (execution) => {
+          if (execution.generated_profiles_count > 0) {
+            try {
+              // Get the editable TestFiles for this execution
+              const testFiles = await fetchFiles(selectedProject.id);
+              const executionTestFiles = testFiles.filter(
+                (file) => file.execution === execution.id,
+              );
+
+              // Map TestFiles to the expected profile format
+              const profiles = executionTestFiles.map((file) => ({
+                id: file.id, // Use the actual TestFile ID for YAML editor
+                name: file.name || file.file.name, // Use the processed name from TestFile
+                is_valid: file.is_valid,
+                uploaded_at: file.uploaded_at,
+                content: undefined, // Content will be fetched by YAML editor when needed
+              }));
+
+              return {
+                ...execution,
+                execution_type: "tracer",
+                profiles,
+              };
+            } catch (error) {
+              console.error(
+                `Error fetching profiles for tracer execution ${execution.id}:`,
+                error,
+              );
+              // Fallback to empty profiles if fetch fails
+              return {
+                ...execution,
+                execution_type: "tracer",
+                profiles: [],
+              };
+            }
+          } else {
+            return {
+              ...execution,
+              execution_type: "tracer",
+              profiles: [],
+            };
+          }
+        }),
+      );
+
+      // Combine and sort executions: manual first, then tracer by date
+      const manualExecutions = (profileData.executions || []).filter(
+        (exec) => exec.execution_type === "manual",
+      );
+      const tracerExecutions = tracerExecutionsWithProfiles;
+
+      // Sort manual executions by date (newest first)
+      const sortedManualExecutions = manualExecutions.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at),
+      );
+
+      // Sort tracer executions by date (newest first)
+      const sortedTracerExecutions = tracerExecutions.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at),
+      );
+
+      // Combine: manual first, then tracer
+      const allExecutions = [
+        ...sortedManualExecutions,
+        ...sortedTracerExecutions,
+      ];
+
+      setExecutions(allExecutions);
+
+      // Flatten all profiles for easy selection management (from both manual and tracer executions)
       const profiles = [];
-      if (data.executions)
-        for (const execution of data.executions) {
-          for (const profile of execution.profiles) {
-            profiles.push(profile);
+      if (profileData.executions) {
+        for (const execution of profileData.executions) {
+          if (execution.execution_type === "manual") {
+            for (const profile of execution.profiles) {
+              profiles.push(profile);
+            }
           }
         }
+      }
+      // Add tracer profiles to the flattened list
+      for (const execution of tracerExecutionsWithProfiles) {
+        for (const profile of execution.profiles) {
+          profiles.push(profile);
+        }
+      }
       setAllProfiles(profiles);
     } catch (error) {
       console.error("Error fetching executions:", error);
@@ -219,18 +309,18 @@ function Home() {
   };
 
   const pollGenerationStatus = useCallback(
-    async (taskId) => {
+    async (celeryTaskId) => {
       // Clear any existing interval
       if (statusIntervalReference.current) {
         clearInterval(statusIntervalReference.current);
       }
 
-      // Set up interval to check status
+      // Set up interval to check status using Celery task ID
       statusIntervalReference.current = setInterval(async () => {
         try {
-          const status = await checkGenerationStatus(taskId);
+          const status = await checkTracerGenerationStatus(celeryTaskId);
 
-          if (status.status === "COMPLETED") {
+          if (status.status === "SUCCESS") {
             clearInterval(statusIntervalReference.current);
             statusIntervalReference.current = undefined;
             // Explicitly reload executions when generation completes
@@ -239,9 +329,9 @@ function Home() {
             setIsGenerating(false);
             showToast(
               "success",
-              `Successfully generated ${status.generated_files} profiles!`,
+              `Successfully generated ${status.generated_files || 0} profiles!`,
             );
-          } else if (status.status === "ERROR") {
+          } else if (status.status === "FAILURE") {
             clearInterval(statusIntervalReference.current);
             statusIntervalReference.current = undefined;
             // Reload executions to update the status in the UI
@@ -286,9 +376,9 @@ function Home() {
         verbosity: profileGenParameters.verbosity,
       });
 
-      // Start polling for status
-      const taskId = response.task_id;
-      pollGenerationStatus(taskId);
+      // Start polling for status using Celery task ID
+      const celeryTaskId = response.celery_task_id;
+      pollGenerationStatus(celeryTaskId);
 
       // Reload executions to show the new one
       await reloadExecutions();
@@ -322,13 +412,13 @@ function Home() {
 
       try {
         const response = await checkOngoingGeneration(projectId);
-        if (response.ongoing) {
+        if (response.ongoing && response.celery_task_id) {
           // There's an ongoing generation task
           setIsGenerating(true);
           // Reset progress indicators to avoid showing stale data
           setGenerationStage("Loading status...");
           setGenerationProgress(0);
-          pollGenerationStatus(response.task_id);
+          pollGenerationStatus(response.celery_task_id);
           showToast("info", "Profile generation is in progress");
         }
       } catch (error) {

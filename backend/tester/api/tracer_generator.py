@@ -7,7 +7,10 @@ import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from celery.app.task import Task
 
 from django.conf import settings
 from django.db import DatabaseError, IntegrityError
@@ -98,18 +101,19 @@ class TracerGenerator:
         self,
         task_id: int,
         params: ProfileGenerationParams,
+        celery_task: "Task | None" = None,
     ) -> None:
         """Run profile generation asynchronously using real TRACER."""
         task = None
         execution = None
 
         try:
-            task = self._initialize_task(task_id)
+            task = self._initialize_task(task_id, celery_task)
             execution = self._create_execution(task, params.conversations, params.turns, params.verbosity)
 
-            success = self.execute_tracer_generation(task, execution, params)
+            success = self.execute_tracer_generation(task, execution, params, celery_task)
 
-            self._finalize_execution(task, execution, success=success)
+            self._finalize_execution(task, execution, success=success, celery_task=celery_task)
 
         except ProfileGenerationTask.DoesNotExist:
             logger.error(f"ProfileGenerationTask with ID {task_id} not found")
@@ -124,7 +128,7 @@ class TracerGenerator:
             # Try to update task and execution if they exist
             if task:
                 try:
-                    task.status = "ERROR"
+                    task.status = "FAILURE"
                     task.error_message = error_message
                     task.save()
                 except (DatabaseError, IntegrityError) as save_error:
@@ -132,7 +136,7 @@ class TracerGenerator:
 
             if execution:
                 try:
-                    execution.status = "ERROR"
+                    execution.status = "FAILURE"
                     execution.save()
                 except (DatabaseError, IntegrityError) as save_error:
                     logger.critical(f"Failed to save error status to execution: {save_error!s}")
@@ -140,12 +144,22 @@ class TracerGenerator:
             # Don't re-raise the exception to prevent console spam
             # The error is logged and stored in the database for user visibility
 
-    def _initialize_task(self, task_id: int) -> ProfileGenerationTask:
+    def _initialize_task(self, task_id: int, celery_task: "Task | None" = None) -> ProfileGenerationTask:
         """Initialize and update task status."""
         task = ProfileGenerationTask.objects.get(id=task_id)
         task.status = "RUNNING"
         task.stage = "INITIALIZING"
         task.save()
+
+        # Update Celery task state if available
+        if celery_task:
+            celery_task.update_state(
+                state="PROGRESS",
+                meta={
+                    "stage": "INITIALIZING",
+                    "progress": 0,
+                },
+            )
 
         logger.info(f"Starting TRACER profile generation for task {task_id}")
         return task
@@ -172,20 +186,50 @@ class TracerGenerator:
         task.save()
         return execution
 
-    def _finalize_execution(self, task: ProfileGenerationTask, execution: ProfileExecution, *, success: bool) -> None:
+    def _finalize_execution(
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        *,
+        success: bool,
+        celery_task: "Task | None" = None,
+    ) -> None:
         """Finalize task and execution status based on success."""
         if success:
-            task.status = "COMPLETED"
+            task.status = "SUCCESS"
             task.progress_percentage = 100
             task.stage = "COMPLETED"
-            execution.status = "COMPLETED"
+            execution.status = "SUCCESS"
+
+            # Update Celery task state if available
+            if celery_task:
+                celery_task.update_state(
+                    state="SUCCESS",
+                    meta={
+                        "stage": "COMPLETED",
+                        "progress": 100,
+                    },
+                )
+
             logger.info(f"TRACER profile generation completed for task {task.id}")
         else:
-            task.status = "ERROR"
+            task.status = "FAILURE"
             # Only set a generic error message if we don't already have a specific one
             if not task.error_message or task.error_message.strip() == "":
                 task.error_message = "TRACER execution failed - check logs for details"
-            execution.status = "ERROR"
+            execution.status = "FAILURE"
+
+            # Update Celery task state if available
+            if celery_task:
+                celery_task.update_state(
+                    state="FAILURE",
+                    meta={
+                        "stage": "ERROR",
+                        "progress": task.progress_percentage,
+                        "error_message": task.error_message,
+                    },
+                )
+
             logger.info(f"TRACER profile generation failed for task {task.id}: {task.error_message}")
 
         task.save()
@@ -196,6 +240,7 @@ class TracerGenerator:
         task: ProfileGenerationTask,
         execution: ProfileExecution,
         params: ProfileGenerationParams,
+        celery_task: "Task | None" = None,
     ) -> bool:
         """Execute TRACER command and process results."""
         try:
@@ -207,10 +252,20 @@ class TracerGenerator:
             task.stage = "CREATING_PROFILES"
             task.save()
 
-            success = self._run_tracer_command(task, execution, params, output_dir)
+            # Update Celery task state if available
+            if celery_task:
+                celery_task.update_state(
+                    state="PROGRESS",
+                    meta={
+                        "stage": "CREATING_PROFILES",
+                        "progress": 20,
+                    },
+                )
+
+            success = self._run_tracer_command(task, execution, params, output_dir, celery_task)
 
             if success:
-                self._post_process_results(task, execution, output_dir)
+                self._post_process_results(task, execution, output_dir, celery_task)
             else:
                 return False
 
@@ -257,6 +312,7 @@ class TracerGenerator:
         execution: ProfileExecution,
         params: ProfileGenerationParams,
         output_dir: Path,
+        celery_task: "Task | None" = None,
     ) -> bool:
         """Execute the TRACER command and handle output."""
         project = task.project
@@ -268,7 +324,7 @@ class TracerGenerator:
 
         env = self._prepare_environment(params.api_key, project.llm_provider)
 
-        return self._execute_subprocess(task, execution, cmd, env)
+        return self._execute_subprocess(task, execution, cmd, env, celery_task)
 
     def _build_tracer_command(
         self,
@@ -324,7 +380,12 @@ class TracerGenerator:
         return env
 
     def _execute_subprocess(
-        self, task: ProfileGenerationTask, execution: ProfileExecution, cmd: list[str], env: dict[str, str]
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        cmd: list[str],
+        env: dict[str, str],
+        celery_task: "Task | None" = None,
     ) -> bool:
         """Execute the TRACER subprocess and handle output."""
         try:
@@ -339,7 +400,7 @@ class TracerGenerator:
                 universal_newlines=True,
             )
 
-            full_stdout = self._handle_process_output(task, process)
+            full_stdout = self._handle_process_output(task, process, celery_task)
             process.wait()
 
             full_stderr_lines = []
@@ -456,7 +517,9 @@ class TracerGenerator:
         logger.debug(f"Could not categorize TRACER error type from stderr. stderr preview: {stderr[:200]}...")
         return "OTHER"
 
-    def _handle_process_output(self, task: ProfileGenerationTask, process: subprocess.Popen) -> list[str]:
+    def _handle_process_output(
+        self, task: ProfileGenerationTask, process: subprocess.Popen, celery_task: "Task | None" = None
+    ) -> list[str]:
         """Handle process output and update progress."""
         full_stdout = []
 
@@ -465,15 +528,31 @@ class TracerGenerator:
                 full_stdout.append(line)
                 if line.strip():
                     logger.info(f"TRACER (task {task.id}): {line.strip()}")
-                    self._update_progress_from_tracer_output(task, line)
+                    self._update_progress_from_tracer_output(task, line, celery_task)
 
         return full_stdout
 
-    def _post_process_results(self, task: ProfileGenerationTask, execution: ProfileExecution, output_dir: Path) -> None:
+    def _post_process_results(
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        output_dir: Path,
+        celery_task: "Task | None" = None,
+    ) -> None:
         """Post-process TRACER results."""
         task.progress_percentage = 99
         task.stage = "SAVING_FILES"
         task.save()
+
+        # Update Celery task state if available
+        if celery_task:
+            celery_task.update_state(
+                state="PROGRESS",
+                meta={
+                    "stage": "SAVING_FILES",
+                    "progress": 99,
+                },
+            )
 
         # Process results with dual storage
         processor = TracerResultsProcessor()
@@ -484,17 +563,30 @@ class TracerGenerator:
         execution.execution_time_minutes = execution_time
         execution.save()
 
-    def _update_progress_from_tracer_output(self, task: ProfileGenerationTask, line: str) -> None:
+    def _update_progress_from_tracer_output(
+        self, task: ProfileGenerationTask, line: str, celery_task: "Task | None" = None
+    ) -> None:
         """Parse a line of TRACER output and update the task progress."""
         try:
             line = line.strip()
-            if (
+            progress_updated = (
                 self._handle_exploration_phase(task, line)
                 or self._handle_analysis_phase(task, line)
                 or self._handle_finalization_phase(task, line)
-            ):
-                pass
-            task.save(update_fields=["stage", "progress_percentage"])
+            )
+
+            if progress_updated:
+                task.save(update_fields=["stage", "progress_percentage"])
+
+                # Update Celery task state if available
+                if celery_task:
+                    celery_task.update_state(
+                        state="PROGRESS",
+                        meta={
+                            "stage": task.stage,
+                            "progress": task.progress_percentage,
+                        },
+                    )
         except (ValueError, AttributeError, TypeError) as e:
             logger.debug(f"Non-critical: Could not parse TRACER progress from output for task {task.id}: {e!s}")
 

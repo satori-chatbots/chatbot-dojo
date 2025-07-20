@@ -1,6 +1,7 @@
 # .env in the backend directory
 backend/.env
 
+
 # vscode
 .vscode/
 
@@ -167,6 +168,9 @@ venv.bak/
 
 # mkdocs documentation
 /site
+
+# Trying to see if this does anything useful
+GEMINI.md
 
 # mypy
 .mypy_cache/

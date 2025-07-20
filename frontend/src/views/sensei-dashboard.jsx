@@ -23,7 +23,10 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/react";
-import { fetchTestCasesByProjects } from "../api/test-cases-api";
+import {
+  fetchTestCasesByProjects,
+  checkSenseiExecutionStatus,
+} from "../api/test-cases-api";
 import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from "@heroui/react";
 import { useMemo } from "react";
@@ -47,9 +50,9 @@ import SetupProgress from "../components/setup-progress";
 
 const statusOptions = [
   { label: "All", value: "ALL" },
-  { label: "Completed", value: "COMPLETED" },
+  { label: "Success", value: "SUCCESS" },
   { label: "Running", value: "RUNNING" },
-  { label: "Error", value: "ERROR" },
+  { label: "Failure", value: "FAILURE" },
   { label: "Stopped", value: "STOPPED" },
 ];
 
@@ -108,8 +111,8 @@ function Dashboard() {
   const { projects, loadingProjects, errorProjects } = useFetchProjects("all");
 
   const statusColorMap = {
-    COMPLETED: "success",
-    ERROR: "danger",
+    SUCCESS: "success",
+    FAILURE: "danger",
     RUNNING: "warning",
     STOPPED: "default",
   };
@@ -243,71 +246,196 @@ function Dashboard() {
       );
       if (runningTestCases.length > 0) {
         try {
-          // Fetch updated data for running test cases
-          const updatedTestCases =
-            await fetchTestCasesByProjects(selectedProjects);
-          setTestCases((previousTestCases) => {
-            return previousTestCases.map((tc) => {
-              const updated = updatedTestCases.find((utc) => utc.id === tc.id);
-              return updated || tc;
-            });
-          });
-
-          // Update reports and errors if status changed
-          const runningTestCaseIds = new Set(
-            runningTestCases.map((tc) => tc.id),
+          // Separate test cases by whether they have Celery task IDs
+          const testCasesWithTaskIds = runningTestCases.filter(
+            (tc) => tc.celery_task_id,
           );
-          const newlyCompletedTestCases = updatedTestCases.filter(
-            (tc) =>
-              runningTestCaseIds.has(tc.id) &&
-              (tc.status === "COMPLETED" ||
-                tc.status === "ERROR" ||
-                tc.status === "STOPPED"),
+          const testCasesWithoutTaskIds = runningTestCases.filter(
+            (tc) => !tc.celery_task_id,
           );
 
-          // Fetch reports and errors for completed test cases
-          if (newlyCompletedTestCases.length > 0) {
-            const testCaseIds = newlyCompletedTestCases.map((tc) => tc.id);
-            const fetchedReports =
-              await fetchGlobalReportsByTestCases(testCaseIds);
-
-            if (fetchedReports.length > 0) {
-              const globalReportIds = fetchedReports.map((report) => report.id);
-              const fetchedErrors =
-                await fetchTestErrorsByGlobalReports(globalReportIds);
-
-              setGlobalReports((previous) => {
-                const updatedReportIds = new Set(
-                  fetchedReports.map((r) => r.id),
+          // Poll Celery task status for test cases with task IDs
+          if (testCasesWithTaskIds.length > 0) {
+            const taskStatusPromises = testCasesWithTaskIds.map(async (tc) => {
+              try {
+                console.log(
+                  `Polling task status for test case ${tc.id}, task ID: ${tc.celery_task_id}`,
                 );
-                const filtered = previous.filter(
-                  (r) => !updatedReportIds.has(r.id),
+                const taskStatus = await checkSenseiExecutionStatus(
+                  tc.celery_task_id,
                 );
-                return [...filtered, ...fetchedReports];
-              });
-              setErrors((previous) => {
-                const updatedErrorIds = new Set(
-                  fetchedErrors.map((error_) => error_.id),
+                console.log(`Task status for ${tc.id}:`, taskStatus);
+                return {
+                  id: tc.id,
+                  taskStatus,
+                  originalTestCase: tc,
+                };
+              } catch (error) {
+                console.error(
+                  `Error polling task status for test case ${tc.id}:`,
+                  error,
                 );
-                const filtered = previous.filter(
-                  (error_) => !updatedErrorIds.has(error_.id),
-                );
-                return [...filtered, ...fetchedErrors];
-              });
-
-              // Update error counts
-              const newErrorCounts = {};
-              for (const error of fetchedErrors) {
-                if (newErrorCounts[error.global_report]) {
-                  newErrorCounts[error.global_report] += error.count;
-                } else {
-                  newErrorCounts[error.global_report] = error.count;
-                }
+                // Return a fallback result to trigger database polling for this test case
+                return {
+                  id: tc.id,
+                  taskStatus: undefined,
+                  originalTestCase: tc,
+                  pollError: true,
+                };
               }
-              setErrorCounts((previous) => ({
-                ...previous,
-                ...newErrorCounts,
-              }));
+            });
+
+            const taskStatusResults = await Promise.all(taskStatusPromises);
+
+            // Update test cases with Celery task progress
+            setTestCases((previousTestCases) => {
+              return previousTestCases.map((tc) => {
+                const result = taskStatusResults.find(
+                  (r) => r && r.id === tc.id,
+                );
+                if (result) {
+                  // If there was a polling error or no task status, fall back to database polling for this test case
+                  if (result.pollError || !result.taskStatus) {
+                    // Trigger individual database poll for this test case
+                    console.log(
+                      `Polling error for test case ${tc.id}, will use database status`,
+                    );
+                    return tc; // Keep existing state for now, individual polling will handle updates
+                  }
+
+                  // Calculate conversation-based progress if available
+                  let calculatedProgress = result.taskStatus.progress || 0;
+                  if (
+                    result.taskStatus.total_conversations > 0 &&
+                    result.taskStatus.executed_conversations >= 0
+                  ) {
+                    calculatedProgress = Math.round(
+                      (result.taskStatus.executed_conversations /
+                        result.taskStatus.total_conversations) *
+                        100,
+                    );
+                  }
+
+                  // Use task status if available, otherwise fall back to database status
+                  const unifiedStatus =
+                    result.taskStatus.test_case_status ||
+                    result.taskStatus.status ||
+                    tc.status;
+
+                  return {
+                    ...tc,
+                    // Update with task status info
+                    progress_stage: result.taskStatus.stage,
+                    progress_percentage: calculatedProgress,
+                    executed_conversations:
+                      result.taskStatus.executed_conversations ||
+                      tc.executed_conversations,
+                    total_conversations:
+                      result.taskStatus.total_conversations ||
+                      tc.total_conversations,
+                    // Use unified status
+                    status: unifiedStatus,
+                    // Store error message if task failed
+                    error_message:
+                      result.taskStatus.error_message || tc.error_message,
+                  };
+                }
+                return tc;
+              });
+            });
+
+            // Check if any tasks completed and refresh data for those
+            const completedTaskResults = taskStatusResults.filter((r) => {
+              if (!r || !r.taskStatus) return false;
+              const unifiedStatus =
+                r.taskStatus.test_case_status || r.taskStatus.status;
+              return unifiedStatus === "SUCCESS" || unifiedStatus === "FAILURE";
+            });
+
+            if (completedTaskResults.length > 0) {
+              console.log(
+                `${completedTaskResults.length} tasks completed, refreshing page data`,
+              );
+              // Refresh the page data to get final reports and errors for completed test cases
+              fetchPagedTestCases(page);
+            }
+          }
+
+          // For test cases without task IDs, use original polling method
+          if (testCasesWithoutTaskIds.length > 0) {
+            const updatedTestCases =
+              await fetchTestCasesByProjects(selectedProjects);
+            setTestCases((previousTestCases) => {
+              return previousTestCases.map((tc) => {
+                // Only update test cases that don't have task IDs
+                if (!tc.celery_task_id) {
+                  const updated = updatedTestCases.find(
+                    (utc) => utc.id === tc.id,
+                  );
+                  return updated || tc;
+                }
+                return tc;
+              });
+            });
+
+            // Handle newly completed test cases (for non-task ID cases)
+            const runningTestCaseIds = new Set(
+              testCasesWithoutTaskIds.map((tc) => tc.id),
+            );
+            const newlyCompletedTestCases = updatedTestCases.filter(
+              (tc) =>
+                runningTestCaseIds.has(tc.id) &&
+                (tc.status === "SUCCESS" ||
+                  tc.status === "FAILURE" ||
+                  tc.status === "STOPPED"),
+            );
+
+            // Fetch reports and errors for completed test cases
+            if (newlyCompletedTestCases.length > 0) {
+              const testCaseIds = newlyCompletedTestCases.map((tc) => tc.id);
+              const fetchedReports =
+                await fetchGlobalReportsByTestCases(testCaseIds);
+
+              if (fetchedReports.length > 0) {
+                const globalReportIds = fetchedReports.map(
+                  (report) => report.id,
+                );
+                const fetchedErrors =
+                  await fetchTestErrorsByGlobalReports(globalReportIds);
+
+                setGlobalReports((previous) => {
+                  const updatedReportIds = new Set(
+                    fetchedReports.map((r) => r.id),
+                  );
+                  const filtered = previous.filter(
+                    (r) => !updatedReportIds.has(r.id),
+                  );
+                  return [...filtered, ...fetchedReports];
+                });
+                setErrors((previous) => {
+                  const updatedErrorIds = new Set(
+                    fetchedErrors.map((error_) => error_.id),
+                  );
+                  const filtered = previous.filter(
+                    (error_) => !updatedErrorIds.has(error_.id),
+                  );
+                  return [...filtered, ...fetchedErrors];
+                });
+
+                // Update error counts
+                const newErrorCounts = {};
+                for (const error of fetchedErrors) {
+                  if (newErrorCounts[error.global_report]) {
+                    newErrorCounts[error.global_report] += error.count;
+                  } else {
+                    newErrorCounts[error.global_report] = error.count;
+                  }
+                }
+                setErrorCounts((previous) => ({
+                  ...previous,
+                  ...newErrorCounts,
+                }));
+              }
             }
           }
         } catch (error) {
@@ -328,8 +456,8 @@ function Dashboard() {
       }
     };
 
-    // Depends on selectedProjects and testCases
-  }, [selectedProjects, testCases]);
+    // Depends on selectedProjects, testCases, and page for polling logic
+  }, [selectedProjects, testCases, page]);
 
   // Initialize selected projects
   useEffect(() => {
@@ -664,7 +792,25 @@ function Dashboard() {
                       >
                         {testCase.status}
                       </Chip>
-                      {testCase.status === "ERROR" &&
+                      {testCase.status === "RUNNING" && (
+                        <div className="flex flex-col gap-1">
+                          {testCase.progress_stage &&
+                            testCase.progress_stage !==
+                              "Task is waiting to be processed" && (
+                              <div className="text-xs text-primary max-w-48 truncate">
+                                {testCase.progress_stage}
+                              </div>
+                            )}
+                          {testCase.progress_percentage !== undefined && (
+                            <div className="text-xs text-default-500">
+                              {testCase.total_conversations > 0
+                                ? `${testCase.executed_conversations || 0} of ${testCase.total_conversations} conversations (${testCase.progress_percentage}%)`
+                                : `${testCase.progress_percentage}% complete`}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {testCase.status === "FAILURE" &&
                         testCase.error_message && (
                           <div
                             className="text-xs text-red-600 dark:text-red-400 max-w-48 truncate"
