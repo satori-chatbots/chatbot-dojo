@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from celery import Task
+    from celery.app.task import Task
 
 from django.conf import settings
 from django.db import DatabaseError, IntegrityError
