@@ -195,72 +195,134 @@ To run the application with background tasks using Celery and RabbitMQ, follow t
     python manage.py runserver
     ```
 
-## Docker Deployment
+## Docker-Based Workflow (Recommended)
 
-For easier setup and deployment, you can use Docker Compose to run the entire application stack including Django, Celery, RabbitMQ, and PostgreSQL.
+This project is configured to run entirely within Docker, which is the recommended way to handle both development and production. This approach simplifies dependency management and ensures consistency across environments.
 
-### Full Production-like Setup
+### Prerequisites
 
-Run the complete stack with PostgreSQL database:
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-```bash
-docker-compose up --build
+### Environment Setup
+
+The application uses `.env` files to manage environment variables. You must create two files in the project root:
+
+1.  `.env.dev`: For the development environment.
+2.  `.env.prod`: For the production environment.
+
+These files are ignored by Git, so your secrets are safe. You can use the provided examples below as a starting point, but for production, be sure to generate a new `SECRET_KEY` and adjust `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` to match your deployment domain.
+
+#### `.env.dev` Example
+
+```env
+DEBUG=True
+SECRET_KEY=django-insecure-dev-key-for-sensei-web
+CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+CELERY_RESULT_BACKEND=rpc://
+DATABASE_URL=postgres://postgres:postgres@db:5432/senseiweb_dev
+POSTGRES_DB=senseiweb_dev
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+ALLOWED_HOSTS=localhost,127.0.0.1,backend
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
-This will start:
-- **Backend Django app** at `http://localhost:8000`
-- **Celery worker** for async task processing
-- **RabbitMQ** message broker (management UI at `http://localhost:15672` - guest/guest)
-- **PostgreSQL** database
+#### `.env.prod` Example
 
-### Development Setup (SQLite)
-
-For development with SQLite (no PostgreSQL):
-
-```bash
-docker-compose -f docker-compose.dev.yml up --build
+```env
+DEBUG=False
+SECRET_KEY=super-secret-prod-key-for-sensei-web
+CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+CELERY_RESULT_BACKEND=rpc://
+DATABASE_URL=postgres://postgres:postgres@db:5432/senseiweb_prod
+POSTGRES_DB=senseiweb_prod
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+ALLOWED_HOSTS=localhost,backend
+CORS_ALLOWED_ORIGINS=http://localhost
 ```
 
-This starts the same services except uses SQLite database (data persisted in local files).
+### Development Workflow
 
-### Frontend
+This workflow is designed for active development, featuring hot-reloading for both the frontend and backend.
 
-The Docker setup only includes the backend services. Run the frontend separately:
+1.  **Start the services**:
 
-```bash
-cd frontend
-pnpm install
-pnpm run dev
-```
+    ```bash
+    docker-compose -f docker-compose.dev.yml up --build
+    ```
 
-The frontend will be available at `http://localhost:5173/`.
+2.  **Access the application**:
+    -   Frontend (with hot-reloading): `http://localhost:5173`
+    -   Backend API: `http://localhost:8000`
+    -   RabbitMQ Management: `http://localhost:15672`
 
-### Environment Variables
+3.  **Making Database Migrations**:
 
-The Docker setup uses these environment variables:
-- `CELERY_BROKER_URL` - Message broker URL (set to RabbitMQ container)
-- `CELERY_RESULT_BACKEND` - Result backend URL
-- `DATABASE_URL` - PostgreSQL connection (full setup only)
-- `DEBUG` - Django debug mode
+    If you change a Django model, you need to create and apply a database migration. Run these commands in a separate terminal:
 
-### Troubleshooting
+    ```bash
+    # Create a new migration file based on your model changes
+    docker-compose -f docker-compose.dev.yml run --rm backend uv run python manage.py makemigrations
 
-**If you see "ModuleNotFoundError" or "exec: no such file or directory":**
-- Stop the containers: `docker-compose down`
-- Rebuild: `docker-compose up --build`
-- This ensures the latest Dockerfile changes are applied
+    # Apply the migration to the database
+    docker-compose -f docker-compose.dev.yml run --rm backend uv run python manage.py migrate
+    ```
 
-**To view logs:**
-```bash
-docker-compose logs backend
-docker-compose logs celery
-docker-compose logs rabbitmq
-```
+4.  **Stopping the environment**:
 
-**To restart just one service:**
-```bash
-docker-compose restart backend
-```
+    ```bash
+    docker-compose -f docker-compose.dev.yml down
+    ```
+
+### Production Workflow
+
+This workflow builds optimized, self-contained images ready for deployment.
+
+1.  **Start the services**:
+
+    To run in the foreground, use:
+    ```bash
+    docker-compose up --build
+    ```
+
+    For detached mode (recommended for servers), use:
+    ```bash
+    docker-compose up --build -d
+    ```
+
+2.  **Access the application**:
+
+    The entire application is served by Nginx on a single port:
+    -   Application URL: `http://localhost`
+    -   RabbitMQ Management: `http://localhost:15672`
+
+    Migrations are applied automatically on startup.
+
+3.  **Stopping the environment**:
+
+    ```bash
+    docker-compose down
+    ```
+
+### Switching Environments
+
+You cannot run the development and production environments simultaneously due to port conflicts. Always stop one before starting the other using the respective `down` command.
+
+### Database Reset
+
+If you need to completely reset your database (e.g., due to a corrupted volume), you can bring down the services and remove the associated volume. **This will permanently delete all data.**
+
+-   **For Development**:
+    ```bash
+    docker-compose -f docker-compose.dev.yml down -v
+    ```
+-   **For Production**:
+    ```bash
+    docker-compose down -v
+    ```
+
 
 ## Usage
 
