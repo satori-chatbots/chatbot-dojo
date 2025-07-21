@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 WORKDIR /app
 
 # Copy dependency config and lock
@@ -36,19 +37,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user for the application
+RUN groupadd -r django && useradd -r -g django -u 1000 django
+
 # Copy complete .venv with Django, uv, and all libs
 COPY --from=builder /app/.venv /app/.venv
+
 # Copy application source code
 COPY --from=builder /app /app
+
 # Also bring uv binary into final image
 COPY --from=builder /bin/uv /bin/uv
 
-WORKDIR /app
-ENV PATH="/app/.venv/bin:$PATH"
+# Create necessary directories and set proper permissions
+RUN mkdir -p /app/filevault /app/.uv-cache && \
+    chown -R django:django /app && \
+    chmod -R 755 /app/filevault /app/.uv-cache
 
-# Copy entrypoint script
+WORKDIR /app
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
+ENV UV_CACHE_DIR="/app/.uv-cache"
+
+# Copy and set up entrypoint script
 COPY ./entrypoint.prod.sh /app/entrypoint.prod.sh
-RUN chmod +x /app/entrypoint.prod.sh
+RUN chmod +x /app/entrypoint.prod.sh && \
+    chown django:django /app/entrypoint.prod.sh
+
+# Switch to non-root user
+USER django
 
 # Final entrypoint to run Django prod server
 CMD ["/app/entrypoint.prod.sh"]

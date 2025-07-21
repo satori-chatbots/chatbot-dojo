@@ -158,8 +158,15 @@ STATIC_ROOT = BASE_DIR.parent / "static"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Media files configuration
 MEDIA_URL = "/filevault/"
-MEDIA_ROOT = BASE_DIR.parent / "filevault"
+
+# Use environment variable to allow flexibility between dev/prod
+FILEVAULT_ROOT = os.getenv("FILEVAULT_ROOT", str(BASE_DIR.parent / "filevault"))
+MEDIA_ROOT = Path(FILEVAULT_ROOT)
+
+# Ensure the filevault directory exists
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")

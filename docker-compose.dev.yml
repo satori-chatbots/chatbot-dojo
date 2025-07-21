@@ -33,13 +33,18 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./.env.dev
+    environment:
+      - FILEVAULT_ROOT=/app/filevault
+      - UV_CACHE_DIR=/app/.uv-cache
+      - UV_CACHE_DIR=/app/.uv-cache
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
-      - ./backend/filevault:/app/filevault
+      - filevault_data_dev:/app/filevault
       - ./user-simulator:/user-simulator
+    user: "1000:1000"  # Use the django user we created
     depends_on:
       db:
         condition: service_healthy
@@ -53,11 +58,14 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./.env.dev
+    environment:
+      - FILEVAULT_ROOT=/app/filevault
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
-      - ./backend/filevault:/app/filevault
+      - filevault_data_dev:/app/filevault
       - ./user-simulator:/user-simulator
+    user: "1000:1000"  # Use the django user we created
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -76,3 +84,4 @@ services:
 volumes:
   postgres_data_dev:
   backend_venv:
+  filevault_data_dev:  # Dedicated volume for dev filevault
