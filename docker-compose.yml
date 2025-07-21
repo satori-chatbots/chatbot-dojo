@@ -43,6 +43,7 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/filevault:/app/filevault
+      - ./backend/filevault:/filevault
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -64,6 +65,7 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/filevault:/app/filevault
+      - ./backend/filevault:/filevault
     depends_on:
       rabbitmq:
         condition: service_healthy
