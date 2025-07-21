@@ -167,9 +167,9 @@ class TestFile(models.Model):
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
     """
 
-    file = models.FileField(upload_to=upload_to_execution, max_length=255)
+    file = models.FileField(upload_to=upload_to_execution, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
     is_valid = models.BooleanField(
         default=False,
@@ -745,9 +745,9 @@ class ProfileGenerationTask(models.Model):
 class PersonalityFile(models.Model):
     """Model to store personality files in the personalities/ folder."""
 
-    file = models.FileField(upload_to=upload_to_personalities)
+    file = models.FileField(upload_to=upload_to_personalities, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="personality_files", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
@@ -764,9 +764,9 @@ class PersonalityFile(models.Model):
 class RuleFile(models.Model):
     """Model to store rule files in the rules/ folder."""
 
-    file = models.FileField(upload_to=upload_to_rules)
+    file = models.FileField(upload_to=upload_to_rules, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="rule_files", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
@@ -783,9 +783,9 @@ class RuleFile(models.Model):
 class TypeFile(models.Model):
     """Model to store type files in the types/ folder."""
 
-    file = models.FileField(upload_to=upload_to_types)
+    file = models.FileField(upload_to=upload_to_types, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="type_files", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
