@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   rabbitmq:
@@ -6,7 +6,7 @@ services:
     hostname: rabbitmq
     ports:
       - "5672:5672"
-      - "15672:15672"  # Management UI at http://localhost:15672 (guest/guest)
+      - "15672:15672" # Management UI at http://localhost:15672 (guest/guest)
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -55,3 +55,13 @@ services:
       rabbitmq:
         condition: service_healthy
     command: uv run celery -A senseiweb worker -l info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    command: pnpm run dev
