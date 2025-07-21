@@ -167,7 +167,7 @@ class TestFile(models.Model):
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
     """
 
-    file = models.FileField(upload_to=upload_to_execution)
+    file = models.FileField(upload_to=upload_to_execution, max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100, blank=True)
     project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
@@ -724,7 +724,7 @@ class ProfileGenerationTask(models.Model):
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
-    stage = models.CharField(max_length=25, choices=STAGE_CHOICES, blank=True)
+    stage = models.CharField(max_length=255, choices=STAGE_CHOICES, blank=True)
     progress_percentage = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
