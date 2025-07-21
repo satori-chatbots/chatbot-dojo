@@ -1,6 +1,8 @@
 # .env in the backend directory
 backend/.env
 
+# static files
+static/
 
 # vscode
 .vscode/

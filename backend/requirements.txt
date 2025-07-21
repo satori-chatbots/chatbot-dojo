@@ -176,6 +176,8 @@ grpcio==1.73.1
     #   grpcio-status
 grpcio-status==1.71.2
     # via google-api-core
+gunicorn==23.0.0
+    # via sensei-web
 h11==0.16.0
     # via
     #   httpcore
@@ -290,6 +292,7 @@ packaging==24.2
     # via
     #   google-cloud-aiplatform
     #   google-cloud-bigquery
+    #   gunicorn
     #   kombu
     #   langchain-core
     #   langsmith
@@ -323,6 +326,8 @@ protobuf==5.29.5
     #   grpcio-status
     #   proto-plus
 psutil==7.0.0
+    # via sensei-web
+psycopg2-binary==2.9.10
     # via sensei-web
 pyarrow==19.0.1
     # via langchain-google-vertexai
