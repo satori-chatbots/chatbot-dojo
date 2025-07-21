@@ -34,4 +34,4 @@ WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Final entrypoint to run Django dev server
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["sh", "/app/entrypoint.prod.sh"]
