@@ -28,7 +28,7 @@ services:
       - DEBUG=True
     volumes:
       - ./backend:/app
-      - ./filevault:/app/filevault
+      - ./backend/filevault:/app/filevault
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -46,7 +46,7 @@ services:
       - DEBUG=True
     volumes:
       - ./backend:/app
-      - ./filevault:/app/filevault
+      - ./backend/filevault:/app/filevault
     depends_on:
       rabbitmq:
         condition: service_healthy
