@@ -195,6 +195,73 @@ To run the application with background tasks using Celery and RabbitMQ, follow t
     python manage.py runserver
     ```
 
+## Docker Deployment
+
+For easier setup and deployment, you can use Docker Compose to run the entire application stack including Django, Celery, RabbitMQ, and PostgreSQL.
+
+### Full Production-like Setup
+
+Run the complete stack with PostgreSQL database:
+
+```bash
+docker-compose up --build
+```
+
+This will start:
+- **Backend Django app** at `http://localhost:8000`
+- **Celery worker** for async task processing
+- **RabbitMQ** message broker (management UI at `http://localhost:15672` - guest/guest)
+- **PostgreSQL** database
+
+### Development Setup (SQLite)
+
+For development with SQLite (no PostgreSQL):
+
+```bash
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+This starts the same services except uses SQLite database (data persisted in local files).
+
+### Frontend
+
+The Docker setup only includes the backend services. Run the frontend separately:
+
+```bash
+cd frontend
+pnpm install
+pnpm run dev
+```
+
+The frontend will be available at `http://localhost:5173/`.
+
+### Environment Variables
+
+The Docker setup uses these environment variables:
+- `CELERY_BROKER_URL` - Message broker URL (set to RabbitMQ container)
+- `CELERY_RESULT_BACKEND` - Result backend URL
+- `DATABASE_URL` - PostgreSQL connection (full setup only)
+- `DEBUG` - Django debug mode
+
+### Troubleshooting
+
+**If you see "ModuleNotFoundError" or "exec: no such file or directory":**
+- Stop the containers: `docker-compose down`
+- Rebuild: `docker-compose up --build`
+- This ensures the latest Dockerfile changes are applied
+
+**To view logs:**
+```bash
+docker-compose logs backend
+docker-compose logs celery
+docker-compose logs rabbitmq
+```
+
+**To restart just one service:**
+```bash
+docker-compose restart backend
+```
+
 ## Usage
 
 You can now access the webpage at [http://localhost:5173/](http://localhost:5173/).
