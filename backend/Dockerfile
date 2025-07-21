@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ─────────────── Runtime stage ───────────────
 FROM python:3.12-slim-bookworm AS runtime
 RUN apt-get update \
-  && apt-get install -y libpcre3 libxml2 \
+  && apt-get install -y libpcre3 libxml2 graphviz \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy complete .venv with Django, uv, and all libs
