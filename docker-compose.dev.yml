@@ -30,6 +30,7 @@ services:
       - ./backend:/app
       - ./backend/filevault:/app/filevault
       - ./backend/filevault:/filevault
+      - ./user-simulator:/user-simulator
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -49,6 +50,7 @@ services:
       - ./backend:/app
       - ./backend/filevault:/app/filevault
       - ./backend/filevault:/filevault
+      - ./user-simulator:/user-simulator
     depends_on:
       rabbitmq:
         condition: service_healthy
