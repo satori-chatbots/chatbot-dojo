@@ -39,10 +39,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 backend-path = ["."]
 
-[tool.setuptools]
-# This tells setuptools that the Python package(s) for 'sensei-web' are found in the 'backend' directory.
-# Adjust if your main source directory for 'sensei-web' has a different name.
-packages = ["backend"]
+[tool.setuptools.packages]
+find = {}
 
 [tool.ruff]
 # default is too small
