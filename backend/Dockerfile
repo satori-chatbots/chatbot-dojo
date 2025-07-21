@@ -1,5 +1,12 @@
 # ─────────────── Builder stage ───────────────
 FROM python:3.12-slim-bookworm AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
@@ -19,9 +26,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # ─────────────── Runtime stage ───────────────
 FROM python:3.12-slim-bookworm AS runtime
-RUN apt-get update \
-  && apt-get install -y libpcre3 libxml2 graphviz \
-  && rm -rf /var/lib/apt/lists/*
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpcre3 \
+    libxml2 \
+    graphviz \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy complete .venv with Django, uv, and all libs
 COPY --from=builder /app/.venv /app/.venv
@@ -33,5 +46,9 @@ COPY --from=builder /bin/uv /bin/uv
 WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Final entrypoint to run Django dev server
-CMD ["sh", "/app/entrypoint.prod.sh"]
+# Copy entrypoint script
+COPY ./entrypoint.prod.sh /app/entrypoint.prod.sh
+RUN chmod +x /app/entrypoint.prod.sh
+
+# Final entrypoint to run Django prod server
+CMD ["/app/entrypoint.prod.sh"]

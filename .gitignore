@@ -197,3 +197,7 @@ cython_debug/
 keys.properties
 
 .python-version
+
+# Environment variables
+.env.dev
+.env.prod

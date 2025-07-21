@@ -1,19 +1,29 @@
-FROM node:20-slim AS base
+# ─────────────── Builder stage ───────────────
+FROM node:20-slim AS builder
+
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-COPY . /app
+
 WORKDIR /app
 
-FROM base AS prod-deps
+COPY package.json pnpm-lock.yaml ./
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY . .
+
 RUN pnpm build
 
-FROM base
-COPY --from=prod-deps /app/node_modules /app/node_modules
-COPY --from=build /app/dist /app/dist
-EXPOSE 5173
-CMD [ "pnpm", "run", "dev" ]
+# ─────────────── Runtime stage ───────────────
+FROM nginx:stable-alpine AS runtime
+
+# Copy built app from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

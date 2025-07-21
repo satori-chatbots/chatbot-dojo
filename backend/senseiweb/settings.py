@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -99,27 +100,14 @@ REST_FRAMEWORK = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Database configuration - supports both SQLite (local) and PostgreSQL (container)
+# The `DATABASE_URL` environment variable is used to configure the database.
+# It is loaded from `.env.dev` or `.env.prod` by Docker Compose.
+# If it's not set, we fall back to SQLite for local development.
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    # Parse DATABASE_URL for containerized environment
-    # Format: postgres://user:password@host:port/database
-    import urllib.parse as urlparse
-
-    url = urlparse.urlparse(DATABASE_URL)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": url.path[1:],  # Remove leading slash
-            "USER": url.username,
-            "PASSWORD": url.password,
-            "HOST": url.hostname,
-            "PORT": url.port,
-        }
-    }
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL)}
 else:
-    # Default to SQLite for local development
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
