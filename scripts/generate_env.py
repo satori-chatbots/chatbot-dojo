@@ -88,7 +88,7 @@ def main():
             "RABBITMQ_HOST": "rabbitmq",
             "RABBITMQ_PORT": "5672",
             "RABBITMQ_USER": "sensei_dev_mq_user",
-            "RABBITMQ_PASSWORD": "admin123",
+            "RABBITMQ_PASSWORD": generate_secure_password(),
             "RABBITMQ_VHOST": "/",
             # Celery Configuration
             "CELERY_RESULT_BACKEND": "rpc://",
