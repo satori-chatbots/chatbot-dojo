@@ -17,8 +17,6 @@ filevault/
 test-results/
 test_files/
 
-# migration files
-**/migrations/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
