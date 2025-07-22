@@ -23,17 +23,21 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Install dependencies
+        working-directory: backend
         run: |
           uv sync --dev
 
       - name: Run ruff linting
-        run: uv run ruff check backend
+        working-directory: backend
+        run: uv run ruff check .
 
       - name: Run ruff formatting check
-        run: uv run ruff format --check backend
+        working-directory: backend
+        run: uv run ruff format --check .
 
       - name: Run type checking with mypy
-        run: uv run mypy backend --ignore-missing-imports --no-strict-optional
+        working-directory: backend
+        run: uv run mypy . --ignore-missing-imports --no-strict-optional
 
   frontend-lint:
     name: Frontend Linting & Formatting
