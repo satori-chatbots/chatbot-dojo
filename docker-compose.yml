@@ -51,7 +51,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: sh -c "uv run python manage.py migrate && uv run gunicorn senseiweb.wsgi:application --bind 0.0.0.0:8000"
 
   celery:
     build:
