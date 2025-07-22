@@ -102,33 +102,33 @@ def main():
         }
 
     file_content = f"""# Django Configuration
-DEBUG={config.get("DEBUG")}
+DEBUG="{config.get("DEBUG")}"
 SECRET_KEY="{config.get("SECRET_KEY")}"
 
 # Database Configuration
-POSTGRES_DB={config.get("POSTGRES_DB")}
-POSTGRES_USER={config.get("POSTGRES_USER")}
-POSTGRES_PASSWORD={config.get("POSTGRES_PASSWORD")}
-POSTGRES_HOST={config.get("POSTGRES_HOST")}
-POSTGRES_PORT={config.get("POSTGRES_PORT")}
+POSTGRES_DB="{config.get("POSTGRES_DB")}"
+POSTGRES_USER="{config.get("POSTGRES_USER")}"
+POSTGRES_PASSWORD="{config.get("POSTGRES_PASSWORD")}"
+POSTGRES_HOST="{config.get("POSTGRES_HOST")}"
+POSTGRES_PORT="{config.get("POSTGRES_PORT")}"
 
 # RabbitMQ Configuration
-RABBITMQ_HOST={config.get("RABBITMQ_HOST")}
-RABBITMQ_PORT={config.get("RABBITMQ_PORT")}
-RABBITMQ_USER={config.get("RABBITMQ_USER")}
-RABBITMQ_PASSWORD={config.get("RABBITMQ_PASSWORD")}
-RABBITMQ_VHOST={config.get("RABBITMQ_VHOST")}
+RABBITMQ_HOST="{config.get("RABBITMQ_HOST")}"
+RABBITMQ_PORT="{config.get("RABBITMQ_PORT")}"
+RABBITMQ_USER="{config.get("RABBITMQ_USER")}"
+RABBITMQ_PASSWORD="{config.get("RABBITMQ_PASSWORD")}"
+RABBITMQ_VHOST="{config.get("RABBITMQ_VHOST")}"
 
 # Celery Configuration (will be built from RabbitMQ settings above)
-CELERY_RESULT_BACKEND={config.get("CELERY_RESULT_BACKEND")}
+CELERY_RESULT_BACKEND="{config.get("CELERY_RESULT_BACKEND")}"
 
 # Django Configuration
-ALLOWED_HOSTS={config.get("ALLOWED_HOSTS")}
-CORS_ALLOWED_ORIGINS={config.get("CORS_ALLOWED_ORIGINS")}
+ALLOWED_HOSTS="{config.get("ALLOWED_HOSTS")}"
+CORS_ALLOWED_ORIGINS="{config.get("CORS_ALLOWED_ORIGINS")}"
 
 # Application Configuration
-FILEVAULT_ROOT={config.get("FILEVAULT_ROOT")}
-FERNET_SECRET_KEY={config.get("FERNET_SECRET_KEY")}
+FILEVAULT_ROOT="{config.get("FILEVAULT_ROOT")}"
+FERNET_SECRET_KEY="{config.get("FERNET_SECRET_KEY")}"
 """
     if not is_production:
         file_content += f"UV_CACHE_DIR={config.get('UV_CACHE_DIR')}\n"
