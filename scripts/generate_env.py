@@ -77,7 +77,7 @@ def main():
         config = {
             # .env.dev
             "DEBUG": "True",
-            "SECRET_KEY": "key-for-development",
+            "SECRET_KEY": generate_django_secret_key(),
             # Database Configuration
             "POSTGRES_DB": "senseiweb_dev",
             "POSTGRES_USER": "senseiweb_dev_user",
