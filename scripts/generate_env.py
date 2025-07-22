@@ -103,7 +103,7 @@ def main():
 
     file_content = f"""# Django Configuration
 DEBUG={config.get("DEBUG")}
-SECRET_KEY={config.get("SECRET_KEY")}
+SECRET_KEY="{config.get("SECRET_KEY")}"
 
 # Database Configuration
 POSTGRES_DB={config.get("POSTGRES_DB")}
