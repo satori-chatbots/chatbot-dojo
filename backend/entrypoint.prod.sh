@@ -6,7 +6,6 @@ mkdir -p /app/filevault
 chmod 755 /app/filevault
 
 # Run Django management commands
-uv run python manage.py makemigrations --noinput
 uv run python manage.py migrate --noinput
 
 # Collect static files (if needed)
