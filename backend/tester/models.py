@@ -102,19 +102,6 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: ClassVar[list[str]] = []
 
-    def set_api_key(self) -> None:
-        """Encrypt and store the API Key."""
-        api_key: str = self.api_key  # type: ignore[assignment,has-type]
-        encrypted_key = cipher_suite.encrypt(api_key.encode())
-        self.api_key = encrypted_key.decode()
-        self.save()
-
-    def get_api_key(self) -> str | None:
-        """Decrypt and return the API Key."""
-        if self.api_key_encrypted:
-            return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
-        return None
-
 
 def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
