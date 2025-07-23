@@ -58,9 +58,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
 # Validate CORS configuration in production
-if not DEBUG and not any(origin.strip() for origin in CORS_ALLOWED_ORIGINS):
+if not DEBUG and not CORS_ALLOWED_ORIGINS:
     _cors_error_msg = "CORS_ALLOWED_ORIGINS must be set in production to avoid overly permissive defaults."
     raise ValueError(_cors_error_msg)
 
