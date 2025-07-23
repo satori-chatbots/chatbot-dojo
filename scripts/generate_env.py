@@ -1,26 +1,28 @@
+import getpass
 import os
 import secrets
 import string
+from typing import Dict
 
 from cryptography.fernet import Fernet
 from django.core.management.utils import get_random_secret_key
 
 
-def generate_django_secret_key():
+def generate_django_secret_key() -> str:
     """
     Generates a cryptographically strong secret key using Django's utility.
     """
     return get_random_secret_key()
 
 
-def generate_fernet_key():
+def generate_fernet_key() -> str:
     """
     Generates a Fernet key for encryption using the cryptography library.
     """
     return Fernet.generate_key().decode()
 
 
-def generate_secure_password(length=16):
+def generate_secure_password(length: int = 16) -> str:
     """
     Generates a cryptographically strong password.
     """
@@ -28,7 +30,7 @@ def generate_secure_password(length=16):
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-def get_superuser_config():
+def get_superuser_config() -> Dict[str, str]:
     """
     Prompts the user for superuser configuration.
     """
@@ -38,9 +40,11 @@ def get_superuser_config():
     email = input("Email: ").strip()
 
     while True:
-        password = input("Password (leave empty for auto-generated): ").strip()
+        password = getpass.getpass(
+            "Password (leave empty for auto-generated): "
+        ).strip()
         if password:
-            confirm_password = input("Confirm password: ").strip()
+            confirm_password = getpass.getpass("Confirm password: ").strip()
             if password == confirm_password:
                 break
             else:
@@ -58,7 +62,7 @@ def get_superuser_config():
     }
 
 
-def main():
+def main() -> None:
     """
     Prompts the user to choose an environment and creates the corresponding
     .env file with securely generated values.
@@ -78,6 +82,7 @@ def main():
     # Get superuser configuration
     superuser_config = get_superuser_config()
 
+    config: Dict[str, str] = {}
     if is_production:
         print("Generating secure keys and passwords for production environment...")
         env_file_path = os.path.join(project_root, ".env")
@@ -146,42 +151,42 @@ def main():
         }
 
     file_content = f"""# Django Configuration
-DEBUG="{config.get("DEBUG")}"
-SECRET_KEY="{config.get("SECRET_KEY")}"
+DEBUG=\"{config["DEBUG"]}\"
+SECRET_KEY=\"{config["SECRET_KEY"]}\"
 
 # Database Configuration
-POSTGRES_DB="{config.get("POSTGRES_DB")}"
-POSTGRES_USER="{config.get("POSTGRES_USER")}"
-POSTGRES_PASSWORD="{config.get("POSTGRES_PASSWORD")}"
-POSTGRES_HOST="{config.get("POSTGRES_HOST")}"
-POSTGRES_PORT="{config.get("POSTGRES_PORT")}"
+POSTGRES_DB=\"{config["POSTGRES_DB"]}\"
+POSTGRES_USER=\"{config["POSTGRES_USER"]}\"
+POSTGRES_PASSWORD=\"{config["POSTGRES_PASSWORD"]}\"
+POSTGRES_HOST=\"{config["POSTGRES_HOST"]}\"
+POSTGRES_PORT=\"{config["POSTGRES_PORT"]}\"
 
 # RabbitMQ Configuration
-RABBITMQ_HOST="{config.get("RABBITMQ_HOST")}"
-RABBITMQ_PORT="{config.get("RABBITMQ_PORT")}"
-RABBITMQ_USER="{config.get("RABBITMQ_USER")}"
-RABBITMQ_PASSWORD="{config.get("RABBITMQ_PASSWORD")}"
-RABBITMQ_VHOST="{config.get("RABBITMQ_VHOST")}"
+RABBITMQ_HOST=\"{config["RABBITMQ_HOST"]}\"
+RABBITMQ_PORT=\"{config["RABBITMQ_PORT"]}\"
+RABBITMQ_USER=\"{config["RABBITMQ_USER"]}\"
+RABBITMQ_PASSWORD=\"{config["RABBITMQ_PASSWORD"]}\"
+RABBITMQ_VHOST=\"{config["RABBITMQ_VHOST"]}\"
 
 # Celery Configuration (will be built from RabbitMQ settings above)
-CELERY_RESULT_BACKEND="{config.get("CELERY_RESULT_BACKEND")}"
+CELERY_RESULT_BACKEND=\"{config["CELERY_RESULT_BACKEND"]}\"
 
 # Django Configuration
-ALLOWED_HOSTS="{config.get("ALLOWED_HOSTS")}"
-CORS_ALLOWED_ORIGINS="{config.get("CORS_ALLOWED_ORIGINS")}"
+ALLOWED_HOSTS=\"{config["ALLOWED_HOSTS"]}\"
+CORS_ALLOWED_ORIGINS=\"{config["CORS_ALLOWED_ORIGINS"]}\"
 
 # Application Configuration
-FILEVAULT_ROOT="{config.get("FILEVAULT_ROOT")}"
-FERNET_SECRET_KEY="{config.get("FERNET_SECRET_KEY")}"
+FILEVAULT_ROOT=\"{config["FILEVAULT_ROOT"]}\"
+FERNET_SECRET_KEY=\"{config["FERNET_SECRET_KEY"]}\"
 
 # Superuser Configuration
-DJANGO_SUPERUSER_FIRST_NAME="{config.get("DJANGO_SUPERUSER_FIRST_NAME")}"
-DJANGO_SUPERUSER_LAST_NAME="{config.get("DJANGO_SUPERUSER_LAST_NAME")}"
-DJANGO_SUPERUSER_EMAIL="{config.get("DJANGO_SUPERUSER_EMAIL")}"
-DJANGO_SUPERUSER_PASSWORD="{config.get("DJANGO_SUPERUSER_PASSWORD")}"
+DJANGO_SUPERUSER_FIRST_NAME=\"{config["DJANGO_SUPERUSER_FIRST_NAME"]}\"
+DJANGO_SUPERUSER_LAST_NAME=\"{config["DJANGO_SUPERUSER_LAST_NAME"]}\"
+DJANGO_SUPERUSER_EMAIL=\"{config["DJANGO_SUPERUSER_EMAIL"]}\"
+DJANGO_SUPERUSER_PASSWORD=\"{config["DJANGO_SUPERUSER_PASSWORD"]}\"
 """
     if not is_production:
-        file_content += f"UV_CACHE_DIR={config.get('UV_CACHE_DIR')}\n"
+        file_content += f"UV_CACHE_DIR={config['UV_CACHE_DIR']}\n"
 
     with open(env_file_path, "w") as f:
         f.write(file_content)
