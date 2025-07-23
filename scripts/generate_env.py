@@ -1,8 +1,9 @@
 import os
 import secrets
 import string
-from django.core.management.utils import get_random_secret_key
+
 from cryptography.fernet import Fernet
+from django.core.management.utils import get_random_secret_key
 
 
 def generate_django_secret_key():
@@ -27,6 +28,36 @@ def generate_secure_password(length=16):
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+def get_superuser_config():
+    """
+    Prompts the user for superuser configuration.
+    """
+    print("\nSuperuser Configuration:")
+    first_name = input("First name: ").strip()
+    last_name = input("Last name: ").strip()
+    email = input("Email: ").strip()
+
+    while True:
+        password = input("Password (leave empty for auto-generated): ").strip()
+        if password:
+            confirm_password = input("Confirm password: ").strip()
+            if password == confirm_password:
+                break
+            else:
+                print("Passwords don't match. Please try again.")
+        else:
+            password = generate_secure_password(20)
+            print(f"Auto-generated password: {password}")
+            break
+
+    return {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "password": password,
+    }
+
+
 def main():
     """
     Prompts the user to choose an environment and creates the corresponding
@@ -43,6 +74,9 @@ def main():
     is_production = env_choice == "prod"
     # The script is in /scripts, so the project root is one level up
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Get superuser configuration
+    superuser_config = get_superuser_config()
 
     if is_production:
         print("Generating secure keys and passwords for production environment...")
@@ -71,6 +105,11 @@ def main():
             # Application Configuration
             "FILEVAULT_ROOT": "/app/filevault",
             "FERNET_SECRET_KEY": generate_fernet_key(),
+            # Superuser Configuration
+            "DJANGO_SUPERUSER_FIRST_NAME": superuser_config["first_name"],
+            "DJANGO_SUPERUSER_LAST_NAME": superuser_config["last_name"],
+            "DJANGO_SUPERUSER_EMAIL": superuser_config["email"],
+            "DJANGO_SUPERUSER_PASSWORD": superuser_config["password"],
         }
     else:
         env_file_path = os.path.join(project_root, ".env.dev")
@@ -99,6 +138,11 @@ def main():
             "FILEVAULT_ROOT": "/app/filevault",
             "FERNET_SECRET_KEY": generate_fernet_key(),
             "UV_CACHE_DIR": "/app/.uv-cache",
+            # Superuser Configuration
+            "DJANGO_SUPERUSER_FIRST_NAME": superuser_config["first_name"],
+            "DJANGO_SUPERUSER_LAST_NAME": superuser_config["last_name"],
+            "DJANGO_SUPERUSER_EMAIL": superuser_config["email"],
+            "DJANGO_SUPERUSER_PASSWORD": superuser_config["password"],
         }
 
     file_content = f"""# Django Configuration
@@ -129,6 +173,12 @@ CORS_ALLOWED_ORIGINS="{config.get("CORS_ALLOWED_ORIGINS")}"
 # Application Configuration
 FILEVAULT_ROOT="{config.get("FILEVAULT_ROOT")}"
 FERNET_SECRET_KEY="{config.get("FERNET_SECRET_KEY")}"
+
+# Superuser Configuration
+DJANGO_SUPERUSER_FIRST_NAME="{config.get("DJANGO_SUPERUSER_FIRST_NAME")}"
+DJANGO_SUPERUSER_LAST_NAME="{config.get("DJANGO_SUPERUSER_LAST_NAME")}"
+DJANGO_SUPERUSER_EMAIL="{config.get("DJANGO_SUPERUSER_EMAIL")}"
+DJANGO_SUPERUSER_PASSWORD="{config.get("DJANGO_SUPERUSER_PASSWORD")}"
 """
     if not is_production:
         file_content += f"UV_CACHE_DIR={config.get('UV_CACHE_DIR')}\n"
