@@ -1,268 +1,147 @@
-# sensei-web
+# Sensei and Tracer Web
 
-A web server for sensei
+## Requirements
 
-## Installation
+- Docker
+- Docker Compose
 
-### Initialize git submodules
+## Git Submodule
 
-First, initialize the required git submodules:
+To initialize user simulator (sensei)
 
 ```bash
 git submodule init
 git submodule update
 ```
 
-### Backend setup
+## Generate `.env` and `.env.dev`
 
-To make the server run, you need to have the project dependencies installed, but also the `user-simulator` ones.
+Use the script `generate_env.py`
+(if you don't have the dependencies to run it see Python Setup)
 
-**With `pip`:**
-```bash
-pip install -r requirements.txt
-pip install -r ../user-simulator/requirements.txt
-```
-
-**With `uv`:**
-
-If you don't have `uv` installed, you can find instructions at [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/).
-
-```bash
-uv sync
-```
-
-#### Set up environment variables (.env)
-
-You must have a `.env` file in the `backend` directory with the following variables:
-
-- `FERNET_SECRET_KEY` — Used for encryption (auto-generated)
-- `SECRET_KEY` — Django secret key (auto-generated)
-- `DEBUG` — Set to `True` or `False` (default: True)
-
-To generate or update your `.env` file with all required variables, you can use `make`:
-```bash
-make env
-```
-
-This will run the script at `scripts/generate_env.py`. You can also run the script directly:
 ```bash
 python scripts/generate_env.py
 ```
 
-#### Manual .env generation (if script cannot be used)
+## Docker Setup
 
-If you cannot run the script, you can manually generate the required keys and create the `.env` file:
+The basic commands are the base command of each section plus:
 
-1. **Generate Fernet key:**
+- `build`: builds the image
+- `build --no-cache`: builds the image without cache
+- `up`: spins up the container
+- `up -d`: spins up the container in detached mode
+- `logs <container name>`: see the logs of certain container
+- `down`: spins down the container
+- `down -v`: spins down and **deletes the volumes**
 
-   Open a Python shell and run:
-   ```python
-   from cryptography.fernet import Fernet
-   print(Fernet.generate_key().decode())
-   ```
-   Copy the output.
+### Development
 
-2. **Generate Django SECRET_KEY:**
+Base command:
 
-   If Django is installed, run:
-   ```python
-   from django.core.management.utils import get_random_secret_key
-   print(get_random_secret_key())
-   ```
-   Copy the output.
-
-3. **Create the `.env` file in the `backend` directory** with the following content:
-   ```env
-   FERNET_SECRET_KEY=<your-generated-fernet-key>
-   SECRET_KEY=<your-generated-django-secret-key>
-   DEBUG=True
-   ```
-   Replace the values with the ones you generated above.
-
-#### Database setup and running the server
-
-After setting up the environment variables, you can make the necessary migrations and then execute the server.
-
-**Using Make:**
 ```bash
-make migrations
-make run
+docker compose -f docker-compose.dev.yml --env-file .env.dev
 ```
 
-**Without Make:**
+You may have to `source .env.dev`
+to override any variable that you may have in your environment.
+
+### Production
+
 ```bash
-# Create and apply migrations
-python manage.py makemigrations tester
+docker compose
+```
+
+## Migrations
+
+The migrations are committed to the repo as the Django docs suggest.
+
+The container will run automatically the migrate,
+but if you modify a model, make sure to run the `makemigrations` yourself
+and test them in a development container before taking it to production.
+
+```bash
 python manage.py makemigrations
-python manage.py migrate
-# Run the server
+```
+
+## Local Dependencies (Optional but suggested)
+
+In case you prefer running this instead of Docker (for local development).
+And I think that they are needed for the `precommit`.
+
+### Python Setup
+
+It is recommended to use [UV](https://docs.astral.sh/uv/getting-started/installation/)
+
+With `UV`:
+
+```bash
+cd backend
+uv sync
+source .venv/bin/activate
+```
+
+With `pip`:
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+Then run it with
+
+```bash
 python manage.py runserver
 ```
 
-#### Database reset
+### PNPM Setup
 
-In case of problems, you can reset the database.
+Make sure you have installed [PNPM](https://pnpm.io/installation), then:
 
-**Using Make:**
 ```bash
-make full-reset
+cd frontend
+pnpm install
 ```
 
-**Without Make (Windows):**
+Then run it with:
+
 ```bash
-# Delete migrations and database
-del /s /q */migrations/0*.py
-del db.sqlite3
-# Recreate database
-python manage.py makemigrations
-python manage.py migrate
+pnpm run dev
 ```
 
-**Without Make (Linux/macOS):**
-```bash
-# Delete migrations and database
-rm -rf */migrations/0*.py
-rm db.sqlite3
-# Recreate database
-python manage.py makemigrations
-python manage.py migrate
-```
+### RabbitMQ Setup
 
-### Frontend setup
+- **Using Docker:**
 
-To set up and run the frontend, you need to have Node.js and pnpm installed. Then, follow these steps:
-
-1. Navigate to the `frontend` folder:
-
-   ```bash
-   cd frontend
-   ```
-
-2. Install the dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Run the development server:
-
-   ```bash
-   pnpm run dev
-   ```
-
-The frontend will be running at `http://localhost:5173/`.
-
-## Running with Celery and RabbitMQ
-
-To run the application with background tasks using Celery and RabbitMQ, follow these steps:
-
-1.  **Install and run RabbitMQ:**
-
-    -   **Using Docker (recommended):**
-        ```bash
-        docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management
-        ```
-        The management interface will be available at `http://localhost:15672` (user: `guest`, pass: `guest`).
-
-    -   **Natively (Debian/Ubuntu):**
-        ```bash
-        sudo apt-get update
-        sudo apt-get install rabbitmq-server
-        sudo systemctl enable rabbitmq-server
-        sudo systemctl start rabbitmq-server
-        ```
-
-    -   **Natively (Arch Linux):**
-        ```bash
-        sudo pacman -S rabbitmq
-        sudo systemctl enable rabbitmq.service
-        sudo systemctl start rabbitmq.service
-        ```
-
-2.  **Start the Celery worker:**
-
-    In a new terminal, navigate to the `backend` directory and run:
     ```bash
-    source .venv/bin/activate
-    celery -A senseiweb worker -l info
+    docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management
     ```
 
-3.  **Start the Django development server:**
+    The management interface will be available at `http://localhost:15672`
+    (user: `guest`, pass: `guest`).
 
-    In another terminal, navigate to the `backend` directory and run:
+- **Natively (Debian/Ubuntu):**
+
     ```bash
-    source .venv/bin/activate
-    python manage.py runserver
+    sudo apt-get update
+    sudo apt-get install rabbitmq-server
+    sudo systemctl enable rabbitmq-server
+    sudo systemctl start rabbitmq-server
     ```
 
-## Usage
+- **Natively (Arch Linux):**
 
-You can now access the webpage at [http://localhost:5173/](http://localhost:5173/).
+    ```bash
+    sudo pacman -S rabbitmq
+    sudo systemctl enable rabbitmq.service
+    sudo systemctl start rabbitmq.service
+    ```
 
-## Troubleshooting
+### Celery Setup
 
-### Common issues
-
-**Port already in use:**
-
-- Backend: Change port with `python manage.py runserver 8001`
-- Frontend: Change port with `pnpm run dev -- --port 5174`
-
-**Database migration errors:**
-
-- Follow manual database reset steps above
-
-**Missing dependencies:**
-
-- Make sure both project and user-simulator requirements are installed
-- Try recreating your virtual environment
-
-**Environment variables not loading:**
-
-- Check that `.env` file exists in `backend` directory
-- Verify the file has the correct `FERNET_SECRET_KEY` format
-
-## Development Setup
-
-### Pre-commit Hooks
-
-This project uses pre-commit hooks to ensure code quality and consistency.
-
-#### Installation
-
-1. Install pre-commit:
-   ```bash
-   pip install pre-commit
-   ```
-
-2. Install the git hooks:
-   ```bash
-   pre-commit install
-   ```
-
-3. Ensure frontend dependencies are installed:
-   ```bash
-   cd frontend && pnpm install
-   ```
-
-   **Note**: The project now uses pnpm instead of npm. Make sure you have pnpm installed globally:
-   ```bash
-   npm install -g pnpm
-   ```
-
-#### Usage
-
-Pre-commit hooks will run automatically on `git commit`. You can also run them manually:
+In a new terminal, navigate to the `backend` directory and run:
 
 ```bash
-# Run on all files
-pre-commit run --all-files
-
-# Run on staged files only
-pre-commit run
-```
-
-To skip pre-commit hooks temporarily (not recommended):
-```bash
-git commit --no-verify
+source .venv/bin/activate
+celery -A senseiweb worker -l info
 ```

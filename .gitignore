@@ -1,6 +1,8 @@
 # .env in the backend directory
 backend/.env
 
+# static files
+static/
 
 # vscode
 .vscode/
@@ -15,8 +17,6 @@ filevault/
 test-results/
 test_files/
 
-# migration files
-**/migrations/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -195,3 +195,7 @@ cython_debug/
 keys.properties
 
 .python-version
+
+# Environment variables
+.env.dev
+.env.prod

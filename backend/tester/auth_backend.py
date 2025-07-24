@@ -12,24 +12,42 @@ class EmailAuthBackend:
     """
 
     def authenticate(
-        self, _request: HttpRequest, email: str | None = None, password: str | None = None
+        self,
+        _request: HttpRequest,
+        username: str | None = None,
+        email: str | None = None,
+        password: str | None = None,
+        **kwargs: object,
     ) -> CustomUser | None:
         """Authenticate a user by email and password.
 
         Args:
             _request: The HttpRequest object (unused).
+            username: The username (treated as email for Django admin compatibility).
             email: The user's email address.
             password: The user's password.
+            **kwargs: Additional keyword arguments (unused).
 
         Returns:
             The user object if authentication is successful, otherwise None.
         """
+        # Silence unused kwargs warning
+        _ = kwargs
+        # Django admin passes the email as 'username', so we prioritize that
+        # If username is provided, use it as email (for Django admin)
+        # Otherwise, use the email parameter (for your app)
+        user_email = username or email
+
+        if not user_email or not password:
+            return None
+
         try:
-            user = CustomUser.objects.get(email=email)
-            if user.check_password(password):
+            user = CustomUser.objects.get(email=user_email)
+            if user.check_password(password) and self.user_can_authenticate(user):
                 return user
         except CustomUser.DoesNotExist:
             return None
+
         return None
 
     def get_user(self, user_id: int) -> CustomUser | None:
@@ -45,3 +63,17 @@ class EmailAuthBackend:
             return CustomUser.objects.get(pk=user_id)
         except CustomUser.DoesNotExist:
             return None
+
+    def user_can_authenticate(self, user: object) -> bool:
+        """Check if the user is allowed to authenticate.
+
+        Args:
+            user: The user object to check.
+
+        Returns:
+            True if the user can authenticate, False otherwise.
+
+        Reject users with is_active=False. Custom user models that don't have
+        an is_active field are allowed.
+        """
+        return getattr(user, "is_active", True)

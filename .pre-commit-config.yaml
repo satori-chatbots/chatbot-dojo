@@ -7,9 +7,11 @@ repos:
       - id: ruff
         args: [--fix]
         files: ^(backend|scripts)/.*\.py$
+        exclude: ^backend/tester/migrations/.*
       # Run the formatter
       - id: ruff-format
         files: ^(backend|scripts)/.*\.py$
+        exclude: ^backend/tester/migrations/.*
 
   # MyPy for Python type checking (backend only)
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -19,6 +21,7 @@ repos:
         files: ^backend/.*\.py$
         args: [--ignore-missing-imports, --no-strict-optional]
         additional_dependencies: [types-requests, types-PyYAML]
+        exclude: ^backend/tester/migrations/.*
 
   # ESLint for JavaScript/TypeScript linting (using pnpm)
   - repo: local
@@ -45,9 +48,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^frontend/pnpm-lock\.yaml$
+        exclude: ^frontend/pnpm-lock\.yaml$|^backend/tester/migrations/.*
       - id: end-of-file-fixer
-        exclude: ^frontend/pnpm-lock\.yaml$
+        exclude: ^frontend/pnpm-lock\.yaml$|^backend/tester/migrations/.*
       - id: check-merge-conflict
       - id: check-added-large-files
       # File format validation

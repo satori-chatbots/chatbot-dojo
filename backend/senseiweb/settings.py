@@ -12,8 +12,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,10 +25,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS: list[str] = []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
-# Read the .env file
-load_dotenv()
 
 # Get the FERNET SECRET KEY used to encrypt and decrypt the api
 FERNET_SECRET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -54,20 +50,23 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+# Validate CORS configuration in production
+if not DEBUG and not CORS_ALLOWED_ORIGINS:
+    cors_error_msg = "CORS_ALLOWED_ORIGINS must be set in production to avoid overly permissive defaults."
+    raise ValueError(cors_error_msg)
 
 AUTH_USER_MODEL = "tester.CustomUser"
 
-AUTHETICATION_BACKENDS = [
+AUTHENTICATION_BACKENDS = [
     "tester.auth_backend.EmailAuthBackend",
 ]
 
@@ -99,12 +98,27 @@ REST_FRAMEWORK = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# Database configuration is loaded from environment variables.
+# For PostgreSQL, set POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, etc.
+# If POSTGRES_DB is not set, it falls back to SQLite for local development.
+if os.getenv("POSTGRES_DB"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB"),
+            "USER": os.getenv("POSTGRES_USER"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+            "HOST": os.getenv("POSTGRES_HOST", "db"),  # Default to 'db' for Docker
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
+        }
+    }
 
 
 # Password validation
@@ -142,18 +156,34 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "static"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Media files configuration
 MEDIA_URL = "/filevault/"
-MEDIA_ROOT = BASE_DIR.parent / "filevault"
+
+# Use environment variable to allow flexibility between dev/prod
+FILEVAULT_ROOT = os.getenv("FILEVAULT_ROOT", str(BASE_DIR.parent / "filevault"))
+MEDIA_ROOT = Path(FILEVAULT_ROOT)
+
+# Ensure the filevault directory exists
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Celery Configuration
-CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672//"
-CELERY_RESULT_BACKEND = "rpc://"
+RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
+RABBITMQ_PORT = os.getenv("RABBITMQ_PORT", "5672")
+RABBITMQ_VHOST = os.getenv("RABBITMQ_VHOST", "/")
+
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL", f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}{RABBITMQ_VHOST}"
+)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

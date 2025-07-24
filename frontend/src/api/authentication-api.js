@@ -83,7 +83,7 @@ export const validateToken = async () => {
     const token = localStorage.getItem("token");
     if (!token) return false;
 
-    const response = await fetch(`${API_BASE_URL}/validate-token/`, {
+    const response = await fetch(`${API_BASE_URL}${ENDPOINTS.VALIDATE_TOKEN}`, {
       method: "POST",
       headers: {
         Authorization: `Token ${token}`,

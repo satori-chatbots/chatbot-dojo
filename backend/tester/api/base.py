@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Import the RoleData class from user-simulator (Sensei)
 # Use pathlib for modern path manipulation
-base_dir = Path(settings.BASE_DIR).parent
+base_dir = Path(settings.BASE_DIR)
 sys.path.append(str(base_dir / "user-simulator" / "src"))
 
 

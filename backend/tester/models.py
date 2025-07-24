@@ -102,19 +102,6 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: ClassVar[list[str]] = []
 
-    def set_api_key(self) -> None:
-        """Encrypt and store the API Key."""
-        api_key: str = self.api_key  # type: ignore[assignment,has-type]
-        encrypted_key = cipher_suite.encrypt(api_key.encode())
-        self.api_key = encrypted_key.decode()
-        self.save()
-
-    def get_api_key(self) -> str | None:
-        """Decrypt and return the API Key."""
-        if self.api_key_encrypted:
-            return cipher_suite.decrypt(self.api_key_encrypted.encode()).decode()
-        return None
-
 
 def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
@@ -167,9 +154,9 @@ class TestFile(models.Model):
     Once the test is run, this file is copied to the project folder so that if this one is modified or even deleted, you can still see the original file that was used to run the test
     """
 
-    file = models.FileField(upload_to=upload_to_execution)
+    file = models.FileField(upload_to=upload_to_execution, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="test_files", on_delete=models.CASCADE)
     is_valid = models.BooleanField(
         default=False,
@@ -724,7 +711,7 @@ class ProfileGenerationTask(models.Model):
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
-    stage = models.CharField(max_length=25, choices=STAGE_CHOICES, blank=True)
+    stage = models.CharField(max_length=255, choices=STAGE_CHOICES, blank=True)
     progress_percentage = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -745,9 +732,9 @@ class ProfileGenerationTask(models.Model):
 class PersonalityFile(models.Model):
     """Model to store personality files in the personalities/ folder."""
 
-    file = models.FileField(upload_to=upload_to_personalities)
+    file = models.FileField(upload_to=upload_to_personalities, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="personality_files", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
@@ -764,9 +751,9 @@ class PersonalityFile(models.Model):
 class RuleFile(models.Model):
     """Model to store rule files in the rules/ folder."""
 
-    file = models.FileField(upload_to=upload_to_rules)
+    file = models.FileField(upload_to=upload_to_rules, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="rule_files", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
@@ -783,9 +770,9 @@ class RuleFile(models.Model):
 class TypeFile(models.Model):
     """Model to store type files in the types/ folder."""
 
-    file = models.FileField(upload_to=upload_to_types)
+    file = models.FileField(upload_to=upload_to_types, max_length=500)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(max_length=255, blank=True)
     project = models.ForeignKey("Project", related_name="type_files", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
