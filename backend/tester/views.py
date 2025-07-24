@@ -6,6 +6,7 @@ import sys
 import time
 from pathlib import Path
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from rest_framework import status
@@ -31,7 +32,7 @@ class ExecuteAPIView(APIView):
             )
 
         file_path = Path(files.first().file.path).parent
-        base_dir = Path(__file__).resolve().parents[3]
+        base_dir = Path(settings.BASE_DIR)
         extract_dir = file_path.parent
         script_path = base_dir / "user-simulator" / "src" / "autotest.py"
         work_dir = script_path.parent.parent

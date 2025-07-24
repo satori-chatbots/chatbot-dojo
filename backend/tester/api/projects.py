@@ -71,7 +71,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project = serializer.save(owner=self.request.user)
 
         # Get the path of the script
-        base_dir = Path(settings.BASE_DIR).parent
+        base_dir = Path(settings.BASE_DIR)
         init_script_path = base_dir / "user-simulator" / "src" / "init_project.py"
 
         # Create path structure: projects/user_{user_id}/project_{project_id}/

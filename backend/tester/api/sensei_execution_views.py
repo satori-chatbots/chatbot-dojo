@@ -155,7 +155,7 @@ class ExecuteSelectedProfilesAPIView(APIView):
         execution_name = request.data.get("test_name")
         api_key = SenseiApiKeyManager.setup_api_key(project)
 
-        base_dir = Path(settings.BASE_DIR).parent
+        base_dir = Path(settings.BASE_DIR)
         sensei_script_path = str(base_dir / "user-simulator" / "src" / "sensei_chat.py")
         project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{request.user.id}" / f"project_{project.id}"
 

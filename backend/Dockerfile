@@ -12,14 +12,15 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Copy dependency config and lock
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 
 # Install dependencies but skip project install (cache layer)
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --locked --no-install-project
 
-# Copy full project
-COPY . .
+# Copy full project (backend and user-simulator)
+COPY backend/ ./
+COPY user-simulator/ ./user-simulator/
 
 # Now install project + any extra dependencies into the venv
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -61,7 +62,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV UV_CACHE_DIR="/app/.uv-cache"
 
 # Copy and set up entrypoint script
-COPY ./entrypoint.prod.sh /app/entrypoint.prod.sh
+COPY backend/entrypoint.prod.sh /app/entrypoint.prod.sh
 RUN chmod +x /app/entrypoint.prod.sh && \
     chown django:django /app/entrypoint.prod.sh
 

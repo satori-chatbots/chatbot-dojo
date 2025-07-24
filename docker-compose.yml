@@ -38,8 +38,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     env_file:
       - .env
     environment:
@@ -48,7 +48,6 @@ services:
       - "8000:8000"
     volumes:
       - filevault_data_prod:/app/filevault
-      - ./user-simulator:/user-simulator
     depends_on:
       db:
         condition: service_healthy
@@ -57,13 +56,12 @@ services:
 
   celery:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     env_file:
       - .env
     volumes:
       - filevault_data_prod:/app/filevault
-      - ./usersimulator:/user-simulator
     depends_on:
       rabbitmq:
         condition: service_healthy
