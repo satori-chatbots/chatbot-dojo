@@ -118,6 +118,7 @@ def main() -> None:
         }
     else:
         env_file_path = os.path.join(project_root, ".env.dev")
+        dev_db_password = generate_secure_password()
         config = {
             # .env.dev
             "DEBUG": "True",
@@ -125,7 +126,7 @@ def main() -> None:
             # Database Configuration
             "POSTGRES_DB": "senseiweb_dev",
             "POSTGRES_USER": "senseiweb_dev_user",
-            "POSTGRES_PASSWORD": "sensei_passwd_dev",
+            "POSTGRES_PASSWORD": dev_db_password,
             "POSTGRES_HOST": "db",
             "POSTGRES_PORT": "5432",
             # RabbitMQ Configuration
@@ -187,6 +188,9 @@ DJANGO_SUPERUSER_PASSWORD=\"{config["DJANGO_SUPERUSER_PASSWORD"]}\"
 """
     if not is_production:
         file_content += f'UV_CACHE_DIR="{config["UV_CACHE_DIR"]}"\n'
+        print(
+            f"\nDevelopment database password (POSTGRES_PASSWORD): {config['POSTGRES_PASSWORD']}"
+        )
 
     with open(env_file_path, "w") as f:
         f.write(file_content)
