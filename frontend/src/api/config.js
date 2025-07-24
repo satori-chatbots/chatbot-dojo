@@ -18,7 +18,7 @@ export const ENDPOINTS = {
   CHECK_TEST_CASE_NAME: `${API_PATH}/testcases/check-name/`,
   CHECK_PROJECT_NAME: `${API_PATH}/projects/check-name/`,
   CHECK_CHATBOT_NAME: `${API_PATH}/chatbotconnectors/check-name/`,
-  PROFILERPORTS: `${API_PATH}/profilereports/`,
+  PROFILE_REPORTS: `${API_PATH}/profilereports/`,
   CONVERSATIONS: `${API_PATH}/conversations/`,
   STOP_TEST_EXECUTION: `${API_PATH}/test-cases-stop/`,
   REGISTER: `${API_PATH}/register/`,
