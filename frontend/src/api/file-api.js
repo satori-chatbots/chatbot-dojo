@@ -147,18 +147,21 @@ export const validateYamlOnServer = async (content) => {
 
 export const generateProfiles = async (projectId, parameters = {}) => {
   try {
-    const response = await apiClient(`${API_BASE_URL}/generate-profiles/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.GENERATE_PROFILES}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          sessions: parameters.sessions || 3,
+          turns_per_session: parameters.turns_per_session || 8,
+          verbosity: parameters.verbosity || "normal",
+        }),
       },
-      body: JSON.stringify({
-        project_id: projectId,
-        sessions: parameters.sessions || 3,
-        turns_per_session: parameters.turns_per_session || 8,
-        verbosity: parameters.verbosity || "normal",
-      }),
-    });
+    );
     return await response.json();
   } catch (error) {
     console.error("Error starting profile generation:", error);
@@ -169,7 +172,7 @@ export const generateProfiles = async (projectId, parameters = {}) => {
 export const checkOngoingGeneration = async (projectId) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/ongoing-generation/${projectId}/`,
+      `${API_BASE_URL}${ENDPOINTS.ONGOING_GENERATION}${projectId}/`,
     );
     return await response.json();
   } catch (error) {
@@ -181,7 +184,7 @@ export const checkOngoingGeneration = async (projectId) => {
 export const checkTracerGenerationStatus = async (celeryTaskId) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/tracer-generation-status/${celeryTaskId}/`,
+      `${API_BASE_URL}${ENDPOINTS.TRACER_GENERATION_STATUS}${celeryTaskId}/`,
     );
     return await response.json();
   } catch (error) {
@@ -196,7 +199,7 @@ export const fetchProfileExecutions = async (projectId) => {
   }
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/profile-executions/${projectId}/`,
+      `${API_BASE_URL}${ENDPOINTS.PROFILE_EXECUTIONS}${projectId}/`,
     );
     const data = await response.json();
     return data;
@@ -209,7 +212,7 @@ export const fetchProfileExecutions = async (projectId) => {
 export const deleteProfileExecution = async (executionId) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/profile-execution/${executionId}/delete/`,
+      `${API_BASE_URL}${ENDPOINTS.DELETE_PROFILE_EXECUTION}${executionId}/delete/`,
       {
         method: "DELETE",
       },
@@ -224,7 +227,9 @@ export const deleteProfileExecution = async (executionId) => {
 // TRACER Dashboard API functions
 export const fetchTracerExecutions = async () => {
   try {
-    const response = await apiClient(`${API_BASE_URL}/tracer-executions/`);
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.TRACER_EXECUTIONS}`,
+    );
     const data = await response.json();
     return data;
   } catch (error) {
@@ -236,7 +241,7 @@ export const fetchTracerExecutions = async () => {
 export const fetchTracerAnalysisReport = async (executionId) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/tracer-analysis-report/${executionId}/`,
+      `${API_BASE_URL}${ENDPOINTS.TRACER_ANALYSIS_REPORT}${executionId}/`,
     );
     const data = await response.json();
     return data;
@@ -248,7 +253,7 @@ export const fetchTracerAnalysisReport = async (executionId) => {
 
 export const fetchTracerWorkflowGraph = async (executionId, format) => {
   try {
-    let url = `${API_BASE_URL}/tracer-workflow-graph/${executionId}/`;
+    let url = `${API_BASE_URL}${ENDPOINTS.TRACER_WORKFLOW_GRAPH}${executionId}/`;
     if (format) {
       url += `?graph_format=${format}`;
     }
@@ -269,7 +274,7 @@ export const fetchTracerWorkflowGraph = async (executionId, format) => {
 export const fetchTracerOriginalProfiles = async (executionId) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/tracer-original-profiles/${executionId}/`,
+      `${API_BASE_URL}${ENDPOINTS.TRACER_ORIGINAL_PROFILES}${executionId}/`,
     );
     const data = await response.json();
     return data;
@@ -280,26 +285,27 @@ export const fetchTracerOriginalProfiles = async (executionId) => {
 };
 
 // Delete a TRACER execution
-export const deleteTracerExecution = async (executionId) => {
-  try {
-    const response = await apiClient(
-      `${API_BASE_URL}/tracer-execution/${executionId}/delete/`,
-      {
-        method: "DELETE",
-      },
-    );
-    return await response.json();
-  } catch (error) {
-    console.error("Error deleting TRACER execution:", error);
-    throw error;
-  }
-};
+// Note: This endpoint doesn't exist in the Django URLs, might need to be implemented
+// export const deleteTracerExecution = async (executionId) => {
+//   try {
+//     const response = await apiClient(
+//       `${API_BASE_URL}/tracer-execution/${executionId}/delete/`,
+//       {
+//         method: "DELETE",
+//       },
+//     );
+//     return await response.json();
+//   } catch (error) {
+//     console.error("Error deleting TRACER execution:", error);
+//     throw error;
+//   }
+// };
 
 // Fetch TRACER execution logs
 export const fetchTracerExecutionLogs = async (executionId) => {
   try {
     const response = await apiClient(
-      `${API_BASE_URL}/tracer-execution-logs/${executionId}/`,
+      `${API_BASE_URL}${ENDPOINTS.TRACER_EXECUTION_LOGS}${executionId}/`,
     );
     const data = await response.json();
     return data;
