@@ -284,23 +284,6 @@ export const fetchTracerOriginalProfiles = async (executionId) => {
   }
 };
 
-// Delete a TRACER execution
-// Note: This endpoint doesn't exist in the Django URLs, might need to be implemented
-// export const deleteTracerExecution = async (executionId) => {
-//   try {
-//     const response = await apiClient(
-//       `${API_BASE_URL}/tracer-execution/${executionId}/delete/`,
-//       {
-//         method: "DELETE",
-//       },
-//     );
-//     return await response.json();
-//   } catch (error) {
-//     console.error("Error deleting TRACER execution:", error);
-//     throw error;
-//   }
-// };
-
 // Fetch TRACER execution logs
 export const fetchTracerExecutionLogs = async (executionId) => {
   try {
