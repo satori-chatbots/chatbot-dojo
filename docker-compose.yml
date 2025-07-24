@@ -48,6 +48,7 @@ services:
       - "8000:8000"
     volumes:
       - filevault_data_prod:/app/filevault
+      - static_files_prod:/app/static
     depends_on:
       db:
         condition: service_healthy
@@ -62,6 +63,7 @@ services:
       - .env
     volumes:
       - filevault_data_prod:/app/filevault
+      - static_files_prod:/app/static
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -85,6 +87,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - react_build:/var/www/react
+      - static_files_prod:/var/www/static:ro
     depends_on:
       - backend
       - frontend
@@ -94,3 +97,4 @@ volumes:
   rabbitmq_data:
   filevault_data_prod:
   react_build:
+  static_files_prod:

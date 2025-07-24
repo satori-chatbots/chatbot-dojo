@@ -51,9 +51,9 @@ COPY --from=builder /app /app
 COPY --from=builder /bin/uv /bin/uv
 
 # Create necessary directories and set proper permissions
-RUN mkdir -p /app/filevault /app/.uv-cache /static && \
-    chown -R django:django /app /static && \
-    chmod -R 755 /app/filevault /app/.uv-cache /static
+RUN mkdir -p /app/filevault /app/.uv-cache /app/static && \
+    chown -R django:django /app && \
+    chmod -R 755 /app/filevault /app/.uv-cache /app/static
 
 WORKDIR /app
 

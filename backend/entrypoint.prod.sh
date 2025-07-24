@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-# Ensure filevault directory exists with proper permissions
-mkdir -p /app/filevault
-chmod 755 /app/filevault
+# Ensure filevault and static directories exist with proper permissions
+mkdir -p /app/filevault /app/static
+chmod 755 /app/filevault /app/static
 
 # Run Django management commands
 uv run python manage.py migrate --noinput
