@@ -186,7 +186,7 @@ DJANGO_SUPERUSER_EMAIL=\"{config["DJANGO_SUPERUSER_EMAIL"]}\"
 DJANGO_SUPERUSER_PASSWORD=\"{config["DJANGO_SUPERUSER_PASSWORD"]}\"
 """
     if not is_production:
-        file_content += f"UV_CACHE_DIR={config['UV_CACHE_DIR']}\n"
+        file_content += f'UV_CACHE_DIR="{config["UV_CACHE_DIR"]}"\n'
 
     with open(env_file_path, "w") as f:
         f.write(file_content)
