@@ -17,7 +17,7 @@ class EmailAuthBackend:
         username: str | None = None,
         email: str | None = None,
         password: str | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> CustomUser | None:
         """Authenticate a user by email and password.
 
@@ -26,10 +26,13 @@ class EmailAuthBackend:
             username: The username (treated as email for Django admin compatibility).
             email: The user's email address.
             password: The user's password.
+            **kwargs: Additional keyword arguments (unused).
 
         Returns:
             The user object if authentication is successful, otherwise None.
         """
+        # Silence unused kwargs warning
+        _ = kwargs
         # Django admin passes the email as 'username', so we prioritize that
         # If username is provided, use it as email (for Django admin)
         # Otherwise, use the email parameter (for your app)
@@ -61,8 +64,14 @@ class EmailAuthBackend:
         except CustomUser.DoesNotExist:
             return None
 
-    def user_can_authenticate(self, user):
+    def user_can_authenticate(self, user: object) -> bool:
         """Check if the user is allowed to authenticate.
+
+        Args:
+            user: The user object to check.
+
+        Returns:
+            True if the user can authenticate, False otherwise.
 
         Reject users with is_active=False. Custom user models that don't have
         an is_active field are allowed.
