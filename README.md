@@ -52,6 +52,21 @@ to override any variable that you may have in your environment.
 docker compose
 ```
 
+
+### Other commands
+
+Get a shell in the backend (can be changed for another container or for production).
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env.dev exec -it  backend /bin/bash
+```
+
+Get a Django shell:
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env.dev exec -it backend python manage.py shell
+```
+
 ## Migrations
 
 The migrations are committed to the repo as the Django docs suggest.
@@ -62,6 +77,25 @@ and test them in a development container before taking it to production.
 
 ```bash
 python manage.py makemigrations
+```
+
+
+If that doesn't work run the migrations within the container:
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python manage.py makemigrations
+```
+
+And then:
+```bash
+
+docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python manage.py migrate 
+```
+
+If it is in production it is the same just changing the base command to:
+
+```bash
+docker compose exec backend python manage.py
 ```
 
 ## Local Dependencies (Optional but suggested)
