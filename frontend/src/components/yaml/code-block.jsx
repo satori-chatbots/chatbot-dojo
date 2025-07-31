@@ -24,8 +24,9 @@ export const CodeBlock = ({ code, description }) => {
     <Card className="border border-border">
       <CardBody className="p-3">
         <div className="relative group">
-          <pre className="text-xs bg-content2 p-3 rounded overflow-x-auto mb-2 border border-default-200 font-modern-mono">
+          <pre className="text-xs bg-content2 p-3 rounded overflow-x-auto mb-2 border border-default-200">
             <code
+              className="font-modern-mono"
               dangerouslySetInnerHTML={{
                 __html: highlightYamlCode(code),
               }}
