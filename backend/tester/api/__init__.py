@@ -12,7 +12,12 @@ from .auth import (
     UserAPIKeyViewSet,
     validate_token,
 )
-from .connectors import ChatbotConnectorViewSet, get_technology_choices
+from .connectors import (
+    ChatbotConnectorViewSet,
+    get_available_connectors,
+    get_connector_parameters,
+    get_technology_choices,
+)
 from .conversations import ConversationViewSet
 from .errors import TestErrorViewSet
 from .project_files import (
@@ -67,6 +72,8 @@ __all__ = [
     "delete_profile_execution",
     "fetch_file_content",
     "generate_profiles",
+    "get_available_connectors",
+    "get_connector_parameters",
     "get_profile_executions",
     "get_technology_choices",
     "get_tracer_analysis_report",

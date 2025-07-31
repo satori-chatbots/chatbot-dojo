@@ -133,6 +133,12 @@ def upload_to_types(instance: "TypeFile", filename: str) -> str:
     return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
 
 
+def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
+    """Returns the path where custom connector YAML files are stored."""
+    user_id = instance.owner.id
+    return f"projects/user_{user_id}/connectors/{filename}"
+
+
 def upload_to_execution(instance: "TestFile", filename: str) -> str:
     """Returns the path where Test Files are stored in execution folders."""
     user_id = instance.project.owner.id
@@ -330,7 +336,6 @@ class Project(models.Model):
             "project_folder": f"project_{self.id}",
             "user_profile": "",
             "technology": self.chatbot_connector.technology if self.chatbot_connector else "",
-            "connector": self.chatbot_connector.link if self.chatbot_connector else "",
             "connector_parameters": {},
             "extract": "",
             "#execution_parameters": [
@@ -346,8 +351,6 @@ class Project(models.Model):
             if hasattr(self, "config") and self.config:
                 if self.config.user_profile:
                     config_data["user_profile"] = self.config.user_profile
-                if self.config.connector:
-                    config_data["connector"] = self.config.connector
                 if self.config.connector_parameters:
                     config_data["connector_parameters"] = self.config.connector_parameters
                 if self.config.extract_path:
@@ -409,31 +412,24 @@ def delete_project_directory(sender: type[Project], instance: Project, **_kwargs
             logger.exception("Error deleting project directory %s", project_path)
 
 
-CONNECTOR_CHOICES = [
-    ("rasa", "Rasa"),
-    ("taskyto", "Taskyto"),
-    ("ada-uam", "Ada UAM"),
-    ("millionbot", "Millionbot"),
-    ("genion", "Genion"),
-    ("lola", "Lola"),
-    ("serviceform", "Serviceform"),
-    ("kuki", "Kuki"),
-    ("julie", "Julie"),
-    ("rivas_catalina", "Rivas Catalina"),
-    ("saic_malaga", "Saic Malaga"),
-]
-
-
 class ChatbotConnector(models.Model):
     """Information about the technology of the chatbot used, it can be used by multiple projects.
 
-    Contains the used technology and the link to access the chatbot, also a name to identify it
+    Contains the used technology and the parameters to access the chatbot, also a name to identify it
     """
 
     # Name of the chatbot connector, must be unique per user
     name = models.CharField(max_length=255)
-    technology = models.CharField(max_length=255, choices=CONNECTOR_CHOICES)
-    link = models.URLField(blank=True)
+    technology = models.CharField(max_length=255)  # No longer hardcoded choices - dynamic from TRACER
+    parameters = models.JSONField(default=dict, blank=True, help_text="Connector-specific parameters as JSON")
+
+    # Custom connector YAML configuration file (for TRACER custom connectors)
+    custom_config_file = models.FileField(
+        upload_to=upload_to_custom_connectors,
+        blank=True,
+        null=True,
+        help_text="YAML configuration file for custom connectors",
+    )
 
     # Owner of the chatbot connector
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="chatbot_connectors", on_delete=models.CASCADE)
@@ -827,6 +823,21 @@ def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **_k
             logger.info("Deleted file %s from media.", instance.file.path)
     except (FileNotFoundError, PermissionError, OSError):
         logger.exception("Error deleting file %s", instance.file.path)
+
+
+@receiver(post_delete, sender=ChatbotConnector)
+def delete_custom_config_file_from_media(
+    sender: type[ChatbotConnector],
+    instance: ChatbotConnector,
+    **_kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Delete the custom config file from media when the ChatbotConnector is deleted."""
+    try:
+        if instance.custom_config_file and Path(instance.custom_config_file.path).exists():
+            Path(instance.custom_config_file.path).unlink()
+            logger.info("Deleted custom config file %s from media.", instance.custom_config_file.path)
+    except (FileNotFoundError, PermissionError, OSError):
+        logger.exception("Error deleting custom config file %s", instance.custom_config_file.path)
 
 
 class ProfileExecution(models.Model):

@@ -3,6 +3,8 @@ import apiClient from "./api-client";
 
 const API_URL = `${API_BASE_URL}${ENDPOINTS.CHATBOTCONNECTOR}`;
 const CHOICES_URL = `${API_BASE_URL}${ENDPOINTS.CONNECTORS_CHOICES}`;
+const AVAILABLE_URL = `${API_BASE_URL}${ENDPOINTS.CONNECTORS_AVAILABLE}`;
+const PARAMETERS_URL = `${API_BASE_URL}${ENDPOINTS.CONNECTORS_PARAMETERS}`;
 
 export const fetchChatbotConnectors = async () => {
   try {
@@ -37,6 +39,36 @@ export const fetchTechnologyChoices = async () => {
     return data.technology_choices;
   } catch (error) {
     console.error("Error fetching technology choices:", error);
+    throw error;
+  }
+};
+
+export const fetchAvailableConnectors = async () => {
+  try {
+    const response = await fetch(AVAILABLE_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.connectors;
+  } catch (error) {
+    console.error("Error fetching available connectors:", error);
+    throw error;
+  }
+};
+
+export const fetchConnectorParameters = async (technology) => {
+  try {
+    const response = await fetch(
+      `${PARAMETERS_URL}?technology=${encodeURIComponent(technology)}`,
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching connector parameters:", error);
     throw error;
   }
 };

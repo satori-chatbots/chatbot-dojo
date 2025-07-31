@@ -37,6 +37,16 @@ urlpatterns = [
         name="chatbot-connectors-choices",
     ),
     path(
+        "chatbotconnectors/available/",
+        api.get_available_connectors,
+        name="chatbot-connectors-available",
+    ),
+    path(
+        "chatbotconnectors/parameters/",
+        api.get_connector_parameters,
+        name="chatbot-connectors-parameters",
+    ),
+    path(
         "test-cases-stop/",
         api.stop_sensei_execution,
         name="stop-sensei-execution",

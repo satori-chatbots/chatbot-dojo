@@ -1,5 +1,6 @@
 """TRACER profile generation core functionality."""
 
+import json
 import os
 import re
 import shlex
@@ -45,7 +46,7 @@ from tester.api.base import logger
 
 # Import here to avoid circular imports in runtime, but linter prefers top-level
 from tester.api.tracer_parser import TracerResultsProcessor
-from tester.models import ProfileExecution, ProfileGenerationTask, Project
+from tester.models import ChatbotConnector, ProfileExecution, ProfileGenerationTask, Project
 
 # Mapping of TRACER exceptions to error type codes for the database
 TRACER_EXCEPTION_MAPPING = {
@@ -316,38 +317,83 @@ class TracerGenerator:
     ) -> bool:
         """Execute the TRACER command and handle output."""
         project = task.project
-        chatbot_url = project.chatbot_connector.link if project.chatbot_connector else "http://localhost:5000"
+        connector = project.chatbot_connector
+
+        if not connector:
+            msg = "Project does not have a chatbot connector configured"
+            raise ValueError(msg)
+
+        # Extract technology and parameters from the connector
+        technology = connector.technology
+        connector_params = self._prepare_connector_params(connector)
+
         exploration_model = project.llm_model or "gpt-4o-mini"
         profile_model = project.profile_model or None  # None if not set
 
-        cmd = self._build_tracer_command(params, chatbot_url, exploration_model, profile_model, output_dir)
+        config = {
+            "technology": technology,
+            "connector_params": connector_params,
+            "exploration_model": exploration_model,
+            "profile_model": profile_model,
+            "output_dir": output_dir,
+        }
 
-        env = self._prepare_environment(params.api_key, project.llm_provider)
+        cmd = self._build_tracer_command(params, config)
+
+        env = self._prepare_environment(params.api_key, project.llm_provider or "")
 
         return self._execute_subprocess(task, execution, cmd, env, celery_task)
+
+    def _prepare_connector_params(self, connector: "ChatbotConnector") -> dict[str, Any] | str:
+        """Prepare connector parameters based on the technology type."""
+        if connector.technology == "custom":
+            # For custom connectors, we need to pass the config file path
+            if connector.custom_config_file:
+                return f"config_path={connector.custom_config_file.path}"
+            msg = "Custom connector must have a configuration file"
+            raise ValueError(msg)
+        # For other connectors, use the JSON parameters
+        return connector.parameters or {}
 
     def _build_tracer_command(
         self,
         params: ProfileGenerationParams,
-        chatbot_url: str,
-        exploration_model: str,
-        profile_model: str | None,
-        output_dir: Path,
+        config: dict[str, Any],
     ) -> list[str]:
-        """Build the TRACER command with all parameters."""
+        """Build the TRACER command with all parameters.
+
+        Args:
+            params: Profile generation parameters
+            config: Configuration dict containing technology, connector_params,
+                   exploration_model, profile_model, and output_dir
+        """
+        technology = config["technology"]
+        connector_params = config["connector_params"]
+        exploration_model = config["exploration_model"]
+        profile_model = config["profile_model"]
+        output_dir = config["output_dir"]
+
         cmd = [
             "tracer",
             "-s",
             str(params.conversations),
             "-n",
             str(params.turns),
-            "-t",
-            params.technology,
-            "-u",
-            chatbot_url,
-            "-m",
-            exploration_model,
+            "--technology",
+            technology,
+            "--connector-params",
         ]
+
+        # Handle connector_params based on type
+        if isinstance(connector_params, str):
+            # For custom connectors, connector_params is a string like "config_path=./path"
+            cmd.append(connector_params)
+        else:
+            # For other connectors, connector_params is a dict that should be JSON-encoded
+            cmd.append(json.dumps(connector_params))
+
+        cmd.extend(["-m", exploration_model])
+
         if profile_model:
             cmd.extend(["-pm", profile_model])
         cmd.extend(

@@ -53,7 +53,9 @@ cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.4.2
     # via requests
-chatbot-tracer==0.3.0
+chatbot-connectors==0.2.2
+    # via chatbot-tracer
+chatbot-tracer==0.4.0
     # via sensei-web
 click==8.2.1
     # via
@@ -78,8 +80,11 @@ distlib==0.3.9
     # via virtualenv
 distro==1.9.0
     # via openai
+dj-database-url==3.0.1
+    # via sensei-web
 django==5.2.4
     # via
+    #   dj-database-url
     #   django-cors-headers
     #   django-rest-knox
     #   djangorestframework
@@ -94,8 +99,6 @@ djangorestframework==3.16.0
     #   sensei-web
 docstring-parser==0.16
     # via google-cloud-aiplatform
-dotenv==0.9.9
-    # via sensei-web
 filelock==3.18.0
     # via virtualenv
 filetype==1.2.0
@@ -370,12 +373,13 @@ python-dateutil==2.9.0.post0
     #   pandas
 python-dotenv==1.1.1
     # via
-    #   dotenv
+    #   sensei-web
     #   webdriver-manager
 pytz==2025.2
     # via pandas
 pyyaml==6.0.2
     # via
+    #   chatbot-connectors
     #   langchain
     #   langchain-core
     #   pre-commit
@@ -384,6 +388,7 @@ regex==2024.11.6
     # via tiktoken
 requests==2.32.4
     # via
+    #   chatbot-connectors
     #   google-api-core
     #   google-cloud-bigquery
     #   google-cloud-storage
