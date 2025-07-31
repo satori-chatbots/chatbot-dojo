@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Input,
@@ -35,6 +36,7 @@ import SetupProgress from "../components/setup-progress";
 import { useSetup } from "../contexts/setup-context";
 
 const ChatbotConnectors = () => {
+  const navigate = useNavigate();
   const { reloadConnectors } = useSetup();
   const [editData, setEditData] = useState({
     name: "",
@@ -114,6 +116,13 @@ const ChatbotConnectors = () => {
       return;
     }
 
+    // Handle custom technology differently - no parameters needed
+    if (technology === "custom") {
+      setCurrentParameters([]);
+      setLoadingValidation(false);
+      return;
+    }
+
     setLoadingValidation(true);
     try {
       const paramData = await fetchConnectorParameters(technology);
@@ -144,7 +153,16 @@ const ChatbotConnectors = () => {
 
         if (availableConnectorsData.status === "fulfilled") {
           const connectors = availableConnectorsData.value;
-          setAvailableConnectors(connectors);
+          // Add "Custom" option to the available connectors
+          const connectorsWithCustom = [
+            ...connectors,
+            {
+              name: "custom",
+              description: "Custom connector with YAML configuration",
+              usage: "Define your own connector using YAML configuration",
+            },
+          ];
+          setAvailableConnectors(connectorsWithCustom);
 
           setFormData((previous) => ({
             ...previous,
@@ -257,7 +275,8 @@ const ChatbotConnectors = () => {
     if (!isValid) return;
 
     try {
-      await createChatbotConnector(data);
+      const newConnector = await createChatbotConnector(data);
+
       // Reset form
       setFormData({
         name: "",
@@ -266,8 +285,14 @@ const ChatbotConnectors = () => {
       });
       loadConnectors();
       await reloadConnectors(); // Update setup progress
+
       // Close modal
       onOpenChange(false);
+
+      // If this is a custom connector, redirect to YAML editor
+      if (data.technology === "custom") {
+        navigate(`/custom-connector-editor/${newConnector.id}`);
+      }
     } catch (error) {
       console.log("Error creating chatbot connector:", error);
       alert(`Error creating chatbot connector: ${error.message}`);
@@ -478,8 +503,17 @@ const ChatbotConnectors = () => {
                     )}
                   </Select>
 
-                  {/* Dynamic parameter fields */}
-                  {loadingValidation && formData.technology ? (
+                  {/* Dynamic parameter fields or custom connector button */}
+                  {formData.technology === "custom" ? (
+                    <div className="flex flex-col gap-4 items-center py-4">
+                      <div className="text-sm text-gray-600 text-center">
+                        Custom connectors use YAML configuration files.
+                        <br />
+                        After creating the connector, you can edit its YAML
+                        configuration.
+                      </div>
+                    </div>
+                  ) : loadingValidation && formData.technology ? (
                     <div className="flex justify-center items-center py-4">
                       <Spinner size="sm" />
                       <span className="ml-2 text-sm text-gray-600">
@@ -593,6 +627,19 @@ const ChatbotConnectors = () => {
                 )}
               </TableCell>
               <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
+                {connector.technology === "custom" && (
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant="flat"
+                    endContent={<Edit className="w-3 h-3" />}
+                    onPress={() =>
+                      navigate(`/custom-connector-editor/${connector.id}`)
+                    }
+                  >
+                    YAML
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   color="secondary"
@@ -719,8 +766,28 @@ const ChatbotConnectors = () => {
                     )}
                   </Select>
 
-                  {/* Dynamic parameter fields for edit */}
-                  {loadingValidation && editData.technology ? (
+                  {/* Dynamic parameter fields for edit or custom connector button */}
+                  {editData.technology === "custom" ? (
+                    <div className="flex flex-col gap-4 items-center py-4">
+                      <div className="text-sm text-gray-600 text-center">
+                        Custom connectors use YAML configuration files.
+                        <br />
+                        Click the button below to edit the YAML configuration.
+                      </div>
+                      <Button
+                        color="secondary"
+                        variant="bordered"
+                        onPress={() => {
+                          navigate(
+                            `/custom-connector-editor/${editData.id || "new"}`,
+                          );
+                        }}
+                        startContent={<Edit className="w-4 h-4" />}
+                      >
+                        Edit YAML Configuration
+                      </Button>
+                    </div>
+                  ) : loadingValidation && editData.technology ? (
                     <div className="flex justify-center items-center py-4">
                       <Spinner size="sm" />
                       <span className="ml-2 text-sm text-gray-600">

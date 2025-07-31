@@ -3,6 +3,7 @@
 import subprocess
 from typing import ClassVar
 
+import yaml
 from django.core.cache import cache
 from django.db.models.query import QuerySet
 from django.http import JsonResponse
@@ -174,3 +175,64 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
         # Only check for existing names within the user's own connectors
         exists = ChatbotConnector.objects.filter(name=name, owner=request.user).exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get", "put"], url_path="config")
+    def config(self, request: Request, pk: str | None = None) -> Response:
+        """Get or update the custom YAML configuration for a connector."""
+        connector = self.get_object()
+
+        if request.method == "GET":
+            # Return the current YAML configuration
+            if connector.custom_config_file:
+                try:
+                    with connector.custom_config_file.open("r") as f:
+                        content = f.read()
+                    return Response(
+                        {"content": content, "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK
+                    )
+                except Exception as e:
+                    return Response(
+                        {"error": f"Failed to read configuration: {e!s}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+            else:
+                # Return empty configuration
+                return Response({"content": "", "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK)
+
+        elif request.method == "PUT":
+            # Update the YAML configuration
+            content = request.data.get("content", "")
+
+            # Validate YAML syntax
+            try:
+                yaml.safe_load(content)
+            except yaml.YAMLError as e:
+                return Response(
+                    {"error": f"Invalid YAML syntax: {e!s}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Save the configuration to a file
+            try:
+                from django.core.files.base import ContentFile
+
+                file_content = ContentFile(content)
+                file_name = f"{connector.name}_config.yml"
+
+                # Delete old file if it exists
+                if connector.custom_config_file:
+                    connector.custom_config_file.delete(save=False)
+
+                # Save new file
+                connector.custom_config_file.save(file_name, file_content)
+                connector.save()
+
+                return Response(
+                    {"message": "Configuration updated successfully", "id": connector.id}, status=status.HTTP_200_OK
+                )
+
+            except Exception as e:
+                return Response(
+                    {"error": f"Failed to save configuration: {e!s}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )

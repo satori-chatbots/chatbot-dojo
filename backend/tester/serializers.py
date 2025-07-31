@@ -125,8 +125,8 @@ class ChatbotConnectorSerializer(serializers.ModelSerializer):
             "name",
             "technology",
             "parameters",
-            "link",
-        ]  # Include both parameters and link for backward compatibility
+            "custom_config_file",
+        ]
         read_only_fields: ClassVar[list[str]] = ["owner"]
 
     def validate_parameters(self, value):

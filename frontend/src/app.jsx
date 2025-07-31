@@ -38,6 +38,9 @@ const TracerDashboard = React.lazy(() => import("./views/tracer-dashboard"));
 const SignupView = React.lazy(() => import("./views/signup-view"));
 const UserProfileView = React.lazy(() => import("./views/user-profile-view"));
 const YamlEditor = React.lazy(() => import("./views/yaml-editor-view"));
+const CustomConnectorYamlEditor = React.lazy(
+  () => import("./views/custom-connector-yaml-editor"),
+);
 const SetupGuide = React.lazy(() => import("./views/setup-guide"));
 
 // Loading component
@@ -459,6 +462,14 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <YamlEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/custom-connector-editor/:connectorId"
+                element={
+                  <PrivateRoute>
+                    <CustomConnectorYamlEditor />
                   </PrivateRoute>
                 }
               />
