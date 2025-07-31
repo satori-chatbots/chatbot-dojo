@@ -31,7 +31,7 @@ import {
   deleteChatbotConnector,
   checkChatbotConnectorName,
 } from "../api/chatbot-connector-api";
-import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
+import { Plus, RotateCcw, Edit, Trash, Save, FileText } from "lucide-react";
 import SetupProgress from "../components/setup-progress";
 import { useSetup } from "../contexts/setup-context";
 
@@ -362,7 +362,7 @@ const ChatbotConnectors = () => {
   const columns = [
     { name: "Name", key: "name", sortable: true },
     { name: "Technology", key: "technology", sortable: true },
-    { name: "Parameters", key: "parameters", sortable: false },
+    { name: "Configuration", key: "parameters", sortable: false },
     { name: "Actions", key: "actions", sortable: false },
   ];
 
@@ -611,8 +611,15 @@ const ChatbotConnectors = () => {
                 {connector.technology}
               </TableCell>
               <TableCell className="px-2 sm:px-4">
-                {connector.parameters &&
-                Object.keys(connector.parameters).length > 0 ? (
+                {connector.technology === "custom" ? (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      YAML Configuration
+                    </span>
+                  </div>
+                ) : connector.parameters &&
+                  Object.keys(connector.parameters).length > 0 ? (
                   <ul className="list-disc list-inside text-sm space-y-1">
                     {Object.entries(connector.parameters).map(
                       ([key, value]) => (
@@ -626,38 +633,29 @@ const ChatbotConnectors = () => {
                   <span className="text-gray-500 italic">No parameters</span>
                 )}
               </TableCell>
-              <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
-                {connector.technology === "custom" && (
+              <TableCell className="px-2 sm:px-4">
+                <div className="flex items-center justify-start space-x-2">
                   <Button
                     size="sm"
-                    color="primary"
+                    color="secondary"
                     variant="flat"
                     endContent={<Edit className="w-3 h-3" />}
-                    onPress={() =>
-                      navigate(`/custom-connector-editor/${connector.id}`)
-                    }
+                    onPress={() => handleEdit(connector)}
+                    className="text-xs px-3"
                   >
-                    YAML
+                    Edit
                   </Button>
-                )}
-                <Button
-                  size="sm"
-                  color="secondary"
-                  variant="flat"
-                  endContent={<Edit className="w-3 h-3" />}
-                  onPress={() => handleEdit(connector)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  color="danger"
-                  variant="flat"
-                  endContent={<Trash className="w-3 h-3" />}
-                  onPress={() => handleDelete(connector.id)}
-                >
-                  Delete
-                </Button>
+                  <Button
+                    size="sm"
+                    color="danger"
+                    variant="flat"
+                    endContent={<Trash className="w-3 h-3" />}
+                    onPress={() => handleDelete(connector.id)}
+                    className="text-xs px-3"
+                  >
+                    Delete
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
