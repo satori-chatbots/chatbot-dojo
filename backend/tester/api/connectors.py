@@ -147,8 +147,9 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get", "put"], url_path="config")
-    def config(self, request: Request) -> Response:
+    def config(self, request: Request, _pk: str | None = None) -> Response:
         """Get or update the custom YAML configuration for a connector."""
+        # _pk parameter is provided by DRF but we use get_object() instead
         connector = self.get_object()
 
         if request.method == "GET":
