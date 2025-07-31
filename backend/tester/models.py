@@ -133,6 +133,12 @@ def upload_to_types(instance: "TypeFile", filename: str) -> str:
     return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
 
 
+def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
+    """Returns the path where custom connector YAML files are stored."""
+    user_id = instance.owner.id
+    return f"projects/user_{user_id}/connectors/{filename}"
+
+
 def upload_to_execution(instance: "TestFile", filename: str) -> str:
     """Returns the path where Test Files are stored in execution folders."""
     user_id = instance.project.owner.id
@@ -330,7 +336,7 @@ class Project(models.Model):
             "project_folder": f"project_{self.id}",
             "user_profile": "",
             "technology": self.chatbot_connector.technology if self.chatbot_connector else "",
-            "connector": self.chatbot_connector.link if self.chatbot_connector else "",
+            "connector": "",  # Legacy field - now using connector_parameters
             "connector_parameters": {},
             "extract": "",
             "#execution_parameters": [
@@ -420,8 +426,13 @@ class ChatbotConnector(models.Model):
     technology = models.CharField(max_length=255)  # No longer hardcoded choices - dynamic from TRACER
     parameters = models.JSONField(default=dict, blank=True, help_text="Connector-specific parameters as JSON")
 
-    # Keep link field for backward compatibility during migration (can be removed later)
-    link = models.URLField(blank=True, null=True, help_text="Legacy URL field - use parameters instead")
+    # Custom connector YAML configuration file (for TRACER custom connectors)
+    custom_config_file = models.FileField(
+        upload_to=upload_to_custom_connectors,
+        blank=True,
+        null=True,
+        help_text="YAML configuration file for custom connectors",
+    )
 
     # Owner of the chatbot connector
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="chatbot_connectors", on_delete=models.CASCADE)
@@ -815,6 +826,21 @@ def delete_type_file_from_media(sender: type[TypeFile], instance: TypeFile, **_k
             logger.info("Deleted file %s from media.", instance.file.path)
     except (FileNotFoundError, PermissionError, OSError):
         logger.exception("Error deleting file %s", instance.file.path)
+
+
+@receiver(post_delete, sender=ChatbotConnector)
+def delete_custom_config_file_from_media(
+    sender: type[ChatbotConnector],
+    instance: ChatbotConnector,
+    **_kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Delete the custom config file from media when the ChatbotConnector is deleted."""
+    try:
+        if instance.custom_config_file and Path(instance.custom_config_file.path).exists():
+            Path(instance.custom_config_file.path).unlink()
+            logger.info("Deleted custom config file %s from media.", instance.custom_config_file.path)
+    except (FileNotFoundError, PermissionError, OSError):
+        logger.exception("Error deleting custom config file %s", instance.custom_config_file.path)
 
 
 class ProfileExecution(models.Model):
