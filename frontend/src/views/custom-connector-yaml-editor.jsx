@@ -13,8 +13,9 @@ import {
   ChevronRight,
   ExternalLink,
   BookOpen,
+  Settings,
 } from "lucide-react";
-import { Button, Card, CardBody, Tabs, Tab, Link } from "@heroui/react";
+import { Button, Card, CardBody, Tabs, Tab, Link, Switch, Popover, PopoverTrigger, PopoverContent, Tooltip } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
@@ -56,10 +57,22 @@ function CustomConnectorYamlEditor() {
   });
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
+  // Autosave and data protection state
+  const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
+    const saved = localStorage.getItem("custom-connector-autosave-enabled");
+    return saved ? JSON.parse(saved) : true;
+  });
+  const [lastSaved, setLastSaved] = useState();
+
   // Persist sidebar state
   useEffect(() => {
     localStorage.setItem("custom-connector-sidebar-collapsed", JSON.stringify(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  // Persist autosave setting
+  useEffect(() => {
+    localStorage.setItem("custom-connector-autosave-enabled", JSON.stringify(autosaveEnabled));
+  }, [autosaveEnabled]);
 
   // Auto-collapse sidebar on mobile
   useEffect(() => {
@@ -300,6 +313,7 @@ response_path: "response.text"
 
       if (response.ok) {
         setOriginalContent(editorContent);
+        setLastSaved(new Date());
         showToast({
           title: "Success",
           description: "Custom connector configuration saved successfully!",
@@ -323,6 +337,42 @@ response_path: "response.text"
       setIsSaving(false);
     }
   }, [editorContent, isValid, connectorId, navigate, showToast]);
+
+  // Autosave functionality
+  useEffect(() => {
+    if (!hasUnsavedChanges || !autosaveEnabled || connectorId === "new" || isSaving) {
+      return;
+    }
+
+    const autosaveTimer = setTimeout(async () => {
+      try {
+        await handleSave();
+        showToast({
+          title: "Auto-saved",
+          description: "Changes saved automatically",
+          status: "success",
+          duration: 2000,
+        });
+      } catch (error) {
+        console.error("Autosave failed:", error);
+      }
+    }, 10_000); // Autosave after 10 seconds of inactivity
+
+    return () => clearTimeout(autosaveTimer);
+  }, [hasUnsavedChanges, autosaveEnabled, connectorId, isSaving, handleSave, showToast]);
+
+  // Prevent data loss on page leave
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Keyboard shortcut for save (Ctrl+S / Cmd+S)
   useEffect(() => {
@@ -409,59 +459,15 @@ response_path: "response.text"
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Documentation toggle */}
-          <Button
-            variant="flat"
-            size="sm"
-            isIconOnly
-            onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "Show Documentation" : "Hide Documentation"}
-          >
-            <BookOpen className="w-4 h-4" />
-          </Button>
-
-          {/* Zoom controls */}
-          <Button
-            variant="flat"
-            size="sm"
-            isIconOnly
-            onPress={zoomOut}
-            isDisabled={fontSize <= 8}
-          >
-            <ZoomOutIcon className="w-4 h-4" />
-          </Button>
-          <span className="text-sm px-2">{fontSize}px</span>
-          <Button
-            variant="flat"
-            size="sm"
-            isIconOnly
-            onPress={zoomIn}
-            isDisabled={fontSize >= 24}
-          >
-            <ZoomInIcon className="w-4 h-4" />
-          </Button>
-
-          {/* Save button */}
-          <Button
-            color={hasUnsavedChanges ? "primary" : "default"}
-            variant={hasUnsavedChanges ? "solid" : "flat"}
-            size="sm"
-            isLoading={isSaving}
-            isDisabled={!hasUnsavedChanges || !isValid || isSaving}
-            startContent={!isSaving && <Save className="w-4 h-4" />}
-            onPress={handleSave}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-        </div>
+        {/* Removed duplicate save button from header */}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Main Editor Area */}
         <div className="flex-1">
-          {/* Validation status */}
+          {/* Validation status and toolbar */}
           <div className="mb-3 flex items-start justify-between gap-4">
+            {/* Validation Status */}
             <div className="min-h-[32px] flex items-center flex-1">
               {errorInfo ? (
                 <div className="flex items-center space-x-2 text-danger-600 bg-danger-50 dark:bg-danger-900/20 px-3 py-1.5 rounded-md text-sm">
@@ -476,6 +482,104 @@ response_path: "response.text"
                   <span className="font-medium">YAML is valid</span>
                 </div>
               ) : undefined}
+            </div>
+
+            {/* Editor Toolbar */}
+            <div className="flex items-center space-x-2">
+              {/* Save Button - Primary Action */}
+              <Button
+                color={hasUnsavedChanges ? "primary" : "default"}
+                variant={hasUnsavedChanges ? "solid" : "flat"}
+                size="sm"
+                isLoading={isSaving}
+                isDisabled={!hasUnsavedChanges || !isValid || isSaving}
+                startContent={!isSaving && <Save className="w-4 h-4" />}
+                onPress={handleSave}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+
+              {/* Documentation Toggle */}
+              <Tooltip content={sidebarCollapsed ? "Show Documentation" : "Hide Documentation"}>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  aria-label={sidebarCollapsed ? "Show Documentation" : "Hide Documentation"}
+                >
+                  <BookOpen className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+
+              {/* Editor Settings */}
+              <Popover placement="bottom-end">
+                <PopoverTrigger>
+                  <Button
+                    variant="flat"
+                    size="sm"
+                    isIconOnly
+                    aria-label="Editor Settings"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64">
+                  <div className="px-4 py-3">
+                    <h4 className="text-medium font-semibold mb-3">Editor Settings</h4>
+                    
+                    {/* Font Size Controls */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium">Font Size</span>
+                      </div>
+                      <div className="flex items-center justify-center space-x-2">
+                        <Button
+                          variant="flat"
+                          size="sm"
+                          isIconOnly
+                          onPress={zoomOut}
+                          isDisabled={fontSize <= 8}
+                          aria-label="Decrease font size"
+                        >
+                          <ZoomOutIcon className="w-4 h-4" />
+                        </Button>
+                        <div className="text-sm px-3 py-1 bg-default-100 rounded min-w-[50px] text-center">
+                          {fontSize}px
+                        </div>
+                        <Button
+                          variant="flat"
+                          size="sm"
+                          isIconOnly
+                          onPress={zoomIn}
+                          isDisabled={fontSize >= 24}
+                          aria-label="Increase font size"
+                        >
+                          <ZoomInIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Autosave Toggle */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col flex-1">
+                        <span className="text-sm font-medium">Autosave</span>
+                        <span className="text-xs text-foreground-500 mt-1">
+                          Saves automatically every 10 seconds
+                        </span>
+                      </div>
+                      <div className="flex-shrink-0 pt-1">
+                        <Switch
+                          isSelected={autosaveEnabled}
+                          onValueChange={setAutosaveEnabled}
+                          size="sm"
+                          aria-label="Toggle autosave"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -517,6 +621,17 @@ response_path: "response.text"
                   <span className="text-warning-600 flex items-center gap-1">
                     <div className="w-2 h-2 bg-warning-500 rounded-full" />
                     <span>Unsaved changes</span>
+                  </span>
+                )}
+                {autosaveEnabled && connectorId !== "new" && (
+                  <span className="text-success-600 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
+                    <span>Autosave enabled</span>
+                  </span>
+                )}
+                {lastSaved && (
+                  <span className="text-foreground-400">
+                    Last saved: {lastSaved.toLocaleTimeString()}
                   </span>
                 )}
               </div>
