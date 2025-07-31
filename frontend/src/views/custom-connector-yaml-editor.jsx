@@ -19,7 +19,7 @@ import {
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
 } from "lucide-react";
-import { Button, Card, CardBody, Tabs, Tab, Link, Switch, Popover, PopoverTrigger, PopoverContent, Tooltip } from "@heroui/react";
+import { Button, Card, CardBody, Link, Switch, Popover, PopoverTrigger, PopoverContent, Tooltip } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
@@ -139,13 +139,14 @@ const CodeBlock = ({ code, description }) => {
 const ScrollableTabs = ({ sections }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [activeTab, setActiveTab] = useState(Object.keys(sections)[0]);
   const tabsContainerRef = useRef(null);
 
   const updateScrollButtons = useCallback(() => {
     if (tabsContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
       setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5); // More sensitive threshold
     }
   }, []);
 
@@ -155,19 +156,36 @@ const ScrollableTabs = ({ sections }) => {
     if (container) {
       container.addEventListener('scroll', updateScrollButtons);
       window.addEventListener('resize', updateScrollButtons);
+      
+      // Also update when tabs are rendered
+      const observer = new ResizeObserver(() => {
+        updateScrollButtons();
+      });
+      observer.observe(container);
+      
       return () => {
         container.removeEventListener('scroll', updateScrollButtons);
         window.removeEventListener('resize', updateScrollButtons);
+        observer.disconnect();
       };
     }
   }, [updateScrollButtons]);
 
+  // Update scroll buttons when sections change
+  useEffect(() => {
+    const timer = setTimeout(updateScrollButtons, 100); // Small delay to ensure DOM is updated
+    return () => clearTimeout(timer);
+  }, [sections, updateScrollButtons]);
+
   const scrollTabs = useCallback((direction) => {
     if (tabsContainerRef.current) {
-      const scrollAmount = 200;
+      const scrollAmount = 250; // Increased scroll amount for better UX
       const newScrollLeft = direction === 'left' 
-        ? tabsContainerRef.current.scrollLeft - scrollAmount
-        : tabsContainerRef.current.scrollLeft + scrollAmount;
+        ? Math.max(0, tabsContainerRef.current.scrollLeft - scrollAmount)
+        : Math.min(
+            tabsContainerRef.current.scrollWidth - tabsContainerRef.current.clientWidth,
+            tabsContainerRef.current.scrollLeft + scrollAmount
+          );
       
       tabsContainerRef.current.scrollTo({
         left: newScrollLeft,
@@ -178,13 +196,13 @@ const ScrollableTabs = ({ sections }) => {
 
   // Filter out the 'Testing Your Configuration' tab
   const filteredSections = Object.fromEntries(
-    Object.entries(sections).filter(([sectionName]) => sectionName !== "Testing Your Configuration")
+    Object.entries(sections).filter(([key]) => key !== 'Testing Your Configuration')
   );
 
   return (
     <div className="w-full">
-      {/* Tab navigation with scroll arrows */}
-      <div className="relative">
+      {/* Tab navigation with scroll arrows - ONLY affects the tab headers */}
+      <div className="relative mb-4">
         {/* Left gradient fade when scrollable */}
         {canScrollLeft && (
           <div className="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
@@ -200,7 +218,7 @@ const ScrollableTabs = ({ sections }) => {
             isIconOnly
             size="sm"
             variant="flat"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background shadow-md"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
             onPress={() => scrollTabs('left')}
             aria-label="Scroll tabs left"
           >
@@ -213,7 +231,7 @@ const ScrollableTabs = ({ sections }) => {
             isIconOnly
             size="sm"
             variant="flat"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background shadow-md"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
             onPress={() => scrollTabs('right')}
             aria-label="Scroll tabs right"
           >
@@ -221,47 +239,47 @@ const ScrollableTabs = ({ sections }) => {
           </Button>
         )}
 
-        {/* Scrollable tabs container */}
+        {/* Scrollable tab headers container - ONLY scrolls the tab navigation */}
         <div 
           ref={tabsContainerRef}
-          className="overflow-x-auto scrollbar-hide"
+          className="overflow-x-auto"
+          style={{ 
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
         >
-          <Tabs 
-            aria-label="Documentation" 
-            variant="underlined" 
-            className="w-full"
-            classNames={{
-              tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
-              cursor: "w-full bg-primary",
-              tab: "max-w-fit px-4 h-12 flex-shrink-0",
-              tabContent: "group-data-[selected=true]:text-primary whitespace-nowrap"
-            }}
-          >
-            {Object.entries(filteredSections).map(([sectionName, section]) => (
-              <Tab
+          <div className="flex gap-1 border-b border-divider min-w-max">
+            {Object.keys(filteredSections).map((sectionName) => (
+              <button
                 key={sectionName}
-                title={
-                  <div className="flex items-center space-x-2">
-                    <BookOpen className="w-4 h-4" />
-                    <span className="text-sm">{sectionName}</span>
-                  </div>
-                }
+                className={`flex items-center space-x-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                  activeTab === sectionName
+                    ? 'border-primary text-primary font-medium'
+                    : 'border-transparent text-foreground-600 hover:text-foreground hover:border-default-300'
+                }`}
+                onClick={() => setActiveTab(sectionName)}
               >
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-3">
-                    {section.items.map((item, index) => (
-                      <CodeBlock
-                        key={index}
-                        code={item.code}
-                        description={item.description}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </Tab>
+                <BookOpen className="w-4 h-4" />
+                <span>{sectionName}</span>
+              </button>
             ))}
-          </Tabs>
+          </div>
         </div>
+      </div>
+
+      {/* Tab content - SEPARATE from scrollable area */}
+      <div className="space-y-4">
+        {activeTab && filteredSections[activeTab] && (
+          <div className="space-y-3">
+            {filteredSections[activeTab].items.map((item, index) => (
+              <CodeBlock
+                key={index}
+                code={item.code}
+                description={item.description}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
