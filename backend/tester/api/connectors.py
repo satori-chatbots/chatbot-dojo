@@ -16,6 +16,9 @@ from rest_framework.response import Response
 from tester.models import ChatbotConnector
 from tester.serializers import ChatbotConnectorSerializer
 
+# Cache timeout for connector information (1 hour)
+CACHE_TIMEOUT_SECONDS = 3600
+
 
 @api_view(["GET"])
 def get_available_connectors(_request: Request) -> Response:
@@ -39,7 +42,7 @@ def get_available_connectors(_request: Request) -> Response:
                 {"name": connector_type, "description": description, "usage": f"--technology {connector_type}"}
             )
 
-        cache.set(cache_key, connectors, timeout=3600)  # Cache for 1 hour
+        cache.set(cache_key, connectors, timeout=CACHE_TIMEOUT_SECONDS)  # Cache for 1 hour
         return Response({"connectors": connectors}, status=status.HTTP_200_OK)
 
     except (ImportError, AttributeError) as e:
@@ -88,7 +91,7 @@ def get_connector_parameters(request: Request) -> Response:
                 param_dict["default"] = param.default
             parameters.append(param_dict)
 
-        cache.set(cache_key, parameters, timeout=3600)  # Cache for 1 hour
+        cache.set(cache_key, parameters, timeout=CACHE_TIMEOUT_SECONDS)  # Cache for 1 hour
         return Response({"technology": technology, "parameters": parameters}, status=status.HTTP_200_OK)
 
     except ValueError:
