@@ -298,7 +298,7 @@ const ChatbotConnectors = () => {
   const columns = [
     { name: "Name", key: "name", sortable: true },
     { name: "Technology", key: "technology", sortable: true },
-    { name: "URL", key: "link", sortable: true },
+    { name: "Parameters", key: "parameters", sortable: false },
     { name: "Actions", key: "actions", sortable: false },
   ];
 
@@ -315,13 +315,23 @@ const ChatbotConnectors = () => {
           ? a.name
           : column === "technology"
             ? a.technology
-            : a.link;
+            : column === "parameters"
+              ? Object.keys(a.parameters || {}).length // Sort by number of parameters
+              : a.name; // Default to name for non-sortable columns
       const second =
         column === "name"
           ? b.name
           : column === "technology"
             ? b.technology
-            : b.link;
+            : column === "parameters"
+              ? Object.keys(b.parameters || {}).length // Sort by number of parameters
+              : b.name; // Default to name for non-sortable columns
+
+      if (column === "parameters") {
+        // For parameters, sort by number of parameters
+        return direction === "ascending" ? first - second : second - first;
+      }
+
       return direction === "ascending"
         ? first.localeCompare(second)
         : second.localeCompare(first);
@@ -507,13 +517,20 @@ const ChatbotConnectors = () => {
                 {connector.technology}
               </TableCell>
               <TableCell className="px-2 sm:px-4">
-                <a
-                  href={connector.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {connector.link}
-                </a>
+                {connector.parameters &&
+                Object.keys(connector.parameters).length > 0 ? (
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    {Object.entries(connector.parameters).map(
+                      ([key, value]) => (
+                        <li key={key} className="break-words">
+                          <strong>{key}:</strong> {value}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                ) : (
+                  <span className="text-gray-500 italic">No parameters</span>
+                )}
               </TableCell>
               <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
                 <Button
