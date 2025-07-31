@@ -89,7 +89,7 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python
 And then:
 ```bash
 
-docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python manage.py migrate 
+docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python manage.py migrate
 ```
 
 If it is in production it is the same just changing the base command to:
