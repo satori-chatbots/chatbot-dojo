@@ -50,6 +50,10 @@ import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap } from "@codemirror/search";
 import { customConnectorDocumentationSections } from "../data/custom-connector-documentation";
 
+// Constants
+const SCROLL_SENSITIVITY_THRESHOLD = 5;
+const AUTOSAVE_DELAY_MS = 10_000;
+
 // YAML syntax highlighter for code examples
 const highlightYamlCode = (yaml) => {
   let highlighted = yaml
@@ -158,7 +162,9 @@ const ScrollableTabs = ({ sections }) => {
     if (tabsContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
       setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5); // More sensitive threshold
+      setCanScrollRight(
+        scrollLeft < scrollWidth - clientWidth - SCROLL_SENSITIVITY_THRESHOLD,
+      );
     }
   }, []);
 
@@ -636,7 +642,7 @@ response_path: "response.text"
       } catch (error) {
         console.error("Autosave failed:", error);
       }
-    }, 10_000); // Autosave after 10 seconds of inactivity
+    }, AUTOSAVE_DELAY_MS);
 
     return () => clearTimeout(autosaveTimer);
   }, [
