@@ -129,13 +129,13 @@ const renderMarkdown = (text) => {
   // Convert code blocks
   html = html.replaceAll(
     /```([\s\S]*?)```/gim,
-    '<pre class="bg-default-100 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto my-4"><code class="text-sm text-default-700 dark:text-gray-100">$1</code></pre>',
+    '<pre class="bg-default-100 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto my-4 font-modern-mono"><code class="text-sm text-default-700 dark:text-gray-100">$1</code></pre>',
   );
 
   // Convert inline code
   html = html.replaceAll(
     /`([^`]+)`/gim,
-    '<code class="bg-default-100 dark:bg-gray-800 text-default-700 dark:text-gray-100 px-2 py-1 rounded text-sm">$1</code>',
+    '<code class="bg-default-100 dark:bg-gray-800 text-default-700 dark:text-gray-100 px-2 py-1 rounded text-sm font-modern-mono">$1</code>',
   );
 
   // Convert tables

@@ -96,4 +96,14 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* WebKit */
   }
+
+  /* Modern monospace font utility class */
+  .font-modern-mono {
+    font-family:
+      "JetBrains Mono", "Fira Code", "Cascadia Code", "SF Mono", Monaco,
+      "Roboto Mono", "Ubuntu Mono", Consolas, "Courier New", monospace;
+    font-feature-settings:
+      "liga" on,
+      "calt" on;
+  }
 }

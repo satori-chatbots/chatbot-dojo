@@ -6,6 +6,10 @@ import { insertNewlineAndIndent } from "@codemirror/commands";
 import { lintGutter } from "@codemirror/lint";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { load as yamlLoad } from "js-yaml";
+import {
+  MODERN_MONOSPACE_FONT_FAMILY,
+  FONT_FEATURE_SETTINGS,
+} from "../utils/modern-font";
 
 /**
  * Shared hook for YAML editor functionality
@@ -257,6 +261,28 @@ export const useYamlEditor = ({
     [],
   );
 
+  // Modern font theme extension
+  const modernFontTheme = useMemo(
+    () =>
+      EditorView.theme({
+        "&": {
+          fontFamily: MODERN_MONOSPACE_FONT_FAMILY,
+          fontFeatureSettings: FONT_FEATURE_SETTINGS, // Enable ligatures
+        },
+        ".cm-editor": {
+          fontFamily: MODERN_MONOSPACE_FONT_FAMILY,
+        },
+        ".cm-content": {
+          fontFamily: MODERN_MONOSPACE_FONT_FAMILY,
+          fontFeatureSettings: FONT_FEATURE_SETTINGS,
+        },
+        ".cm-line": {
+          fontFamily: MODERN_MONOSPACE_FONT_FAMILY,
+        },
+      }),
+    [],
+  );
+
   // Editor extensions
   const extensions = useMemo(
     () => [
@@ -266,8 +292,9 @@ export const useYamlEditor = ({
       highlightSelectionMatches(),
       cursorPositionExtension,
       lintGutter(),
+      modernFontTheme,
     ],
-    [customKeymap, cursorPositionExtension],
+    [customKeymap, cursorPositionExtension, modernFontTheme],
   );
 
   // Handle content change

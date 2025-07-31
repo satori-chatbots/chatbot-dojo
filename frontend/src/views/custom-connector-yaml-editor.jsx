@@ -352,9 +352,12 @@ response_path: "response.text"
                         title={`Click to jump to line ${error.line}`}
                       >
                         {error.message}
-                        <span className="font-mono"> at line {error.line}</span>
+                        <span className="font-modern-mono">
+                          {" "}
+                          at line {error.line}
+                        </span>
                         {error.path && (
-                          <span className="font-mono text-red-500 dark:text-red-400">
+                          <span className="font-modern-mono text-red-500 dark:text-red-400">
                             {" "}
                             ({error.path})
                           </span>
@@ -364,7 +367,7 @@ response_path: "response.text"
                       <>
                         {error.message}
                         {error.path && (
-                          <span className="font-mono text-red-500 dark:text-red-400">
+                          <span className="font-modern-mono text-red-500 dark:text-red-400">
                             {" "}
                             ({error.path})
                           </span>

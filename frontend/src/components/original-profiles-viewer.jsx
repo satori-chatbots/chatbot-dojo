@@ -57,7 +57,7 @@ const formatDate = (dateString) => {
 
 const YamlHighlighter = ({ content }) => {
   return (
-    <pre className="bg-default-50 dark:bg-default-900/10 rounded-lg p-4 overflow-x-auto text-sm whitespace-pre-wrap break-words border border-default-200 dark:border-default-700">
+    <pre className="bg-default-50 dark:bg-default-900/10 rounded-lg p-4 overflow-x-auto text-sm whitespace-pre-wrap break-words border border-default-200 dark:border-default-700 font-modern-mono">
       <code
         className="text-foreground"
         dangerouslySetInnerHTML={{ __html: highlightYaml(content) }}

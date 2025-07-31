@@ -21,7 +21,7 @@ export const EditorStatusBar = ({
   return (
     <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
       <div className="flex items-center gap-4">
-        <span className="font-mono">
+        <span className="font-modern-mono">
           Line {cursorPosition.line}, Col {cursorPosition.column}
         </span>
         <span>{lineCount} lines</span>
@@ -56,7 +56,7 @@ export const EditorStatusBar = ({
           >
             <ZoomOutIcon className="w-3 h-3" />
           </Button>
-          <span className="text-default-400 text-xs font-mono">
+          <span className="text-default-400 text-xs font-modern-mono">
             {fontSize}px
           </span>
           <Button
