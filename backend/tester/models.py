@@ -336,7 +336,6 @@ class Project(models.Model):
             "project_folder": f"project_{self.id}",
             "user_profile": "",
             "technology": self.chatbot_connector.technology if self.chatbot_connector else "",
-            "connector": "",  # Legacy field - now using connector_parameters
             "connector_parameters": {},
             "extract": "",
             "#execution_parameters": [
@@ -352,8 +351,6 @@ class Project(models.Model):
             if hasattr(self, "config") and self.config:
                 if self.config.user_profile:
                     config_data["user_profile"] = self.config.user_profile
-                if self.config.connector:
-                    config_data["connector"] = self.config.connector
                 if self.config.connector_parameters:
                     config_data["connector_parameters"] = self.config.connector_parameters
                 if self.config.extract_path:
