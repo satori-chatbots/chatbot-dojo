@@ -417,7 +417,7 @@ const ChatbotConnectors = () => {
                     ) : (
                       availableConnectors.map((connector) => (
                         <SelectItem key={connector.name} value={connector.name}>
-                          {connector.name} - {connector.description}
+                          {connector.name}
                         </SelectItem>
                       ))
                     )}
@@ -620,7 +620,7 @@ const ChatbotConnectors = () => {
                     ) : (
                       availableConnectors.map((connector) => (
                         <SelectItem key={connector.name} value={connector.name}>
-                          {connector.name} - {connector.description}
+                          {connector.name}
                         </SelectItem>
                       ))
                     )}
