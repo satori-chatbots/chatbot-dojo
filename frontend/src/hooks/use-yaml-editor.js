@@ -164,7 +164,30 @@ export const useYamlEditor = ({
   const validateYaml = useCallback(
     async (value) => {
       if (validateYamlFunction) {
-        return validateYamlFunction(value);
+        setIsValidatingYaml(true);
+        try {
+          const result = await validateYamlFunction(value);
+
+          // Update state based on validation result
+          setIsValid(result.isValid);
+          setErrorInfo(result.errorInfo);
+          setServerValidationErrors(result.serverValidationErrors);
+          setHasTypedAfterError(false);
+
+          return result;
+        } catch (error) {
+          console.error("Validation function error:", error);
+          setIsValid(false);
+          setErrorInfo({
+            message: "Validation failed",
+            isSchemaError: false,
+          });
+          setServerValidationErrors(undefined);
+          setHasTypedAfterError(false);
+          return { isValid: false };
+        } finally {
+          setIsValidatingYaml(false);
+        }
       }
 
       setIsValidatingYaml(true);

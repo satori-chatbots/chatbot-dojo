@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror from "@uiw/react-codemirror";
 import {
@@ -79,44 +79,56 @@ function YamlEditor() {
   const yamlTypoLinter = linter(createYamlTypoLinter());
 
   // Custom validation function for this editor
-  const validateYamlFunction = useCallback(async (value) => {
-    try {
-      // First check YAML syntax
-      const { load: yamlLoad } = await import("js-yaml");
-      yamlLoad(value);
+  const createValidationFunction = useCallback(() => {
+    return async (value, setIsValidatingSchema) => {
+      try {
+        // First check YAML syntax
+        const { load: yamlLoad } = await import("js-yaml");
+        yamlLoad(value);
 
-      // If YAML is valid, check schema on server
-      if (value.trim()) {
-        try {
-          const validationResult = await validateYamlOnServer(value);
-          if (validationResult.valid) {
+        // If YAML is valid, check schema on server
+        if (value.trim()) {
+          try {
+            // Set schema validation state before making request
+            if (setIsValidatingSchema) {
+              setIsValidatingSchema(true);
+            }
+
+            const validationResult = await validateYamlOnServer(value);
+            if (validationResult.valid) {
+              return { isValid: true, serverValidationErrors: undefined };
+            }
+            return {
+              isValid: true,
+              serverValidationErrors: validationResult.errors,
+            };
+          } catch (error) {
+            console.error("Schema validation error:", error);
             return { isValid: true, serverValidationErrors: undefined };
+          } finally {
+            // Clear schema validation state after request completes
+            if (setIsValidatingSchema) {
+              setIsValidatingSchema(false);
+            }
           }
-          return {
-            isValid: true,
-            serverValidationErrors: validationResult.errors,
-          };
-        } catch (error) {
-          console.error("Schema validation error:", error);
+        } else {
           return { isValid: true, serverValidationErrors: undefined };
         }
-      } else {
-        return { isValid: true, serverValidationErrors: undefined };
+      } catch (error) {
+        const errorLines = error.message.split("\n");
+        const errorMessage = errorLines[0];
+        const codeContext = errorLines.slice(1).join("\n");
+        const errorInfo = {
+          message: errorMessage,
+          line: error.mark ? error.mark.line + 1 : undefined,
+          column: error.mark ? error.mark.column + 1 : undefined,
+          codeContext: codeContext,
+          isSchemaError: false,
+        };
+        console.error("Invalid YAML:", error);
+        return { isValid: false, errorInfo };
       }
-    } catch (error) {
-      const errorLines = error.message.split("\n");
-      const errorMessage = errorLines[0];
-      const codeContext = errorLines.slice(1).join("\n");
-      const errorInfo = {
-        message: errorMessage,
-        line: error.mark ? error.mark.line + 1 : undefined,
-        column: error.mark ? error.mark.column + 1 : undefined,
-        codeContext: codeContext,
-        isSchemaError: false,
-      };
-      console.error("Invalid YAML:", error);
-      return { isValid: false, errorInfo };
-    }
+    };
   }, []);
 
   const onLoad = useCallback(async () => {
@@ -132,7 +144,8 @@ function YamlEditor() {
   const onSave = useCallback(
     async (content) => {
       // Re-validate before saving to ensure we have the latest validation state
-      const validationResults = await validateYamlFunction(content);
+      const validationFunction = createValidationFunction();
+      const validationResults = await validationFunction(content);
 
       const hasValidationErrors =
         !validationResults.isValid ||
@@ -189,7 +202,7 @@ function YamlEditor() {
       reloadProfiles,
       showToast,
       navigate,
-      validateYamlFunction,
+      createValidationFunction,
     ],
   );
 
@@ -197,11 +210,46 @@ function YamlEditor() {
   const editor = useYamlEditor({
     onLoad,
     onSave,
-    validateYamlFunction,
+    validateYamlFunction: undefined, // Will be set after initialization
     storageKey: "yamlEditor",
     enableAutosave: true,
     autosaveDelay: 3000, // Auto-save after 3 seconds of inactivity
   });
+
+  // Update the editor's validation function with the custom validation
+  useEffect(() => {
+    const validationFunction = createValidationFunction();
+
+    editor.validateYaml = async (value) => {
+      editor.setIsValidatingYaml(true);
+      try {
+        const result = await validationFunction(
+          value,
+          editor.setIsValidatingSchema,
+        );
+
+        // Update state based on validation result
+        editor.setIsValid(result.isValid);
+        editor.setErrorInfo(result.errorInfo);
+        editor.setServerValidationErrors(result.serverValidationErrors);
+        editor.setHasTypedAfterError(false);
+
+        return result;
+      } catch (error) {
+        console.error("Validation function error:", error);
+        editor.setIsValid(false);
+        editor.setErrorInfo({
+          message: "Validation failed",
+          isSchemaError: false,
+        });
+        editor.setServerValidationErrors(undefined);
+        editor.setHasTypedAfterError(false);
+        return { isValid: false };
+      } finally {
+        editor.setIsValidatingYaml(false);
+      }
+    };
+  }, [createValidationFunction, editor]);
 
   // Enhanced extensions with autocomplete and linter
   const enhancedExtensions = useMemo(
