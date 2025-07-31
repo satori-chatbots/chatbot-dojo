@@ -14,7 +14,6 @@ export const EditorToolbar = ({
   onToggleSidebar,
   autosaveEnabled,
   onToggleAutosave,
-  lastSaved,
 }) => {
   return (
     <div className="flex items-center space-x-2">
@@ -28,14 +27,6 @@ export const EditorToolbar = ({
           onValueChange={onToggleAutosave}
           aria-label="Toggle auto-save"
         />
-        {autosaveEnabled && lastSaved && (
-          <span className="text-xs text-foreground-400">
-            {new Date(lastSaved).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-        )}
       </div>
 
       {/* Save Button - Primary Action */}
