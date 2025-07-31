@@ -174,6 +174,8 @@ response_path: "response.text"
     onLoad,
     onSave,
     storageKey: `custom-connector-${connectorId}`,
+    enableAutosave: true,
+    autosaveDelay: 3000, // Auto-save after 3 seconds of inactivity
   });
 
   if (editor.isLoading) {
@@ -236,13 +238,15 @@ response_path: "response.text"
             <EditorToolbar
               hasUnsavedChanges={editor.hasUnsavedChanges}
               isSaving={editor.isSaving}
-              isValid={editor.isValid}
               fileId={connectorId}
               onSave={editor.handleSave}
               sidebarCollapsed={editor.sidebarCollapsed}
               onToggleSidebar={() =>
                 editor.setSidebarCollapsed(!editor.sidebarCollapsed)
               }
+              autosaveEnabled={editor.autosaveEnabled}
+              onToggleAutosave={editor.setAutosaveEnabled}
+              lastSaved={editor.lastSaved}
             />
           </div>
 

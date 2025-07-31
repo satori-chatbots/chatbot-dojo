@@ -199,6 +199,8 @@ function YamlEditor() {
     onSave,
     validateYamlFunction,
     storageKey: "yamlEditor",
+    enableAutosave: true,
+    autosaveDelay: 3000, // Auto-save after 3 seconds of inactivity
   });
 
   // Enhanced extensions with autocomplete and linter
@@ -270,13 +272,15 @@ function YamlEditor() {
             <EditorToolbar
               hasUnsavedChanges={editor.hasUnsavedChanges}
               isSaving={editor.isSaving}
-              isValid={editor.isValid}
               fileId={fileId}
               onSave={editor.handleSave}
               sidebarCollapsed={editor.sidebarCollapsed}
               onToggleSidebar={() =>
                 editor.setSidebarCollapsed(!editor.sidebarCollapsed)
               }
+              autosaveEnabled={editor.autosaveEnabled}
+              onToggleAutosave={editor.setAutosaveEnabled}
+              lastSaved={editor.lastSaved}
             />
           </div>
 
