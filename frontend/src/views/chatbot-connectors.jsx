@@ -428,7 +428,16 @@ const ChatbotConnectors = () => {
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Configure and manage chatbot connectors to communicate TRACER and
-            Sensei with other chatbots.
+            Sensei with other chatbots. Built with{" "}
+            <a
+              href="https://github.com/Chatbot-TRACER/chatbot-connectors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+            >
+              chatbot-connectors library
+            </a>
+            .
           </p>
         </div>
 
@@ -513,7 +522,16 @@ const ChatbotConnectors = () => {
                   >
                     {availableConnectors.length === 0 ? (
                       <SelectItem key="no-connectors" value="" isDisabled>
-                        No connectors available - TRACER may not be running
+                        No connectors available - TRACER may not be running (
+                        <a
+                          href="https://github.com/Chatbot-TRACER/chatbot-connectors"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          learn more
+                        </a>
+                        )
                       </SelectItem>
                     ) : (
                       availableConnectors.map((connector) => (
@@ -840,7 +858,16 @@ const ChatbotConnectors = () => {
                   >
                     {availableConnectors.length === 0 ? (
                       <SelectItem key="no-connectors" value="" isDisabled>
-                        No connectors available - TRACER may not be running
+                        No connectors available - TRACER may not be running (
+                        <a
+                          href="https://github.com/Chatbot-TRACER/chatbot-connectors"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          learn more
+                        </a>
+                        )
                       </SelectItem>
                     ) : (
                       availableConnectors.map((connector) => (
