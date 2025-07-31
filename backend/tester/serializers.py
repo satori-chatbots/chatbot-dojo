@@ -120,8 +120,20 @@ class ChatbotConnectorSerializer(serializers.ModelSerializer):
         """Meta class for ChatbotConnectorSerializer."""
 
         model = ChatbotConnector
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "technology",
+            "parameters",
+            "link",
+        ]  # Include both parameters and link for backward compatibility
         read_only_fields: ClassVar[list[str]] = ["owner"]
+
+    def validate_parameters(self, value):
+        """Validate that parameters is a valid JSON object."""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Parameters must be a valid JSON object")
+        return value
 
 
 class ProjectSerializer(serializers.ModelSerializer):

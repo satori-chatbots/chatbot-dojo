@@ -24,7 +24,8 @@ import {
 import {
   fetchChatbotConnectors,
   createChatbotConnector,
-  fetchTechnologyChoices,
+  fetchAvailableConnectors,
+  fetchConnectorParameters,
   updateChatbotConnector,
   deleteChatbotConnector,
   checkChatbotConnectorName,
@@ -38,7 +39,7 @@ const ChatbotConnectors = () => {
   const [editData, setEditData] = useState({
     name: "",
     technology: "",
-    link: "",
+    parameters: {},
   });
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -48,16 +49,18 @@ const ChatbotConnectors = () => {
   const handleEdit = (tech) => {
     setEditData(tech);
     setOriginalName(tech.name);
+    loadParametersForTechnology(tech.technology);
     setIsEditOpen(true);
   };
 
   const [connectors, setConnectors] = useState([]);
-  const [technologyChoices, setTechnologyChoices] = useState([]);
+  const [availableConnectors, setAvailableConnectors] = useState([]);
+  const [currentParameters, setCurrentParameters] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
     technology: "",
-    link: "",
+    parameters: {},
   });
 
   // State of the modal to create new connector
@@ -72,15 +75,64 @@ const ChatbotConnectors = () => {
   // State for the original name
   const [originalName, setOriginalName] = useState("");
 
-  useEffect(() => {
-    try {
-      loadConnectors();
-      loadTechnologyChoices();
-    } catch (error) {
-      console.error("Error loading chatbot connectors:", error);
-    } finally {
-      setLoading(false);
+  // Load available connector parameters when technology changes
+  const loadParametersForTechnology = async (technology) => {
+    if (!technology) {
+      setCurrentParameters([]);
+      return;
     }
+
+    try {
+      const paramData = await fetchConnectorParameters(technology);
+      setCurrentParameters(paramData.parameters || []);
+    } catch (error) {
+      console.error(
+        "Error loading parameters for technology:",
+        technology,
+        error,
+      );
+      setCurrentParameters([]);
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load connectors
+        const data = await fetchChatbotConnectors();
+        setConnectors(data);
+
+        // Load available connectors from TRACER
+        try {
+          const connectors = await fetchAvailableConnectors();
+          setAvailableConnectors(connectors);
+
+          // Set initial selection to first available connector
+          if (connectors.length > 0) {
+            const firstConnector = connectors[0].name;
+            setFormData((previous) => ({
+              ...previous,
+              technology: firstConnector,
+            }));
+            // Load parameters for the first connector
+            loadParametersForTechnology(firstConnector);
+          }
+        } catch (error) {
+          console.error(
+            "Error loading available connectors from TRACER:",
+            error,
+          );
+          // Fallback to empty list if TRACER is not available
+          setAvailableConnectors([]);
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   const loadConnectors = async () => {
@@ -92,17 +144,22 @@ const ChatbotConnectors = () => {
     }
   };
 
-  const loadTechnologyChoices = async () => {
+  const loadAvailableConnectors = async () => {
     try {
-      const choices = await fetchTechnologyChoices();
-      setTechnologyChoices(choices); // each choice is [key, value]
-      // Set initial selection
-      setFormData((previous) => ({
-        ...previous,
-        technology: choices[0]?.[0] || "",
-      }));
+      const connectors = await fetchAvailableConnectors();
+      setAvailableConnectors(connectors);
+      // Set initial selection to first available connector
+      if (connectors.length > 0) {
+        const firstConnector = connectors[0].name;
+        setFormData((previous) => ({
+          ...previous,
+          technology: firstConnector,
+        }));
+        // Load parameters for the first connector
+        loadParametersForTechnology(firstConnector);
+      }
     } catch (error) {
-      console.error("Error fetching technology choices:", error);
+      console.error("Error fetching available connectors:", error);
     }
   };
 
@@ -112,13 +169,6 @@ const ChatbotConnectors = () => {
     setLoadingValidation(true);
 
     try {
-      // URL check
-      if (data.link && !/^https?:\/\//.test(data.link)) {
-        alert("Please enter a valid URL or leave it empty");
-        setLoadingValidation(false);
-        return false;
-      }
-
       // Technology check
       if (!data.technology) {
         alert("Please select a technology");
@@ -173,8 +223,8 @@ const ChatbotConnectors = () => {
       // Reset form
       setFormData({
         name: "",
-        technology: technologyChoices[0]?.[0] || "",
-        link: "",
+        technology: availableConnectors[0]?.name || "",
+        parameters: {},
       });
       loadConnectors();
       await reloadConnectors(); // Update setup progress
@@ -192,8 +242,8 @@ const ChatbotConnectors = () => {
   const handleFormReset = () => {
     setFormData({
       name: "",
-      technology: technologyChoices[0]?.[0] || "",
-      link: "",
+      technology: availableConnectors[0]?.name || "",
+      parameters: {},
     });
     setValidationErrors({});
   };
@@ -203,7 +253,7 @@ const ChatbotConnectors = () => {
     setEditData({
       name: "",
       technology: "",
-      link: "",
+      parameters: {},
     });
     setValidationErrors({});
   };
@@ -214,7 +264,7 @@ const ChatbotConnectors = () => {
     const data = {
       name: editData.name,
       technology: editData.technology,
-      link: editData.link,
+      parameters: editData.parameters,
     };
 
     // Now pass the stored originalName
@@ -353,34 +403,55 @@ const ChatbotConnectors = () => {
                       setFormData((previous) => ({
                         ...previous,
                         technology: selectedValue,
+                        parameters: {}, // Reset parameters when technology changes
                       }));
+                      // Load parameters for the selected technology
+                      loadParametersForTechnology(selectedValue);
                     }}
                     fullWidth
                   >
-                    {technologyChoices.map(([key, value]) => (
-                      <SelectItem key={key} value={key}>
-                        {value}
+                    {availableConnectors.length === 0 ? (
+                      <SelectItem key="no-connectors" value="" isDisabled>
+                        No connectors available - TRACER may not be running
                       </SelectItem>
-                    ))}
+                    ) : (
+                      availableConnectors.map((connector) => (
+                        <SelectItem key={connector.name} value={connector.name}>
+                          {connector.name} - {connector.description}
+                        </SelectItem>
+                      ))
+                    )}
                   </Select>
 
-                  <Input
-                    isDisabled={loadingValidation}
-                    errorMessage="Please enter a valid URL"
-                    label="URL (optional)"
-                    labelPlacement="outside"
-                    name="link"
-                    placeholder="Enter a URL to the connector"
-                    value={formData.link}
-                    onChange={(event) =>
-                      setFormData({ ...formData, link: event.target.value })
-                    }
-                    isInvalid={
-                      formData.link.length > 0 &&
-                      !/^https?:\/\//.test(formData.link)
-                    }
-                    type="url"
-                  />
+                  {/* Dynamic parameter fields */}
+                  {currentParameters.map((param) => (
+                    <Input
+                      key={param.name}
+                      isRequired={param.required}
+                      isDisabled={loadingValidation}
+                      label={`${param.name} ${param.required ? "*" : ""}`}
+                      labelPlacement="outside"
+                      placeholder={param.description}
+                      value={
+                        formData.parameters[param.name] || param.default || ""
+                      }
+                      isInvalid={!!validationErrors[`parameters.${param.name}`]}
+                      errorMessage={
+                        validationErrors[`parameters.${param.name}`]
+                      }
+                      onValueChange={(value) => {
+                        setFormData((previous) => ({
+                          ...previous,
+                          parameters: {
+                            ...previous.parameters,
+                            [param.name]: value,
+                          },
+                        }));
+                      }}
+                      fullWidth
+                      type={param.type === "integer" ? "number" : "text"}
+                    />
+                  ))}
 
                   <ModalFooter className="w-full flex justify-center gap-4">
                     <Button
@@ -536,25 +607,54 @@ const ChatbotConnectors = () => {
                       setEditData((previous) => ({
                         ...previous,
                         technology: selectedValue,
+                        parameters: previous.parameters || {}, // Preserve existing parameters
                       }));
+                      // Load parameters for the selected technology
+                      loadParametersForTechnology(selectedValue);
                     }}
                   >
-                    {technologyChoices.map(([key, value]) => (
-                      <SelectItem key={key} value={key}>
-                        {value}
+                    {availableConnectors.length === 0 ? (
+                      <SelectItem key="no-connectors" value="" isDisabled>
+                        No connectors available - TRACER may not be running
                       </SelectItem>
-                    ))}
+                    ) : (
+                      availableConnectors.map((connector) => (
+                        <SelectItem key={connector.name} value={connector.name}>
+                          {connector.name} - {connector.description}
+                        </SelectItem>
+                      ))
+                    )}
                   </Select>
-                  <Input
-                    label="URL (optional)"
-                    name="link"
-                    value={editData.link}
-                    onChange={(event) =>
-                      setEditData({ ...editData, link: event.target.value })
-                    }
-                    isDisabled={loadingValidation}
-                    type="url"
-                  />
+
+                  {/* Dynamic parameter fields for edit */}
+                  {currentParameters.map((param) => (
+                    <Input
+                      key={param.name}
+                      isRequired={param.required}
+                      isDisabled={loadingValidation}
+                      label={`${param.name} ${param.required ? "*" : ""}`}
+                      labelPlacement="outside"
+                      placeholder={param.description}
+                      value={
+                        editData.parameters?.[param.name] || param.default || ""
+                      }
+                      isInvalid={!!validationErrors[`parameters.${param.name}`]}
+                      errorMessage={
+                        validationErrors[`parameters.${param.name}`]
+                      }
+                      onValueChange={(value) => {
+                        setEditData((previous) => ({
+                          ...previous,
+                          parameters: {
+                            ...previous.parameters,
+                            [param.name]: value,
+                          },
+                        }));
+                      }}
+                      fullWidth
+                      type={param.type === "integer" ? "number" : "text"}
+                    />
+                  ))}
                   <ModalFooter className="w-full flex justify-center gap-4">
                     <Button
                       type="reset"

@@ -12,7 +12,12 @@ from .auth import (
     UserAPIKeyViewSet,
     validate_token,
 )
-from .connectors import ChatbotConnectorViewSet, get_technology_choices
+from .connectors import (
+    ChatbotConnectorViewSet,
+    get_available_connectors,
+    get_connector_parameters,
+    get_technology_choices,
+)
 from .conversations import ConversationViewSet
 from .errors import TestErrorViewSet
 from .project_files import (

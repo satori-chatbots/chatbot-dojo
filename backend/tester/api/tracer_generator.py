@@ -316,11 +316,21 @@ class TracerGenerator:
     ) -> bool:
         """Execute the TRACER command and handle output."""
         project = task.project
-        chatbot_url = project.chatbot_connector.link if project.chatbot_connector else "http://localhost:5000"
+        connector = project.chatbot_connector
+
+        if not connector:
+            raise ValueError("Project does not have a chatbot connector configured")
+
+        # Extract technology and parameters from the connector
+        technology = connector.technology
+        connector_params = connector.parameters or {}
+
         exploration_model = project.llm_model or "gpt-4o-mini"
         profile_model = project.profile_model or None  # None if not set
 
-        cmd = self._build_tracer_command(params, chatbot_url, exploration_model, profile_model, output_dir)
+        cmd = self._build_tracer_command(
+            params, technology, connector_params, exploration_model, profile_model, output_dir
+        )
 
         env = self._prepare_environment(params.api_key, project.llm_provider)
 
@@ -329,22 +339,25 @@ class TracerGenerator:
     def _build_tracer_command(
         self,
         params: ProfileGenerationParams,
-        chatbot_url: str,
+        technology: str,
+        connector_params: dict,
         exploration_model: str,
         profile_model: str | None,
         output_dir: Path,
     ) -> list[str]:
         """Build the TRACER command with all parameters."""
+        import json
+
         cmd = [
             "tracer",
             "-s",
             str(params.conversations),
             "-n",
             str(params.turns),
-            "-t",
-            params.technology,
-            "-u",
-            chatbot_url,
+            "--technology",
+            technology,
+            "--connector-params",
+            json.dumps(connector_params),
             "-m",
             exploration_model,
         ]

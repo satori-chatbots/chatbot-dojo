@@ -409,31 +409,19 @@ def delete_project_directory(sender: type[Project], instance: Project, **_kwargs
             logger.exception("Error deleting project directory %s", project_path)
 
 
-CONNECTOR_CHOICES = [
-    ("rasa", "Rasa"),
-    ("taskyto", "Taskyto"),
-    ("ada-uam", "Ada UAM"),
-    ("millionbot", "Millionbot"),
-    ("genion", "Genion"),
-    ("lola", "Lola"),
-    ("serviceform", "Serviceform"),
-    ("kuki", "Kuki"),
-    ("julie", "Julie"),
-    ("rivas_catalina", "Rivas Catalina"),
-    ("saic_malaga", "Saic Malaga"),
-]
-
-
 class ChatbotConnector(models.Model):
     """Information about the technology of the chatbot used, it can be used by multiple projects.
 
-    Contains the used technology and the link to access the chatbot, also a name to identify it
+    Contains the used technology and the parameters to access the chatbot, also a name to identify it
     """
 
     # Name of the chatbot connector, must be unique per user
     name = models.CharField(max_length=255)
-    technology = models.CharField(max_length=255, choices=CONNECTOR_CHOICES)
-    link = models.URLField(blank=True)
+    technology = models.CharField(max_length=255)  # No longer hardcoded choices - dynamic from TRACER
+    parameters = models.JSONField(default=dict, blank=True, help_text="Connector-specific parameters as JSON")
+
+    # Keep link field for backward compatibility during migration (can be removed later)
+    link = models.URLField(blank=True, null=True, help_text="Legacy URL field - use parameters instead")
 
     # Owner of the chatbot connector
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="chatbot_connectors", on_delete=models.CASCADE)

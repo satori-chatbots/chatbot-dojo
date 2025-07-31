@@ -13,6 +13,8 @@ export const ENDPOINTS = {
   PROJECTS: `${API_PATH}/projects/`,
   CHATBOTCONNECTOR: `${API_PATH}/chatbotconnectors/`,
   CONNECTORS_CHOICES: `${API_PATH}/chatbotconnectors/choices/`,
+  CONNECTORS_AVAILABLE: `${API_PATH}/chatbotconnectors/available/`,
+  CONNECTORS_PARAMETERS: `${API_PATH}/chatbotconnectors/parameters/`,
   GLOBALREPORTS: `${API_PATH}/globalreports/`,
   TESTERRORS: `${API_PATH}/testerrors/`,
   CHECK_TEST_CASE_NAME: `${API_PATH}/testcases/check-name/`,
