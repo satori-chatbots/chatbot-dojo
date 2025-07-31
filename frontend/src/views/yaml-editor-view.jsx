@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -15,12 +21,14 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
   Save,
-  Edit,
   Loader2,
-  Eye,
-  EyeOff,
+  Copy,
+  Check,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+  BookOpen,
 } from "lucide-react";
-import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
+import { Button, Card, CardBody, Tooltip } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
@@ -28,10 +36,7 @@ import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
 import { useSetup } from "../contexts/setup-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
-import {
-  documentationSections,
-  yamlBasicsSections,
-} from "../data/yaml-documentation";
+import { documentationSections } from "../data/yaml-documentation";
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
@@ -42,6 +47,225 @@ import {
   getCursorContext,
   createYamlTypoLinter,
 } from "../data/yaml-schema";
+
+// Constants
+const SCROLL_SENSITIVITY_THRESHOLD = 5;
+
+// YAML syntax highlighter for code examples
+const highlightYamlCode = (yaml) => {
+  let highlighted = yaml
+    .replaceAll(
+      /(#.*$)/gm,
+      '<span class="text-success-600 dark:text-success-400">$1</span>',
+    )
+    .replaceAll(
+      /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/gm,
+      '$1<span class="text-primary-600 dark:text-primary-400 font-semibold">$2</span>:',
+    )
+    .replaceAll(
+      /:\s*["']([^"']*?)["']/g,
+      ': <span class="text-warning-600 dark:text-warning-400">"$1"</span>',
+    )
+    .replaceAll(
+      /(https?:\/\/[^\s]+)/g,
+      '<span class="text-secondary-600 dark:text-secondary-400 underline">$1</span>',
+    )
+    .replaceAll(
+      /(\{[^}]+\})/g,
+      '<span class="text-danger-600 dark:text-danger-400 font-medium">$1</span>',
+    )
+    .replaceAll(
+      /:\s*(\d+\.?\d*)\s*$/gm,
+      ': <span class="text-secondary-600 dark:text-secondary-400">$1</span>',
+    )
+    .replaceAll(
+      /:\s*(true|false)\s*$/gm,
+      ': <span class="text-danger-600 dark:text-danger-400">$1</span>',
+    )
+    .replaceAll(
+      /^(\s*)-\s+/gm,
+      '$1<span class="text-default-600 dark:text-default-400">-</span> ',
+    );
+
+  return highlighted;
+};
+
+// Code block component with syntax highlighting and copy functionality
+const CodeBlock = ({ code, description }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
+  }, [code]);
+
+  return (
+    <Card className="border border-border">
+      <CardBody className="p-3">
+        <div className="relative group">
+          <pre className="text-xs bg-content2 p-3 rounded overflow-x-auto mb-2 border border-default-200">
+            <code
+              dangerouslySetInnerHTML={{
+                __html: highlightYamlCode(code),
+              }}
+            />
+          </pre>
+
+          <Tooltip content={copied ? "Copied!" : "Copy code"}>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="flat"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              onPress={handleCopy}
+              aria-label="Copy code"
+            >
+              {copied ? (
+                <Check className="w-3 h-3 text-success" />
+              ) : (
+                <Copy className="w-3 h-3" />
+              )}
+            </Button>
+          </Tooltip>
+        </div>
+
+        <p className="text-xs text-foreground-600">{description}</p>
+      </CardBody>
+    </Card>
+  );
+};
+
+// Scrollable tabs component
+const ScrollableTabs = ({ sections }) => {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [activeTab, setActiveTab] = useState(Object.keys(sections)[0]);
+  const tabsContainerRef = useRef(null);
+
+  const updateScrollButtons = useCallback(() => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setCanScrollLeft(scrollLeft > SCROLL_SENSITIVITY_THRESHOLD);
+      setCanScrollRight(
+        scrollLeft < scrollWidth - clientWidth - SCROLL_SENSITIVITY_THRESHOLD,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (container) {
+      updateScrollButtons();
+      container.addEventListener("scroll", updateScrollButtons);
+      window.addEventListener("resize", updateScrollButtons);
+
+      return () => {
+        container.removeEventListener("scroll", updateScrollButtons);
+        window.removeEventListener("resize", updateScrollButtons);
+      };
+    }
+  }, [updateScrollButtons]);
+
+  // Update scroll buttons when sections change
+  useEffect(() => {
+    setTimeout(updateScrollButtons, 100);
+  }, [sections, updateScrollButtons]);
+
+  const scrollTabs = useCallback((direction) => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 200;
+      tabsContainerRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  }, []);
+
+  return (
+    <div className="w-full">
+      <div className="relative mb-4">
+        {canScrollLeft && (
+          <div className="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
+        )}
+
+        {canScrollRight && (
+          <div className="absolute right-8 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
+        )}
+
+        {canScrollLeft && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="flat"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
+            onPress={() => scrollTabs("left")}
+            aria-label="Scroll tabs left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        )}
+
+        {canScrollRight && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="flat"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
+            onPress={() => scrollTabs("right")}
+            aria-label="Scroll tabs right"
+          >
+            <ChevronRightIcon className="w-4 h-4" />
+          </Button>
+        )}
+
+        <div
+          ref={tabsContainerRef}
+          className="overflow-x-auto"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          <div className="flex gap-1 border-b border-divider min-w-max">
+            {Object.keys(sections).map((sectionName) => (
+              <button
+                key={sectionName}
+                className={`flex items-center space-x-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                  activeTab === sectionName
+                    ? "border-primary text-primary font-medium"
+                    : "border-transparent text-foreground-600 hover:text-foreground hover:border-default-300"
+                }`}
+                onClick={() => setActiveTab(sectionName)}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>{sectionName}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {activeTab && sections[activeTab] && (
+          <div className="space-y-3">
+            {sections[activeTab].items.map((item, index) => (
+              <CodeBlock
+                key={index}
+                code={item.code}
+                description={item.description}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 function myCompletions(context) {
   const word = context.matchBefore(/\w*/);
@@ -100,30 +324,44 @@ function YamlEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      const saved = globalThis.localStorage.getItem(
+        "yamlEditorSidebarCollapsed",
+      );
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
   const [isValidatingYaml, setIsValidatingYaml] = useState(false);
   const [isValidatingSchema, setIsValidatingSchema] = useState(false);
   const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
 
   // Autosave and data protection state
-  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
-  useEffect(() => {
-    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
-      const saved = globalThis.localStorage.getItem(
-        "yamlEditorAutosaveEnabled",
-      );
-      setAutosaveEnabled(saved === null ? true : JSON.parse(saved));
-    }
-  }, []);
   const [lastSaved, setLastSaved] = useState();
 
-  // Persist autosave setting
+  // Persist sidebar state
   useEffect(() => {
-    localStorage.setItem(
-      "yamlEditorAutosaveEnabled",
-      JSON.stringify(autosaveEnabled),
-    );
-  }, [autosaveEnabled]);
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      localStorage.setItem(
+        "yamlEditorSidebarCollapsed",
+        JSON.stringify(sidebarCollapsed),
+      );
+    }
+  }, [sidebarCollapsed]);
+
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Enhanced status bar state
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
@@ -376,30 +614,10 @@ function YamlEditor() {
     validateYaml,
   ]);
 
-  // Autosave functionality
+  // Track unsaved changes
   useEffect(() => {
-    if (!autosaveEnabled || !hasUnsavedChanges || !fileId || isSaving) {
-      return;
-    }
-
-    const autosaveTimer = setTimeout(async () => {
-      try {
-        await handleSave();
-        setLastSaved(new Date());
-      } catch (error) {
-        console.error("Autosave failed:", error);
-      }
-    }, 5000); // Auto-save every 5 seconds
-
-    return () => clearTimeout(autosaveTimer);
-  }, [
-    hasUnsavedChanges,
-    autosaveEnabled,
-    fileId,
-    isSaving,
-    handleSave,
-    showToast,
-  ]);
+    setHasUnsavedChanges(editorContent !== originalContent);
+  }, [editorContent, originalContent]);
 
   // Prevent data loss on page leave
   useEffect(() => {
@@ -458,34 +676,44 @@ function YamlEditor() {
     [editorContent],
   );
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <h2 className="text-xl font-semibold mb-2 text-foreground">
+            Loading YAML Editor
+          </h2>
+          <p className="text-foreground-600">
+            Please wait while we prepare your workspace...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">
-            {fileId ? "Edit YAML File" : "Create New YAML"}
-          </h1>
-          {isLoading && (
-            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm font-medium">Loading...</span>
-            </div>
-          )}
+        <div className="flex items-center space-x-4">
+          <div>
+            <h1 className="text-xl font-semibold">
+              {fileId ? "Edit YAML File" : "Create New YAML"}
+            </h1>
+            <p className="text-sm text-foreground-500">
+              YAML Profile Configuration
+            </p>
+          </div>
         </div>
-        <Button
-          variant="light"
-          size="sm"
-          onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="lg:hidden"
-        >
-          {sidebarCollapsed ? <Eye /> : <EyeOff />}
-          {sidebarCollapsed ? "Show Help" : "Hide Help"}
-        </Button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
+        {/* Main Editor Area */}
         <div className="flex-1">
+          {/* Validation status and toolbar */}
           <div className="mb-3 flex items-start justify-between gap-4">
+            {/* Validation Status */}
             <div className="min-h-[32px] flex items-center flex-1">
               {isValidatingYaml ? (
                 <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
@@ -557,99 +785,89 @@ function YamlEditor() {
               )}
             </div>
 
-            <div className="flex items-center justify-end">
+            {/* Editor Toolbar */}
+            <div className="flex items-center space-x-2">
+              {/* Save Button - Primary Action */}
               <Button
-                size="sm"
-                color="primary"
+                color={hasUnsavedChanges ? "primary" : "default"}
                 variant={hasUnsavedChanges ? "solid" : "flat"}
-                onPress={() => handleSave()}
+                size="sm"
                 isLoading={isSaving}
-                isDisabled={isLoading}
-                className="h-8 px-3 text-sm"
+                isDisabled={!hasUnsavedChanges || !isValid || isSaving}
+                startContent={!isSaving && <Save className="w-4 h-4" />}
+                onPress={handleSave}
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    Saving...
-                  </>
-                ) : fileId ? (
-                  <>
-                    <Edit className="mr-1.5 h-3.5 w-3.5" />
-                    {hasUnsavedChanges ? "Update*" : "Update"}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
-                    {hasUnsavedChanges ? "Save*" : "Save"}
-                  </>
-                )}
+                {isSaving
+                  ? "Saving..."
+                  : fileId
+                    ? hasUnsavedChanges
+                      ? "Update*"
+                      : "Update"
+                    : hasUnsavedChanges
+                      ? "Save*"
+                      : "Save"}
               </Button>
+
+              {/* Documentation Toggle */}
+              <Tooltip
+                content={
+                  sidebarCollapsed ? "Show Documentation" : "Hide Documentation"
+                }
+              >
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  aria-label={
+                    sidebarCollapsed
+                      ? "Show Documentation"
+                      : "Hide Documentation"
+                  }
+                >
+                  <BookOpen className="w-4 h-4" />
+                </Button>
+              </Tooltip>
             </div>
           </div>
 
-          {!isValid && errorInfo && errorInfo.isSchemaError && (
-            <div className="mb-4 p-3 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
-              <details>
-                <summary className="cursor-pointer text-red-700 dark:text-red-400 font-medium">
-                  Schema Validation Errors ({errorInfo.errors.length})
-                </summary>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                  {errorInfo.errors.map((error, index) => (
-                    <li
-                      key={index}
-                      className="text-red-600 dark:text-red-300 text-sm"
-                    >
-                      {error}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </div>
-          )}
+          {/* Editor */}
           <div className="relative">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-[70vh] bg-default-100 rounded-lg">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-default-500">Loading editor...</p>
-                </div>
-              </div>
-            ) : (
-              <CodeMirror
-                value={editorContent}
-                height="70vh"
-                width="100%"
-                extensions={[
-                  yaml(),
-                  EditorView.lineWrapping,
-                  autocompletion({
-                    override: [myCompletions],
-                    closeOnBlur: false,
-                    activateOnTyping: true,
-                    maxRenderedOptions: 20,
-                  }),
-                  yamlTypoLinter,
-                  lintGutter(),
-                  customKeymap,
-                  highlightSelectionMatches(),
-                  cursorPositionExtension,
-                ]}
-                onChange={handleEditorChange}
-                theme={isDark ? materialDark : githubLight}
-                basicSetup={{
-                  lineNumbers: true,
-                  foldGutter: true,
-                  highlightActiveLineGutter: true,
-                  highlightActiveLine: true,
-                  lineWrapping: true,
-                  autocompletion: true,
-                }}
-                style={{ fontSize: `${fontSize}px` }}
-                ref={setEditorRef}
-              />
-            )}
+            <CodeMirror
+              value={editorContent}
+              onChange={handleEditorChange}
+              theme={isDark ? materialDark : githubLight}
+              height="70vh"
+              width="100%"
+              extensions={[
+                yaml(),
+                EditorView.lineWrapping,
+                autocompletion({
+                  override: [myCompletions],
+                  closeOnBlur: false,
+                  activateOnTyping: true,
+                  maxRenderedOptions: 20,
+                }),
+                yamlTypoLinter,
+                lintGutter(),
+                customKeymap,
+                highlightSelectionMatches(),
+                cursorPositionExtension,
+              ]}
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: true,
+                highlightActiveLineGutter: true,
+                highlightActiveLine: true,
+                lineWrapping: true,
+                autocompletion: true,
+              }}
+              placeholder="Enter your YAML configuration here..."
+              style={{ fontSize: `${fontSize}px` }}
+              ref={setEditorRef}
+            />
 
-            {/* Enhanced Status Bar - moved directly under editor */}
+            {/* Status bar directly under editor */}
             <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
               <div className="flex items-center gap-4">
                 <span className="font-mono">
@@ -658,9 +876,21 @@ function YamlEditor() {
                 <span>{lineCount} lines</span>
                 <span>{editorContent.length} characters</span>
                 {editorContent.length > 0 && <span>{wordCount} words</span>}
-
-                {/* Zoom controls integrated into status bar */}
-                <div className="flex items-center gap-1 ml-2 border-l border-default-300 pl-3">
+                {hasUnsavedChanges && (
+                  <span className="text-warning-600 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-warning-500 rounded-full" />
+                    <span>Unsaved changes</span>
+                  </span>
+                )}
+                {lastSaved && (
+                  <span className="text-foreground-400">
+                    Last saved: {lastSaved.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Zoom controls */}
+                <div className="flex items-center gap-1">
                   <Button
                     variant="light"
                     size="sm"
@@ -683,41 +913,34 @@ function YamlEditor() {
                     <ZoomInIcon className="w-3 h-3" />
                   </Button>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {/* Autosave controls integrated into status bar */}
-                {fileId && (
-                  <label className="flex items-center gap-2 cursor-pointer text-default-600 hover:text-default-700">
-                    <input
-                      type="checkbox"
-                      checked={autosaveEnabled}
-                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
-                      className="w-3 h-3"
-                    />
-                    <span>Auto-save</span>
-                  </label>
-                )}
-                {hasUnsavedChanges ? (
-                  autosaveEnabled && fileId ? (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                      <span>Auto-save pending</span>
-                    </span>
-                  ) : (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                      <span>Unsaved</span>
-                    </span>
-                  )
-                ) : lastSaved ? (
-                  <span className="text-green-600">
-                    Saved: {lastSaved.toLocaleTimeString()}
-                  </span>
-                ) : undefined}
+                <span>Ctrl+S to save</span>
                 <span className="text-default-400">YAML</span>
               </div>
             </div>
           </div>
+
+          {/* Error details */}
+          {!isValid && errorInfo && errorInfo.isSchemaError && (
+            <div className="mt-4 p-3 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
+              <details>
+                <summary className="cursor-pointer text-red-700 dark:text-red-400 font-medium">
+                  Schema Validation Errors ({errorInfo.errors.length})
+                </summary>
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  {errorInfo.errors.map((error, index) => (
+                    <li
+                      key={index}
+                      className="text-red-600 dark:text-red-300 text-sm"
+                    >
+                      {error}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </div>
+          )}
+
+          {/* Server validation errors */}
           {serverValidationErrors && (
             <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
               <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 flex items-center">
@@ -765,17 +988,41 @@ function YamlEditor() {
             </div>
           )}
         </div>
+
+        {/* Documentation Sidebar */}
         <div
-          className={`w-full lg:w-1/3 ${sidebarCollapsed ? "hidden lg:block" : ""}`}
+          className={`${
+            sidebarCollapsed ? "hidden lg:hidden" : "w-96"
+          } transition-all duration-300`}
         >
-          <div className="sticky top-4">
-            <Tabs defaultValue="profile" className="space-y-3 -mt-1">
-              <Tab key="profile" title="User Profile Help">
-                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    User Profile Documentation
-                  </h2>
-                  <div className="text-xs text-default-500 mb-3 space-y-1">
+          <div className="h-full flex flex-col border border-border bg-background rounded-lg">
+            {/* Sidebar Header */}
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Documentation</h2>
+                </div>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(true)}
+                  className="lg:hidden"
+                >
+                  <ChevronRightIcon className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Documentation Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">
+                    User Profile Help
+                  </h3>
+                  <div className="text-xs text-foreground-600 mb-4 space-y-1">
                     <div>
                       Use{" "}
                       <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
@@ -792,129 +1039,10 @@ function YamlEditor() {
                     </div>
                     <div>Click any code example to copy it</div>
                   </div>
-                  <Accordion variant="light" className="px-0">
-                    {Object.entries(documentationSections).map(
-                      ([sectionTitle, section]) => (
-                        <AccordionItem
-                          key={sectionTitle}
-                          title={
-                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                              {sectionTitle}
-                            </span>
-                          }
-                        >
-                          <div className="space-y-3 pt-1 pb-2">
-                            {section.items.map((item, index) => (
-                              <div key={index} className="space-y-1.5">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.code);
-                                    showToast(
-                                      "success",
-                                      "Code copied to clipboard",
-                                    );
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      navigator.clipboard.writeText(item.code);
-                                      showToast(
-                                        "success",
-                                        "Code copied to clipboard",
-                                      );
-                                    }
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {item.code}
-                                </div>
-                                <p className="text-sm text-default-foreground">
-                                  {item.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionItem>
-                      ),
-                    )}
-                  </Accordion>
+                  <ScrollableTabs sections={documentationSections} />
                 </div>
-              </Tab>
-              <Tab key="yaml" title="YAML Help">
-                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    YAML Tutorial
-                  </h2>
-                  <div className="text-xs text-default-500 mb-3 space-y-1">
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+F
-                      </kbd>{" "}
-                      to search in editor
-                    </div>
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+S
-                      </kbd>{" "}
-                      to save the file
-                    </div>
-                    <div>Click any code example to copy it</div>
-                  </div>
-                  <Accordion variant="light" className="px-0">
-                    {Object.entries(yamlBasicsSections).map(
-                      ([sectionTitle, section]) => (
-                        <AccordionItem
-                          key={sectionTitle}
-                          title={
-                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                              {sectionTitle}
-                            </span>
-                          }
-                        >
-                          <div className="space-y-3 pt-1 pb-2">
-                            {section.items.map((item, index) => (
-                              <div key={index} className="space-y-1.5">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.code);
-                                    showToast(
-                                      "success",
-                                      "Code copied to clipboard",
-                                    );
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      navigator.clipboard.writeText(item.code);
-                                      showToast(
-                                        "success",
-                                        "Code copied to clipboard",
-                                      );
-                                    }
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {item.code}
-                                </div>
-                                <p className="text-sm text-default-foreground">
-                                  {item.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionItem>
-                      ),
-                    )}
-                  </Accordion>
-                </div>
-              </Tab>
-            </Tabs>
+              </div>
+            </div>
           </div>
         </div>
       </div>
