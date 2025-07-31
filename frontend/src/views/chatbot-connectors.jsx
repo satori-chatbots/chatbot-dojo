@@ -529,7 +529,7 @@ const ChatbotConnectors = () => {
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
                       <div className="flex items-start space-x-3">
                         <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
                             Custom YAML Configuration
                           </h4>
