@@ -421,7 +421,8 @@ const ChatbotConnectors = () => {
             Connector Management
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Configure and manage chatbot connectors to communicate TRACER and Sensei with other chatbots.
+            Configure and manage chatbot connectors to communicate TRACER and
+            Sensei with other chatbots.
           </p>
         </div>
 
@@ -527,9 +528,10 @@ const ChatbotConnectors = () => {
                             Custom YAML Configuration
                           </h4>
                           <p className="text-sm text-blue-700 dark:text-blue-300">
-                            Custom connectors use YAML configuration files for maximum flexibility.
-                            After creating the connector, you&apos;ll be redirected to the YAML editor
-                            where you can define your custom integration logic.
+                            Custom connectors use YAML configuration files for
+                            maximum flexibility. After creating the connector,
+                            you&apos;ll be redirected to the YAML editor where
+                            you can define your custom integration logic.
                           </p>
                         </div>
                       </div>
@@ -576,8 +578,8 @@ const ChatbotConnectors = () => {
                     ))
                   )}
                 </Form>
-                
-                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+
+                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     type="reset"
                     color="default"
@@ -614,7 +616,8 @@ const ChatbotConnectors = () => {
               Active Connectors
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {connectors.length} connector{connectors.length === 1 ? '' : 's'} configured
+              {connectors.length} connector{connectors.length === 1 ? "" : "s"}{" "}
+              configured
             </p>
           </div>
           <Button
@@ -676,8 +679,13 @@ const ChatbotConnectors = () => {
               }
             >
               {sortedChatbotConnectors.map((connector) => (
-                <TableRow key={connector.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <TableCell className="px-4 py-4 font-medium">{connector.name}</TableCell>
+                <TableRow
+                  key={connector.id}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                >
+                  <TableCell className="px-4 py-4 font-medium">
+                    {connector.name}
+                  </TableCell>
                   <TableCell className="px-4 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                       {connector.technology}
@@ -694,14 +702,18 @@ const ChatbotConnectors = () => {
                     ) : connector.parameters &&
                       Object.keys(connector.parameters).length > 0 ? (
                       <div className="space-y-1">
-                        {Object.entries(connector.parameters).slice(0, 3).map(
-                          ([key, value]) => (
+                        {Object.entries(connector.parameters)
+                          .slice(0, 3)
+                          .map(([key, value]) => (
                             <div key={key} className="text-sm">
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{key}:</span>{' '}
-                              <span className="text-gray-600 dark:text-gray-400 break-all">{value}</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
+                                {key}:
+                              </span>{" "}
+                              <span className="text-gray-600 dark:text-gray-400 break-all">
+                                {value}
+                              </span>
                             </div>
-                          ),
-                        )}
+                          ))}
                         {Object.keys(connector.parameters).length > 3 && (
                           <div className="text-xs text-gray-500">
                             +{Object.keys(connector.parameters).length - 3} more
@@ -709,7 +721,9 @@ const ChatbotConnectors = () => {
                         )}
                       </div>
                     ) : (
-                      <span className="text-gray-500 italic text-sm">No parameters</span>
+                      <span className="text-gray-500 italic text-sm">
+                        No parameters
+                      </span>
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-4">
@@ -841,8 +855,9 @@ const ChatbotConnectors = () => {
                             Custom YAML Configuration
                           </h4>
                           <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-                            This connector uses a custom YAML configuration file.
-                            Use the button below to edit the configuration in the dedicated editor.
+                            This connector uses a custom YAML configuration
+                            file. Use the button below to edit the configuration
+                            in the dedicated editor.
                           </p>
                           <Button
                             color="primary"
@@ -904,8 +919,8 @@ const ChatbotConnectors = () => {
                     ))
                   )}
                 </Form>
-                
-                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+
+                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     type="reset"
                     color="default"

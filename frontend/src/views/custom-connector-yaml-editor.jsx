@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -19,7 +25,17 @@ import {
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
 } from "lucide-react";
-import { Button, Card, CardBody, Link, Switch, Popover, PopoverTrigger, PopoverContent, Tooltip } from "@heroui/react";
+import {
+  Button,
+  Card,
+  CardBody,
+  Link,
+  Switch,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Tooltip,
+} from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
@@ -32,9 +48,7 @@ import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap } from "@codemirror/search";
-import {
-  customConnectorDocumentationSections,
-} from "../data/custom-connector-documentation";
+import { customConnectorDocumentationSections } from "../data/custom-connector-documentation";
 
 // YAML syntax highlighter for code examples
 const highlightYamlCode = (yaml) => {
@@ -92,7 +106,7 @@ const CodeBlock = ({ code, description }) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy code:', error);
+      console.error("Failed to copy code:", error);
     }
   }, [code]);
 
@@ -101,13 +115,13 @@ const CodeBlock = ({ code, description }) => {
       <CardBody className="p-3">
         <div className="relative group">
           <pre className="text-xs bg-content2 p-3 rounded overflow-x-auto mb-2 border border-default-200">
-            <code 
-              dangerouslySetInnerHTML={{ 
-                __html: highlightYamlCode(code) 
+            <code
+              dangerouslySetInnerHTML={{
+                __html: highlightYamlCode(code),
               }}
             />
           </pre>
-          
+
           {/* Copy button */}
           <Tooltip content={copied ? "Copied!" : "Copy code"}>
             <Button
@@ -126,10 +140,8 @@ const CodeBlock = ({ code, description }) => {
             </Button>
           </Tooltip>
         </div>
-        
-        <p className="text-xs text-foreground-600">
-          {description}
-        </p>
+
+        <p className="text-xs text-foreground-600">{description}</p>
       </CardBody>
     </Card>
   );
@@ -154,18 +166,18 @@ const ScrollableTabs = ({ sections }) => {
     updateScrollButtons();
     const container = tabsContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', updateScrollButtons);
-      window.addEventListener('resize', updateScrollButtons);
-      
+      container.addEventListener("scroll", updateScrollButtons);
+      window.addEventListener("resize", updateScrollButtons);
+
       // Also update when tabs are rendered
       const observer = new ResizeObserver(() => {
         updateScrollButtons();
       });
       observer.observe(container);
-      
+
       return () => {
-        container.removeEventListener('scroll', updateScrollButtons);
-        window.removeEventListener('resize', updateScrollButtons);
+        container.removeEventListener("scroll", updateScrollButtons);
+        window.removeEventListener("resize", updateScrollButtons);
         observer.disconnect();
       };
     }
@@ -180,23 +192,27 @@ const ScrollableTabs = ({ sections }) => {
   const scrollTabs = useCallback((direction) => {
     if (tabsContainerRef.current) {
       const scrollAmount = 250; // Increased scroll amount for better UX
-      const newScrollLeft = direction === 'left' 
-        ? Math.max(0, tabsContainerRef.current.scrollLeft - scrollAmount)
-        : Math.min(
-            tabsContainerRef.current.scrollWidth - tabsContainerRef.current.clientWidth,
-            tabsContainerRef.current.scrollLeft + scrollAmount
-          );
-      
+      const newScrollLeft =
+        direction === "left"
+          ? Math.max(0, tabsContainerRef.current.scrollLeft - scrollAmount)
+          : Math.min(
+              tabsContainerRef.current.scrollWidth -
+                tabsContainerRef.current.clientWidth,
+              tabsContainerRef.current.scrollLeft + scrollAmount,
+            );
+
       tabsContainerRef.current.scrollTo({
         left: newScrollLeft,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
   }, []);
 
   // Filter out the 'Testing Your Configuration' tab
   const filteredSections = Object.fromEntries(
-    Object.entries(sections).filter(([key]) => key !== 'Testing Your Configuration')
+    Object.entries(sections).filter(
+      ([key]) => key !== "Testing Your Configuration",
+    ),
   );
 
   return (
@@ -207,32 +223,32 @@ const ScrollableTabs = ({ sections }) => {
         {canScrollLeft && (
           <div className="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
         )}
-        
+
         {/* Right gradient fade when scrollable */}
         {canScrollRight && (
           <div className="absolute right-8 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
         )}
-        
+
         {canScrollLeft && (
           <Button
             isIconOnly
             size="sm"
             variant="flat"
             className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
-            onPress={() => scrollTabs('left')}
+            onPress={() => scrollTabs("left")}
             aria-label="Scroll tabs left"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
         )}
-        
+
         {canScrollRight && (
           <Button
             isIconOnly
             size="sm"
             variant="flat"
             className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
-            onPress={() => scrollTabs('right')}
+            onPress={() => scrollTabs("right")}
             aria-label="Scroll tabs right"
           >
             <ChevronRightIcon className="w-4 h-4" />
@@ -240,12 +256,12 @@ const ScrollableTabs = ({ sections }) => {
         )}
 
         {/* Scrollable tab headers container - ONLY scrolls the tab navigation */}
-        <div 
+        <div
           ref={tabsContainerRef}
           className="overflow-x-auto"
-          style={{ 
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
         >
           <div className="flex gap-1 border-b border-divider min-w-max">
@@ -254,8 +270,8 @@ const ScrollableTabs = ({ sections }) => {
                 key={sectionName}
                 className={`flex items-center space-x-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === sectionName
-                    ? 'border-primary text-primary font-medium'
-                    : 'border-transparent text-foreground-600 hover:text-foreground hover:border-default-300'
+                    ? "border-primary text-primary font-medium"
+                    : "border-transparent text-foreground-600 hover:text-foreground hover:border-default-300"
                 }`}
                 onClick={() => setActiveTab(sectionName)}
               >
@@ -319,12 +335,18 @@ function CustomConnectorYamlEditor() {
 
   // Persist sidebar state
   useEffect(() => {
-    localStorage.setItem("custom-connector-sidebar-collapsed", JSON.stringify(sidebarCollapsed));
+    localStorage.setItem(
+      "custom-connector-sidebar-collapsed",
+      JSON.stringify(sidebarCollapsed),
+    );
   }, [sidebarCollapsed]);
 
   // Persist autosave setting
   useEffect(() => {
-    localStorage.setItem("custom-connector-autosave-enabled", JSON.stringify(autosaveEnabled));
+    localStorage.setItem(
+      "custom-connector-autosave-enabled",
+      JSON.stringify(autosaveEnabled),
+    );
   }, [autosaveEnabled]);
 
   // Auto-collapse sidebar on mobile
@@ -593,7 +615,12 @@ response_path: "response.text"
 
   // Autosave functionality
   useEffect(() => {
-    if (!hasUnsavedChanges || !autosaveEnabled || connectorId === "new" || isSaving) {
+    if (
+      !hasUnsavedChanges ||
+      !autosaveEnabled ||
+      connectorId === "new" ||
+      isSaving
+    ) {
       return;
     }
 
@@ -612,19 +639,26 @@ response_path: "response.text"
     }, 10_000); // Autosave after 10 seconds of inactivity
 
     return () => clearTimeout(autosaveTimer);
-  }, [hasUnsavedChanges, autosaveEnabled, connectorId, isSaving, handleSave, showToast]);
+  }, [
+    hasUnsavedChanges,
+    autosaveEnabled,
+    connectorId,
+    isSaving,
+    handleSave,
+    showToast,
+  ]);
 
   // Prevent data loss on page leave
   useEffect(() => {
     const handleBeforeUnload = (event) => {
       if (hasUnsavedChanges) {
         event.preventDefault();
-        event.returnValue = '';
+        event.returnValue = "";
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
   // Keyboard shortcut for save (Ctrl+S / Cmd+S)
@@ -753,13 +787,21 @@ response_path: "response.text"
               </Button>
 
               {/* Documentation Toggle */}
-              <Tooltip content={sidebarCollapsed ? "Show Documentation" : "Hide Documentation"}>
+              <Tooltip
+                content={
+                  sidebarCollapsed ? "Show Documentation" : "Hide Documentation"
+                }
+              >
                 <Button
                   variant="flat"
                   size="sm"
                   isIconOnly
                   onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  aria-label={sidebarCollapsed ? "Show Documentation" : "Hide Documentation"}
+                  aria-label={
+                    sidebarCollapsed
+                      ? "Show Documentation"
+                      : "Hide Documentation"
+                  }
                 >
                   <BookOpen className="w-4 h-4" />
                 </Button>
@@ -779,8 +821,10 @@ response_path: "response.text"
                 </PopoverTrigger>
                 <PopoverContent className="w-64">
                   <div className="px-4 py-3">
-                    <h4 className="text-medium font-semibold mb-3">Editor Settings</h4>
-                    
+                    <h4 className="text-medium font-semibold mb-3">
+                      Editor Settings
+                    </h4>
+
                     {/* Font Size Controls */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-3">

@@ -43,15 +43,15 @@ base_url: "https://api.mychatbot.com"`,
     items: [
       {
         code: `response_path: "message"`,
-        description: "Simple path: response[\"message\"]",
+        description: 'Simple path: response["message"]',
       },
       {
         code: `response_path: "data.text"`,
-        description: "Nested path: response[\"data\"][\"text\"]",
+        description: 'Nested path: response["data"]["text"]',
       },
       {
         code: `response_path: "results.0.content"`,
-        description: "Array access: response[\"results\"][0][\"content\"]",
+        description: 'Array access: response["results"][0]["content"]',
       },
     ],
   },
@@ -68,8 +68,7 @@ base_url: "https://api.mychatbot.com"`,
         code: `headers:
   X-API-Key: "your-secret-key"
   User-Agent: "CustomBot/1.0"`,
-        description:
-          "Include any custom headers required by your chatbot API.",
+        description: "Include any custom headers required by your chatbot API.",
       },
     ],
   },
@@ -80,7 +79,8 @@ export const customConnectorDocumentationSections = {
     items: [
       {
         code: 'name: "My Custom Bot"',
-        description: "Friendly name for your chatbot connector (optional but recommended).",
+        description:
+          "Friendly name for your chatbot connector (optional but recommended).",
       },
       {
         code: 'base_url: "https://api.mychatbot.com"',
@@ -94,11 +94,13 @@ export const customConnectorDocumentationSections = {
       {
         code: `payload_template:
   message: "{user_msg}"`,
-        description: "JSON structure defining how to send the user's message to your API.",
+        description:
+          "JSON structure defining how to send the user's message to your API.",
       },
       {
         code: 'response_path: "response.text"',
-        description: "Dot-separated path to extract the bot's reply from the JSON response.",
+        description:
+          "Dot-separated path to extract the bot's reply from the JSON response.",
       },
     ],
   },
@@ -107,7 +109,8 @@ export const customConnectorDocumentationSections = {
       {
         code: `send_message:
   method: "POST"`,
-        description: "HTTP method (POST, GET, PUT, DELETE). Defaults to POST if not specified.",
+        description:
+          "HTTP method (POST, GET, PUT, DELETE). Defaults to POST if not specified.",
       },
       {
         code: `send_message:
@@ -130,7 +133,8 @@ send_message:
   payload_template:
     message: "{user_msg}"
 response_path: "json.message"`,
-        description: "Basic configuration for testing your setup with Postman Echo.",
+        description:
+          "Basic configuration for testing your setup with Postman Echo.",
       },
       {
         code: `# Bot with Authentication
@@ -146,7 +150,8 @@ send_message:
     query: "{user_msg}"
     session_id: "user123"
 response_path: "response.text"`,
-        description: "Configuration with API key authentication and session management.",
+        description:
+          "Configuration with API key authentication and session management.",
       },
       {
         code: `# Complex Nested Response
@@ -160,7 +165,8 @@ send_message:
       text: "{user_msg}"
       context: "general"
 response_path: "data.messages.0.content"`,
-        description: "Advanced configuration with nested payload and response structures.",
+        description:
+          "Advanced configuration with nested payload and response structures.",
       },
     ],
   },
@@ -186,7 +192,8 @@ send_message:
     message:
       text: "{user_msg}"
 response_path: "response.0.text"`,
-        description: "Real example showing integration with MillionBot platform including all required fields.",
+        description:
+          "Real example showing integration with MillionBot platform including all required fields.",
       },
     ],
   },
@@ -198,7 +205,8 @@ response_path: "response.0.text"`,
 bot = CustomChatbot("your-config.yml")
 success, response = bot.execute_with_input("Hello!")
 print(response)`,
-        description: "Quick way to test your YAML configuration in a Python environment.",
+        description:
+          "Quick way to test your YAML configuration in a Python environment.",
       },
       {
         code: `# Use with ChatbotFactory
@@ -217,13 +225,15 @@ payload_template:
   message: "{user_msg}"
   user_id: "unique_user_id"
   timestamp: "{{current_time}}"`,
-        description: "Standard REST API pattern with user identification and timestamps.",
+        description:
+          "Standard REST API pattern with user identification and timestamps.",
       },
       {
         code: `# GraphQL-style API
 payload_template:
   query: "mutation { sendMessage(input: \\"{user_msg}\\") { response } }"`,
-        description: "GraphQL mutation pattern for APIs that use GraphQL queries.",
+        description:
+          "GraphQL mutation pattern for APIs that use GraphQL queries.",
       },
       {
         code: `# Multi-part responses
