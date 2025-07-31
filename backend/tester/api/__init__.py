@@ -72,6 +72,8 @@ __all__ = [
     "delete_profile_execution",
     "fetch_file_content",
     "generate_profiles",
+    "get_available_connectors",
+    "get_connector_parameters",
     "get_profile_executions",
     "get_technology_choices",
     "get_tracer_analysis_report",

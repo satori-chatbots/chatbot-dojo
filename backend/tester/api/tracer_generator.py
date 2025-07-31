@@ -1,5 +1,6 @@
 """TRACER profile generation core functionality."""
 
+import json
 import os
 import re
 import shlex
@@ -319,7 +320,8 @@ class TracerGenerator:
         connector = project.chatbot_connector
 
         if not connector:
-            raise ValueError("Project does not have a chatbot connector configured")
+            msg = "Project does not have a chatbot connector configured"
+            raise ValueError(msg)
 
         # Extract technology and parameters from the connector
         technology = connector.technology
@@ -328,11 +330,17 @@ class TracerGenerator:
         exploration_model = project.llm_model or "gpt-4o-mini"
         profile_model = project.profile_model or None  # None if not set
 
-        cmd = self._build_tracer_command(
-            params, technology, connector_params, exploration_model, profile_model, output_dir
-        )
+        config = {
+            "technology": technology,
+            "connector_params": connector_params,
+            "exploration_model": exploration_model,
+            "profile_model": profile_model,
+            "output_dir": output_dir,
+        }
 
-        env = self._prepare_environment(params.api_key, project.llm_provider)
+        cmd = self._build_tracer_command(params, config)
+
+        env = self._prepare_environment(params.api_key, project.llm_provider or "")
 
         return self._execute_subprocess(task, execution, cmd, env, celery_task)
 
@@ -342,21 +350,28 @@ class TracerGenerator:
             # For custom connectors, we need to pass the config file path
             if connector.custom_config_file:
                 return f"config_path={connector.custom_config_file.path}"
-            raise ValueError("Custom connector must have a configuration file")
+            msg = "Custom connector must have a configuration file"
+            raise ValueError(msg)
         # For other connectors, use the JSON parameters
         return connector.parameters or {}
 
     def _build_tracer_command(
         self,
         params: ProfileGenerationParams,
-        technology: str,
-        connector_params: dict[str, Any] | str,
-        exploration_model: str,
-        profile_model: str | None,
-        output_dir: Path,
+        config: dict[str, Any],
     ) -> list[str]:
-        """Build the TRACER command with all parameters."""
-        import json
+        """Build the TRACER command with all parameters.
+
+        Args:
+            params: Profile generation parameters
+            config: Configuration dict containing technology, connector_params,
+                   exploration_model, profile_model, and output_dir
+        """
+        technology = config["technology"]
+        connector_params = config["connector_params"]
+        exploration_model = config["exploration_model"]
+        profile_model = config["profile_model"]
+        output_dir = config["output_dir"]
 
         cmd = [
             "tracer",
