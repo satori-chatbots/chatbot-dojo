@@ -135,6 +135,18 @@ response_path: "response.text"
           setConnectorName(newConnector.name);
         }
 
+        // Check if YAML has validation errors
+        let hasValidationErrors = false;
+        try {
+          yamlLoad(content);
+        } catch (error) {
+          hasValidationErrors = true;
+          console.warn(
+            "YAML has validation errors, but saving anyway:",
+            error.message,
+          );
+        }
+
         // Save connector YAML configuration
         const response = await apiClient(
           `${ENDPOINTS.CHATBOTCONNECTOR}${targetConnectorId}/config/`,
@@ -142,15 +154,23 @@ response_path: "response.text"
             method: "PUT",
             body: JSON.stringify({
               content: content,
+              ignore_validation_errors: hasValidationErrors,
             }),
           },
         );
 
         if (response.ok) {
+          const responseData = await response.json();
+          const hasServerValidationErrors =
+            responseData.validation_errors &&
+            responseData.validation_errors.length > 0;
+
           showToast({
             title: "Success",
-            description: "Custom connector configuration saved successfully!",
-            status: "success",
+            description: hasServerValidationErrors
+              ? "Custom connector configuration saved with validation errors"
+              : "Custom connector configuration saved successfully!",
+            status: hasServerValidationErrors ? "warning" : "success",
           });
 
           if (connectorId === "new") {

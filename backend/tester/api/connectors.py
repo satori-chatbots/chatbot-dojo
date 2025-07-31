@@ -184,15 +184,24 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
     def _handle_put_config(self, request: Request, connector: ChatbotConnector) -> Response:
         """Handle PUT request for configuration."""
         content = request.data.get("content", "")
+        ignore_validation_errors = request.data.get("ignore_validation_errors", False)
 
-        # Validate YAML syntax
-        try:
-            yaml.safe_load(content)
-        except yaml.YAMLError as e:
-            return Response(
-                {"error": f"Invalid YAML syntax: {e!s}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Validate YAML syntax unless explicitly ignoring validation errors
+        validation_errors = []
+        if not ignore_validation_errors:
+            try:
+                yaml.safe_load(content)
+            except yaml.YAMLError as e:
+                return Response(
+                    {"error": f"Invalid YAML syntax: {e!s}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            # Still collect validation errors for informational purposes
+            try:
+                yaml.safe_load(content)
+            except yaml.YAMLError as e:
+                validation_errors.append(f"YAML syntax error: {e!s}")
 
         # Save the configuration to a file
         try:
@@ -207,9 +216,14 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
             connector.custom_config_file.save(file_name, file_content)
             connector.save()
 
-            return Response(
-                {"message": "Configuration updated successfully", "id": connector.id}, status=status.HTTP_200_OK
-            )
+            response_data = {"message": "Configuration updated successfully", "id": connector.id}
+
+            # Include validation errors in response if any were found
+            if validation_errors:
+                response_data["validation_errors"] = validation_errors
+                response_data["message"] = "Configuration saved with validation errors"
+
+            return Response(response_data, status=status.HTTP_200_OK)
 
         except OSError as e:
             return Response(
