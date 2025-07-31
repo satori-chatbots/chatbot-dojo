@@ -23,7 +23,14 @@ export const useYamlEditor = ({
 }) => {
   // Editor state
   const [editorContent, setEditorContent] = useState(initialContent);
-  const [fontSize, setFontSize] = useState(14);
+  const [fontSize, setFontSize] = useState(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      // Use a global font size key that's shared across all YAML editors
+      const saved = globalThis.localStorage.getItem(`yamlEditorGlobalFontSize`);
+      return saved ? JSON.parse(saved) : 14;
+    }
+    return 14;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -97,6 +104,17 @@ export const useYamlEditor = ({
       );
     }
   }, [autosaveEnabled, storageKey]);
+
+  // Persist font size
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      // Use a global font size key that's shared across all YAML editors
+      localStorage.setItem(
+        `yamlEditorGlobalFontSize`,
+        JSON.stringify(fontSize),
+      );
+    }
+  }, [fontSize]); // Remove storageKey dependency since we're using a global key
 
   // Auto-collapse sidebar on mobile
   useEffect(() => {
