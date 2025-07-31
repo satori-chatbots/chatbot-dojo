@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Button,
   Input,
@@ -34,6 +34,36 @@ import { Plus, RotateCcw, Edit, Trash, Save } from "lucide-react";
 import SetupProgress from "../components/setup-progress";
 import { useSetup } from "../contexts/setup-context";
 
+// Helper function to save cache to sessionStorage with timestamp
+const saveCacheToStorage = (cache) => {
+  try {
+    const cacheWithTimestamp = {};
+    for (const [key, value] of cache) {
+      cacheWithTimestamp[key] = {
+        data: value,
+        timestamp: Date.now(),
+      };
+    }
+    sessionStorage.setItem(
+      "connectorParametersCache",
+      JSON.stringify(cacheWithTimestamp),
+    );
+  } catch (error) {
+    console.warn("Failed to save parameters cache:", error);
+  }
+};
+
+// Helper function to check if cache entry is expired (1 hour)
+const isCacheExpired = (timestamp, maxAge = 60 * 60 * 1000) => {
+  return Date.now() - timestamp > maxAge;
+};
+
+// Helper function to clear the parameters cache
+const clearParametersCache = (setParametersCache) => {
+  setParametersCache(new Map());
+  sessionStorage.removeItem("connectorParametersCache");
+};
+
 const ChatbotConnectors = () => {
   const { reloadConnectors } = useSetup();
   const [editData, setEditData] = useState({
@@ -44,6 +74,64 @@ const ChatbotConnectors = () => {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Cache for connector parameters with automatic expiration
+  const [parametersCache, setParametersCache] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("connectorParametersCache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const cache = new Map();
+
+        for (const [key, value] of Object.entries(parsed)) {
+          if (value.timestamp && !isCacheExpired(value.timestamp)) {
+            cache.set(key, value.data);
+          }
+        }
+
+        return cache;
+      }
+    } catch (error) {
+      console.warn("Failed to restore parameters cache:", error);
+    }
+    return new Map();
+  });
+
+  // Prefetch parameters for all available connectors in the background
+  const prefetchAllParameters = useCallback(
+    async (connectors) => {
+      if (!connectors || connectors.length === 0) return;
+
+      const uncachedConnectors = connectors.filter(
+        (connector) => !parametersCache.has(connector.name),
+      );
+
+      if (uncachedConnectors.length === 0) {
+        return;
+      }
+
+      const prefetchPromises = uncachedConnectors.map(async (connector) => {
+        try {
+          const paramData = await fetchConnectorParameters(connector.name);
+          const parameters = paramData.parameters || [];
+
+          setParametersCache((prev) => {
+            const newCache = new Map(prev.set(connector.name, parameters));
+            saveCacheToStorage(newCache);
+            return newCache;
+          });
+        } catch (error) {
+          console.warn(
+            `Failed to prefetch parameters for ${connector.name}:`,
+            error,
+          );
+        }
+      });
+
+      await Promise.all(prefetchPromises);
+    },
+    [parametersCache],
+  );
 
   // Function to open edit modal
   const handleEdit = (tech) => {
@@ -107,23 +195,32 @@ const ChatbotConnectors = () => {
     return true;
   }, [editData, currentParameters]);
 
-  // Load available connector parameters when technology changes
+  // Load parameters for the selected technology
   const loadParametersForTechnology = async (technology) => {
     if (!technology) {
       setCurrentParameters([]);
       return;
     }
 
-    setLoadingValidation(true); // Show loading state while fetching parameters
+    // Use cached parameters if available
+    if (parametersCache.has(technology)) {
+      setCurrentParameters(parametersCache.get(technology));
+      return;
+    }
+
+    setLoadingValidation(true);
     try {
       const paramData = await fetchConnectorParameters(technology);
-      setCurrentParameters(paramData.parameters || []);
+      const parameters = paramData.parameters || [];
+
+      setParametersCache((prev) => {
+        const newCache = new Map(prev.set(technology, parameters));
+        saveCacheToStorage(newCache);
+        return newCache;
+      });
+      setCurrentParameters(parameters);
     } catch (error) {
-      console.error(
-        "Error loading parameters for technology:",
-        technology,
-        error,
-      );
+      console.error("Error loading parameters:", error);
       setCurrentParameters([]);
     } finally {
       setLoadingValidation(false);
@@ -133,28 +230,40 @@ const ChatbotConnectors = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load connectors
-        const data = await fetchChatbotConnectors();
-        setConnectors(data);
+        // Load both API endpoints in parallel for better performance
+        const [connectorsData, availableConnectorsData] =
+          await Promise.allSettled([
+            fetchChatbotConnectors(),
+            fetchAvailableConnectors(),
+          ]);
 
-        // Load available connectors from TRACER
-        try {
-          const connectors = await fetchAvailableConnectors();
+        if (connectorsData.status === "fulfilled") {
+          setConnectors(connectorsData.value);
+        } else {
+          console.error("Error loading connectors:", connectorsData.reason);
+        }
+
+        if (availableConnectorsData.status === "fulfilled") {
+          const connectors = availableConnectorsData.value;
           setAvailableConnectors(connectors);
 
-          // Don't auto-select the first connector - let user choose
-          // Just initialize with empty technology
           setFormData((previous) => ({
             ...previous,
             technology: "",
             parameters: {},
           }));
-        } catch (error) {
+
+          // Start background prefetching after a short delay
+          if (connectors && connectors.length > 0) {
+            setTimeout(() => {
+              prefetchAllParameters(connectors);
+            }, 100);
+          }
+        } else {
           console.error(
             "Error loading available connectors from TRACER:",
-            error,
+            availableConnectorsData.reason,
           );
-          // Fallback to empty list if TRACER is not available
           setAvailableConnectors([]);
         }
       } catch (error) {
@@ -165,7 +274,7 @@ const ChatbotConnectors = () => {
     };
 
     loadData();
-  }, []);
+  }, [prefetchAllParameters]);
 
   const loadConnectors = async () => {
     try {
@@ -173,25 +282,6 @@ const ChatbotConnectors = () => {
       setConnectors(data);
     } catch (error) {
       console.error("Error fetching chatbot connectors:", error);
-    }
-  };
-
-  const loadAvailableConnectors = async () => {
-    try {
-      const connectors = await fetchAvailableConnectors();
-      setAvailableConnectors(connectors);
-      // Set initial selection to first available connector
-      if (connectors.length > 0) {
-        const firstConnector = connectors[0].name;
-        setFormData((previous) => ({
-          ...previous,
-          technology: firstConnector,
-        }));
-        // Load parameters for the first connector
-        loadParametersForTechnology(firstConnector);
-      }
-    } catch (error) {
-      console.error("Error fetching available connectors:", error);
     }
   };
 
@@ -303,9 +393,11 @@ const ChatbotConnectors = () => {
     });
     setCurrentParameters([]);
     setValidationErrors({});
+    // Clear cache to get fresh data when user resets the form
+    clearParametersCache(setParametersCache);
   };
 
-  // Handle the reset of the edit form so it clears the data
+  // Handle the reset of the edit form
   const handleEditFormReset = () => {
     setEditData({
       name: "",
@@ -313,6 +405,8 @@ const ChatbotConnectors = () => {
       parameters: {},
     });
     setValidationErrors({});
+    // Clear cache to get fresh data when user resets the form
+    clearParametersCache(setParametersCache);
   };
 
   // Update connector
