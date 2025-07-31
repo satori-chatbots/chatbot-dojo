@@ -176,6 +176,11 @@ const ScrollableTabs = ({ sections }) => {
     }
   }, []);
 
+  // Filter out the 'Testing Your Configuration' tab
+  const filteredSections = Object.fromEntries(
+    Object.entries(sections).filter(([sectionName]) => sectionName !== "Testing Your Configuration")
+  );
+
   return (
     <div className="w-full">
       {/* Tab navigation with scroll arrows */}
@@ -232,7 +237,7 @@ const ScrollableTabs = ({ sections }) => {
               tabContent: "group-data-[selected=true]:text-primary whitespace-nowrap"
             }}
           >
-            {Object.entries(sections).map(([sectionName, section]) => (
+            {Object.entries(filteredSections).map(([sectionName, section]) => (
               <Tab
                 key={sectionName}
                 title={
