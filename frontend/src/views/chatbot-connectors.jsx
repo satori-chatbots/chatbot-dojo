@@ -75,6 +75,38 @@ const ChatbotConnectors = () => {
   // State for the original name
   const [originalName, setOriginalName] = useState("");
 
+  // Check if form is valid for submission
+  const isFormValid = useMemo(() => {
+    if (!formData.name || formData.name.trim() === "") return false;
+    if (!formData.technology) return false;
+
+    // Check required parameters
+    for (const param of currentParameters) {
+      if (param.required) {
+        const value = formData.parameters?.[param.name];
+        if (!value || value.toString().trim() === "") return false;
+      }
+    }
+
+    return true;
+  }, [formData, currentParameters]);
+
+  // Check if edit form is valid for submission
+  const isEditFormValid = useMemo(() => {
+    if (!editData.name || editData.name.trim() === "") return false;
+    if (!editData.technology) return false;
+
+    // Check required parameters
+    for (const param of currentParameters) {
+      if (param.required) {
+        const value = editData.parameters?.[param.name];
+        if (!value || value.toString().trim() === "") return false;
+      }
+    }
+
+    return true;
+  }, [editData, currentParameters]);
+
   // Load available connector parameters when technology changes
   const loadParametersForTechnology = async (technology) => {
     if (!technology) {
@@ -82,6 +114,7 @@ const ChatbotConnectors = () => {
       return;
     }
 
+    setLoadingValidation(true); // Show loading state while fetching parameters
     try {
       const paramData = await fetchConnectorParameters(technology);
       setCurrentParameters(paramData.parameters || []);
@@ -92,6 +125,8 @@ const ChatbotConnectors = () => {
         error,
       );
       setCurrentParameters([]);
+    } finally {
+      setLoadingValidation(false);
     }
   };
 
@@ -107,16 +142,13 @@ const ChatbotConnectors = () => {
           const connectors = await fetchAvailableConnectors();
           setAvailableConnectors(connectors);
 
-          // Set initial selection to first available connector
-          if (connectors.length > 0) {
-            const firstConnector = connectors[0].name;
-            setFormData((previous) => ({
-              ...previous,
-              technology: firstConnector,
-            }));
-            // Load parameters for the first connector
-            loadParametersForTechnology(firstConnector);
-          }
+          // Don't auto-select the first connector - let user choose
+          // Just initialize with empty technology
+          setFormData((previous) => ({
+            ...previous,
+            technology: "",
+            parameters: {},
+          }));
         } catch (error) {
           console.error(
             "Error loading available connectors from TRACER:",
@@ -168,15 +200,37 @@ const ChatbotConnectors = () => {
     event.preventDefault();
     setLoadingValidation(true);
 
+    const errors = {};
+
     try {
+      // Basic validation
+      if (!data.name || data.name.trim() === "") {
+        errors.name = "Name is required";
+      }
+
       // Technology check
       if (!data.technology) {
-        alert("Please select a technology");
+        errors.technology = "Please select a technology";
+      }
+
+      // Validate required parameters
+      for (const param of currentParameters) {
+        if (param.required) {
+          const value = data.parameters?.[param.name];
+          if (!value || value.toString().trim() === "") {
+            errors[`parameters.${param.name}`] = `${param.name} is required`;
+          }
+        }
+      }
+
+      // If there are validation errors, show them and don't proceed
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
         setLoadingValidation(false);
         return false;
       }
 
-      // Skip check only if the user truly didn't change their name
+      // Skip server-side name check only if the user truly didn't change their name
       if (oldName && data.name === oldName) {
         console.log(
           "Skipping validation for name, name:",
@@ -189,7 +243,7 @@ const ChatbotConnectors = () => {
         return true;
       }
 
-      // Otherwise, check if the name exists
+      // Otherwise, check if the name exists on the server
       const existsResponse = await checkChatbotConnectorName(data.name);
       if (existsResponse.exists) {
         setValidationErrors({ name: "Name already exists" });
@@ -202,7 +256,9 @@ const ChatbotConnectors = () => {
       return true;
     } catch (error) {
       console.error("Validation error:", error);
-      alert("An error occurred during validation. Please try again.");
+      setValidationErrors({
+        general: "An error occurred during validation. Please try again.",
+      });
       setLoadingValidation(false);
       return false;
     }
@@ -242,9 +298,10 @@ const ChatbotConnectors = () => {
   const handleFormReset = () => {
     setFormData({
       name: "",
-      technology: availableConnectors[0]?.name || "",
+      technology: "",
       parameters: {},
     });
+    setCurrentParameters([]);
     setValidationErrors({});
   };
 
@@ -415,8 +472,14 @@ const ChatbotConnectors = () => {
                         technology: selectedValue,
                         parameters: {}, // Reset parameters when technology changes
                       }));
+                      // Clear any validation errors when technology changes
+                      setValidationErrors({});
                       // Load parameters for the selected technology
-                      loadParametersForTechnology(selectedValue);
+                      if (selectedValue) {
+                        loadParametersForTechnology(selectedValue);
+                      } else {
+                        setCurrentParameters([]);
+                      }
                     }}
                     fullWidth
                   >
@@ -434,34 +497,45 @@ const ChatbotConnectors = () => {
                   </Select>
 
                   {/* Dynamic parameter fields */}
-                  {currentParameters.map((param) => (
-                    <Input
-                      key={param.name}
-                      isRequired={param.required}
-                      isDisabled={loadingValidation}
-                      label={`${param.name} ${param.required ? "*" : ""}`}
-                      labelPlacement="outside"
-                      placeholder={param.description}
-                      value={
-                        formData.parameters[param.name] || param.default || ""
-                      }
-                      isInvalid={!!validationErrors[`parameters.${param.name}`]}
-                      errorMessage={
-                        validationErrors[`parameters.${param.name}`]
-                      }
-                      onValueChange={(value) => {
-                        setFormData((previous) => ({
-                          ...previous,
-                          parameters: {
-                            ...previous.parameters,
-                            [param.name]: value,
-                          },
-                        }));
-                      }}
-                      fullWidth
-                      type={param.type === "integer" ? "number" : "text"}
-                    />
-                  ))}
+                  {loadingValidation && formData.technology ? (
+                    <div className="flex justify-center items-center py-4">
+                      <Spinner size="sm" />
+                      <span className="ml-2 text-sm text-gray-600">
+                        Loading parameters...
+                      </span>
+                    </div>
+                  ) : (
+                    currentParameters.map((param) => (
+                      <Input
+                        key={param.name}
+                        isRequired={param.required}
+                        isDisabled={loadingValidation}
+                        label={param.name}
+                        labelPlacement="outside"
+                        placeholder={param.description}
+                        value={
+                          formData.parameters[param.name] || param.default || ""
+                        }
+                        isInvalid={
+                          !!validationErrors[`parameters.${param.name}`]
+                        }
+                        errorMessage={
+                          validationErrors[`parameters.${param.name}`]
+                        }
+                        onValueChange={(value) => {
+                          setFormData((previous) => ({
+                            ...previous,
+                            parameters: {
+                              ...previous.parameters,
+                              [param.name]: value,
+                            },
+                          }));
+                        }}
+                        fullWidth
+                        type={param.type === "integer" ? "number" : "text"}
+                      />
+                    ))
+                  )}
 
                   <ModalFooter className="w-full flex justify-center gap-4">
                     <Button
@@ -475,7 +549,11 @@ const ChatbotConnectors = () => {
                     <Button
                       type="submit"
                       color="primary"
-                      startContent={<Plus className="w-4 h-4 mr-1" />}
+                      isDisabled={!isFormValid || loadingValidation}
+                      isLoading={loadingValidation}
+                      startContent={
+                        !loadingValidation && <Plus className="w-4 h-4 mr-1" />
+                      }
                     >
                       Create
                     </Button>
@@ -560,7 +638,17 @@ const ChatbotConnectors = () => {
       {/* Button to open modal */}
       <Button
         color="primary"
-        onPress={onOpen}
+        onPress={() => {
+          // Reset form when opening modal
+          setFormData({
+            name: "",
+            technology: "",
+            parameters: {},
+          });
+          setCurrentParameters([]);
+          setValidationErrors({});
+          onOpen();
+        }}
         className="w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
         startContent={<Plus className="w-4 h-4 mr-1" />}
       >
@@ -626,8 +714,14 @@ const ChatbotConnectors = () => {
                         technology: selectedValue,
                         parameters: previous.parameters || {}, // Preserve existing parameters
                       }));
+                      // Clear any validation errors when technology changes
+                      setValidationErrors({});
                       // Load parameters for the selected technology
-                      loadParametersForTechnology(selectedValue);
+                      if (selectedValue) {
+                        loadParametersForTechnology(selectedValue);
+                      } else {
+                        setCurrentParameters([]);
+                      }
                     }}
                   >
                     {availableConnectors.length === 0 ? (
@@ -644,34 +738,47 @@ const ChatbotConnectors = () => {
                   </Select>
 
                   {/* Dynamic parameter fields for edit */}
-                  {currentParameters.map((param) => (
-                    <Input
-                      key={param.name}
-                      isRequired={param.required}
-                      isDisabled={loadingValidation}
-                      label={`${param.name} ${param.required ? "*" : ""}`}
-                      labelPlacement="outside"
-                      placeholder={param.description}
-                      value={
-                        editData.parameters?.[param.name] || param.default || ""
-                      }
-                      isInvalid={!!validationErrors[`parameters.${param.name}`]}
-                      errorMessage={
-                        validationErrors[`parameters.${param.name}`]
-                      }
-                      onValueChange={(value) => {
-                        setEditData((previous) => ({
-                          ...previous,
-                          parameters: {
-                            ...previous.parameters,
-                            [param.name]: value,
-                          },
-                        }));
-                      }}
-                      fullWidth
-                      type={param.type === "integer" ? "number" : "text"}
-                    />
-                  ))}
+                  {loadingValidation && editData.technology ? (
+                    <div className="flex justify-center items-center py-4">
+                      <Spinner size="sm" />
+                      <span className="ml-2 text-sm text-gray-600">
+                        Loading parameters...
+                      </span>
+                    </div>
+                  ) : (
+                    currentParameters.map((param) => (
+                      <Input
+                        key={param.name}
+                        isRequired={param.required}
+                        isDisabled={loadingValidation}
+                        label={param.name}
+                        labelPlacement="outside"
+                        placeholder={param.description}
+                        value={
+                          editData.parameters?.[param.name] ||
+                          param.default ||
+                          ""
+                        }
+                        isInvalid={
+                          !!validationErrors[`parameters.${param.name}`]
+                        }
+                        errorMessage={
+                          validationErrors[`parameters.${param.name}`]
+                        }
+                        onValueChange={(value) => {
+                          setEditData((previous) => ({
+                            ...previous,
+                            parameters: {
+                              ...previous.parameters,
+                              [param.name]: value,
+                            },
+                          }));
+                        }}
+                        fullWidth
+                        type={param.type === "integer" ? "number" : "text"}
+                      />
+                    ))
+                  )}
                   <ModalFooter className="w-full flex justify-center gap-4">
                     <Button
                       type="reset"
@@ -684,7 +791,11 @@ const ChatbotConnectors = () => {
                     <Button
                       type="submit"
                       color="primary"
-                      startContent={<Save className="w-4 h-4 mr-1" />}
+                      isDisabled={!isEditFormValid || loadingValidation}
+                      isLoading={loadingValidation}
+                      startContent={
+                        !loadingValidation && <Save className="w-4 h-4 mr-1" />
+                      }
                     >
                       Save
                     </Button>
