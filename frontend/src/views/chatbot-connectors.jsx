@@ -199,7 +199,9 @@ const ChatbotConnectors = () => {
 
   // Handle validation of the form for both edit and create
   const handleValidation = async (event, data, oldName = "") => {
-    event.preventDefault();
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
     setLoadingValidation(true);
 
     const errors = {};
@@ -268,7 +270,9 @@ const ChatbotConnectors = () => {
 
   // Called after the form is submitted
   const handleFormSubmit = async (event) => {
-    event.preventDefault();
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
 
     const data = formData;
 
@@ -326,7 +330,9 @@ const ChatbotConnectors = () => {
 
   // Update connector
   const handleUpdate = async (event) => {
-    event.preventDefault();
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
     const data = {
       name: editData.name,
       technology: editData.technology,
