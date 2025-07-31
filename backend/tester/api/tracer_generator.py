@@ -45,7 +45,7 @@ from tester.api.base import logger
 
 # Import here to avoid circular imports in runtime, but linter prefers top-level
 from tester.api.tracer_parser import TracerResultsProcessor
-from tester.models import ProfileExecution, ProfileGenerationTask, Project
+from tester.models import ChatbotConnector, ProfileExecution, ProfileGenerationTask, Project
 
 # Mapping of TRACER exceptions to error type codes for the database
 TRACER_EXCEPTION_MAPPING = {
@@ -323,7 +323,7 @@ class TracerGenerator:
 
         # Extract technology and parameters from the connector
         technology = connector.technology
-        connector_params = connector.parameters or {}
+        connector_params = self._prepare_connector_params(connector)
 
         exploration_model = project.llm_model or "gpt-4o-mini"
         profile_model = project.profile_model or None  # None if not set
@@ -336,11 +336,21 @@ class TracerGenerator:
 
         return self._execute_subprocess(task, execution, cmd, env, celery_task)
 
+    def _prepare_connector_params(self, connector: "ChatbotConnector") -> dict[str, Any] | str:
+        """Prepare connector parameters based on the technology type."""
+        if connector.technology == "custom":
+            # For custom connectors, we need to pass the config file path
+            if connector.custom_config_file:
+                return f"config_path={connector.custom_config_file.path}"
+            raise ValueError("Custom connector must have a configuration file")
+        # For other connectors, use the JSON parameters
+        return connector.parameters or {}
+
     def _build_tracer_command(
         self,
         params: ProfileGenerationParams,
         technology: str,
-        connector_params: dict,
+        connector_params: dict[str, Any] | str,
         exploration_model: str,
         profile_model: str | None,
         output_dir: Path,
@@ -357,10 +367,18 @@ class TracerGenerator:
             "--technology",
             technology,
             "--connector-params",
-            json.dumps(connector_params),
-            "-m",
-            exploration_model,
         ]
+
+        # Handle connector_params based on type
+        if isinstance(connector_params, str):
+            # For custom connectors, connector_params is a string like "config_path=./path"
+            cmd.append(connector_params)
+        else:
+            # For other connectors, connector_params is a dict that should be JSON-encoded
+            cmd.append(json.dumps(connector_params))
+
+        cmd.extend(["-m", exploration_model])
+
         if profile_model:
             cmd.extend(["-pm", profile_model])
         cmd.extend(
