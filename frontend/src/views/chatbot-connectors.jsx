@@ -7,7 +7,6 @@ import {
   SelectItem,
   Modal,
   ModalContent,
-  ModalFooter,
   ModalBody,
   ModalHeader,
   useDisclosure,
@@ -576,31 +575,30 @@ const ChatbotConnectors = () => {
                       />
                     ))
                   )}
-
-                  <ModalFooter className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-                    <div className="flex justify-end gap-3 w-full">
-                      <Button
-                        type="reset"
-                        color="default"
-                        variant="bordered"
-                        startContent={<RotateCcw className="w-4 h-4" />}
-                      >
-                        Reset
-                      </Button>
-                      <Button
-                        type="submit"
-                        color="primary"
-                        isDisabled={!isFormValid || loadingValidation}
-                        isLoading={loadingValidation}
-                        startContent={
-                          !loadingValidation && <Plus className="w-4 h-4" />
-                        }
-                      >
-                        Create Connector
-                      </Button>
-                    </div>
-                  </ModalFooter>
                 </Form>
+                
+                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <Button
+                    type="reset"
+                    color="default"
+                    variant="bordered"
+                    startContent={<RotateCcw className="w-4 h-4" />}
+                    onPress={handleFormReset}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    color="primary"
+                    isDisabled={!isFormValid || loadingValidation}
+                    isLoading={loadingValidation}
+                    startContent={
+                      !loadingValidation && <Plus className="w-4 h-4" />
+                    }
+                    onPress={handleFormSubmit}
+                  >
+                    Create Connector
+                  </Button>
+                </div>
               </ModalBody>
             </>
           )}
@@ -905,30 +903,30 @@ const ChatbotConnectors = () => {
                       />
                     ))
                   )}
-                  <ModalFooter className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-                    <div className="flex justify-end gap-3 w-full">
-                      <Button
-                        type="reset"
-                        color="default"
-                        variant="bordered"
-                        startContent={<RotateCcw className="w-4 h-4" />}
-                      >
-                        Reset
-                      </Button>
-                      <Button
-                        type="submit"
-                        color="primary"
-                        isDisabled={!isEditFormValid || loadingValidation}
-                        isLoading={loadingValidation}
-                        startContent={
-                          !loadingValidation && <Save className="w-4 h-4" />
-                        }
-                      >
-                        Save Changes
-                      </Button>
-                    </div>
-                  </ModalFooter>
                 </Form>
+                
+                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <Button
+                    type="reset"
+                    color="default"
+                    variant="bordered"
+                    startContent={<RotateCcw className="w-4 h-4" />}
+                    onPress={handleEditFormReset}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    color="primary"
+                    isDisabled={!isEditFormValid || loadingValidation}
+                    isLoading={loadingValidation}
+                    startContent={
+                      !loadingValidation && <Save className="w-4 h-4" />
+                    }
+                    onPress={handleUpdate}
+                  >
+                    Save Changes
+                  </Button>
+                </div>
               </ModalBody>
             </>
           )}
