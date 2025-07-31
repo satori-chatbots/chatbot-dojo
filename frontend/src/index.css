@@ -86,4 +86,14 @@
   .dark .project-dropdown-btn:hover {
     color: rgb(var(--foreground-dark));
   }
+
+  /* Hide scrollbars for documentation tabs */
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
 }

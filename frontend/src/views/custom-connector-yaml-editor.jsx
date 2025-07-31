@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -14,6 +14,10 @@ import {
   ExternalLink,
   BookOpen,
   Settings,
+  Copy,
+  Check,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 import { Button, Card, CardBody, Tabs, Tab, Link, Switch, Popover, PopoverTrigger, PopoverContent, Tooltip } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
@@ -31,6 +35,232 @@ import { searchKeymap } from "@codemirror/search";
 import {
   customConnectorDocumentationSections,
 } from "../data/custom-connector-documentation";
+
+// YAML syntax highlighter for code examples
+const highlightYamlCode = (yaml) => {
+  let highlighted = yaml
+    // Comments
+    .replaceAll(
+      /(#.*$)/gm,
+      '<span class="text-success-600 dark:text-success-400">$1</span>',
+    )
+    // Keys (before colon)
+    .replaceAll(
+      /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:/gm,
+      '$1<span class="text-primary-600 dark:text-primary-400 font-semibold">$2</span>:',
+    )
+    // String values (quoted)
+    .replaceAll(
+      /:\s*["']([^"']*?)["']/g,
+      ': <span class="text-warning-600 dark:text-warning-400">"$1"</span>',
+    )
+    // URLs and placeholders
+    .replaceAll(
+      /(https?:\/\/[^\s]+)/g,
+      '<span class="text-secondary-600 dark:text-secondary-400 underline">$1</span>',
+    )
+    .replaceAll(
+      /(\{[^}]+\})/g,
+      '<span class="text-danger-600 dark:text-danger-400 font-medium">$1</span>',
+    )
+    // Numbers
+    .replaceAll(
+      /:\s*(\d+\.?\d*)\s*$/gm,
+      ': <span class="text-secondary-600 dark:text-secondary-400">$1</span>',
+    )
+    // Booleans
+    .replaceAll(
+      /:\s*(true|false)\s*$/gm,
+      ': <span class="text-danger-600 dark:text-danger-400">$1</span>',
+    )
+    // Array items
+    .replaceAll(
+      /^(\s*)-\s+/gm,
+      '$1<span class="text-default-600 dark:text-default-400">-</span> ',
+    );
+
+  return highlighted;
+};
+
+// Code block component with syntax highlighting and copy functionality
+const CodeBlock = ({ code, description }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy code:', error);
+    }
+  }, [code]);
+
+  return (
+    <Card className="border border-border">
+      <CardBody className="p-3">
+        <div className="relative group">
+          <pre className="text-xs bg-content2 p-3 rounded overflow-x-auto mb-2 border border-default-200">
+            <code 
+              dangerouslySetInnerHTML={{ 
+                __html: highlightYamlCode(code) 
+              }}
+            />
+          </pre>
+          
+          {/* Copy button */}
+          <Tooltip content={copied ? "Copied!" : "Copy code"}>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="flat"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              onPress={handleCopy}
+              aria-label="Copy code"
+            >
+              {copied ? (
+                <Check className="w-3 h-3 text-success" />
+              ) : (
+                <Copy className="w-3 h-3" />
+              )}
+            </Button>
+          </Tooltip>
+        </div>
+        
+        <p className="text-xs text-foreground-600">
+          {description}
+        </p>
+      </CardBody>
+    </Card>
+  );
+};
+
+// Scrollable tabs component
+const ScrollableTabs = ({ sections }) => {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const tabsContainerRef = useRef(null);
+
+  const updateScrollButtons = useCallback(() => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateScrollButtons();
+    const container = tabsContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', updateScrollButtons);
+      window.addEventListener('resize', updateScrollButtons);
+      return () => {
+        container.removeEventListener('scroll', updateScrollButtons);
+        window.removeEventListener('resize', updateScrollButtons);
+      };
+    }
+  }, [updateScrollButtons]);
+
+  const scrollTabs = useCallback((direction) => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 200;
+      const newScrollLeft = direction === 'left' 
+        ? tabsContainerRef.current.scrollLeft - scrollAmount
+        : tabsContainerRef.current.scrollLeft + scrollAmount;
+      
+      tabsContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
+  return (
+    <div className="w-full">
+      {/* Tab navigation with scroll arrows */}
+      <div className="relative">
+        {/* Left gradient fade when scrollable */}
+        {canScrollLeft && (
+          <div className="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
+        )}
+        
+        {/* Right gradient fade when scrollable */}
+        {canScrollRight && (
+          <div className="absolute right-8 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
+        )}
+        
+        {canScrollLeft && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="flat"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background shadow-md"
+            onPress={() => scrollTabs('left')}
+            aria-label="Scroll tabs left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        )}
+        
+        {canScrollRight && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="flat"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background shadow-md"
+            onPress={() => scrollTabs('right')}
+            aria-label="Scroll tabs right"
+          >
+            <ChevronRightIcon className="w-4 h-4" />
+          </Button>
+        )}
+
+        {/* Scrollable tabs container */}
+        <div 
+          ref={tabsContainerRef}
+          className="overflow-x-auto scrollbar-hide"
+        >
+          <Tabs 
+            aria-label="Documentation" 
+            variant="underlined" 
+            className="w-full"
+            classNames={{
+              tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
+              cursor: "w-full bg-primary",
+              tab: "max-w-fit px-4 h-12 flex-shrink-0",
+              tabContent: "group-data-[selected=true]:text-primary whitespace-nowrap"
+            }}
+          >
+            {Object.entries(sections).map(([sectionName, section]) => (
+              <Tab
+                key={sectionName}
+                title={
+                  <div className="flex items-center space-x-2">
+                    <BookOpen className="w-4 h-4" />
+                    <span className="text-sm">{sectionName}</span>
+                  </div>
+                }
+              >
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-3">
+                    {section.items.map((item, index) => (
+                      <CodeBlock
+                        key={index}
+                        code={item.code}
+                        description={item.description}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </Tab>
+            ))}
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function CustomConnectorYamlEditor() {
   const { connectorId } = useParams();
@@ -681,38 +911,7 @@ response_path: "response.text"
 
             {/* Documentation Content */}
             <div className="flex-1 overflow-y-auto p-4">
-              <Tabs aria-label="Documentation" variant="underlined" className="w-full">
-                {Object.entries(customConnectorDocumentationSections).map(
-                  ([sectionName, section]) => (
-                    <Tab
-                      key={sectionName}
-                      title={
-                        <div className="flex items-center space-x-2">
-                          <BookOpen className="w-4 h-4" />
-                          <span>{sectionName}</span>
-                        </div>
-                      }
-                    >
-                      <div className="space-y-4 pt-4">
-                        <div className="space-y-3">
-                          {section.items.map((item, index) => (
-                            <Card key={index} className="border border-border">
-                              <CardBody className="p-3">
-                                <pre className="text-xs bg-content2 p-2 rounded overflow-x-auto mb-2">
-                                  <code>{item.code}</code>
-                                </pre>
-                                <p className="text-xs text-foreground-600">
-                                  {item.description}
-                                </p>
-                              </CardBody>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    </Tab>
-                  ),
-                )}
-              </Tabs>
+              <ScrollableTabs sections={customConnectorDocumentationSections} />
             </div>
           </div>
         </div>
