@@ -1,10 +1,11 @@
 """Chatbot Technology API endpoints."""
 
-import subprocess
 from typing import ClassVar
 
 import yaml
+from chatbot_connectors import ChatbotFactory
 from django.core.cache import cache
+from django.core.files.base import ContentFile
 from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from rest_framework import permissions, status, viewsets
@@ -18,7 +19,7 @@ from tester.serializers import ChatbotConnectorSerializer
 
 @api_view(["GET"])
 def get_available_connectors(_request: Request) -> Response:
-    """Get available connector technologies from TRACER."""
+    """Get available connector technologies from ChatbotFactory."""
     cache_key = "available_connectors"
     cached_connectors = cache.get(cache_key)
 
@@ -26,46 +27,27 @@ def get_available_connectors(_request: Request) -> Response:
         return Response({"connectors": cached_connectors}, status=status.HTTP_200_OK)
 
     try:
-        result = subprocess.run(
-            ["tracer", "--list-connectors"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
-        )
+        available_types = ChatbotFactory.get_available_types()
+        registered_connectors = ChatbotFactory.get_registered_connectors()
 
-        # Parse the output to extract connector information
         connectors = []
-        lines = result.stdout.strip().split("\n")
-        current_connector = None
+        for connector_type in sorted(available_types):
+            connector_info = registered_connectors.get(connector_type, {})
+            description = connector_info.get("description", "No description available")
 
-        for line in lines:
-            line = line.strip()
-            if line.startswith("•"):
-                # Extract connector name
-                connector_name = line.split("•")[1].strip()
-                current_connector = {"name": connector_name}
-            elif line.startswith("Description:") and current_connector:
-                current_connector["description"] = line.split("Description:")[1].strip()
-            elif line.startswith("Use:") and current_connector:
-                current_connector["usage"] = line.split("Use:")[1].strip()
-                connectors.append(current_connector)
-                current_connector = None
+            connectors.append(
+                {"name": connector_type, "description": description, "usage": f"--technology {connector_type}"}
+            )
+
         cache.set(cache_key, connectors, timeout=3600)  # Cache for 1 hour
-
         return Response({"connectors": connectors}, status=status.HTTP_200_OK)
 
-    except subprocess.TimeoutExpired:
+    except (ImportError, AttributeError) as e:
         return Response(
-            {"error": "Timeout while fetching available connectors"},
-            status=status.HTTP_408_REQUEST_TIMEOUT,
-        )
-    except subprocess.CalledProcessError as e:
-        return Response(
-            {"error": f"Failed to fetch connectors: {e.stderr}"},
+            {"error": f"Error retrieving connector information: {e!s}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         return Response(
             {"error": f"Unexpected error: {e!s}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -91,51 +73,36 @@ def get_connector_parameters(request: Request) -> Response:
         )
 
     try:
-        result = subprocess.run(
-            ["tracer", "--list-connector-params", technology],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
-        )
+        params = ChatbotFactory.get_chatbot_parameters(technology)
 
-        # Parse the output to extract parameter information
+        # Convert parameter objects to dictionaries
         parameters = []
-        lines = result.stdout.strip().split("\n")
-        current_param = None
+        for param in params:
+            param_dict = {
+                "name": param.name,
+                "type": param.type,
+                "required": param.required,
+                "description": param.description,
+            }
+            if param.default is not None:
+                param_dict["default"] = param.default
+            parameters.append(param_dict)
 
-        for line in lines:
-            line = line.strip()
-            if line.startswith("- Name:"):
-                if current_param:
-                    parameters.append(current_param)
-                current_param = {"name": line.split("Name:")[1].strip()}
-            elif line.startswith("Type:") and current_param:
-                current_param["type"] = line.split("Type:")[1].strip()
-            elif line.startswith("Required:") and current_param:
-                current_param["required"] = line.split("Required:")[1].strip().lower() == "true"
-            elif line.startswith("Default:") and current_param:
-                current_param["default"] = line.split("Default:")[1].strip()
-            elif line.startswith("Description:") and current_param:
-                current_param["description"] = line.split("Description:")[1].strip()
-
-        if current_param:
-            parameters.append(current_param)
         cache.set(cache_key, parameters, timeout=3600)  # Cache for 1 hour
-
         return Response({"technology": technology, "parameters": parameters}, status=status.HTTP_200_OK)
 
-    except subprocess.TimeoutExpired:
+    except ValueError:
+        available_types = ChatbotFactory.get_available_types()
         return Response(
-            {"error": "Timeout while fetching connector parameters"},
-            status=status.HTTP_408_REQUEST_TIMEOUT,
+            {"error": f"Invalid technology '{technology}'. Available types: {', '.join(available_types)}"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-    except subprocess.CalledProcessError as e:
+    except (ImportError, AttributeError) as e:
         return Response(
-            {"error": f"Failed to fetch parameters for {technology}: {e.stderr}"},
+            {"error": f"Error retrieving parameters: {e!s}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         return Response(
             {"error": f"Unexpected error: {e!s}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -177,62 +144,71 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get", "put"], url_path="config")
-    def config(self, request: Request, pk: str | None = None) -> Response:
+    def config(self, request: Request) -> Response:
         """Get or update the custom YAML configuration for a connector."""
         connector = self.get_object()
 
         if request.method == "GET":
-            # Return the current YAML configuration
-            if connector.custom_config_file:
-                try:
-                    with connector.custom_config_file.open("r") as f:
-                        content = f.read()
-                    return Response(
-                        {"content": content, "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK
-                    )
-                except Exception as e:
-                    return Response(
-                        {"error": f"Failed to read configuration: {e!s}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-            else:
-                # Return empty configuration
-                return Response({"content": "", "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK)
+            return self._handle_get_config(connector)
+        if request.method == "PUT":
+            return self._handle_put_config(request, connector)
 
-        elif request.method == "PUT":
-            # Update the YAML configuration
-            content = request.data.get("content", "")
+        # Explicit return for any other HTTP method (though DRF should handle this)
+        return Response(
+            {"error": "Method not allowed"},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
-            # Validate YAML syntax
+    def _handle_get_config(self, connector: ChatbotConnector) -> Response:
+        """Handle GET request for configuration."""
+        if connector.custom_config_file:
             try:
-                yaml.safe_load(content)
-            except yaml.YAMLError as e:
+                with connector.custom_config_file.open("r") as f:
+                    content = f.read()
                 return Response(
-                    {"error": f"Invalid YAML syntax: {e!s}"},
-                    status=status.HTTP_400_BAD_REQUEST,
+                    {"content": content, "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK
                 )
-
-            # Save the configuration to a file
-            try:
-                from django.core.files.base import ContentFile
-
-                file_content = ContentFile(content)
-                file_name = f"{connector.name}_config.yml"
-
-                # Delete old file if it exists
-                if connector.custom_config_file:
-                    connector.custom_config_file.delete(save=False)
-
-                # Save new file
-                connector.custom_config_file.save(file_name, file_content)
-                connector.save()
-
+            except OSError as e:
                 return Response(
-                    {"message": "Configuration updated successfully", "id": connector.id}, status=status.HTTP_200_OK
-                )
-
-            except Exception as e:
-                return Response(
-                    {"error": f"Failed to save configuration: {e!s}"},
+                    {"error": f"Failed to read configuration: {e!s}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
+        else:
+            # Return empty configuration
+            return Response({"content": "", "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK)
+
+    def _handle_put_config(self, request: Request, connector: ChatbotConnector) -> Response:
+        """Handle PUT request for configuration."""
+        content = request.data.get("content", "")
+
+        # Validate YAML syntax
+        try:
+            yaml.safe_load(content)
+        except yaml.YAMLError as e:
+            return Response(
+                {"error": f"Invalid YAML syntax: {e!s}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Save the configuration to a file
+        try:
+            file_content = ContentFile(content)
+            file_name = f"{connector.name}_config.yml"
+
+            # Delete old file if it exists
+            if connector.custom_config_file:
+                connector.custom_config_file.delete(save=False)
+
+            # Save new file
+            connector.custom_config_file.save(file_name, file_content)
+            connector.save()
+
+            return Response(
+                {"message": "Configuration updated successfully", "id": connector.id}, status=status.HTTP_200_OK
+            )
+
+        except OSError as e:
+            return Response(
+                {"error": f"Failed to save configuration: {e!s}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
