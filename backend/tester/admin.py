@@ -52,7 +52,7 @@ class ProjectAdmin(admin.ModelAdmin):
 class ChatbotConnectorAdmin(admin.ModelAdmin):
     """Admin configuration for ChatbotConnector model."""
 
-    list_display = ("name", "technology", "link", "owner")
+    list_display = ("name", "technology", "parameters", "owner")
     search_fields = ("name", "technology", "owner__email")
     list_filter = ("technology", "owner")
 
