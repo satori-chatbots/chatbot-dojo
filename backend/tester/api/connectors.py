@@ -3,6 +3,7 @@
 import subprocess
 from typing import ClassVar
 
+from django.core.cache import cache
 from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from rest_framework import permissions, status, viewsets
@@ -17,6 +18,12 @@ from tester.serializers import ChatbotConnectorSerializer
 @api_view(["GET"])
 def get_available_connectors(_request: Request) -> Response:
     """Get available connector technologies from TRACER."""
+    cache_key = "available_connectors"
+    cached_connectors = cache.get(cache_key)
+
+    if cached_connectors:
+        return Response({"connectors": cached_connectors}, status=status.HTTP_200_OK)
+
     try:
         result = subprocess.run(
             ["tracer", "--list-connectors"],
@@ -43,6 +50,7 @@ def get_available_connectors(_request: Request) -> Response:
                 current_connector["usage"] = line.split("Use:")[1].strip()
                 connectors.append(current_connector)
                 current_connector = None
+        cache.set(cache_key, connectors, timeout=3600)  # Cache for 1 hour
 
         return Response({"connectors": connectors}, status=status.HTTP_200_OK)
 
@@ -71,6 +79,14 @@ def get_connector_parameters(request: Request) -> Response:
         return Response(
             {"error": "Technology parameter is required"},
             status=status.HTTP_400_BAD_REQUEST,
+        )
+    cache_key = f"connector_parameters_{technology}"
+    cached_parameters = cache.get(cache_key)
+
+    if cached_parameters:
+        return Response(
+            {"technology": technology, "parameters": cached_parameters},
+            status=status.HTTP_200_OK,
         )
 
     try:
@@ -104,6 +120,7 @@ def get_connector_parameters(request: Request) -> Response:
 
         if current_param:
             parameters.append(current_param)
+        cache.set(cache_key, parameters, timeout=3600)  # Cache for 1 hour
 
         return Response({"technology": technology, "parameters": parameters}, status=status.HTTP_200_OK)
 
