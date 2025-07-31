@@ -408,34 +408,46 @@ const ChatbotConnectors = () => {
   return (
     <div
       className="flex flex-col
-            items-center
-            space-y-4 sm:space-y-6 lg:space-y-8
-            w-full sm:max-w-4xl
+            w-full sm:max-w-6xl
             mx-auto
             my-auto
-            max-h-[90vh]
-            p-4 sm:p-6 lg:p-8"
+            max-h-[95vh]
+            p-4 sm:p-6 lg:p-8
+            space-y-6"
     >
-      <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground dark:text-foreground-dark">
-        Chatbot Connectors
-      </h1>
+      {/* Header Section */}
+      <div className="text-center space-y-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground dark:text-foreground-dark">
+            Connector Management
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Configure and manage chatbot connectors to communicate TRACER and Sensei with other chatbots.
+          </p>
+        </div>
 
-      {/* Setup Progress */}
-      <div className="w-full max-w-4xl">
-        <SetupProgress isCompact={true} />
+        {/* Setup Progress */}
+        <div className="w-full max-w-4xl mx-auto">
+          <SetupProgress isCompact={true} />
+        </div>
       </div>
 
       {/* Modal to create new connector */}
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="lg">
         <ModalContent>
           {() => (
             <>
-              <ModalHeader className="flex flex-col gap-1 items-center">
-                Create New Connector
+              <ModalHeader className="flex flex-col gap-1 border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                  Create New Connector
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Set up a new connector to integrate with external platforms
+                </p>
               </ModalHeader>
-              <ModalBody className="flex flex-col gap-4 items-center">
+              <ModalBody className="pt-6">
                 <Form
-                  className="w-full flex flex-col gap-4"
+                  className="w-full flex flex-col gap-6"
                   onSubmit={handleFormSubmit}
                   onReset={handleFormReset}
                   validationBehavior="aria"
@@ -506,22 +518,31 @@ const ChatbotConnectors = () => {
                     )}
                   </Select>
 
-                  {/* Dynamic parameter fields or custom connector button */}
+                  {/* Dynamic parameter fields or custom connector info */}
                   {formData.technology === "custom" ? (
-                    <div className="flex flex-col gap-4 items-center py-4">
-                      <div className="text-sm text-gray-600 text-center">
-                        Custom connectors use YAML configuration files.
-                        <br />
-                        After creating the connector, you can edit its YAML
-                        configuration.
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start space-x-3">
+                        <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                            Custom YAML Configuration
+                          </h4>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            Custom connectors use YAML configuration files for maximum flexibility.
+                            After creating the connector, you&apos;ll be redirected to the YAML editor
+                            where you can define your custom integration logic.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ) : loadingValidation && formData.technology ? (
-                    <div className="flex justify-center items-center py-4">
-                      <Spinner size="sm" />
-                      <span className="ml-2 text-sm text-gray-600">
-                        Loading parameters...
-                      </span>
+                    <div className="flex justify-center items-center py-8">
+                      <div className="flex flex-col items-center space-y-3">
+                        <Spinner size="md" color="primary" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Loading parameters for {formData.technology}...
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     currentParameters.map((param) => (
@@ -556,26 +577,28 @@ const ChatbotConnectors = () => {
                     ))
                   )}
 
-                  <ModalFooter className="w-full flex justify-center gap-4">
-                    <Button
-                      type="reset"
-                      color="danger"
-                      variant="light"
-                      startContent={<RotateCcw className="w-4 h-4 mr-1" />}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      type="submit"
-                      color="primary"
-                      isDisabled={!isFormValid || loadingValidation}
-                      isLoading={loadingValidation}
-                      startContent={
-                        !loadingValidation && <Plus className="w-4 h-4 mr-1" />
-                      }
-                    >
-                      Create
-                    </Button>
+                  <ModalFooter className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                    <div className="flex justify-end gap-3 w-full">
+                      <Button
+                        type="reset"
+                        color="default"
+                        variant="bordered"
+                        startContent={<RotateCcw className="w-4 h-4" />}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        type="submit"
+                        color="primary"
+                        isDisabled={!isFormValid || loadingValidation}
+                        isLoading={loadingValidation}
+                        startContent={
+                          !loadingValidation && <Plus className="w-4 h-4" />
+                        }
+                      >
+                        Create Connector
+                      </Button>
+                    </div>
                   </ModalFooter>
                 </Form>
               </ModalBody>
@@ -584,106 +607,143 @@ const ChatbotConnectors = () => {
         </ModalContent>
       </Modal>
 
-      <h2 className="text-xl sm:text-2xl font-bold text-center text-foreground dark:text-foreground-dark">
-        Existing Connectors
-      </h2>
+      {/* Main Content Section */}
+      <div className="flex flex-col space-y-6">
+        {/* Header with Create Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground dark:text-foreground-dark">
+              Active Connectors
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {connectors.length} connector{connectors.length === 1 ? '' : 's'} configured
+            </p>
+          </div>
+          <Button
+            color="primary"
+            onPress={() => {
+              // Reset form when opening modal
+              setFormData({
+                name: "",
+                technology: "",
+                parameters: {},
+              });
+              setCurrentParameters([]);
+              setValidationErrors({});
+              onOpen();
+            }}
+            className="w-full sm:w-auto"
+            startContent={<Plus className="w-4 h-4" />}
+            size="lg"
+          >
+            Add Connector
+          </Button>
+        </div>
 
-      {/* Table of existing connectors */}
-      <Table
-        aria-label="Chatbot Connectors Table"
-        className="max-h-[60vh] sm:max-h-[50vh] overflow-y-auto"
-        sortDescriptor={sortDescriptor}
-        onSortChange={setSortDescriptor}
-      >
-        <TableHeader columns={columns}>
-          {(column) => (
-            <TableColumn key={column.key} allowsSorting={column.sortable}>
-              {column.name}
-            </TableColumn>
-          )}
-        </TableHeader>
-        <TableBody
-          isLoading={loading}
-          loadingContent={<Spinner label="Loading..." />}
-          emptyContent="Create a new connector to get started."
-        >
-          {sortedChatbotConnectors.map((connector) => (
-            <TableRow key={connector.id}>
-              <TableCell className="px-2 sm:px-4">{connector.name}</TableCell>
-              <TableCell className="px-2 sm:px-4">
-                {connector.technology}
-              </TableCell>
-              <TableCell className="px-2 sm:px-4">
-                {connector.technology === "custom" ? (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <FileText className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      YAML Configuration
-                    </span>
+        {/* Connectors Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <Table
+            aria-label="Chatbot Connectors Table"
+            className="min-h-[300px]"
+            sortDescriptor={sortDescriptor}
+            onSortChange={setSortDescriptor}
+            removeWrapper
+          >
+            <TableHeader columns={columns}>
+              {(column) => (
+                <TableColumn key={column.key} allowsSorting={column.sortable}>
+                  {column.name}
+                </TableColumn>
+              )}
+            </TableHeader>
+            <TableBody
+              isLoading={loading}
+              loadingContent={<Spinner label="Loading connectors..." />}
+              emptyContent={
+                <div className="text-center py-12">
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                      <Plus className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                        No connectors yet
+                      </h3>
+                      <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Get started by creating your first connector
+                      </p>
+                    </div>
                   </div>
-                ) : connector.parameters &&
-                  Object.keys(connector.parameters).length > 0 ? (
-                  <ul className="list-disc list-inside text-sm space-y-1">
-                    {Object.entries(connector.parameters).map(
-                      ([key, value]) => (
-                        <li key={key} className="break-words">
-                          <strong>{key}:</strong> {value}
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                ) : (
-                  <span className="text-gray-500 italic">No parameters</span>
-                )}
-              </TableCell>
-              <TableCell className="px-2 sm:px-4">
-                <div className="flex items-center justify-start space-x-2">
-                  <Button
-                    size="sm"
-                    color="secondary"
-                    variant="flat"
-                    endContent={<Edit className="w-3 h-3" />}
-                    onPress={() => handleEdit(connector)}
-                    className="text-xs px-3"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    color="danger"
-                    variant="flat"
-                    endContent={<Trash className="w-3 h-3" />}
-                    onPress={() => handleDelete(connector.id)}
-                    className="text-xs px-3"
-                  >
-                    Delete
-                  </Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-
-      {/* Button to open modal */}
-      <Button
-        color="primary"
-        onPress={() => {
-          // Reset form when opening modal
-          setFormData({
-            name: "",
-            technology: "",
-            parameters: {},
-          });
-          setCurrentParameters([]);
-          setValidationErrors({});
-          onOpen();
-        }}
-        className="w-full sm:max-w-[200px] mx-auto h-10 sm:h-12"
-        startContent={<Plus className="w-4 h-4 mr-1" />}
-      >
-        Create New Connector
-      </Button>
+              }
+            >
+              {sortedChatbotConnectors.map((connector) => (
+                <TableRow key={connector.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <TableCell className="px-4 py-4 font-medium">{connector.name}</TableCell>
+                  <TableCell className="px-4 py-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      {connector.technology}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-4">
+                    {connector.technology === "custom" ? (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <FileText className="w-4 h-4 text-gray-500" />
+                        <span className="text-gray-700 dark:text-gray-300">
+                          YAML Configuration
+                        </span>
+                      </div>
+                    ) : connector.parameters &&
+                      Object.keys(connector.parameters).length > 0 ? (
+                      <div className="space-y-1">
+                        {Object.entries(connector.parameters).slice(0, 3).map(
+                          ([key, value]) => (
+                            <div key={key} className="text-sm">
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{key}:</span>{' '}
+                              <span className="text-gray-600 dark:text-gray-400 break-all">{value}</span>
+                            </div>
+                          ),
+                        )}
+                        {Object.keys(connector.parameters).length > 3 && (
+                          <div className="text-xs text-gray-500">
+                            +{Object.keys(connector.parameters).length - 3} more
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 italic text-sm">No parameters</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-4">
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        size="sm"
+                        color="default"
+                        variant="flat"
+                        startContent={<Edit className="w-3 h-3" />}
+                        onPress={() => handleEdit(connector)}
+                        className="text-xs"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        color="danger"
+                        variant="flat"
+                        startContent={<Trash className="w-3 h-3" />}
+                        onPress={() => handleDelete(connector.id)}
+                        className="text-xs"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
       {/* Modal for editing */}
       <Modal
@@ -693,16 +753,22 @@ const ChatbotConnectors = () => {
           handleEditFormReset();
           setValidationErrors({});
         }}
+        size="lg"
       >
         <ModalContent>
           {() => (
             <>
-              <ModalHeader className="flex flex-col gap-1 items-center">
-                Edit Connector
+              <ModalHeader className="flex flex-col gap-1 border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                  Edit Connector
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Modify the configuration for &ldquo;{editData.name}&rdquo;
+                </p>
               </ModalHeader>
-              <ModalBody className="flex flex-col gap-4 items-center">
+              <ModalBody className="pt-6">
                 <Form
-                  className="w-full flex flex-col gap-4"
+                  className="w-full flex flex-col gap-6"
                   onSubmit={handleUpdate}
                   onReset={handleEditFormReset}
                   validationBehavior="aria"
@@ -767,33 +833,43 @@ const ChatbotConnectors = () => {
                     )}
                   </Select>
 
-                  {/* Dynamic parameter fields for edit or custom connector button */}
+                  {/* Dynamic parameter fields for edit or custom connector section */}
                   {editData.technology === "custom" ? (
-                    <div className="flex flex-col gap-4 items-center py-4">
-                      <div className="text-sm text-gray-600 text-center">
-                        Custom connectors use YAML configuration files.
-                        <br />
-                        Click the button below to edit the YAML configuration.
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start space-x-3">
+                        <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                            Custom YAML Configuration
+                          </h4>
+                          <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                            This connector uses a custom YAML configuration file.
+                            Use the button below to edit the configuration in the dedicated editor.
+                          </p>
+                          <Button
+                            color="primary"
+                            variant="flat"
+                            onPress={() => {
+                              navigate(
+                                `/custom-connector-editor/${editData.id || "new"}`,
+                              );
+                            }}
+                            startContent={<Edit className="w-4 h-4" />}
+                            size="sm"
+                          >
+                            Edit YAML Configuration
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        color="secondary"
-                        variant="bordered"
-                        onPress={() => {
-                          navigate(
-                            `/custom-connector-editor/${editData.id || "new"}`,
-                          );
-                        }}
-                        startContent={<Edit className="w-4 h-4" />}
-                      >
-                        Edit YAML Configuration
-                      </Button>
                     </div>
                   ) : loadingValidation && editData.technology ? (
-                    <div className="flex justify-center items-center py-4">
-                      <Spinner size="sm" />
-                      <span className="ml-2 text-sm text-gray-600">
-                        Loading parameters...
-                      </span>
+                    <div className="flex justify-center items-center py-8">
+                      <div className="flex flex-col items-center space-y-3">
+                        <Spinner size="md" color="primary" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Loading parameters for {editData.technology}...
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     currentParameters.map((param) => (
@@ -829,26 +905,28 @@ const ChatbotConnectors = () => {
                       />
                     ))
                   )}
-                  <ModalFooter className="w-full flex justify-center gap-4">
-                    <Button
-                      type="reset"
-                      color="danger"
-                      variant="light"
-                      startContent={<RotateCcw className="w-4 h-4 mr-1" />}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      type="submit"
-                      color="primary"
-                      isDisabled={!isEditFormValid || loadingValidation}
-                      isLoading={loadingValidation}
-                      startContent={
-                        !loadingValidation && <Save className="w-4 h-4 mr-1" />
-                      }
-                    >
-                      Save
-                    </Button>
+                  <ModalFooter className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                    <div className="flex justify-end gap-3 w-full">
+                      <Button
+                        type="reset"
+                        color="default"
+                        variant="bordered"
+                        startContent={<RotateCcw className="w-4 h-4" />}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        type="submit"
+                        color="primary"
+                        isDisabled={!isEditFormValid || loadingValidation}
+                        isLoading={loadingValidation}
+                        startContent={
+                          !loadingValidation && <Save className="w-4 h-4" />
+                        }
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
                   </ModalFooter>
                 </Form>
               </ModalBody>
