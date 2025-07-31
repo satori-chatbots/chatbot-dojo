@@ -153,15 +153,18 @@ const ChatbotConnectors = () => {
 
         if (availableConnectorsData.status === "fulfilled") {
           const connectors = availableConnectorsData.value;
-          // Add "Custom" option to the available connectors
-          const connectorsWithCustom = [
-            ...connectors,
-            {
-              name: "custom",
-              description: "Custom connector with YAML configuration",
-              usage: "Define your own connector using YAML configuration",
-            },
-          ];
+          // Only add "custom" if not present in the API response
+          const hasCustom = connectors.some((c) => c.name === "custom");
+          const connectorsWithCustom = hasCustom
+            ? connectors
+            : [
+                ...connectors,
+                {
+                  name: "custom",
+                  description: "Custom connector with YAML configuration",
+                  usage: "Define your own connector using YAML configuration",
+                },
+              ];
           setAvailableConnectors(connectorsWithCustom);
 
           setFormData((previous) => ({
