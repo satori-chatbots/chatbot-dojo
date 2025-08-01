@@ -239,7 +239,6 @@ export const useYamlEditor = ({
           isSchemaError: false,
         });
         setHasTypedAfterError(false);
-        console.error("Invalid YAML:", error);
         return { isValid: false };
       } finally {
         setIsValidatingYaml(false);
