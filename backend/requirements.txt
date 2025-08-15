@@ -55,7 +55,7 @@ charset-normalizer==3.4.2
     # via requests
 chatbot-connectors==0.2.2
     # via chatbot-tracer
-chatbot-tracer==0.4.0
+chatbot-tracer==0.4.1
     # via sensei-web
 click==8.2.1
     # via
