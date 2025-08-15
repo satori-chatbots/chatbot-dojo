@@ -147,7 +147,7 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get", "put"], url_path="config")
-    def config(self, request: Request) -> Response:
+    def config(self, request: Request, pk: str | None = None) -> Response:
         """Get or update the custom YAML configuration for a connector."""
         connector = self.get_object()
 
