@@ -41,10 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create a non-root user for the application
 RUN groupadd -r django && useradd -r -g django -u 1000 django
 
-# Copy complete .venv with Django, uv, and all libs
-COPY --from=builder /app/.venv /app/.venv
-
-# Copy application source code
+# Copy application source code (excluding .venv to avoid conflicts)
 COPY --from=builder /app /app
 
 # Also bring uv binary into final image
