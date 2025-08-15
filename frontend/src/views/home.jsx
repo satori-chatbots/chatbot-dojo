@@ -436,8 +436,31 @@ function Home() {
   useEffect(() => {
     if (selectedProject) {
       checkForOngoingGeneration(selectedProject.id);
+    } else {
+      // Clear generation status when no project is selected
+      setIsGenerating(false);
+      setGenerationStage("");
+      setGenerationProgress(0);
+      // Clear any ongoing polling
+      if (statusIntervalReference.current) {
+        clearInterval(statusIntervalReference.current);
+        statusIntervalReference.current = undefined;
+      }
     }
   }, [selectedProject, checkForOngoingGeneration]);
+
+  // Clear generation status when switching between projects
+  useEffect(() => {
+    // Reset generation status immediately when project changes
+    setIsGenerating(false);
+    setGenerationStage("");
+    setGenerationProgress(0);
+    // Clear any ongoing polling from previous project
+    if (statusIntervalReference.current) {
+      clearInterval(statusIntervalReference.current);
+      statusIntervalReference.current = undefined;
+    }
+  }, [selectedProject?.id]); // Only trigger when project ID changes
 
   useEffect(() => {
     return () => {
