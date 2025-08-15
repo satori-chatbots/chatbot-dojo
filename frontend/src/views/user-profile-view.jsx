@@ -259,81 +259,83 @@ const UserProfileView = () => {
         }}
       >
         <ModalContent>
-          <ModalHeader>Add New API Key</ModalHeader>
-          <ModalBody>
-            <Input
-              label="API Key Name"
-              placeholder="e.g., Production API Key"
-              value={newApiKey.name}
-              onChange={(event) =>
-                setNewApiKey((previous) => ({
-                  ...previous,
-                  name: event.target.value,
-                }))
-              }
-              variant="bordered"
-            />
-            <Select
-              label="Provider"
-              placeholder="Select a provider"
-              value={newApiKey.provider}
-              onChange={(event) =>
-                setNewApiKey((previous) => ({
-                  ...previous,
-                  provider: event.target.value,
-                }))
-              }
-              variant="bordered"
-              selectedKeys={[newApiKey.provider]}
-            >
-              {PROVIDER_OPTIONS.map((provider) => (
-                <SelectItem key={provider.key} value={provider.value}>
-                  {provider.label}
-                </SelectItem>
-              ))}
-            </Select>
-            <div className="relative">
+          <form onSubmit={(e) => { e.preventDefault(); handleAddApiKey(); }}>
+            <ModalHeader>Add New API Key</ModalHeader>
+            <ModalBody>
               <Input
-                label="API Key Value"
-                placeholder="Enter your API key"
-                value={newApiKey.api_key}
+                label="API Key Name"
+                placeholder="e.g., Production API Key"
+                value={newApiKey.name}
                 onChange={(event) =>
                   setNewApiKey((previous) => ({
                     ...previous,
-                    api_key: event.target.value,
+                    name: event.target.value,
                   }))
                 }
                 variant="bordered"
-                type={showKey ? "text" : "password"}
               />
-              <Button
-                isIconOnly
-                color="default"
-                variant="light"
-                onPress={toggleShowKey}
-                aria-label="Show/Hide API Key"
-                className="absolute top-6 right-2 transform -translate-y-1/2"
+              <Select
+                label="Provider"
+                placeholder="Select a provider"
+                value={newApiKey.provider}
+                onChange={(event) =>
+                  setNewApiKey((previous) => ({
+                    ...previous,
+                    provider: event.target.value,
+                  }))
+                }
+                variant="bordered"
+                selectedKeys={[newApiKey.provider]}
               >
-                {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                {PROVIDER_OPTIONS.map((provider) => (
+                  <SelectItem key={provider.key} value={provider.value}>
+                    {provider.label}
+                  </SelectItem>
+                ))}
+              </Select>
+              <div className="relative">
+                <Input
+                  label="API Key Value"
+                  placeholder="Enter your API key"
+                  value={newApiKey.api_key}
+                  onChange={(event) =>
+                    setNewApiKey((previous) => ({
+                      ...previous,
+                      api_key: event.target.value,
+                    }))
+                  }
+                  variant="bordered"
+                  type={showKey ? "text" : "password"}
+                />
+                <Button
+                  isIconOnly
+                  color="default"
+                  variant="light"
+                  onPress={toggleShowKey}
+                  aria-label="Show/Hide API Key"
+                  className="absolute top-6 right-2 transform -translate-y-1/2"
+                >
+                  {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                </Button>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                color="danger"
+                variant="light"
+                onPress={() => setIsModalOpen(false)}
+              >
+                Cancel
               </Button>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              color="danger"
-              variant="light"
-              onPress={() => setIsModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              color="primary"
-              onPress={handleAddApiKey}
-              isLoading={loading}
-            >
-              Add Key
-            </Button>
-          </ModalFooter>
+              <Button
+                color="primary"
+                type="submit"
+                isLoading={loading}
+              >
+                Add Key
+              </Button>
+            </ModalFooter>
+          </form>
         </ModalContent>
       </Modal>
     </div>

@@ -108,58 +108,60 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
 
       <Modal isOpen={isEditModalOpen} onClose={handleCancel}>
         <ModalContent>
-          <ModalHeader>Edit API Key</ModalHeader>
-          <ModalBody>
-            <Input
-              label="API Key Name"
-              placeholder="e.g., Production API Key"
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              variant="bordered"
-            />
-            <Select
-              label="Provider"
-              placeholder="Select a provider"
-              value={newProvider}
-              onChange={(event) => setNewProvider(event.target.value)}
-              variant="bordered"
-              selectedKeys={[newProvider]}
-            >
-              {PROVIDER_OPTIONS.map((provider) => (
-                <SelectItem key={provider.key} value={provider.value}>
-                  {provider.label}
-                </SelectItem>
-              ))}
-            </Select>
-            <div className="relative">
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+            <ModalHeader>Edit API Key</ModalHeader>
+            <ModalBody>
               <Input
-                label="API Key Value"
-                placeholder="Enter your API key"
-                value={newApiKey}
-                onChange={(event) => setNewApiKey(event.target.value)}
+                label="API Key Name"
+                placeholder="e.g., Production API Key"
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
                 variant="bordered"
-                type={showModalKey ? "text" : "password"}
               />
-              <Button
-                isIconOnly
-                color="default"
-                variant="light"
-                onPress={toggleShowModalKey}
-                aria-label="Show/Hide API Key"
-                className="absolute top-6 right-2 transform -translate-y-1/2"
+              <Select
+                label="Provider"
+                placeholder="Select a provider"
+                value={newProvider}
+                onChange={(event) => setNewProvider(event.target.value)}
+                variant="bordered"
+                selectedKeys={[newProvider]}
               >
-                {showModalKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                {PROVIDER_OPTIONS.map((provider) => (
+                  <SelectItem key={provider.key} value={provider.value}>
+                    {provider.label}
+                  </SelectItem>
+                ))}
+              </Select>
+              <div className="relative">
+                <Input
+                  label="API Key Value"
+                  placeholder="Enter your API key"
+                  value={newApiKey}
+                  onChange={(event) => setNewApiKey(event.target.value)}
+                  variant="bordered"
+                  type={showModalKey ? "text" : "password"}
+                />
+                <Button
+                  isIconOnly
+                  color="default"
+                  variant="light"
+                  onPress={toggleShowModalKey}
+                  aria-label="Show/Hide API Key"
+                  className="absolute top-6 right-2 transform -translate-y-1/2"
+                >
+                  {showModalKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                </Button>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="danger" variant="light" onPress={handleCancel}>
+                Cancel
               </Button>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="danger" variant="light" onPress={handleCancel}>
-              Cancel
-            </Button>
-            <Button color="primary" onPress={handleSave}>
-              Update Key
-            </Button>
-          </ModalFooter>
+              <Button color="primary" type="submit">
+                Update Key
+              </Button>
+            </ModalFooter>
+          </form>
         </ModalContent>
       </Modal>
     </>
