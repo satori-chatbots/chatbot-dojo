@@ -73,7 +73,7 @@ const ProjectsDashboard = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full sm:max-w-4xl mx-auto my-auto max-h-[90vh]">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto my-auto max-h-[90vh]">
       <CreateProjectModal
         isOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
@@ -114,15 +114,17 @@ const ProjectsDashboard = () => {
         )}
       </div>
 
-      <ProjectsList
-        projects={projects}
-        connectors={connectors}
-        loading={loading || loadingProjects}
-        selectedProject={selectedProject}
-        onSelectProject={setSelectedProject}
-        onEditProject={handleEditClick}
-        onDeleteProject={handleProjectDelete}
-      />
+      <div className="w-full px-2 sm:px-0">
+        <ProjectsList
+          projects={projects}
+          connectors={connectors}
+          loading={loading || loadingProjects}
+          selectedProject={selectedProject}
+          onSelectProject={setSelectedProject}
+          onEditProject={handleEditClick}
+          onDeleteProject={handleProjectDelete}
+        />
+      </div>
 
       <Button
         color="primary"
