@@ -63,51 +63,18 @@ const TracerExecutionCard = ({
   return (
     <Card className="border-default-200 hover:border-primary-200 transition-all duration-200 hover:shadow-md">
       <CardBody className="p-4">
-        {/* Main Row */}
-        <div className="flex items-center justify-between">
-          {/* Left Side - Project Info & Status */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        {/* Main Content - Responsive Layout */}
+        <div className="space-y-3">
+          {/* Top Row - Project Info & Title */}
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex-shrink-0">
               <BarChart3 className="w-4 h-4 text-primary" />
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-sm font-semibold text-foreground truncate">
-                  {formatDate(execution.created_at)}
-                </h3>
-                {execution.status === "FAILURE" && execution.error_type ? (
-                  <Tooltip
-                    content={
-                      execution.error_message ||
-                      "An error occurred during execution"
-                    }
-                    placement="top"
-                    className="max-w-xs"
-                  >
-                    <Chip
-                      color={getStatusColor(execution.status)}
-                      variant="flat"
-                      startContent={getStatusIcon(execution.status)}
-                      size="sm"
-                      className="flex-shrink-0 cursor-help"
-                    >
-                      {getErrorTypeDisplay(execution.error_type)}
-                    </Chip>
-                  </Tooltip>
-                ) : (
-                  <Chip
-                    color={getStatusColor(execution.status)}
-                    variant="flat"
-                    startContent={getStatusIcon(execution.status)}
-                    size="sm"
-                    className="flex-shrink-0"
-                  >
-                    {getStatusLabel(execution.status)}
-                  </Chip>
-                )}
-              </div>
-
+              <h3 className="text-sm font-semibold text-foreground truncate">
+                {formatDate(execution.created_at)}
+              </h3>
               <div className="flex items-center gap-4 text-xs text-default-500">
                 <span>{execution.project_name}</span>
                 {execution.execution_time_minutes && (
@@ -119,174 +86,334 @@ const TracerExecutionCard = ({
             </div>
           </div>
 
-          {/* Center - Key Metrics */}
-          {isCompleted && hasAnalysis && (
-            <div className="hidden sm:flex items-center gap-6 mx-4 text-xs">
-              <div className="text-center">
-                <p className="text-default-500">Sessions</p>
-                <p className="font-medium">{execution.sessions || "0"}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-default-500">Turns/Session</p>
-                <p className="font-medium">
-                  {execution.turns_per_session || "0"}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-default-500">Profiles</p>
-                <p className="font-medium">
-                  {execution.generated_profiles_count || "0"}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Right Side - Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Running Progress */}
-            {isRunning && (
-              <div className="flex items-center gap-3">
-                <Zap className="w-4 h-4 text-primary animate-pulse" />
-                <div className="flex flex-col gap-1 min-w-0">
-                  {progressStage && (
-                    <span className="text-xs text-primary font-medium truncate max-w-32">
-                      {progressStage}
-                    </span>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <div className="w-16">
-                      <Progress
+          {/* Status and Actions Row - Responsive Layout */}
+          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3">
+            {/* Left Side - Status & Metrics */}
+            <div className="flex flex-col xs:flex-row xs:items-center gap-3 min-w-0 flex-1">
+              {/* Status Chip */}
+              <div className="flex items-center justify-between xs:justify-start w-full xs:w-auto gap-2">
+                <div className="flex items-center gap-2">
+                  {execution.status === "FAILURE" && execution.error_type ? (
+                    <Tooltip
+                      content={
+                        execution.error_message ||
+                        "An error occurred during execution"
+                      }
+                      placement="top"
+                      className="max-w-xs"
+                    >
+                      <Chip
+                        color={getStatusColor(execution.status)}
+                        variant="flat"
+                        startContent={getStatusIcon(execution.status)}
                         size="sm"
-                        color="primary"
-                        value={progressPercentage || 0}
-                        className="transition-all duration-500 ease-out"
-                      />
-                    </div>
-                    <span className="text-xs text-default-500 font-mono">
-                      {progressPercentage || 0}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+                        className="flex-shrink-0 cursor-help"
+                      >
+                        {getErrorTypeDisplay(execution.error_type)}
+                      </Chip>
+                    </Tooltip>
+                  ) : (
+                    <Chip
+                      color={getStatusColor(execution.status)}
+                      variant="flat"
+                      startContent={getStatusIcon(execution.status)}
+                      size="sm"
+                      className="flex-shrink-0"
+                    >
+                      {getStatusLabel(execution.status)}
+                    </Chip>
+                  )}
 
-            {/* Quick Actions */}
-            <div className="flex gap-1">
-              <Tooltip
-                content={
-                  isCompleted && hasAnalysis && execution.analysis.has_report
-                    ? "View Report"
-                    : "Report not available"
-                }
-              >
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  isDisabled={
-                    !(
+                  {/* Running Progress - Inline on small screens */}
+                  {isRunning && (
+                    <div className="flex items-center gap-2 ml-2">
+                      <Zap className="w-4 h-4 text-primary animate-pulse" />
+                      <div className="flex flex-col gap-1 min-w-0">
+                        {progressStage && (
+                          <span className="text-xs text-primary font-medium truncate max-w-32">
+                            {progressStage}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <div className="w-16">
+                            <Progress
+                              size="sm"
+                              color="primary"
+                              value={progressPercentage || 0}
+                              className="transition-all duration-500 ease-out"
+                            />
+                          </div>
+                          <span className="text-xs text-default-500 font-mono">
+                            {progressPercentage || 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions on mobile - shown inline with status */}
+                <div className="flex xs:hidden items-center gap-1">
+                  <Tooltip
+                    content={
                       isCompleted &&
                       hasAnalysis &&
                       execution.analysis.has_report
-                    )
-                  }
-                  onPress={() => onViewReport(execution)}
-                >
-                  <FileText className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-
-              <Tooltip
-                content={
-                  isCompleted && hasAnalysis && execution.analysis.has_graph
-                    ? "View Graph"
-                    : "Graph not available"
-                }
-              >
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  isDisabled={
-                    !(
-                      isCompleted &&
-                      hasAnalysis &&
-                      execution.analysis.has_graph
-                    )
-                  }
-                  onPress={() => onViewGraph(execution)}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-
-              <Tooltip
-                content={
-                  isCompleted && execution.generated_profiles_count > 0
-                    ? "View Profiles"
-                    : "Profiles not available"
-                }
-              >
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  isDisabled={
-                    !(isCompleted && execution.generated_profiles_count > 0)
-                  }
-                  onPress={() => onViewProfiles(execution)}
-                >
-                  <Users className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-
-              {execution.has_logs && onViewLogs && (
-                <Tooltip content="View Execution Logs">
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    color={execution.has_error ? "danger" : "default"}
-                    onPress={() => onViewLogs(execution)}
+                        ? "View Report"
+                        : "Report not available"
+                    }
                   >
-                    <Terminal className="w-4 h-4" />
-                  </Button>
-                </Tooltip>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      isDisabled={
+                        !(
+                          isCompleted &&
+                          hasAnalysis &&
+                          execution.analysis.has_report
+                        )
+                      }
+                      onPress={() => onViewReport(execution)}
+                    >
+                      <FileText className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+
+                  <Tooltip
+                    content={
+                      isCompleted && hasAnalysis && execution.analysis.has_graph
+                        ? "View Graph"
+                        : "Graph not available"
+                    }
+                  >
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      isDisabled={
+                        !(
+                          isCompleted &&
+                          hasAnalysis &&
+                          execution.analysis.has_graph
+                        )
+                      }
+                      onPress={() => onViewGraph(execution)}
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+
+                  <Tooltip
+                    content={
+                      isCompleted && execution.generated_profiles_count > 0
+                        ? "View Profiles"
+                        : "Profiles not available"
+                    }
+                  >
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      isDisabled={
+                        !(isCompleted && execution.generated_profiles_count > 0)
+                      }
+                      onPress={() => onViewProfiles(execution)}
+                    >
+                      <Users className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+
+                  {execution.has_logs && onViewLogs && (
+                    <Tooltip content="View Execution Logs">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color={execution.has_error ? "danger" : "default"}
+                        onPress={() => onViewLogs(execution)}
+                      >
+                        <Terminal className="w-4 h-4" />
+                      </Button>
+                    </Tooltip>
+                  )}
+
+                  {(hasAnalysis || execution.execution_name) && (
+                    <Tooltip content={isExpanded ? "Show less" : "Show more"}>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => setIsExpanded(!isExpanded)}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </Tooltip>
+                  )}
+
+                  {onDelete && (
+                    <Tooltip content="Delete Execution">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => onDelete(execution)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
+
+              {/* Key Metrics - Hidden on smallest screens */}
+              {isCompleted && hasAnalysis && (
+                <div className="hidden md:flex items-center gap-6 text-xs">
+                  <div className="text-center">
+                    <p className="text-default-500">Sessions</p>
+                    <p className="font-medium">{execution.sessions || "0"}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-default-500">Turns/Session</p>
+                    <p className="font-medium">
+                      {execution.turns_per_session || "0"}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-default-500">Profiles</p>
+                    <p className="font-medium">
+                      {execution.generated_profiles_count || "0"}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Expand/More Menu */}
-            <div className="flex gap-1">
-              {(hasAnalysis || execution.execution_name) && (
-                <Tooltip content={isExpanded ? "Show less" : "Show more"}>
+            {/* Right Side - Actions (hidden on mobile, shown above 480px) */}
+            <div className="hidden xs:flex items-center justify-end gap-2 flex-shrink-0">
+              {/* Quick Actions */}
+              <div className="flex gap-1">
+                <Tooltip
+                  content={
+                    isCompleted && hasAnalysis && execution.analysis.has_report
+                      ? "View Report"
+                      : "Report not available"
+                  }
+                >
                   <Button
                     isIconOnly
                     size="sm"
                     variant="light"
-                    onPress={() => setIsExpanded(!isExpanded)}
+                    isDisabled={
+                      !(
+                        isCompleted &&
+                        hasAnalysis &&
+                        execution.analysis.has_report
+                      )
+                    }
+                    onPress={() => onViewReport(execution)}
                   >
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
+                    <FileText className="w-4 h-4" />
                   </Button>
                 </Tooltip>
-              )}
 
-              {onDelete && (
-                <Tooltip content="Delete Execution">
+                <Tooltip
+                  content={
+                    isCompleted && hasAnalysis && execution.analysis.has_graph
+                      ? "View Graph"
+                      : "Graph not available"
+                  }
+                >
                   <Button
                     isIconOnly
                     size="sm"
                     variant="light"
-                    color="danger"
-                    onPress={() => onDelete(execution)}
+                    isDisabled={
+                      !(
+                        isCompleted &&
+                        hasAnalysis &&
+                        execution.analysis.has_graph
+                      )
+                    }
+                    onPress={() => onViewGraph(execution)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <BarChart3 className="w-4 h-4" />
                   </Button>
                 </Tooltip>
-              )}
+
+                <Tooltip
+                  content={
+                    isCompleted && execution.generated_profiles_count > 0
+                      ? "View Profiles"
+                      : "Profiles not available"
+                  }
+                >
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    isDisabled={
+                      !(isCompleted && execution.generated_profiles_count > 0)
+                    }
+                    onPress={() => onViewProfiles(execution)}
+                  >
+                    <Users className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+
+                {execution.has_logs && onViewLogs && (
+                  <Tooltip content="View Execution Logs">
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      color={execution.has_error ? "danger" : "default"}
+                      onPress={() => onViewLogs(execution)}
+                    >
+                      <Terminal className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
+
+              {/* Expand/More Menu */}
+              <div className="flex gap-1">
+                {(hasAnalysis || execution.execution_name) && (
+                  <Tooltip content={isExpanded ? "Show less" : "Show more"}>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      onPress={() => setIsExpanded(!isExpanded)}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </Tooltip>
+                )}
+
+                {onDelete && (
+                  <Tooltip content="Delete Execution">
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      color="danger"
+                      onPress={() => onDelete(execution)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
             </div>
           </div>
         </div>

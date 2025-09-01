@@ -9,6 +9,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        xs: "480px",
+      },
       colors: {
         gray: {
           50: "#fafafa",
