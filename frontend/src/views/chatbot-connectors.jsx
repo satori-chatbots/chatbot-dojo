@@ -370,7 +370,12 @@ const ChatbotConnectors = () => {
   const columns = [
     { name: "Name", key: "name", sortable: true },
     { name: "Technology", key: "technology", sortable: true },
-    { name: "Configuration", key: "parameters", sortable: false },
+    {
+      name: "Configuration",
+      key: "parameters",
+      sortable: false,
+      className: "hidden lg:table-cell",
+    },
     { name: "Actions", key: "actions", sortable: false },
   ];
 
@@ -415,18 +420,17 @@ const ChatbotConnectors = () => {
       className="flex flex-col
             w-full sm:max-w-6xl
             mx-auto
-            my-auto
-            max-h-[95vh]
-            p-4 sm:p-6 lg:p-8
-            space-y-6"
+            min-h-0
+            p-3 sm:p-4 md:p-6 lg:p-8
+            space-y-4 sm:space-y-6"
     >
       {/* Header Section */}
       <div className="text-center space-y-4">
         <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground dark:text-foreground-dark">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground dark:text-foreground-dark">
             Connector Management
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-4">
             Configure and manage chatbot connectors to communicate TRACER and
             Sensei with other chatbots. Built with{" "}
             <a
@@ -442,7 +446,7 @@ const ChatbotConnectors = () => {
         </div>
 
         {/* Setup Progress */}
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full max-w-4xl mx-auto px-4">
           <SetupProgress isCompact={true} />
         </div>
       </div>
@@ -603,13 +607,14 @@ const ChatbotConnectors = () => {
                   )}
                 </Form>
 
-                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     type="reset"
                     color="default"
                     variant="bordered"
                     startContent={<RotateCcw className="w-4 h-4" />}
                     onPress={handleFormReset}
+                    className="w-full sm:w-auto"
                   >
                     Reset
                   </Button>
@@ -621,6 +626,7 @@ const ChatbotConnectors = () => {
                       !loadingValidation && <Plus className="w-4 h-4" />
                     }
                     onPress={handleFormSubmit}
+                    className="w-full sm:w-auto"
                   >
                     Create Connector
                   </Button>
@@ -632,11 +638,11 @@ const ChatbotConnectors = () => {
       </Modal>
 
       {/* Main Content Section */}
-      <div className="flex flex-col space-y-6">
+      <div className="flex flex-col space-y-4 sm:space-y-6">
         {/* Header with Create Button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground dark:text-foreground-dark">
+          <div className="text-center sm:text-left">
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground dark:text-foreground-dark">
               Active Connectors
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -667,98 +673,88 @@ const ChatbotConnectors = () => {
 
         {/* Connectors Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <Table
-            aria-label="Chatbot Connectors Table"
-            className="min-h-[300px]"
-            sortDescriptor={sortDescriptor}
-            onSortChange={setSortDescriptor}
-            removeWrapper
-          >
-            <TableHeader columns={columns}>
-              {(column) => (
-                <TableColumn key={column.key} allowsSorting={column.sortable}>
-                  {column.name}
-                </TableColumn>
-              )}
-            </TableHeader>
-            <TableBody
-              isLoading={loading}
-              loadingContent={<Spinner label="Loading connectors..." />}
-              emptyContent={
-                <div className="text-center py-12">
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                      <Plus className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        No connectors yet
-                      </h3>
-                      <p className="text-gray-500 dark:text-gray-400 mt-1">
-                        Get started by creating your first connector
-                      </p>
-                    </div>
+          {/* Mobile view - Cards for small screens */}
+          <div className="block sm:hidden">
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <Spinner label="Loading connectors..." />
+              </div>
+            ) : sortedChatbotConnectors.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <Plus className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      No connectors yet
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                      Get started by creating your first connector
+                    </p>
                   </div>
                 </div>
-              }
-            >
-              {sortedChatbotConnectors.map((connector) => (
-                <TableRow
+              </div>
+            ) : (
+              sortedChatbotConnectors.map((connector) => (
+                <div
                   key={connector.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  className="p-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
-                  <TableCell className="px-4 py-4 font-medium">
-                    {connector.name}
-                  </TableCell>
-                  <TableCell className="px-4 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                      {connector.technology}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-4">
-                    {connector.technology === "custom" ? (
-                      <div className="flex items-center space-x-2 text-sm">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-700 dark:text-gray-300">
-                          YAML Configuration
-                        </span>
+                  <div className="space-y-3">
+                    {/* Header with name and technology */}
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {connector.name}
+                        </h3>
+                        <div className="mt-1">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            {connector.technology}
+                          </span>
+                        </div>
                       </div>
-                    ) : connector.parameters &&
-                      Object.keys(connector.parameters).length > 0 ? (
-                      <div className="space-y-1">
-                        {Object.entries(connector.parameters)
-                          .slice(0, 3)
-                          .map(([key, value]) => (
-                            <div key={key} className="text-sm">
-                              <span className="font-medium text-gray-900 dark:text-gray-100">
-                                {key}:
-                              </span>{" "}
-                              <span className="text-gray-600 dark:text-gray-400 break-all">
-                                {value}
-                              </span>
+                    </div>
+
+                    {/* Configuration details */}
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {connector.technology === "custom" ? (
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          <span>YAML Configuration</span>
+                        </div>
+                      ) : connector.parameters &&
+                        Object.keys(connector.parameters).length > 0 ? (
+                        <div className="space-y-1">
+                          {Object.entries(connector.parameters)
+                            .slice(0, 2)
+                            .map(([key, value]) => (
+                              <div key={key}>
+                                <span className="font-medium">{key}:</span>{" "}
+                                <span className="break-all">{value}</span>
+                              </div>
+                            ))}
+                          {Object.keys(connector.parameters).length > 2 && (
+                            <div className="text-xs text-gray-500">
+                              +{Object.keys(connector.parameters).length - 2}{" "}
+                              more
                             </div>
-                          ))}
-                        {Object.keys(connector.parameters).length > 3 && (
-                          <div className="text-xs text-gray-500">
-                            +{Object.keys(connector.parameters).length - 3} more
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-500 italic text-sm">
-                        No parameters
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="px-4 py-4">
-                    <div className="flex items-center space-x-2">
+                          )}
+                        </div>
+                      ) : (
+                        <span className="italic">No parameters</span>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2">
                       <Button
                         size="sm"
                         color="default"
                         variant="flat"
                         startContent={<Edit className="w-3 h-3" />}
                         onPress={() => handleEdit(connector)}
-                        className="text-xs"
+                        className="flex-1"
                       >
                         Edit
                       </Button>
@@ -768,16 +764,136 @@ const ChatbotConnectors = () => {
                         variant="flat"
                         startContent={<Trash className="w-3 h-3" />}
                         onPress={() => handleDelete(connector.id)}
-                        className="text-xs"
+                        className="flex-1"
                       >
                         Delete
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop view - Table for larger screens */}
+          <div className="hidden sm:block">
+            <Table
+              aria-label="Chatbot Connectors Table"
+              className="min-h-[300px]"
+              sortDescriptor={sortDescriptor}
+              onSortChange={setSortDescriptor}
+              removeWrapper
+            >
+              <TableHeader columns={columns}>
+                {(column) => (
+                  <TableColumn
+                    key={column.key}
+                    allowsSorting={column.sortable}
+                    className={column.className}
+                  >
+                    {column.name}
+                  </TableColumn>
+                )}
+              </TableHeader>
+              <TableBody
+                isLoading={loading}
+                loadingContent={<Spinner label="Loading connectors..." />}
+                emptyContent={
+                  <div className="text-center py-12">
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                        <Plus className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                          No connectors yet
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">
+                          Get started by creating your first connector
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                }
+              >
+                {sortedChatbotConnectors.map((connector) => (
+                  <TableRow
+                    key={connector.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  >
+                    <TableCell className="px-4 py-4 font-medium">
+                      {connector.name}
+                    </TableCell>
+                    <TableCell className="px-4 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {connector.technology}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-4 hidden lg:table-cell">
+                      {connector.technology === "custom" ? (
+                        <div className="flex items-center space-x-2 text-sm">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-700 dark:text-gray-300">
+                            YAML Configuration
+                          </span>
+                        </div>
+                      ) : connector.parameters &&
+                        Object.keys(connector.parameters).length > 0 ? (
+                        <div className="space-y-1">
+                          {Object.entries(connector.parameters)
+                            .slice(0, 3)
+                            .map(([key, value]) => (
+                              <div key={key} className="text-sm">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">
+                                  {key}:
+                                </span>{" "}
+                                <span className="text-gray-600 dark:text-gray-400 break-all">
+                                  {value}
+                                </span>
+                              </div>
+                            ))}
+                          {Object.keys(connector.parameters).length > 3 && (
+                            <div className="text-xs text-gray-500">
+                              +{Object.keys(connector.parameters).length - 3}{" "}
+                              more
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 italic text-sm">
+                          No parameters
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-4">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          color="default"
+                          variant="flat"
+                          startContent={<Edit className="w-3 h-3" />}
+                          onPress={() => handleEdit(connector)}
+                          className="text-xs"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          color="danger"
+                          variant="flat"
+                          startContent={<Trash className="w-3 h-3" />}
+                          onPress={() => handleDelete(connector.id)}
+                          className="text-xs"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 
@@ -953,13 +1069,14 @@ const ChatbotConnectors = () => {
                   )}
                 </Form>
 
-                <div className="flex justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row justify-center gap-3 w-full px-6 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     type="reset"
                     color="default"
                     variant="bordered"
                     startContent={<RotateCcw className="w-4 h-4" />}
                     onPress={handleEditFormReset}
+                    className="w-full sm:w-auto"
                   >
                     Reset
                   </Button>
@@ -971,6 +1088,7 @@ const ChatbotConnectors = () => {
                       !loadingValidation && <Save className="w-4 h-4" />
                     }
                     onPress={handleUpdate}
+                    className="w-full sm:w-auto"
                   >
                     Save Changes
                   </Button>

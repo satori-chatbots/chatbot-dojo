@@ -57,12 +57,16 @@ const formatDate = (dateString) => {
 
 const YamlHighlighter = ({ content }) => {
   return (
-    <pre className="bg-default-50 dark:bg-default-900/10 rounded-lg p-4 overflow-x-auto text-sm whitespace-pre-wrap break-words border border-default-200 dark:border-default-700">
-      <code
-        className="text-foreground"
-        dangerouslySetInnerHTML={{ __html: highlightYaml(content) }}
-      />
-    </pre>
+    <div className="bg-default-50 dark:bg-default-900/10 rounded-lg border border-default-200 dark:border-default-700 overflow-hidden">
+      <div className="overflow-x-auto">
+        <pre className="p-3 sm:p-4 text-xs sm:text-sm md:text-sm whitespace-pre-wrap break-words min-w-0">
+          <code
+            className="text-foreground block"
+            dangerouslySetInnerHTML={{ __html: highlightYaml(content) }}
+          />
+        </pre>
+      </div>
+    </div>
   );
 };
 
@@ -109,17 +113,17 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
 
   return (
     <>
-      <ModalHeader className="flex flex-col gap-1">
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success-50 dark:bg-success-900/20">
+      <ModalHeader className="flex flex-col gap-3 sm:gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-3 sm:gap-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="p-2 rounded-lg bg-success-50 dark:bg-success-900/20 flex-shrink-0">
               <Users className="w-5 h-5 text-success" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-semibold truncate">
                 Original TRACER Profiles
               </h2>
-              <p className="text-sm text-default-500">
+              <p className="text-xs sm:text-sm text-default-500 truncate">
                 {execution.execution_name} -{" "}
                 {profilesData?.project_name || execution.project_name}
               </p>
@@ -133,6 +137,7 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
               variant="flat"
               startContent={<Copy className="w-4 h-4" />}
               onPress={handleCopyAll}
+              className="w-full sm:w-auto"
             >
               Copy All
             </Button>
@@ -198,38 +203,47 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
                 </Card>
 
                 {/* Profiles using Accordion for better space management */}
-                <Accordion variant="splitted" selectionMode="multiple">
+                <Accordion
+                  variant="splitted"
+                  selectionMode="multiple"
+                  className="px-0"
+                >
                   {profilesData.profiles.map((profile, index) => (
                     <AccordionItem
                       key={profile.id}
                       aria-label={profile.filename}
                       title={
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-success-100 dark:bg-success-900/20">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                          <div className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-success-100 dark:bg-success-900/20 flex-shrink-0">
                             <span className="text-xs font-semibold text-success-700 dark:text-success-400">
                               {index + 1}
                             </span>
                           </div>
-                          <span className="font-medium">
+                          <span className="font-medium text-sm sm:text-base truncate flex-1 min-w-0">
                             {profile.filename}
                           </span>
-                          <span className="text-xs text-default-500 ml-auto">
+                          <span className="text-xs text-default-500 ml-auto flex-shrink-0 hidden sm:block">
                             {formatDate(profile.created_at)}
                           </span>
                         </div>
                       }
+                      subtitle={
+                        <span className="text-xs text-default-500 block sm:hidden mt-1">
+                          {formatDate(profile.created_at)}
+                        </span>
+                      }
                       className="border-default-200 dark:border-default-700"
                     >
-                      <div className="px-4 pb-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <p className="text-sm text-default-600 dark:text-default-400">
+                      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3">
+                          <p className="text-xs sm:text-sm text-default-600 dark:text-default-400 flex-1">
                             Original TRACER-generated profile content
                             (read-only)
                           </p>
                           <Button
                             size="sm"
                             variant="light"
-                            startContent={<Copy className="w-3 h-3" />}
+                            startContent={<Copy className="w-4 h-4" />}
                             onPress={async () => {
                               try {
                                 await navigator.clipboard.writeText(
@@ -243,6 +257,7 @@ const OriginalProfilesViewer = ({ execution, onClose }) => {
                                 showToast("Failed to copy profile", "error");
                               }
                             }}
+                            className="w-full sm:w-auto"
                           >
                             Copy
                           </Button>

@@ -124,9 +124,9 @@ function AppContent() {
       <div className={`flex flex-col min-h-screen ${theme}`}>
         <Navbar
           onMenuOpenChange={setIsMenuOpen}
-          maxWidth="lg"
+          maxWidth="full"
           isMenuOpen={isMenuOpen}
-          className="bg-background sm:bg-background-subtle dark:bg-darkbg-card"
+          className="bg-background sm:bg-background-subtle dark:bg-darkbg-card px-4"
         >
           <NavbarMenuToggle
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
@@ -134,7 +134,10 @@ function AppContent() {
           />
 
           {/* Left section */}
-          <NavbarContent className="hidden sm:flex" justify="start">
+          <NavbarContent
+            className="hidden sm:flex gap-1 lg:gap-4"
+            justify="start"
+          >
             {user && (
               <NavbarItem isActive={location.pathname === "/"}>
                 <Link to="/" className="hover:underline text-sm">
@@ -144,12 +147,14 @@ function AppContent() {
             )}
             <NavbarItem isActive={location.pathname === "/dashboard"}>
               <Link to="/dashboard" className="hover:underline text-sm">
-                Sensei Dashboard
+                <span className="hidden lg:inline">SENSEI Dashboard</span>
+                <span className="lg:hidden">SENSEI</span>
               </Link>
             </NavbarItem>
             <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
               <Link to="/tracer-dashboard" className="hover:underline text-sm">
-                TRACER Dashboard
+                <span className="hidden lg:inline">TRACER Dashboard</span>
+                <span className="lg:hidden">TRACER</span>
               </Link>
             </NavbarItem>
             {user && (
@@ -233,22 +238,24 @@ function AppContent() {
           <NavbarContent justify="end" className="gap-2">
             {user ? (
               <>
-                <NavbarItem>
+                {/* Welcome text - hide on smaller screens */}
+                <NavbarItem className="hidden lg:flex">
                   <span className="text-sm">Welcome, </span>
                 </NavbarItem>
                 <NavbarItem
                   isActive={location.pathname === "/profile"}
-                  className="text-primary"
+                  className="text-primary hidden sm:flex"
                 >
                   <Link to="/profile" className="hover:underline text-sm">
                     {user.first_name}
                   </Link>
                 </NavbarItem>
-                <NavbarItem>
+                <NavbarItem className="hidden sm:flex">
                   <Button
                     size="sm"
                     color="default"
                     variant="ghost"
+                    className="hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400"
                     onPress={() => {
                       logout();
                       navigate("/");
@@ -260,7 +267,10 @@ function AppContent() {
               </>
             ) : (
               <>
-                <NavbarItem isActive={location.pathname === "/login"}>
+                <NavbarItem
+                  isActive={location.pathname === "/login"}
+                  className="hidden md:flex"
+                >
                   <Button
                     size="sm"
                     color="primary"
@@ -270,7 +280,10 @@ function AppContent() {
                     Login
                   </Button>
                 </NavbarItem>
-                <NavbarItem isActive={location.pathname === "/signup"}>
+                <NavbarItem
+                  isActive={location.pathname === "/signup"}
+                  className="hidden md:flex"
+                >
                   <Button
                     size="sm"
                     color="default"
@@ -284,24 +297,26 @@ function AppContent() {
                 </NavbarItem>
               </>
             )}
-            <Switch
-              defaultSelected={theme === "dark"}
-              className="ml-4"
-              color="success"
-              endContent={
-                <span aria-hidden="true">
-                  <MoonIcon />
-                </span>
-              }
-              size="md"
-              startContent={
-                <span aria-hidden="true">
-                  <SunIcon />
-                </span>
-              }
-              value={mounted}
-              onChange={toggleTheme}
-            />
+            {/* Theme switch - always visible */}
+            <NavbarItem>
+              <Switch
+                defaultSelected={theme === "dark"}
+                color="success"
+                endContent={
+                  <span aria-hidden="true">
+                    <MoonIcon />
+                  </span>
+                }
+                size="md"
+                startContent={
+                  <span aria-hidden="true">
+                    <SunIcon />
+                  </span>
+                }
+                value={mounted}
+                onChange={toggleTheme}
+              />
+            </NavbarItem>
           </NavbarContent>
 
           <NavbarMenu>
@@ -322,7 +337,7 @@ function AppContent() {
                 className="hover:underline text-sm"
                 onClick={handleLinkClick}
               >
-                Sensei Dashboard
+                SENSEI Dashboard
               </Link>
             </NavbarMenuItem>
             <NavbarMenuItem
@@ -373,15 +388,34 @@ function AppContent() {
               </>
             )}
             {user ? (
-              <NavbarMenuItem isActive={location.pathname === "/profile"}>
-                <Link
-                  to="/profile"
-                  className="hover:underline text-sm"
-                  onClick={handleLinkClick}
-                >
-                  Profile
-                </Link>
-              </NavbarMenuItem>
+              <>
+                <div className="px-4 py-2 text-tiny text-default-400 font-medium">
+                  USER
+                </div>
+                <NavbarMenuItem isActive={location.pathname === "/profile"}>
+                  <Link
+                    to="/profile"
+                    className="hover:underline text-sm"
+                    onClick={handleLinkClick}
+                  >
+                    {user.first_name}
+                  </Link>
+                </NavbarMenuItem>
+                <NavbarMenuItem>
+                  <Link
+                    to="#"
+                    className="hover:underline text-sm text-danger-600 dark:text-danger-400 hover:text-danger-700 dark:hover:text-danger-300"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      logout();
+                      navigate("/");
+                      handleLinkClick();
+                    }}
+                  >
+                    Logout
+                  </Link>
+                </NavbarMenuItem>
+              </>
             ) : (
               <>
                 <NavbarMenuItem isActive={location.pathname === "/login"}>

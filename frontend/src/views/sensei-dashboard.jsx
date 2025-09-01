@@ -595,12 +595,12 @@ function Dashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-6 max-w-6xl mx-auto">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full 2xl:max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Activity className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-          {publicView ? "Public Sensei Dashboard" : "Sensei Dashboard"}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+          {publicView ? "Public SENSEI Dashboard" : "SENSEI Dashboard"}
         </h1>
       </div>
 
@@ -613,30 +613,37 @@ function Dashboard() {
 
       {/* Filters */}
       <Card className="border-default-200">
-        <CardBody>
+        <CardBody className="p-4 sm:p-6">
           <Form
-            className="flex flex-col lg:flex-row items-start lg:items-center gap-4"
+            className="flex flex-col lg:flex-row gap-4 lg:items-center"
             onSubmit={handleFilterProjects}
             validationBehavior="native"
           >
             {/* Search input */}
-            <div className="flex-1 min-w-0">
+            <div className="w-full lg:flex-1 lg:min-w-0">
               <Input
                 type="search"
                 label="Search test cases"
-                placeholder="Type to search..."
+                placeholder="Search by name, status, or project..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 startContent={<Search className="text-default-400" size={18} />}
                 isClearable
-                radius="sm"
+                radius="md"
                 onClear={() => setSearchTerm("")}
-                size="sm"
+                size="md"
+                className="w-full"
+                classNames={{
+                  base: "w-full",
+                  mainWrapper: "w-full",
+                  inputWrapper:
+                    "w-full h-12 bg-default-50/50 border-1 border-default-200 hover:border-default-300 focus-within:border-primary transition-colors",
+                }}
               />
             </div>
 
             {/* Projects selector */}
-            <div className="flex-1 min-w-0">
+            <div className="w-full lg:flex-1 lg:min-w-[280px] lg:max-w-[320px]">
               <Select
                 label={
                   publicView ? "Filter Public Projects" : "Filter Projects"
@@ -644,14 +651,20 @@ function Dashboard() {
                 placeholder={
                   publicView ? "All Public Projects" : "All Projects"
                 }
-                size="sm"
+                size="md"
                 isRequired
                 errorMessage="Please select at least one project."
                 selectionMode="multiple"
                 selectedKeys={new Set(selectedProjects)}
                 onSelectionChange={handleProjectChange}
                 isDisabled={loadingProjects || !!errorProjects}
-                className="min-w-[200px]"
+                className="w-full"
+                classNames={{
+                  base: "w-full",
+                  mainWrapper: "w-full",
+                  trigger:
+                    "w-full h-12 bg-default-50/50 border-1 border-default-200 hover:border-default-300 data-[focus=true]:border-primary transition-colors",
+                }}
               >
                 {loadingProjects ? (
                   <SelectItem key="loading" isDisabled>
@@ -692,29 +705,39 @@ function Dashboard() {
             </div>
 
             {/* Status selector */}
-            <div className="flex-1 min-w-0">
+            <div className="w-full lg:flex-1 lg:min-w-[200px] lg:max-w-[240px]">
               <Select
                 label="Filter by Status"
                 placeholder="All Statuses"
-                size="sm"
+                size="md"
                 selectedKeys={new Set([selectedStatus])}
                 selectionMode="single"
                 onSelectionChange={(keys) => {
                   const value = [...keys][0];
                   setSelectedStatus(value);
                 }}
-                className="min-w-[150px]"
+                className="w-full"
+                classNames={{
+                  base: "w-full",
+                  mainWrapper: "w-full",
+                  trigger:
+                    "w-full h-12 bg-default-50/50 border-1 border-default-200 hover:border-default-300 data-[focus=true]:border-primary transition-colors",
+                }}
                 renderValue={() => {
                   return (
                     <div className="flex items-center gap-2">
                       {selectedStatus === "ALL" ? (
                         "All Statuses"
                       ) : (
-                        <span
-                          className={`text-${statusColorMap[selectedStatus]}`}
-                        >
-                          {selectedStatus}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <Chip
+                            color={statusColorMap[selectedStatus]}
+                            size="sm"
+                            variant="flat"
+                          >
+                            {selectedStatus}
+                          </Chip>
+                        </div>
                       )}
                     </div>
                   );
@@ -742,9 +765,15 @@ function Dashboard() {
             </div>
 
             {/* Filter button */}
-            <div className="flex-shrink-0">
-              <Button color="primary" size="sm" type="submit" className="px-8">
-                Filter
+            <div className="w-full lg:w-auto lg:flex-shrink-0">
+              <Button
+                color="primary"
+                size="md"
+                type="submit"
+                className="w-full lg:w-auto h-12 px-8 font-medium"
+                radius="md"
+              >
+                Apply Filters
               </Button>
             </div>
           </Form>
@@ -754,218 +783,243 @@ function Dashboard() {
       {/* Results Table */}
       <Card className="border-default-200">
         <CardBody className="p-0">
-          <Table
-            aria-label="Test Cases Table"
-            isStriped
-            sortDescriptor={sortDescriptor}
-            onSortChange={(descriptor) => {
-              setSortDescriptor(descriptor);
-              fetchPagedTestCases(
-                page,
-                descriptor.column,
-                descriptor.direction,
-              );
-            }}
-          >
-            <TableHeader>
-              {columns.map((column) => (
-                <TableColumn key={column.key} allowsSorting={column.sortable}>
-                  {column.name}
-                </TableColumn>
-              ))}
-            </TableHeader>
-            <TableBody
-              items={sortedTestCases}
-              isLoading={loading}
-              loadingContent={<Spinner label="Loading Test Cases..." />}
-              emptyContent={"No Test Cases to display."}
+          <div className="overflow-x-auto">
+            <Table
+              aria-label="Test Cases Table"
+              isStriped
+              sortDescriptor={sortDescriptor}
+              onSortChange={(descriptor) => {
+                setSortDescriptor(descriptor);
+                fetchPagedTestCases(
+                  page,
+                  descriptor.column,
+                  descriptor.direction,
+                );
+              }}
+              className="min-w-[800px]"
             >
-              {(testCase) => (
-                <TableRow key={testCase.id} href={`/test-case/${testCase.id}`}>
-                  <TableCell>{testCase.displayName}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Chip
-                        color={statusColorMap[testCase.status]}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {testCase.status}
-                      </Chip>
-                      {testCase.status === "RUNNING" && (
-                        <div className="flex flex-col gap-1">
-                          {testCase.progress_stage &&
-                            testCase.progress_stage !==
-                              "Task is waiting to be processed" && (
-                              <div className="text-xs text-primary max-w-48 truncate">
-                                {testCase.progress_stage}
+              <TableHeader>
+                {columns.map((column) => (
+                  <TableColumn key={column.key} allowsSorting={column.sortable}>
+                    {column.name}
+                  </TableColumn>
+                ))}
+              </TableHeader>
+              <TableBody
+                items={sortedTestCases}
+                isLoading={loading}
+                loadingContent={<Spinner label="Loading Test Cases..." />}
+                emptyContent={"No Test Cases to display."}
+              >
+                {(testCase) => (
+                  <TableRow
+                    key={testCase.id}
+                    href={`/test-case/${testCase.id}`}
+                  >
+                    <TableCell>{testCase.displayName}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1 min-w-[120px]">
+                        <Chip
+                          color={statusColorMap[testCase.status]}
+                          size="sm"
+                          variant="flat"
+                        >
+                          {testCase.status}
+                        </Chip>
+                        {testCase.status === "RUNNING" && (
+                          <div className="flex flex-col gap-1">
+                            {testCase.progress_stage &&
+                              testCase.progress_stage !==
+                                "Task is waiting to be processed" && (
+                                <div className="text-xs text-primary max-w-[180px] sm:max-w-48 truncate">
+                                  {testCase.progress_stage}
+                                </div>
+                              )}
+                            {testCase.progress_percentage !== undefined && (
+                              <div className="text-xs text-default-500">
+                                {testCase.total_conversations > 0
+                                  ? `${testCase.executed_conversations || 0} of ${testCase.total_conversations} conversations (${testCase.progress_percentage}%)`
+                                  : `${testCase.progress_percentage}% complete`}
                               </div>
                             )}
-                          {testCase.progress_percentage !== undefined && (
-                            <div className="text-xs text-default-500">
-                              {testCase.total_conversations > 0
-                                ? `${testCase.executed_conversations || 0} of ${testCase.total_conversations} conversations (${testCase.progress_percentage}%)`
-                                : `${testCase.progress_percentage}% complete`}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {testCase.status === "FAILURE" &&
-                        testCase.error_message && (
-                          <div
-                            className="text-xs text-red-600 dark:text-red-400 max-w-48 truncate"
-                            title={testCase.error_message}
-                          >
-                            {testCase.error_message}
                           </div>
                         )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(testCase.executed_at).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    {testCase.copied_files.length > 3 ? (
-                      <Accordion isCompact={true}>
-                        <AccordionItem
-                          title={`View ${testCase.copied_files.length} files`}
-                          isCompact={true}
-                          classNames={{ title: "text-sm mx-0" }}
-                        >
-                          <ul>
-                            {testCase.copied_files.map((file) => (
-                              <li key={`${testCase.id}-${file.name}`}>
-                                {file.name}
-                              </li>
-                            ))}
-                          </ul>
-                        </AccordionItem>
-                      </Accordion>
-                    ) : (
-                      <ul>
-                        {testCase.copied_files.map((file) => (
-                          <li key={`${testCase.id}-${file.name}`}>
-                            <Link
-                              color="foreground"
-                              href={`${MEDIA_URL}${file.path}`}
-                              className="text-sm text-foreground/100 dark:text-foreground-dark/100"
+                        {testCase.status === "FAILURE" &&
+                          testCase.error_message && (
+                            <div
+                              className="text-xs text-red-600 dark:text-red-400 max-w-[180px] sm:max-w-48 truncate"
+                              title={testCase.error_message}
                             >
-                              {file.name}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {formatExecutionTime(
-                      testCase.execution_time,
-                      testCase.status,
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {testCase.num_errors > 0 ? (
-                      <Accordion isCompact>
-                        <AccordionItem
-                          title={
-                            <span className="text-sm text-foreground/100 dark:text-foreground-dark/100">{`${testCase.num_errors} errors`}</span>
-                          }
-                        >
-                          <ul>
-                            {testCase.testCaseErrors.map((error_) => (
-                              <li key={error_.id}>
-                                Error {error_.code}: {error_.count}
+                              {testCase.error_message}
+                            </div>
+                          )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(testCase.executed_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="min-w-[150px] max-w-[200px]">
+                        {testCase.copied_files.length > 3 ? (
+                          <Accordion isCompact={true}>
+                            <AccordionItem
+                              title={`View ${testCase.copied_files.length} files`}
+                              isCompact={true}
+                              classNames={{ title: "text-sm mx-0" }}
+                            >
+                              <ul className="space-y-1">
+                                {testCase.copied_files.map((file) => (
+                                  <li
+                                    key={`${testCase.id}-${file.name}`}
+                                    className="truncate"
+                                  >
+                                    <span className="text-xs" title={file.name}>
+                                      {file.name}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </AccordionItem>
+                          </Accordion>
+                        ) : (
+                          <ul className="space-y-1">
+                            {testCase.copied_files.map((file) => (
+                              <li
+                                key={`${testCase.id}-${file.name}`}
+                                className="truncate"
+                              >
+                                <Link
+                                  color="foreground"
+                                  href={`${MEDIA_URL}${file.path}`}
+                                  className="text-xs text-foreground/100 dark:text-foreground-dark/100"
+                                  title={file.name}
+                                >
+                                  {file.name}
+                                </Link>
                               </li>
                             ))}
                           </ul>
-                        </AccordionItem>
-                      </Accordion>
-                    ) : (
-                      <Accordion isCompact>
-                        <AccordionItem
-                          title={
-                            <span className="text-sm text-foreground dark:text-foreground-dark">
-                              No errors
-                            </span>
-                          }
-                        />
-                      </Accordion>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {formatCost(testCase.total_cost, testCase.status)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      {testCase.llm_model ? (
-                        <>
-                          <span className="font-medium text-sm">
-                            {testCase.llm_model}
-                          </span>
-                          <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
-                            {getProviderDisplayName(testCase.llm_provider)}
-                          </span>
-                        </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {formatExecutionTime(
+                        testCase.execution_time,
+                        testCase.status,
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {testCase.num_errors > 0 ? (
+                        <Accordion isCompact>
+                          <AccordionItem
+                            title={
+                              <span className="text-sm text-foreground/100 dark:text-foreground-dark/100">{`${testCase.num_errors} errors`}</span>
+                            }
+                          >
+                            <ul>
+                              {testCase.testCaseErrors.map((error_) => (
+                                <li key={error_.id}>
+                                  Error {error_.code}: {error_.count}
+                                </li>
+                              ))}
+                            </ul>
+                          </AccordionItem>
+                        </Accordion>
                       ) : (
-                        <span className="text-foreground/60 dark:text-foreground-dark/60 italic text-sm">
-                          No model recorded
-                        </span>
+                        <Accordion isCompact>
+                          <AccordionItem
+                            title={
+                              <span className="text-sm text-foreground dark:text-foreground-dark">
+                                No errors
+                              </span>
+                            }
+                          />
+                        </Accordion>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {
-                      projects.find(
-                        (project) => project.id === testCase.project,
-                      )?.name
-                    }
-                  </TableCell>
+                    </TableCell>
+                    <TableCell>
+                      {formatCost(testCase.total_cost, testCase.status)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        {testCase.llm_model ? (
+                          <>
+                            <span className="font-medium text-sm">
+                              {testCase.llm_model}
+                            </span>
+                            <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                              {getProviderDisplayName(testCase.llm_provider)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-foreground/60 dark:text-foreground-dark/60 italic text-sm">
+                            No model recorded
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {
+                        projects.find(
+                          (project) => project.id === testCase.project,
+                        )?.name
+                      }
+                    </TableCell>
 
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        as={Link}
-                        href={`/test-case/${testCase.id}`}
-                        size="sm"
-                        variant="flat"
-                        color="primary"
-                        endContent={<Eye className="w-3 h-3" />}
-                      >
-                        View
-                      </Button>
-                      {testCase.status === "RUNNING" && (
+                    <TableCell>
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 min-w-[120px]">
                         <Button
+                          as={Link}
+                          href={`/test-case/${testCase.id}`}
                           size="sm"
                           variant="flat"
-                          color="danger"
-                          onPress={(event) => handleStop(testCase.id, event)}
-                          endContent={<XCircle className="w-3 h-3" />}
+                          color="primary"
+                          endContent={<Eye className="w-3 h-3" />}
+                          className="w-full sm:w-auto text-xs"
                         >
-                          Stop
+                          <span className="hidden sm:inline">View</span>
+                          <span className="sm:hidden">View</span>
                         </Button>
-                      )}
-                      {!publicView && (
-                        <Button
-                          size="sm"
-                          variant="flat"
-                          color="danger"
-                          onPress={(event) => handleDelete(testCase.id, event)}
-                          endContent={<Trash className="w-3 h-3" />}
-                        >
-                          Delete
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        {testCase.status === "RUNNING" && (
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            color="danger"
+                            onPress={(event) => handleStop(testCase.id, event)}
+                            endContent={<XCircle className="w-3 h-3" />}
+                            className="w-full sm:w-auto text-xs"
+                          >
+                            <span className="hidden sm:inline">Stop</span>
+                            <span className="sm:hidden">Stop</span>
+                          </Button>
+                        )}
+                        {!publicView && (
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            color="danger"
+                            onPress={(event) =>
+                              handleDelete(testCase.id, event)
+                            }
+                            endContent={<Trash className="w-3 h-3" />}
+                            className="w-full sm:w-auto text-xs"
+                          >
+                            <span className="hidden sm:inline">Delete</span>
+                            <span className="sm:hidden">Del</span>
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardBody>
       </Card>
 
       {/* Pagination */}
-      <div className="flex justify-center">
+      <div className="flex justify-center px-2">
         <Pagination
           showControls
           total={totalPages}
@@ -974,6 +1028,8 @@ function Dashboard() {
             setPage(newPage);
             fetchPagedTestCases(newPage);
           }}
+          size="sm"
+          className="flex-wrap"
         />
       </div>
 
@@ -987,16 +1043,29 @@ function Dashboard() {
               if (!open)
                 setDeleteModal({ isOpen: false, testCaseId: undefined });
             }}
+            size="sm"
+            placement="center"
+            className="mx-3"
           >
             <ModalContent>
               {(onClose) => (
                 <>
-                  <ModalHeader>Delete Test Case</ModalHeader>
-                  <ModalBody>
-                    Are you sure you want to delete this test case?
+                  <ModalHeader className="text-lg font-semibold px-4 sm:px-6">
+                    Delete Test Case
+                  </ModalHeader>
+                  <ModalBody className="px-4 sm:px-6">
+                    <p className="text-sm sm:text-base">
+                      Are you sure you want to delete this test case?
+                    </p>
                   </ModalBody>
-                  <ModalFooter>
-                    <Button color="default" variant="flat" onPress={onClose}>
+                  <ModalFooter className="px-4 sm:px-6 gap-2">
+                    <Button
+                      color="default"
+                      variant="flat"
+                      onPress={onClose}
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                    >
                       Cancel
                     </Button>
                     <Button
@@ -1006,6 +1075,8 @@ function Dashboard() {
                         confirmDelete();
                         onClose();
                       }}
+                      size="sm"
+                      className="flex-1 sm:flex-none"
                     >
                       Delete
                     </Button>

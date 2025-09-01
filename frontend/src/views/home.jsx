@@ -795,18 +795,18 @@ function Home() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex flex-col items-center space-y-4 sm:space-y-6 w-full sm:max-w-4xl mx-auto my-auto">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col items-center space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto my-auto">
       {/* Setup Progress - always visible when not complete */}
       <div className="w-full max-w-lg">
         <SetupProgress isCompact={true} />
       </div>
 
       {selectedProject ? (
-        <Card className="p-6 flex-col space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
+        <Card className="p-4 sm:p-6 flex-col space-y-4 sm:space-y-6 max-w-lg mx-auto w-full bg-content3 dark:bg-darkbg-glass dark:backdrop-blur-md shadow-glass rounded-2xl border border-border dark:border-border-dark">
           {/* Header with Dropdown */}
           <div className="flex items-center justify-center relative">
             <div className="flex items-center justify-center flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-foreground dark:text-foreground-dark truncate text-center">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground dark:text-foreground-dark truncate text-center">
                 {selectedProject.name}
               </h1>
             </div>
@@ -854,7 +854,7 @@ function Home() {
           </div>
 
           {/* LLM Model Information */}
-          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-3 border border-border dark:border-border-dark backdrop-blur-sm">
+          <div className="bg-background-subtle dark:bg-darkbg-card rounded-lg p-3 sm:p-4 border border-border dark:border-border-dark backdrop-blur-sm">
             <div className="flex flex-col space-y-1">
               <h3 className="text-sm font-semibold text-foreground dark:text-foreground-dark mb-2">
                 LLM Configuration
@@ -863,7 +863,7 @@ function Home() {
               selectedProject.llm_model &&
               selectedProject.profile_model ? (
                 <div className="flex flex-col space-y-3">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
                     <div className="flex flex-col">
                       <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
                         Provider
@@ -872,7 +872,7 @@ function Home() {
                         {getProviderDisplayName(selectedProject.llm_provider)}
                       </span>
                     </div>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col sm:items-end">
                       <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
                         API Key
                       </span>
@@ -884,7 +884,7 @@ function Home() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
                     <div className="flex flex-col">
                       <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
                         Exploration Model
@@ -893,7 +893,7 @@ function Home() {
                         {selectedProject.llm_model}
                       </span>
                     </div>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col sm:items-end">
                       <span className="text-xs text-foreground/60 dark:text-foreground-dark/60">
                         Profile Model
                       </span>
@@ -1153,19 +1153,21 @@ function Home() {
           </div>
         </Card>
       ) : (
-        <div className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-4 w-full">
           <h2 className="text-xl font-bold text-center text-foreground dark:text-foreground-dark">
             Select a Project
           </h2>
-          <ProjectsList
-            projects={projects}
-            connectors={availableConnectors}
-            loading={loadingProjects || loadingConnectors}
-            selectedProject={selectedProject}
-            onSelectProject={setSelectedProject}
-            onEditProject={handleEditClick}
-            onDeleteProject={handleProjectDelete}
-          />
+          <div className="w-full px-2 sm:px-0">
+            <ProjectsList
+              projects={projects}
+              connectors={availableConnectors}
+              loading={loadingProjects || loadingConnectors}
+              selectedProject={selectedProject}
+              onSelectProject={setSelectedProject}
+              onEditProject={handleEditClick}
+              onDeleteProject={handleProjectDelete}
+            />
+          </div>
           <Button
             color="primary"
             className="max-w-[200px] mx-auto"

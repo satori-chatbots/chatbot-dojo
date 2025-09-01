@@ -9,6 +9,7 @@ import {
   ModalContent,
   useDisclosure,
   Spinner,
+  Chip,
 } from "@heroui/react";
 import { FixedSizeList as List } from "react-window";
 import {
@@ -373,35 +374,39 @@ const TracerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
         <Spinner size="lg" />
-        <p className="text-default-500">Loading TRACER executions...</p>
+        <p className="text-default-500 text-center">
+          Loading TRACER executions...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex flex-col space-y-6 max-w-6xl mx-auto">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full 2xl:max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <BarChart3 className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
           {publicView ? "Public TRACER Dashboard" : "TRACER Dashboard"}
         </h1>
       </div>
 
       {/* Filters */}
       <Card className="border-default-200">
-        <CardBody>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex-1">
+        <CardBody className="p-4 sm:p-6">
+          <div className="flex flex-col lg:flex-row gap-4 lg:items-center">
+            {/* Projects selector */}
+            <div className="w-full lg:flex-1 lg:min-w-[280px] lg:max-w-[320px]">
               <Select
                 label={
-                  publicView ? "Filter by Public Project" : "Filter by Project"
+                  publicView ? "Filter Public Projects" : "Filter Projects"
                 }
                 placeholder={
                   publicView ? "All Public Projects" : "All Projects"
                 }
+                size="md"
                 selectedKeys={
                   selectedProject === "all" ? [] : [selectedProject]
                 }
@@ -409,60 +414,118 @@ const TracerDashboard = () => {
                   const selected = [...keys][0];
                   setSelectedProject(selected || "all");
                 }}
-                size="sm"
-                className="max-w-xs"
+                className="w-full"
+                classNames={{
+                  base: "w-full",
+                  mainWrapper: "w-full",
+                  trigger:
+                    "w-full h-12 bg-default-50/50 border-1 border-default-200 hover:border-default-300 data-[focus=true]:border-primary transition-colors",
+                }}
               >
-                <SelectItem key="all" value="all">
+                <SelectItem key="all" value="all" className="text-primary">
                   {publicView ? "All Public Projects" : "All Projects"}
                 </SelectItem>
                 {uniqueProjects.map((project) => (
                   <SelectItem
                     key={project.id.toString()}
                     value={project.id.toString()}
+                    textValue={project.name}
                   >
-                    {project.name}
+                    <div className="flex justify-between items-center">
+                      <span>{project.name}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </Select>
             </div>
 
-            <div className="flex-1">
+            {/* Status selector */}
+            <div className="w-full lg:flex-1 lg:min-w-[200px] lg:max-w-[240px]">
               <Select
                 label="Filter by Status"
                 placeholder="All Statuses"
+                size="md"
                 selectedKeys={selectedStatus === "all" ? [] : [selectedStatus]}
                 onSelectionChange={(keys) => {
                   const selected = [...keys][0];
                   setSelectedStatus(selected || "all");
                 }}
-                size="sm"
-                className="max-w-xs"
+                className="w-full"
+                classNames={{
+                  base: "w-full",
+                  mainWrapper: "w-full",
+                  trigger:
+                    "w-full h-12 bg-default-50/50 border-1 border-default-200 hover:border-default-300 data-[focus=true]:border-primary transition-colors",
+                }}
+                renderValue={() => {
+                  const statusColorMap = {
+                    SUCCESS: "success",
+                    RUNNING: "primary",
+                    FAILURE: "danger",
+                    PENDING: "warning",
+                  };
+                  return (
+                    <div className="flex items-center gap-2">
+                      {selectedStatus === "all" ? (
+                        "All Statuses"
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Chip
+                            color={statusColorMap[selectedStatus]}
+                            size="sm"
+                            variant="flat"
+                          >
+                            {selectedStatus}
+                          </Chip>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
               >
-                <SelectItem key="all" value="all">
+                <SelectItem key="all" value="all" className="text-primary">
                   All Statuses
                 </SelectItem>
                 <SelectItem key="SUCCESS" value="SUCCESS">
-                  Success
+                  <div className="flex items-center gap-2">
+                    <Chip color="success" size="sm" variant="flat">
+                      Success
+                    </Chip>
+                  </div>
                 </SelectItem>
                 <SelectItem key="RUNNING" value="RUNNING">
-                  Running
+                  <div className="flex items-center gap-2">
+                    <Chip color="primary" size="sm" variant="flat">
+                      Running
+                    </Chip>
+                  </div>
                 </SelectItem>
                 <SelectItem key="FAILURE" value="FAILURE">
-                  Failure
+                  <div className="flex items-center gap-2">
+                    <Chip color="danger" size="sm" variant="flat">
+                      Failure
+                    </Chip>
+                  </div>
                 </SelectItem>
                 <SelectItem key="PENDING" value="PENDING">
-                  Pending
+                  <div className="flex items-center gap-2">
+                    <Chip color="warning" size="sm" variant="flat">
+                      Pending
+                    </Chip>
+                  </div>
                 </SelectItem>
               </Select>
             </div>
 
-            <div className="flex-1 flex justify-end">
+            {/* Refresh button */}
+            <div className="w-full lg:w-auto lg:flex-shrink-0">
               <Button
                 color="primary"
-                variant="light"
+                size="md"
                 onPress={loadTracerExecutions}
                 isLoading={loading}
-                size="sm"
+                className="w-full lg:w-auto h-12 px-8 font-medium"
+                radius="md"
               >
                 Refresh
               </Button>
@@ -473,23 +536,21 @@ const TracerDashboard = () => {
 
       {/* Executions List */}
       {filteredExecutions.length === 0 ? (
-        <div className="space-y-4">
-          <Card className="border-default-200">
-            <CardBody className="text-center py-8">
-              <BarChart3 className="w-12 h-12 text-default-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-default-600 mb-2">
-                No TRACER Executions Found
-              </h3>
-              <p className="text-default-500">
-                {executions.length === 0
-                  ? publicView
-                    ? "No public TRACER executions are available."
-                    : "No TRACER executions have been created yet."
-                  : "No executions match the current filters."}
-              </p>
-            </CardBody>
-          </Card>
-        </div>
+        <Card className="border-default-200">
+          <CardBody className="text-center py-8">
+            <BarChart3 className="w-12 h-12 text-default-400 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-default-600 mb-2">
+              No TRACER Executions Found
+            </h3>
+            <p className="text-default-500">
+              {executions.length === 0
+                ? publicView
+                  ? "No public TRACER executions are available."
+                  : "No TRACER executions have been created yet."
+                : "No executions match the current filters."}
+            </p>
+          </CardBody>
+        </Card>
       ) : filteredExecutions.length > 50 ? (
         <List
           height={600} // Adjust list height as needed

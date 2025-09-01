@@ -69,8 +69,8 @@ const SetupGuide = () => {
       {isProgressHidden && (
         <Card className="border-primary-200 bg-primary-50">
           <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-1">
                 <h3 className="text-lg font-semibold text-primary-700">
                   Setup Progress Hidden
                 </h3>
@@ -84,6 +84,7 @@ const SetupGuide = () => {
                 variant="solid"
                 startContent={<Eye className="w-4 h-4" />}
                 onPress={handleShowSetupProgress}
+                className="w-full sm:w-auto"
               >
                 Show Setup Progress
               </Button>
