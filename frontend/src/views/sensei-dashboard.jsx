@@ -600,7 +600,7 @@ function Dashboard() {
       <div className="flex items-center gap-2 sm:gap-3">
         <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-          {publicView ? "Public Sensei Dashboard" : "Sensei Dashboard"}
+          {publicView ? "Public SENSEI Dashboard" : "SENSEI Dashboard"}
         </h1>
       </div>
 
