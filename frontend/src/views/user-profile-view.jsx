@@ -259,7 +259,12 @@ const UserProfileView = () => {
         }}
       >
         <ModalContent>
-          <form onSubmit={(e) => { e.preventDefault(); handleAddApiKey(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAddApiKey();
+            }}
+          >
             <ModalHeader>Add New API Key</ModalHeader>
             <ModalBody>
               <Input
@@ -327,11 +332,7 @@ const UserProfileView = () => {
               >
                 Cancel
               </Button>
-              <Button
-                color="primary"
-                type="submit"
-                isLoading={loading}
-              >
+              <Button color="primary" type="submit" isLoading={loading}>
                 Add Key
               </Button>
             </ModalFooter>

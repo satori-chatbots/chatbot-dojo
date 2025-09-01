@@ -108,7 +108,12 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
 
       <Modal isOpen={isEditModalOpen} onClose={handleCancel}>
         <ModalContent>
-          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+          >
             <ModalHeader>Edit API Key</ModalHeader>
             <ModalBody>
               <Input
