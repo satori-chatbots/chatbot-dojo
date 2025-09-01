@@ -17,8 +17,6 @@ import {
   Save,
   Edit,
   Loader2,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
@@ -100,7 +98,7 @@ function YamlEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   const [isValidatingYaml, setIsValidatingYaml] = useState(false);
   const [isValidatingSchema, setIsValidatingSchema] = useState(false);
   const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
@@ -459,51 +457,42 @@ function YamlEditor() {
   );
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">
+    <div className="container mx-auto p-2 sm:p-4">
+      <div className="flex items-center mb-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <h1 className="text-lg sm:text-2xl font-bold">
             {fileId ? "Edit YAML File" : "Create New YAML"}
           </h1>
           {isLoading && (
-            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm font-medium">Loading...</span>
+            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md">
+              <Loader2 className="w-3 sm:w-4 h-3 sm:h-4 animate-spin" />
+              <span className="text-xs sm:text-sm font-medium">Loading...</span>
             </div>
           )}
         </div>
-        <Button
-          variant="light"
-          size="sm"
-          onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="lg:hidden"
-        >
-          {sidebarCollapsed ? <Eye /> : <EyeOff />}
-          {sidebarCollapsed ? "Show Help" : "Hide Help"}
-        </Button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1">
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div className="min-h-[32px] flex items-center flex-1">
+        <div className="flex-1 min-w-0">
+          <div className="mb-3 flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-4">
+            <div className="min-h-[32px] flex items-center flex-1 w-full">
               {isValidatingYaml ? (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span className="font-medium">Validating YAML...</span>
                 </div>
               ) : isValidatingSchema ? (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm">
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span className="font-medium">Validating Profile...</span>
                 </div>
               ) : hasTypedAfterError ? (
-                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-md text-sm">
+                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
                   <AlertCircle className="w-3.5 h-3.5" />
                   <span className="font-medium">Checking...</span>
                 </div>
               ) : isValid === false ? (
-                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-md text-sm">
+                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="font-medium">Invalid YAML</div>
@@ -537,9 +526,9 @@ function YamlEditor() {
                 </div>
               ) : serverValidationErrors &&
                 serverValidationErrors.length > 0 ? (
-                <div className="flex items-start gap-2 text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-md text-sm">
+                <div className="flex items-start gap-2 text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <div className="font-medium">Invalid Profile</div>
                     <div className="text-xs opacity-75 mt-0.5">
                       {serverValidationErrors.length} validation{" "}
@@ -550,14 +539,14 @@ function YamlEditor() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-md text-sm">
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span className="font-medium">Valid Profile</span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end w-full sm:w-auto">
               <Button
                 size="sm"
                 color="primary"
@@ -565,7 +554,7 @@ function YamlEditor() {
                 onPress={() => handleSave()}
                 isLoading={isSaving}
                 isDisabled={isLoading}
-                className="h-8 px-3 text-sm"
+                className="h-8 px-3 text-sm w-full sm:w-auto"
               >
                 {isSaving ? (
                   <>
@@ -617,7 +606,7 @@ function YamlEditor() {
             ) : (
               <CodeMirror
                 value={editorContent}
-                height="70vh"
+                height="60vh"
                 width="100%"
                 extensions={[
                   yaml(),
@@ -650,17 +639,21 @@ function YamlEditor() {
             )}
 
             {/* Enhanced Status Bar - moved directly under editor */}
-            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-2 sm:px-4 py-2 rounded-b-lg gap-2 sm:gap-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
                 <span>{lineCount} lines</span>
-                <span>{editorContent.length} characters</span>
-                {editorContent.length > 0 && <span>{wordCount} words</span>}
+                <span className="hidden sm:inline">
+                  {editorContent.length} characters
+                </span>
+                {editorContent.length > 0 && (
+                  <span className="hidden sm:inline">{wordCount} words</span>
+                )}
 
                 {/* Zoom controls integrated into status bar */}
-                <div className="flex items-center gap-1 ml-2 border-l border-default-300 pl-3">
+                <div className="flex items-center gap-1 sm:ml-2 sm:border-l sm:border-default-300 sm:pl-3">
                   <Button
                     variant="light"
                     size="sm"
@@ -684,24 +677,28 @@ function YamlEditor() {
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {/* Autosave controls integrated into status bar */}
                 {fileId && (
-                  <label className="flex items-center gap-2 cursor-pointer text-default-600 hover:text-default-700">
+                  <label className="flex items-center gap-1 sm:gap-2 cursor-pointer text-default-600 hover:text-default-700">
                     <input
                       type="checkbox"
                       checked={autosaveEnabled}
                       onChange={(e) => setAutosaveEnabled(e.target.checked)}
                       className="w-3 h-3"
                     />
-                    <span>Auto-save</span>
+                    <span className="hidden sm:inline">Auto-save</span>
+                    <span className="sm:hidden">Auto</span>
                   </label>
                 )}
                 {hasUnsavedChanges ? (
                   autosaveEnabled && fileId ? (
                     <span className="text-amber-600 flex items-center gap-1">
                       <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                      <span>Auto-save pending</span>
+                      <span className="hidden sm:inline">
+                        Auto-save pending
+                      </span>
+                      <span className="sm:hidden">Pending</span>
                     </span>
                   ) : (
                     <span className="text-amber-600 flex items-center gap-1">
@@ -711,7 +708,10 @@ function YamlEditor() {
                   )
                 ) : lastSaved ? (
                   <span className="text-green-600">
-                    Saved: {lastSaved.toLocaleTimeString()}
+                    <span className="hidden sm:inline">
+                      Saved: {lastSaved.toLocaleTimeString()}
+                    </span>
+                    <span className="sm:hidden">Saved</span>
                   </span>
                 ) : undefined}
                 <span className="text-default-400">YAML</span>
@@ -765,13 +765,11 @@ function YamlEditor() {
             </div>
           )}
         </div>
-        <div
-          className={`w-full lg:w-1/3 ${sidebarCollapsed ? "hidden lg:block" : ""}`}
-        >
+        <div className="w-full lg:w-1/3">
           <div className="sticky top-4">
             <Tabs defaultValue="profile" className="space-y-3 -mt-1">
               <Tab key="profile" title="User Profile Help">
-                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
+                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
                   <h2 className="text-base font-semibold mb-2">
                     User Profile Documentation
                   </h2>
@@ -809,7 +807,7 @@ function YamlEditor() {
                                 <div
                                   role="button"
                                   tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors"
+                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
                                   onClick={() => {
                                     navigator.clipboard.writeText(item.code);
                                     showToast(
@@ -830,7 +828,7 @@ function YamlEditor() {
                                 >
                                   {item.code}
                                 </div>
-                                <p className="text-sm text-default-foreground">
+                                <p className="text-xs sm:text-sm text-default-foreground">
                                   {item.description}
                                 </p>
                               </div>
@@ -843,7 +841,7 @@ function YamlEditor() {
                 </div>
               </Tab>
               <Tab key="yaml" title="YAML Help">
-                <div className="bg-default-50 p-3 rounded-lg max-h-[70vh] overflow-y-auto">
+                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
                   <h2 className="text-base font-semibold mb-2">
                     YAML Tutorial
                   </h2>
@@ -881,7 +879,7 @@ function YamlEditor() {
                                 <div
                                   role="button"
                                   tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors"
+                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
                                   onClick={() => {
                                     navigator.clipboard.writeText(item.code);
                                     showToast(
@@ -902,7 +900,7 @@ function YamlEditor() {
                                 >
                                   {item.code}
                                 </div>
-                                <p className="text-sm text-default-foreground">
+                                <p className="text-xs sm:text-sm text-default-foreground">
                                   {item.description}
                                 </p>
                               </div>
