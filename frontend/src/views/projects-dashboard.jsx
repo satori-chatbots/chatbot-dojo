@@ -88,7 +88,7 @@ const ProjectsDashboard = () => {
       <h2 className="text-xl sm:text-2xl font-bold text-center">Projects</h2>
 
       {/* Setup Progress */}
-      <div className="w-full max-w-4xl">
+      <div className="w-full max-w-4xl mx-auto">
         <SetupProgress isCompact={true} />
       </div>
 
