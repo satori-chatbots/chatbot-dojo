@@ -386,13 +386,6 @@ const TracerDashboard = () => {
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col space-y-4 sm:space-y-6 max-w-full 2xl:max-w-7xl mx-auto">
-      {/* Setup Progress - only show for authenticated users */}
-      {!publicView && (
-        <div className="w-full max-w-4xl mx-auto">
-          <SetupProgress isCompact={true} />
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center gap-2 sm:gap-3">
         <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
@@ -400,6 +393,13 @@ const TracerDashboard = () => {
           {publicView ? "Public TRACER Dashboard" : "TRACER Dashboard"}
         </h1>
       </div>
+
+      {/* Setup Progress - only show for authenticated users */}
+      {!publicView && (
+        <div className="w-full max-w-4xl mx-auto">
+          <SetupProgress isCompact={true} />
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="border-default-200">

@@ -430,6 +430,12 @@ const ChatbotConnectors = () => {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground dark:text-foreground-dark">
             Connector Management
           </h1>
+
+          {/* Setup Progress */}
+          <div className="w-full max-w-4xl mx-auto px-4">
+            <SetupProgress isCompact={true} />
+          </div>
+
           <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-4">
             Configure and manage chatbot connectors to communicate TRACER and
             Sensei with other chatbots. Built with{" "}
@@ -443,11 +449,6 @@ const ChatbotConnectors = () => {
             </a>
             .
           </p>
-        </div>
-
-        {/* Setup Progress */}
-        <div className="w-full max-w-4xl mx-auto px-4">
-          <SetupProgress isCompact={true} />
         </div>
       </div>
 
