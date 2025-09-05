@@ -22,7 +22,7 @@ const ProgressHeader = ({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        <h3 className="text-base sm:text-lg font-semibold truncate text-foreground">
+        <h3 className="text-base sm:text-lg font-semibold truncate text-foreground dark:text-foreground-dark">
           Setup Progress
         </h3>
         <Chip

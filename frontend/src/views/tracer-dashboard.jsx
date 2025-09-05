@@ -29,6 +29,7 @@ import InlineReportViewer from "../components/inline-report-viewer";
 import InlineGraphViewer from "../components/inline-graph-viewer";
 import OriginalProfilesViewer from "../components/original-profiles-viewer";
 import ExecutionLogsViewer from "../components/execution-logs-viewer";
+import SetupProgress from "../components/setup-progress";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useAuth } from "../contexts/auth-context";
 
@@ -392,6 +393,13 @@ const TracerDashboard = () => {
           {publicView ? "Public TRACER Dashboard" : "TRACER Dashboard"}
         </h1>
       </div>
+
+      {/* Setup Progress - only show for authenticated users */}
+      {!publicView && (
+        <div className="w-full max-w-4xl mx-auto">
+          <SetupProgress isCompact={true} />
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="border-default-200">

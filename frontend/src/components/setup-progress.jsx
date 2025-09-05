@@ -123,7 +123,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
 
   if (loading) {
     return (
-      <Card className="w-full">
+      <Card className="w-full shadow-glass rounded-2xl backdrop-blur-md bg-content3 dark:bg-darkbg-glass border border-border dark:border-border-dark">
         <CardBody>
           <div className="flex items-center justify-center p-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -145,8 +145,14 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
 
   return (
     <>
-      <Card className="w-full relative">
-        <CardBody className="py-4">
+      <Card
+        className={`w-full relative shadow-glass rounded-2xl backdrop-blur-md ${
+          isSetupComplete
+            ? "bg-gradient-to-r from-success-50/50 to-primary-50/50 dark:from-success-900/10 dark:to-primary-900/10 border-success-200 dark:border-success-800/50"
+            : "bg-content3 dark:bg-darkbg-glass border border-border dark:border-border-dark"
+        }`}
+      >
+        <CardBody className="py-4 px-4 sm:px-6">
           <div className="space-y-4">
             <ProgressHeader
               isExpanded={isExpanded}
@@ -175,7 +181,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
                   size="sm"
                   className="transition-all duration-300"
                 />
-                <div className="flex justify-between items-center text-xs text-foreground-500">
+                <div className="flex justify-between items-center text-xs text-foreground-500 dark:text-foreground-dark-500">
                   <span>
                     {completedRequiredSteps}/{requiredSteps} steps completed
                   </span>
