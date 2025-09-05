@@ -56,10 +56,10 @@ const StepItem = ({ step, index, isActive, setupData }) => {
     <li
       className={`group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
         step.completed
-          ? "bg-success-50 border-success-200 hover:bg-success-100"
+          ? "bg-success-50 dark:bg-success-900/20 border-success-200 dark:border-success-800 hover:bg-success-100 dark:hover:bg-success-900/30"
           : isActive
-            ? "bg-primary-50 border-primary-200 hover:bg-primary-100 ring-2 ring-primary-200"
-            : "bg-default-50 border-default-200 hover:bg-default-100"
+            ? "bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 ring-2 ring-primary-200 dark:ring-primary-800"
+            : "bg-default-50 dark:bg-default-900/20 border-default-200 dark:border-default-800 hover:bg-default-100 dark:hover:bg-default-900/30"
       }`}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -70,7 +70,7 @@ const StepItem = ({ step, index, isActive, setupData }) => {
                 ? "bg-success text-white"
                 : isActive
                   ? "bg-primary text-white"
-                  : "bg-default-300 text-default-600"
+                  : "bg-default-300 dark:bg-default-700 text-default-600 dark:text-default-400"
             }`}
           >
             {step.completed ? "✓" : index + 1}
@@ -84,7 +84,7 @@ const StepItem = ({ step, index, isActive, setupData }) => {
                 ? "text-success"
                 : isActive
                   ? "text-primary"
-                  : "text-default-400"
+                  : "text-default-400 dark:text-default-500"
             }`}
           />
         </div>
@@ -94,10 +94,10 @@ const StepItem = ({ step, index, isActive, setupData }) => {
             <h4
               className={`text-sm font-medium ${
                 step.completed
-                  ? "text-success-700"
+                  ? "text-success-700 dark:text-success-300"
                   : isActive
-                    ? "text-primary-700"
-                    : "text-foreground"
+                    ? "text-primary-700 dark:text-primary-300"
+                    : "text-foreground dark:text-foreground-dark"
               }`}
             >
               {step.title}
@@ -108,7 +108,9 @@ const StepItem = ({ step, index, isActive, setupData }) => {
               </Chip>
             )}
           </div>
-          <p className="text-xs text-foreground-500 mt-1">{step.description}</p>
+          <p className="text-xs text-foreground-500 dark:text-foreground-dark-500 mt-1">
+            {step.description}
+          </p>
           {renderStepSummary(step.id, setupData)}
         </div>
       </div>
