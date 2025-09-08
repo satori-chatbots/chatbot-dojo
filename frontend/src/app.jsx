@@ -135,8 +135,13 @@ function AppContent() {
           />
 
           <NavbarBrand>
-            <Link to="/" className="hover:underline text-sm font-bold">
-              Chatbot dōjō
+            <Link to="/" className="flex items-center gap-2">
+              <img
+                src="/android-chrome-512x512.png"
+                alt="Chatbot dōjō"
+                className="hidden md:block h-6 w-6 text-primary"
+              />
+              <p className="font-bold text-inherit">Chatbot dōjō</p>
             </Link>
           </NavbarBrand>
 
