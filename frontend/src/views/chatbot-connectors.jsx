@@ -438,7 +438,7 @@ const ChatbotConnectors = () => {
 
           <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-4">
             Configure and manage chatbot connectors to communicate TRACER and
-            Sensei with other chatbots. Built with{" "}
+            SENSEI with other chatbots. Built with{" "}
             <a
               href="https://github.com/Chatbot-TRACER/chatbot-connectors"
               target="_blank"

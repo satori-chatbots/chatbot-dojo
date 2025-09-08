@@ -12,7 +12,7 @@ const SetupGuide = () => {
 
   // Check if setup progress is hidden
   React.useEffect(() => {
-    const dismissedKey = `sensei_setup_dismissed_${user ? user.id : "guest"}`;
+    const dismissedKey = `chatbot_dojo_setup_dismissed_${user ? user.id : "guest"}`;
     const updateProgressHiddenStatus = () => {
       try {
         const dismissed = localStorage.getItem(dismissedKey) === "true";
@@ -23,12 +23,12 @@ const SetupGuide = () => {
     };
     updateProgressHiddenStatus();
     globalThis.addEventListener(
-      "sensei:setupDismissedChange",
+      "chatbot_dojo:setupDismissedChange",
       updateProgressHiddenStatus,
     );
     return () => {
       globalThis.removeEventListener(
-        "sensei:setupDismissedChange",
+        "chatbot_dojo:setupDismissedChange",
         updateProgressHiddenStatus,
       );
     };
@@ -36,10 +36,10 @@ const SetupGuide = () => {
 
   // Function to show setup progress again
   const handleShowSetupProgress = () => {
-    const dismissedKey = `sensei_setup_dismissed_${user ? user.id : "guest"}`;
+    const dismissedKey = `chatbot_dojo_setup_dismissed_${user ? user.id : "guest"}`;
     try {
       localStorage.setItem(dismissedKey, "false");
-      globalThis.dispatchEvent(new Event("sensei:setupDismissedChange"));
+      globalThis.dispatchEvent(new Event("chatbot_dojo:setupDismissedChange"));
     } catch {
       /* ignore */
     }
@@ -97,14 +97,14 @@ const SetupGuide = () => {
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold text-foreground">
-            {"Welcome to Sensei's Setup Guide"}
+            {"Welcome to Chatbot dōjō's Setup Guide"}
           </h2>
         </CardHeader>
         <CardBody className="space-y-4">
           <p className="text-foreground/80">
-            Sensei is a user simulator that helps you test your chatbots by
-            running automated conversations using user profiles. Follow the
-            steps below to get started.
+            Chatbot dōjō is the platform that unifies SENSEI, the user
+            simulator, and TRACER, the chatbot explorer, modeller, and profiler.
+            Follow the steps below to get started.
           </p>
 
           <div className="space-y-3">
@@ -126,7 +126,7 @@ const SetupGuide = () => {
                 <div>
                   <strong>Chatbot Connector:</strong>{" "}
                   {
-                    "Connect Sensei to your chatbot's API so it can send messages and receive responses."
+                    "Connect SENSEI and TRACER to your chatbot's API so they can send messages and receive responses."
                   }
                 </div>
               </li>

@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { Button, Switch, Spinner } from "@heroui/react";
 import {
   Navbar,
+  NavbarBrand,
   NavbarContent,
   NavbarItem,
   NavbarMenuToggle,
@@ -132,6 +133,12 @@ function AppContent() {
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             className="sm:hidden"
           />
+
+          <NavbarBrand>
+            <Link to="/" className="hover:underline text-sm font-bold">
+              Chatbot dōjō
+            </Link>
+          </NavbarBrand>
 
           {/* Left section */}
           <NavbarContent

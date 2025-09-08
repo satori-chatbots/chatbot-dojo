@@ -12,7 +12,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   const navigate = useNavigate();
 
   const { user } = useAuth();
-  const dismissedKey = `sensei_setup_dismissed_${user ? user.id : "guest"}`;
+  const dismissedKey = `chatbot_dojo_setup_dismissed_${user ? user.id : "guest"}`;
 
   // State management
   const [isExpanded, setIsExpanded] = useState(!isCompact);
@@ -88,12 +88,12 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
     };
     updateDismissalStatus();
     globalThis.addEventListener(
-      "sensei:setupDismissedChange",
+      "chatbot_dojo:setupDismissedChange",
       updateDismissalStatus,
     );
     return () => {
       globalThis.removeEventListener(
-        "sensei:setupDismissedChange",
+        "chatbot_dojo:setupDismissedChange",
         updateDismissalStatus,
       );
     };
@@ -103,7 +103,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
   const handleDismiss = () => {
     try {
       localStorage.setItem(dismissedKey, "true");
-      globalThis.dispatchEvent(new Event("sensei:setupDismissedChange"));
+      globalThis.dispatchEvent(new Event("chatbot_dojo:setupDismissedChange"));
     } catch {
       /* ignore */
     }
