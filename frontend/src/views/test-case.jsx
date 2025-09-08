@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, Tab } from "@heroui/react";
 import { Card, CardHeader, CardBody } from "@heroui/react";
@@ -34,6 +34,9 @@ import {
   formatTime,
   calculateElapsedTime,
 } from "../utils/time-utils";
+import HTMLMessageRenderer, {
+  containsHTML,
+} from "../components/html-message-renderer";
 
 function TestCase() {
   const { id } = useParams();
@@ -57,41 +60,44 @@ function TestCase() {
   const [totalConversations, setTotalConversations] = useState(0);
 
   // Extract report fetching logic into a reusable function
-  const fetchReportsData = async (testCaseData) => {
-    try {
-      setReportsLoading(true);
-      console.log("Fetching reports data for successful test case");
-      const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
-      setGlobalReport(fetchedGlobalReport);
+  const fetchReportsData = useCallback(
+    async (testCaseData) => {
+      try {
+        setReportsLoading(true);
+        console.log("Fetching reports data for successful test case");
+        const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
+        setGlobalReport(fetchedGlobalReport);
 
-      const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(
-        fetchedGlobalReport.id,
-      );
-      setGlobalErrors(fetchedGlobalErrors);
+        const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(
+          fetchedGlobalReport.id,
+        );
+        setGlobalErrors(fetchedGlobalErrors);
 
-      const fetchedProfileReports = await fetchProfileReportByGlobalReportId(
-        fetchedGlobalReport.id,
-      );
+        const fetchedProfileReports = await fetchProfileReportByGlobalReportId(
+          fetchedGlobalReport.id,
+        );
 
-      for (const report of fetchedProfileReports) {
-        const [fetchedErrors, fetchedConversations] = await Promise.all([
-          fetchTestErrorByProfileReport(report.id),
-          fetchConversationsByProfileReport(report.id),
-        ]);
-        report.errors = fetchedErrors;
-        report.conversations = fetchedConversations;
+        for (const report of fetchedProfileReports) {
+          const [fetchedErrors, fetchedConversations] = await Promise.all([
+            fetchTestErrorByProfileReport(report.id),
+            fetchConversationsByProfileReport(report.id),
+          ]);
+          report.errors = fetchedErrors;
+          report.conversations = fetchedConversations;
+        }
+
+        setProfileReports(fetchedProfileReports);
+        const fetchedProject = await fetchProject(testCaseData.project);
+        setProjectName(fetchedProject.name);
+        console.log("Successfully fetched reports data");
+      } catch (error) {
+        console.error("Error fetching reports data:", error);
+      } finally {
+        setReportsLoading(false);
       }
-
-      setProfileReports(fetchedProfileReports);
-      const fetchedProject = await fetchProject(testCaseData.project);
-      setProjectName(fetchedProject.name);
-      console.log("Successfully fetched reports data");
-    } catch (error) {
-      console.error("Error fetching reports data:", error);
-    } finally {
-      setReportsLoading(false);
-    }
-  };
+    },
+    [id],
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,7 +156,7 @@ function TestCase() {
     };
 
     fetchData();
-  }, [id, navigate]);
+  }, [id, navigate, fetchReportsData]);
 
   // Separate useEffect for polling to avoid dependency issues
   useEffect(() => {
@@ -306,7 +312,7 @@ function TestCase() {
         clearInterval(pollInterval);
       }
     };
-  }, [status, taskId, id]);
+  }, [status, taskId, id, fetchReportsData]);
 
   useEffect(() => {
     let timerInterval;
@@ -1294,26 +1300,40 @@ function TestCase() {
                                     </CardHeader>
                                     <CardBody className="pl-4">
                                       {conversation.interaction.map(
-                                        (message, index) => (
-                                          <div
-                                            key={index}
-                                            className={`mb-4 p-3 rounded-lg ${
-                                              Object.keys(message)[0] === "User"
-                                                ? "bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
-                                                : "bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200"
-                                            }`}
-                                          >
-                                            <p className="font-bold">
-                                              {Object.keys(message)[0] ===
-                                              "User"
-                                                ? "🧑‍💻 User:"
-                                                : "🤖 Agent:"}
-                                            </p>
-                                            <p className="mt-1">
-                                              {Object.values(message)[0]}
-                                            </p>
-                                          </div>
-                                        ),
+                                        (message, index) => {
+                                          const isUser =
+                                            Object.keys(message)[0] === "User";
+                                          const messageContent =
+                                            Object.values(message)[0];
+
+                                          return (
+                                            <div
+                                              key={index}
+                                              className={`mb-4 p-3 rounded-lg ${
+                                                isUser
+                                                  ? "bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                                                  : "bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                              }`}
+                                            >
+                                              <p className="font-bold">
+                                                {isUser
+                                                  ? "🧑‍💻 User:"
+                                                  : "🤖 Agent:"}
+                                              </p>
+                                              {/* Check if content contains HTML tags */}
+                                              {containsHTML(messageContent) ? (
+                                                <HTMLMessageRenderer
+                                                  htmlContent={messageContent}
+                                                  isAgent={!isUser}
+                                                />
+                                              ) : (
+                                                <p className="mt-1">
+                                                  {messageContent}
+                                                </p>
+                                              )}
+                                            </div>
+                                          );
+                                        },
                                       )}
                                     </CardBody>
                                   </Card>
