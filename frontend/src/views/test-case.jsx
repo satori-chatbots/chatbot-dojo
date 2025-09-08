@@ -43,6 +43,7 @@ function TestCase() {
   const [profileReports, setProfileReports] = useState([]);
   const [globalErrors, setGlobalErrors] = useState([]);
   const [globalLoading, setGlobalLoading] = useState(true);
+  const [reportsLoading, setReportsLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [projectName, setProjectName] = useState("");
   const [startTime, setStartTime] = useState();
@@ -54,6 +55,43 @@ function TestCase() {
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [executedConversations, setExecutedConversations] = useState(0);
   const [totalConversations, setTotalConversations] = useState(0);
+
+  // Extract report fetching logic into a reusable function
+  const fetchReportsData = async (testCaseData) => {
+    try {
+      setReportsLoading(true);
+      console.log("Fetching reports data for successful test case");
+      const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
+      setGlobalReport(fetchedGlobalReport);
+
+      const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(
+        fetchedGlobalReport.id,
+      );
+      setGlobalErrors(fetchedGlobalErrors);
+
+      const fetchedProfileReports = await fetchProfileReportByGlobalReportId(
+        fetchedGlobalReport.id,
+      );
+
+      for (const report of fetchedProfileReports) {
+        const [fetchedErrors, fetchedConversations] = await Promise.all([
+          fetchTestErrorByProfileReport(report.id),
+          fetchConversationsByProfileReport(report.id),
+        ]);
+        report.errors = fetchedErrors;
+        report.conversations = fetchedConversations;
+      }
+
+      setProfileReports(fetchedProfileReports);
+      const fetchedProject = await fetchProject(testCaseData.project);
+      setProjectName(fetchedProject.name);
+      console.log("Successfully fetched reports data");
+    } catch (error) {
+      console.error("Error fetching reports data:", error);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,29 +137,7 @@ function TestCase() {
         }
 
         if (currentStatus === "SUCCESS") {
-          const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
-          setGlobalReport(fetchedGlobalReport);
-
-          const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(
-            fetchedGlobalReport.id,
-          );
-          setGlobalErrors(fetchedGlobalErrors);
-
-          const fetchedProfileReports =
-            await fetchProfileReportByGlobalReportId(fetchedGlobalReport.id);
-
-          for (const report of fetchedProfileReports) {
-            const [fetchedErrors, fetchedConversations] = await Promise.all([
-              fetchTestErrorByProfileReport(report.id),
-              fetchConversationsByProfileReport(report.id),
-            ]);
-            report.errors = fetchedErrors;
-            report.conversations = fetchedConversations;
-          }
-
-          setProfileReports(fetchedProfileReports);
-          const fetchedProject = await fetchProject(fetchedTestCase[0].project);
-          setProjectName(fetchedProject.name);
+          await fetchReportsData(fetchedTestCase[0]);
         }
       } catch (error) {
         if (error.message === "403") {
@@ -201,6 +217,14 @@ function TestCase() {
                 const fetchedTestCase = await fetchTestCaseById(id);
                 if (fetchedTestCase && fetchedTestCase.length > 0) {
                   setTestCase(fetchedTestCase);
+
+                  // Auto-fetch reports when status changes to SUCCESS
+                  if (unifiedStatus === "SUCCESS") {
+                    console.log(
+                      "Status changed to SUCCESS, fetching reports data",
+                    );
+                    await fetchReportsData(fetchedTestCase[0]);
+                  }
                 }
               }
             }
@@ -217,6 +241,14 @@ function TestCase() {
                   );
                   setTestCase(fetchedTestCase);
                   setStatus(currentStatus);
+
+                  // Auto-fetch reports when status changes to SUCCESS
+                  if (currentStatus === "SUCCESS") {
+                    console.log(
+                      "Fallback error polling detected SUCCESS status, fetching reports data",
+                    );
+                    await fetchReportsData(fetchedTestCase[0]);
+                  }
                 }
               }
             } catch (fallbackError) {
@@ -239,6 +271,14 @@ function TestCase() {
                 console.log(`Status changed: ${status} -> ${currentStatus}`);
                 setTestCase(fetchedTestCase);
                 setStatus(currentStatus);
+
+                // Auto-fetch reports when status changes to SUCCESS
+                if (currentStatus === "SUCCESS") {
+                  console.log(
+                    "Fallback polling detected SUCCESS status, fetching reports data",
+                  );
+                  await fetchReportsData(fetchedTestCase[0]);
+                }
               }
 
               if (fetchedTestCase[0].executed_conversations !== undefined) {
@@ -456,6 +496,19 @@ function TestCase() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
+      {reportsLoading && (
+        <Card
+          shadow="sm"
+          className="mb-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+        >
+          <CardBody className="flex flex-row items-center justify-center p-4">
+            <Spinner size="sm" className="mr-2" />
+            <p className="text-blue-600 dark:text-blue-400">
+              Loading test reports...
+            </p>
+          </CardBody>
+        </Card>
+      )}
       <Tabs defaultValue="global" className="space-y-4">
         <Tab key="global" title="Global Details">
           <div className="space-y-4">
