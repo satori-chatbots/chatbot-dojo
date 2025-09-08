@@ -568,7 +568,7 @@ urllib3==2.5.0
     #   selenium
     #   twine
     #   types-requests
-user-simulator==0.2.3
+user-simulator==0.2.4
     # via sensei-web
 validators==0.35.0
     # via langchain-google-vertexai
