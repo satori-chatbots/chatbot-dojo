@@ -25,7 +25,7 @@ import {
 } from "@heroui/react";
 import {
   fetchTestCasesByProjects,
-  checkSenseiExecutionStatus,
+  checkSENSEIExecutionStatus,
 } from "../api/test-cases-api";
 import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from "@heroui/react";
@@ -261,7 +261,7 @@ function Dashboard() {
                 console.log(
                   `Polling task status for test case ${tc.id}, task ID: ${tc.celery_task_id}`,
                 );
-                const taskStatus = await checkSenseiExecutionStatus(
+                const taskStatus = await checkSENSEIExecutionStatus(
                   tc.celery_task_id,
                 );
                 console.log(`Task status for ${tc.id}:`, taskStatus);

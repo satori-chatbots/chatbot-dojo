@@ -90,19 +90,19 @@ export const fetchPaginatedTestCases = async (parameters) => {
   return response.json();
 };
 
-export const checkSenseiExecutionStatus = async (taskId) => {
+export const checkSENSEIExecutionStatus = async (taskId) => {
   try {
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.SENSEI_EXECUTION_STATUS}${taskId}/`,
     );
     return await response.json();
   } catch (error) {
-    console.error("Error checking Sensei execution status:", error);
+    console.error("Error checking SENSEI execution status:", error);
     throw error;
   }
 };
 
-export const checkOngoingSenseiExecution = async (testCaseId) => {
+export const checkOngoingSENSEIExecution = async (testCaseId) => {
   try {
     const testCase = await fetchTestCaseById(testCaseId);
     if (
@@ -119,7 +119,7 @@ export const checkOngoingSenseiExecution = async (testCaseId) => {
     }
     return { ongoing: false };
   } catch (error) {
-    console.error("Error checking ongoing Sensei execution:", error);
+    console.error("Error checking ongoing SENSEI execution:", error);
     throw error;
   }
 };
