@@ -196,22 +196,27 @@ class ResultsProcessor:
                 else:
                     all_answered = {"value": all_answered_item["all_answered"]}
 
+            # Extract personality from context details
+            context_items = first_doc.get("context", [])
+            personality = ""
+            filtered_context_details = []
+
+            for item in context_items:
+                if isinstance(item, str) and item.startswith("personality: "):
+                    # Extract personality value after "personality: "
+                    personality = item.replace("personality: ", "")
+                elif isinstance(item, dict) and "personality" in item:
+                    # Handle dict format for backward compatibility
+                    personality = item["personality"]
+                else:
+                    # Keep non-personality items in context_details
+                    filtered_context_details.append(item)
+
             return {
                 "serial": first_doc.get("serial"),
                 "language": first_doc.get("language", ""),
-                "personality": next(
-                    (
-                        item["personality"]
-                        for item in first_doc.get("context", [])
-                        if isinstance(item, dict) and "personality" in item
-                    ),
-                    "",
-                ),
-                "context_details": [
-                    item
-                    for item in first_doc.get("context", [])
-                    if not isinstance(item, dict) or "personality" not in item
-                ],
+                "personality": personality,
+                "context_details": filtered_context_details,
                 "interaction_style": interaction_style,
                 "number_conversations": number,
                 "steps": steps,

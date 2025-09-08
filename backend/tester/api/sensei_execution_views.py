@@ -161,7 +161,6 @@ class ExecuteSelectedProfilesAPIView(APIView):
 
         with transaction.atomic():
             technology = project.chatbot_connector.technology
-            chatbot_link = project.chatbot_connector.link if project.chatbot_connector else None
 
             test_case = TestCase.objects.create(
                 project=project,
@@ -193,7 +192,6 @@ class ExecuteSelectedProfilesAPIView(APIView):
                 profiles_directory=f"testcase_{test_case.id}",
                 results_path=str(results_path),
                 technology=technology,
-                link=chatbot_link,
                 api_key=api_key,
                 api_provider=project.llm_provider,
             )
@@ -206,7 +204,6 @@ class ExecuteSelectedProfilesAPIView(APIView):
                 "profiles_directory": execution_config.profiles_directory,
                 "results_path": execution_config.results_path,
                 "technology": execution_config.technology,
-                "link": execution_config.link,
                 "api_key": execution_config.api_key,
                 "api_provider": execution_config.api_provider,
             }

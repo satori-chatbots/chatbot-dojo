@@ -43,7 +43,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
-      - filevault_data_dev:/app/filevault
+      - ./filevault:/app/filevault
       - ./user-simulator:/app/user-simulator
     user: "1000:1000"
     depends_on:
@@ -62,7 +62,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
-      - filevault_data_dev:/app/filevault
+      - ./filevault:/app/filevault
       - ./user-simulator:/app/user-simulator
     user: "1000:1000"
     depends_on:

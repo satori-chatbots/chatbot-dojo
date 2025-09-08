@@ -36,7 +36,6 @@ class TestExecutionConfig:
     profiles_directory: str
     results_path: str
     technology: str
-    link: str
     api_key: str | None
     api_provider: str | None
 
@@ -261,7 +260,6 @@ class TestRunner:
                 test_case=test_case,
                 results_path=config.results_path,
                 technology=config.technology,
-                link=config.link,
                 user_simulator_dir=user_simulator_dir,
             )
         )
@@ -298,12 +296,9 @@ class TestRunner:
     def _build_command(self, config_data: dict, project_path: str) -> list[str]:
         """Build the command to execute the test script."""
         cmd = [
-            "python",
-            "src/sensei_chat.py",
+            "sensei-chat",
             "--technology",
             config_data["technology"],
-            "--connector",
-            config_data["connector"],
             "--project_path",
             project_path,
             "--user_profile",
@@ -311,11 +306,12 @@ class TestRunner:
             "--extract",
             config_data["extract"],
             "--verbose",
+            "--ignore_cache",
         ]
         if config_data.get("connector_parameters"):
             cmd.extend(
                 [
-                    "--connector_parameters",
+                    "--connector-params",
                     json.dumps(config_data["connector_parameters"]),
                 ]
             )

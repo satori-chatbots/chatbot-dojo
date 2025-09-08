@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,7 +25,6 @@ class RunYmlConfigParams:
     test_case: TestCase
     results_path: str
     technology: str
-    link: str
     user_simulator_dir: str
 
 
@@ -126,15 +124,9 @@ class ExecutionUtils:
             ],
         }
 
-        # If there's a link, it might contain connector parameters
-        if params.link:
-            # Try to parse link as connector parameters if it's JSON-like
-            try:
-                connector_params = json.loads(params.link)
-                config_data["connector_parameters"] = connector_params
-            except (json.JSONDecodeError, ValueError):
-                # If it's not JSON, it might be a URL that needs to be added to connector parameters
-                config_data["connector_parameters"] = {"api_url": params.link}
+        # If there are connector parameters in the project, use them
+        if params.project.chatbot_connector and params.project.chatbot_connector.parameters:
+            config_data["connector_parameters"] = params.project.chatbot_connector.parameters
 
         return config_data
 
