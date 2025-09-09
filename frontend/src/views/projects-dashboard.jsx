@@ -49,6 +49,9 @@ const ProjectsDashboard = () => {
     }
     try {
       await deleteProject(projectId);
+      if (selectedProject && selectedProject.id === projectId) {
+        setSelectedProject(undefined);
+      }
       await reloadProjects();
       await reloadSetupProjects(); // Update setup progress
     } catch (error) {
@@ -93,9 +96,14 @@ const ProjectsDashboard = () => {
       </div>
 
       <div className="flex flex-col items-center justify-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Selected Project:</span>
-          <span>{selectedProject?.name || "None"}</span>
+        <div className="flex items-center gap-2 max-w-full">
+          <span className="font-semibold flex-shrink-0">Selected Project:</span>
+          <span
+            className="truncate max-w-[300px]"
+            title={selectedProject?.name || "None"}
+          >
+            {selectedProject?.name || "None"}
+          </span>
         </div>
         {selectedProject && (
           <div className="text-sm text-foreground/70 dark:text-foreground-dark/70 dark:text-foreground/50 dark:text-foreground-dark/50 flex items-center gap-2">

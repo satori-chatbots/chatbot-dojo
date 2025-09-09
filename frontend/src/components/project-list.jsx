@@ -95,7 +95,10 @@ const ProjectsList = ({
               <h3 className="font-medium text-foreground dark:text-foreground-dark truncate">
                 {project.name}
               </h3>
-              <p className="text-sm text-foreground/70 dark:text-foreground-dark/70 mt-1">
+              <p
+                className="text-sm text-foreground/70 dark:text-foreground-dark/70 mt-1 truncate"
+                title={connector?.name || "No connector"}
+              >
                 {connector?.name || "No connector"}
               </p>
             </div>
@@ -116,14 +119,18 @@ const ProjectsList = ({
                 <p
                   className={
                     modelInfo.isEmpty
-                      ? "text-sm text-foreground/60 dark:text-foreground-dark/60 italic"
-                      : "text-sm font-medium text-foreground dark:text-foreground-dark"
+                      ? "text-sm text-foreground/60 dark:text-foreground-dark/60 italic truncate"
+                      : "text-sm font-medium text-foreground dark:text-foreground-dark truncate"
                   }
+                  title={modelInfo.modelName}
                 >
                   {modelInfo.modelName}
                 </p>
                 {modelInfo.providerName && (
-                  <p className="text-xs text-foreground/50 dark:text-foreground-dark/50">
+                  <p
+                    className="text-xs text-foreground/50 dark:text-foreground-dark/50 truncate"
+                    title={modelInfo.providerName}
+                  >
                     {modelInfo.providerName}
                   </p>
                 )}
@@ -174,7 +181,7 @@ const ProjectsList = ({
   ];
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-4xl mx-auto">
       {/* Desktop Table View */}
       <div className="hidden md:block">
         <Table
@@ -202,12 +209,22 @@ const ProjectsList = ({
               return (
                 <TableRow key={project.id}>
                   <TableCell>
-                    <span className="text-foreground dark:text-foreground-dark font-medium">
+                    <span
+                      className="text-foreground dark:text-foreground-dark font-medium block truncate max-w-[200px]"
+                      title={project.name}
+                    >
                       {project.name}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-foreground dark:text-foreground-dark">
+                    <span
+                      className="text-foreground dark:text-foreground-dark block truncate max-w-[150px]"
+                      title={
+                        connectors.find(
+                          (t) => t.id === project.chatbot_connector,
+                        )?.name
+                      }
+                    >
                       {
                         connectors.find(
                           (t) => t.id === project.chatbot_connector,
@@ -216,59 +233,67 @@ const ProjectsList = ({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col max-w-[180px]">
                       <span
                         className={
                           modelInfo.isEmpty
-                            ? "text-foreground/60 dark:text-foreground-dark/60 italic"
-                            : "font-medium text-foreground dark:text-foreground-dark"
+                            ? "text-foreground/60 dark:text-foreground-dark/60 italic truncate"
+                            : "font-medium text-foreground dark:text-foreground-dark truncate"
                         }
+                        title={modelInfo.modelName}
                       >
                         {modelInfo.modelName}
                       </span>
                       {modelInfo.providerName && (
-                        <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
+                        <span
+                          className="text-xs text-foreground/50 dark:text-foreground-dark/50 truncate"
+                          title={modelInfo.providerName}
+                        >
                           {modelInfo.providerName}
                         </span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="flex space-x-1 sm:space-x-2 px-2 sm:px-4">
-                    <Button
-                      size="sm"
-                      color="primary"
-                      variant="flat"
-                      onPress={() => onSelectProject(project)}
-                      isDisabled={selectedProject?.id === project.id}
-                      className="w-[100px]"
-                      endContent={
-                        selectedProject?.id === project.id ? (
-                          <Check className="w-3 h-3" />
-                        ) : undefined
-                      }
-                    >
-                      {selectedProject?.id === project.id
-                        ? "Selected"
-                        : "Select"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      color="secondary"
-                      variant="flat"
-                      onPress={() => onEditProject(project)}
-                      endContent={<Edit className="w-3 h-3" />}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      color="danger"
-                      variant="flat"
-                      onPress={() => onDeleteProject(project.id)}
-                      endContent={<Trash className="w-3 h-3" />}
-                    >
-                      Delete
-                    </Button>
+                  <TableCell>
+                    <div className="flex space-x-1 justify-start items-center">
+                      <Button
+                        size="sm"
+                        color="primary"
+                        variant="flat"
+                        onPress={() => onSelectProject(project)}
+                        isDisabled={selectedProject?.id === project.id}
+                        className="min-w-[80px] max-w-[80px]"
+                        endContent={
+                          selectedProject?.id === project.id ? (
+                            <Check className="w-3 h-3" />
+                          ) : undefined
+                        }
+                      >
+                        <span className="truncate">
+                          {selectedProject?.id === project.id
+                            ? "Selected"
+                            : "Select"}
+                        </span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        color="secondary"
+                        variant="flat"
+                        onPress={() => onEditProject(project)}
+                        endContent={<Edit className="w-3 h-3" />}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        color="danger"
+                        variant="flat"
+                        onPress={() => onDeleteProject(project.id)}
+                        endContent={<Trash className="w-3 h-3" />}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

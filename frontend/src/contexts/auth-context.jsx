@@ -18,9 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const clearAllData = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    localStorage.removeItem("selectedProject");
+    localStorage.clear();
     setUser(undefined);
     setSelectedProject(undefined);
   };
