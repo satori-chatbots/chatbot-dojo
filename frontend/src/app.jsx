@@ -145,11 +145,9 @@ function AppContent() {
             </Link>
           </NavbarBrand>
 
-          {/* Left section */}
-          <NavbarContent
-            className="hidden sm:flex gap-1 lg:gap-4"
-            justify="start"
-          >
+          {/* Center section */}
+          <NavbarContent className="hidden sm:flex gap-4" justify="center">
+            {/* Test Center */}
             {user && (
               <NavbarItem isActive={location.pathname === "/"}>
                 <Link to="/" className="hover:underline text-sm">
@@ -157,18 +155,21 @@ function AppContent() {
                 </Link>
               </NavbarItem>
             )}
+            {/* SENSEI Dashboard */}
             <NavbarItem isActive={location.pathname === "/dashboard"}>
               <Link to="/dashboard" className="hover:underline text-sm">
                 <span className="hidden lg:inline">SENSEI Dashboard</span>
                 <span className="lg:hidden">SENSEI</span>
               </Link>
             </NavbarItem>
+            {/* TRACER Dashboard */}
             <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
               <Link to="/tracer-dashboard" className="hover:underline text-sm">
                 <span className="hidden lg:inline">TRACER Dashboard</span>
                 <span className="lg:hidden">TRACER</span>
               </Link>
             </NavbarItem>
+            {/* Setup Guide */}
             {user && (
               <Dropdown>
                 <NavbarItem>
@@ -239,12 +240,6 @@ function AppContent() {
               </Dropdown>
             )}
           </NavbarContent>
-
-          {/* Center section */}
-          <NavbarContent
-            className="hidden sm:flex gap-4"
-            justify="center"
-          ></NavbarContent>
 
           {/* Right section */}
           <NavbarContent justify="end" className="gap-2">
