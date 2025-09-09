@@ -51,7 +51,7 @@ const SetupProgress = ({ isCompact = false, forceShow = false }) => {
       icon: FolderPlus,
       optional: false,
       completed: setupData.projects.length > 0,
-      action: () => navigate("/projects"),
+      action: () => navigate("/"),
       actionText: "Create Project",
     },
     {
