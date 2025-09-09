@@ -49,6 +49,9 @@ const ProjectsDashboard = () => {
     }
     try {
       await deleteProject(projectId);
+      if (selectedProject && selectedProject.id === projectId) {
+        setSelectedProject(undefined);
+      }
       await reloadProjects();
       await reloadSetupProjects(); // Update setup progress
     } catch (error) {
