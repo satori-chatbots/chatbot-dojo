@@ -19,7 +19,7 @@ import {
 } from "@heroui/react";
 import {
   fetchTestCaseById,
-  checkSenseiExecutionStatus,
+  checkSENSEIExecutionStatus,
 } from "../api/test-cases-api";
 import { fetchGlobalReportsByTestCase } from "../api/reports-api";
 import { fetchTestErrorByGlobalReport } from "../api/test-errors-api";
@@ -167,7 +167,7 @@ function TestCase() {
         if (taskId) {
           try {
             console.log("Polling Celery task:", taskId);
-            const taskStatus = await checkSenseiExecutionStatus(taskId);
+            const taskStatus = await checkSENSEIExecutionStatus(taskId);
             console.log("Task status response:", taskStatus);
 
             // Update progress stage from Celery task
@@ -235,7 +235,7 @@ function TestCase() {
               }
             }
           } catch (error) {
-            console.error("Error polling Sensei task status:", error);
+            console.error("Error polling SENSEI task status:", error);
             // On error, fall back to database polling
             try {
               const fetchedTestCase = await fetchTestCaseById(id);
@@ -346,7 +346,7 @@ function TestCase() {
 
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
+        <h1 className="text-3xl font-bold mb-6">SENSEI Test Case {id}</h1>
         <Card shadow="sm" className="text-center p-4">
           <CardHeader className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Test Case is Running</h2>
@@ -404,7 +404,7 @@ function TestCase() {
   if (status === "FAILURE") {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
+        <h1 className="text-3xl font-bold mb-6">SENSEI Test Case {id}</h1>
         <div className="space-y-4">
           <Card
             shadow="sm"
@@ -412,7 +412,7 @@ function TestCase() {
           >
             <CardHeader>
               <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
-                ❌ Sensei Execution Failed
+                ❌ SENSEI Execution Failed
               </h2>
             </CardHeader>
             <CardBody className="space-y-4">
@@ -483,7 +483,7 @@ function TestCase() {
   if (status === "STOPPED") {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
+        <h1 className="text-3xl font-bold mb-6">SENSEI Test Case {id}</h1>
         <Card shadow="sm" className="text-center p-4">
           <CardHeader>
             <h2 className="text-2xl font-bold">Test Case Stopped</h2>
@@ -501,7 +501,7 @@ function TestCase() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Sensei Test Case {id}</h1>
+      <h1 className="text-3xl font-bold mb-6">SENSEI Test Case {id}</h1>
       {reportsLoading && (
         <Card
           shadow="sm"
@@ -697,7 +697,7 @@ function TestCase() {
             <Card shadow="sm" className="bg-default-100 dark:bg-default-100">
               <CardHeader>
                 <h2 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-                  Sensei Execution Output
+                  SENSEI Execution Output
                 </h2>
               </CardHeader>
               <CardBody>

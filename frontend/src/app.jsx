@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { Button, Switch, Spinner } from "@heroui/react";
 import {
   Navbar,
+  NavbarBrand,
   NavbarContent,
   NavbarItem,
   NavbarMenuToggle,
@@ -133,11 +134,20 @@ function AppContent() {
             className="sm:hidden"
           />
 
-          {/* Left section */}
-          <NavbarContent
-            className="hidden sm:flex gap-1 lg:gap-4"
-            justify="start"
-          >
+          <NavbarBrand>
+            <Link to="/" className="flex items-center gap-2">
+              <img
+                src="/android-chrome-512x512.png"
+                alt="Chatbot dōjō"
+                className="hidden md:block h-6 w-6 text-primary"
+              />
+              <p className="font-bold text-inherit">Chatbot dōjō</p>
+            </Link>
+          </NavbarBrand>
+
+          {/* Center section */}
+          <NavbarContent className="hidden sm:flex gap-4" justify="center">
+            {/* Test Center */}
             {user && (
               <NavbarItem isActive={location.pathname === "/"}>
                 <Link to="/" className="hover:underline text-sm">
@@ -145,18 +155,21 @@ function AppContent() {
                 </Link>
               </NavbarItem>
             )}
+            {/* SENSEI Dashboard */}
             <NavbarItem isActive={location.pathname === "/dashboard"}>
               <Link to="/dashboard" className="hover:underline text-sm">
                 <span className="hidden lg:inline">SENSEI Dashboard</span>
                 <span className="lg:hidden">SENSEI</span>
               </Link>
             </NavbarItem>
+            {/* TRACER Dashboard */}
             <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
               <Link to="/tracer-dashboard" className="hover:underline text-sm">
                 <span className="hidden lg:inline">TRACER Dashboard</span>
                 <span className="lg:hidden">TRACER</span>
               </Link>
             </NavbarItem>
+            {/* Setup Guide */}
             {user && (
               <Dropdown>
                 <NavbarItem>
@@ -227,12 +240,6 @@ function AppContent() {
               </Dropdown>
             )}
           </NavbarContent>
-
-          {/* Center section */}
-          <NavbarContent
-            className="hidden sm:flex gap-4"
-            justify="center"
-          ></NavbarContent>
 
           {/* Right section */}
           <NavbarContent justify="end" className="gap-2">
@@ -521,7 +528,9 @@ function AppContent() {
 
         {/* Footer */}
         <footer className="w-full py-3 flex items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
-          <p className="text-primary">MISO</p>
+          <a className="text-primary" href="https://miso.es/">
+            MISO
+          </a>
         </footer>
       </div>
     </HeroUIProvider>

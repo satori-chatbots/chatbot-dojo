@@ -25,7 +25,7 @@ import {
 } from "@heroui/react";
 import {
   fetchTestCasesByProjects,
-  checkSenseiExecutionStatus,
+  checkSENSEIExecutionStatus,
 } from "../api/test-cases-api";
 import { Accordion, AccordionItem } from "@heroui/react";
 import { Link } from "@heroui/react";
@@ -261,7 +261,7 @@ function Dashboard() {
                 console.log(
                   `Polling task status for test case ${tc.id}, task ID: ${tc.celery_task_id}`,
                 );
-                const taskStatus = await checkSenseiExecutionStatus(
+                const taskStatus = await checkSENSEIExecutionStatus(
                   tc.celery_task_id,
                 );
                 console.log(`Task status for ${tc.id}:`, taskStatus);
@@ -600,7 +600,7 @@ function Dashboard() {
       <div className="flex items-center gap-2 sm:gap-3">
         <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-          {publicView ? "Public SENSEI Dashboard" : "SENSEI Dashboard"}
+          SENSEI Dashboard
         </h1>
       </div>
 
