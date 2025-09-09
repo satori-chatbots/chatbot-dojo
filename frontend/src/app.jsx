@@ -533,7 +533,9 @@ function AppContent() {
 
         {/* Footer */}
         <footer className="w-full py-3 flex items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
-          <p className="text-primary">MISO</p>
+          <a className="text-primary" href="https://miso.es/">
+            MISO
+          </a>
         </footer>
       </div>
     </HeroUIProvider>
