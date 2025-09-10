@@ -417,7 +417,7 @@ pygments==2.19.2
     # via
     #   readme-renderer
     #   rich
-pymupdf==1.26.3
+pymupdf==1.26.1
     # via
     #   sensei-web
     #   user-simulator
@@ -489,7 +489,7 @@ scipy==1.16.0
     # via scikit-learn
 secretstorage==3.3.3 ; platform_machine != 'ppc64le' and platform_machine != 's390x' and sys_platform == 'linux'
     # via keyring
-selenium==4.34.2
+selenium==4.33.0
     # via
     #   sensei-web
     #   user-simulator
@@ -507,7 +507,9 @@ sortedcontainers==2.4.0
 soupsieve==2.8
     # via beautifulsoup4
 sqlalchemy==2.0.41
-    # via langchain
+    # via
+    #   langchain
+    #   user-simulator
 sqlparse==0.5.3
     # via django
 tenacity==8.5.0
@@ -532,11 +534,11 @@ trio-websocket==0.12.2
     # via selenium
 twine==6.2.0
     # via user-simulator
-typeguard==4.4.4
+typeguard==4.4.2
     # via inflect
 types-pyyaml==6.0.12.20250516
 types-requests==2.32.4.20250611
-typing-extensions==4.14.1
+typing-extensions==4.13.2
     # via
     #   anyio
     #   beautifulsoup4
@@ -552,6 +554,7 @@ typing-extensions==4.14.1
     #   sqlalchemy
     #   typeguard
     #   typing-inspection
+    #   user-simulator
 typing-inspection==0.4.1
     # via pydantic
 tzdata==2025.2
@@ -561,14 +564,14 @@ tzdata==2025.2
     #   pandas
 uritemplate==4.2.0
     # via google-api-python-client
-urllib3==2.5.0
+urllib3==2.4.0
     # via
     #   botocore
     #   requests
     #   selenium
     #   twine
     #   types-requests
-user-simulator==0.2.4
+user-simulator==0.3.4
     # via sensei-web
 validators==0.35.0
     # via langchain-google-vertexai
@@ -594,4 +597,6 @@ wsproto==1.2.0
 xxhash==3.5.0
     # via langgraph
 zstandard==0.23.0
-    # via langsmith
+    # via
+    #   langsmith
+    #   user-simulator
