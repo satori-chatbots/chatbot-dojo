@@ -1,7 +1,7 @@
 """Projects API endpoints and related functionality."""
 
-import subprocess
-import sys
+import logging
+import shutil
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -16,10 +16,13 @@ from rest_framework.decorators import action, api_view
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
+from user_sim.cli.init_project import init_proj
 
 from tester.models import ChatbotConnector, Project, TestFile
 from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer
 from tester.validation_script import YamlValidator
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectAccessPermission(BasePermission):
@@ -70,43 +73,76 @@ class ProjectViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"name": msg})
         project = serializer.save(owner=self.request.user)
 
-        # Get the path of the script
-        base_dir = Path(settings.BASE_DIR)
-        init_script_path = base_dir / "user-simulator" / "src" / "init_project.py"
+        logger.info(
+            "Creating project structure for project '%s' (ID: %d) owned by user %d",
+            project.name,
+            project.id,
+            self.request.user.id,
+        )
 
         # Create path structure: projects/user_{user_id}/project_{project_id}/
         # This should be consistent with the MEDIA_ROOT structure
         relative_path = Path("projects") / f"user_{self.request.user.id}" / f"project_{project.id}"
         project_base_path = Path(settings.MEDIA_ROOT) / relative_path
+        project_name = f"project_{project.id}"
+
+        logger.debug(
+            "Project base path: %s, project name: %s",
+            project_base_path,
+            project_name,
+        )
 
         # Ensure the parent directory exists
-        project_base_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            project_base_path.parent.mkdir(parents=True, exist_ok=True)
+            logger.debug("Created directory structure: %s", project_base_path.parent)
+        except OSError as e:
+            logger.exception("Failed to create directory structure")
+            raise serializers.ValidationError({"non_field_errors": "Failed to create project directory"}) from e
 
-        if init_script_path.exists():
+        # Initialize project structure using user_sim package
+        try:
+            logger.debug(
+                "Initializing project structure with init_proj(name=%s, path=%s)",
+                project_name,
+                project_base_path.parent,
+            )
+
+            init_proj(project_name, str(project_base_path.parent))
+
+            logger.info(
+                "Successfully initialized project structure for '%s' at %s",
+                project.name,
+                project_base_path,
+            )
+
+        except Exception as e:
+            logger.exception(
+                "Failed to initialize project structure for '%s'",
+                project.name,
+            )
+            # Clean up the created directory if initialization failed
             try:
-                # nosec S603 - The command is constructed from safe, internal variables
-                subprocess.run(  # noqa: S603
-                    [
-                        sys.executable,
-                        str(init_script_path),
-                        "--path",
-                        str(project_base_path.parent),
-                        "--name",
-                        f"project_{project.id}",
-                    ],
-                    check=True,
-                )
-                print(f"Project {project.name} (ID: {project.id}) initialized successfully at {project_base_path}")
+                if project_base_path.exists():
+                    shutil.rmtree(project_base_path)
+                    logger.debug("Cleaned up failed project directory: %s", project_base_path)
+            except OSError as cleanup_error:
+                logger.warning("Failed to clean up project directory: %s", cleanup_error)
 
-                # Update the run.yml file with project configuration
-                project.update_run_yml()
+            raise serializers.ValidationError(
+                {"non_field_errors": f"Failed to initialize project structure: {e}"}
+            ) from e
 
-            except subprocess.CalledProcessError as e:
-                print(f"Error initializing project structure: {e}")
-                project.update_run_yml()
-        else:
-            print(f"Warning: Could not find init_project.py at {init_script_path}")
+        # Update the run.yml file with project configuration
+        try:
             project.update_run_yml()
+            logger.debug("Updated run.yml configuration for project '%s'", project.name)
+        except OSError as e:
+            logger.warning(
+                "Project created successfully but failed to update run.yml for '%s': %s",
+                project.name,
+                e,
+            )
 
     def get_object(self) -> Project:
         """Override get_object to return 403 instead of 404 when object exists but user has no access."""
