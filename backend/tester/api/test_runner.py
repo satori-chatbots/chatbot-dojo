@@ -299,14 +299,14 @@ class TestRunner:
             "sensei-chat",
             "--technology",
             config_data["technology"],
-            "--project_path",
+            "--project-path",
             project_path,
-            "--user_profile",
+            "--user-profile",
             config_data["user_profile"],
-            "--extract",
+            "--output",
             config_data["extract"],
             "--verbose",
-            "--ignore_cache",
+            "--ignore-cache",
         ]
         if config_data.get("connector_parameters"):
             cmd.extend(
