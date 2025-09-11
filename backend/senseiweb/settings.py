@@ -9,9 +9,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-import logging
 import os
-import sys
 from pathlib import Path
 
 # Logging is configured via the Django LOGGING setting below.
