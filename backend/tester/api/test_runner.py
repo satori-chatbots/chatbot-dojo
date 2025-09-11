@@ -303,7 +303,7 @@ class TestRunner:
             project_path,
             "--user-profile",
             config_data["user_profile"],
-            "--extract",
+            "--output",
             config_data["extract"],
             "--verbose",
             "--ignore-cache",
