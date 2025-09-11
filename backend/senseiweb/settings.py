@@ -16,9 +16,7 @@ from pathlib import Path
 
 # Configure logging to show print statements
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    stream=sys.stdout
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", stream=sys.stdout
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

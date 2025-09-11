@@ -24,6 +24,7 @@ from tester.validation_script import YamlValidator
 
 logger = logging.getLogger(__name__)
 
+
 class ProjectAccessPermission(BasePermission):
     """Custom permission to only allow owners of an object to edit it."""
 
