@@ -1,6 +1,9 @@
 """Projects API endpoints and related functionality."""
 
 import logging
+import os
+import shutil
+import traceback
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -60,156 +63,71 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # Default: show all public projects and projects owned by the user.
         return Project.objects.filter(models.Q(public=True) | models.Q(owner=self.request.user))
 
-    def perform_create(self, serializer: serializers.ModelSerializer) -> None:
-        """Create a project and initialize its directory structure.
-        Ensures that a user cannot have two projects with the same name.
-        """
-        print("=== DEBUG: Starting perform_create ===")
-
-        name = serializer.validated_data["name"]
-        print(f"DEBUG: Project name: {name}")
-        print(f"DEBUG: User ID: {self.request.user.id}")
-
-        if Project.objects.filter(owner=self.request.user, name=name).exists():
-            msg = "Project name already exists for this user."
-            raise serializers.ValidationError({"name": msg})
-
-        project = serializer.save(owner=self.request.user)
-        print(f"DEBUG: Project created with ID: {project.id}")
-
-        logger.info(
-            "Creating project structure for project '%s' (ID: %d) owned by user %d",
-            project.name,
-            project.id,
-            self.request.user.id,
-        )
-
+    def _setup_project_paths_and_debug(self, project: Project) -> tuple[Path, str]:
+        """Setup project paths and log debug information."""
         # Create path structure: projects/user_{user_id}/project_{project_id}/
-        # This should be consistent with the MEDIA_ROOT structure
         relative_path = Path("projects") / f"user_{self.request.user.id}" / f"project_{project.id}"
         project_base_path = Path(settings.MEDIA_ROOT) / relative_path
         project_name = f"project_{project.id}"
-        try:
-            print(f"DEBUG: MEDIA_ROOT: {settings.MEDIA_ROOT}")
-            print(f"DEBUG: relative_path: {relative_path}")
-            print(f"DEBUG: project_base_path: {project_base_path}")
-            print(f"DEBUG: project_base_path.parent: {project_base_path.parent}")
-            print(f"DEBUG: project_name: {project_name}")
 
-            # Check current working directory and permissions
-            import os
-            print(f"DEBUG: Current working directory: {os.getcwd()}")
+        print(f"DEBUG: MEDIA_ROOT: {settings.MEDIA_ROOT}")
+        print(f"DEBUG: relative_path: {relative_path}")
+        print(f"DEBUG: project_base_path: {project_base_path}")
+        print(f"DEBUG: project_name: {project_name}")
+
+        try:
+            print(f"DEBUG: Current working directory: {Path.cwd()}")
             print(f"DEBUG: User running process: {os.getuid()} (group: {os.getgid()})")
 
-        except Exception as e:
-            print(f"DEBUG: Error in basic info printing: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
-
-        try:
-            # Check if MEDIA_ROOT exists and permissions
+            # Check MEDIA_ROOT
             media_root_path = Path(settings.MEDIA_ROOT)
             print(f"DEBUG: MEDIA_ROOT exists: {media_root_path.exists()}")
             if media_root_path.exists():
                 stat_info = media_root_path.stat()
                 print(f"DEBUG: MEDIA_ROOT permissions: {oct(stat_info.st_mode)[-3:]}")
                 print(f"DEBUG: MEDIA_ROOT owner: {stat_info.st_uid}:{stat_info.st_gid}")
-
-        except Exception as e:
-            print(f"DEBUG: Error checking MEDIA_ROOT: {type(e).__name__}: {e}")
-            import traceback
+        except OSError as e:
+            print(f"DEBUG: Error in debug info logging: {type(e).__name__}: {e}")
             traceback.print_exc()
 
+        return project_base_path, project_name
+
+    def _initialize_project_structure(self, project_name: str, project_base_path: Path, project: Project) -> None:
+        """Initialize the project directory structure and files."""
+        # Create directory structure
+        print(f"DEBUG: About to create directory: {project_base_path.parent}")
+        project_base_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"DEBUG: Successfully created directory structure: {project_base_path.parent}")
+        logger.debug("Created directory structure: %s", project_base_path.parent)
+
+        # Initialize project using user_sim package
+        print("DEBUG: Calling init_proj function...")
         logger.debug(
-            "Project base path: %s, project name: %s",
-            project_base_path,
+            "Initializing project structure with init_proj(name=%s, path=%s)",
             project_name,
+            project_base_path.parent,
+        )
+        init_proj(project_name, str(project_base_path.parent))
+        print("DEBUG: init_proj completed successfully")
+
+        # Verify creation and list contents
+        expected_project_path = project_base_path.parent / project_name
+        if expected_project_path.exists():
+            try:
+                contents = list(expected_project_path.iterdir())
+                print(f"DEBUG: Contents of created project directory: {contents}")
+                for item in contents:
+                    print(f"DEBUG:   - {item.name} ({'dir' if item.is_dir() else 'file'})")
+            except OSError as list_error:
+                print(f"DEBUG: Error listing directory contents: {list_error}")
+
+        logger.info(
+            "Successfully initialized project structure for '%s' at %s",
+            project.name,
+            project_base_path,
         )
 
-        # Ensure the parent directory exists
-        try:
-            print(f"DEBUG: About to create directory: {project_base_path.parent}")
-            print(f"DEBUG: Directory exists before mkdir: {project_base_path.parent.exists()}")
-
-            project_base_path.parent.mkdir(parents=True, exist_ok=True)
-
-            print(f"DEBUG: Directory exists after mkdir: {project_base_path.parent.exists()}")
-            print(f"DEBUG: Successfully created directory structure: {project_base_path.parent}")
-
-            # Check directory permissions after creation
-            if project_base_path.parent.exists():
-                stat_info = project_base_path.parent.stat()
-                print(f"DEBUG: Created directory permissions: {oct(stat_info.st_mode)[-3:]}")
-                print(f"DEBUG: Created directory owner: {stat_info.st_uid}:{stat_info.st_gid}")
-
-            logger.debug("Created directory structure: %s", project_base_path.parent)
-        except OSError as e:
-            print(f"DEBUG: OSError creating directory: {e}")
-            logger.exception("Failed to create directory structure")
-            raise serializers.ValidationError({"non_field_errors": "Failed to create project directory"}) from e
-
-        # Initialize project structure using user_sim package
-        try:
-            print("DEBUG: About to call init_proj with:")
-            print(f"DEBUG:   name: {project_name}")
-            print(f"DEBUG:   path: {project_base_path.parent!s}")
-            print(f"DEBUG:   path exists: {Path(str(project_base_path.parent)).exists()}")
-
-            logger.debug(
-                "Initializing project structure with init_proj(name=%s, path=%s)",
-                project_name,
-                project_base_path.parent,
-            )
-
-            print("DEBUG: Calling init_proj function...")
-            init_proj(project_name, str(project_base_path.parent))
-
-            print("DEBUG: init_proj completed successfully")
-
-            # Check what was actually created
-            expected_project_path = project_base_path.parent / project_name
-            print(f"DEBUG: Expected project path: {expected_project_path}")
-            print(f"DEBUG: Expected project path exists: {expected_project_path.exists()}")
-
-            if expected_project_path.exists():
-                # List contents of created directory
-                try:
-                    contents = list(expected_project_path.iterdir())
-                    print(f"DEBUG: Contents of created project directory: {contents}")
-                    for item in contents:
-                        print(f"DEBUG:   - {item.name} ({'dir' if item.is_dir() else 'file'})")
-                except Exception as list_error:
-                    print(f"DEBUG: Error listing directory contents: {list_error}")
-
-            logger.info(
-                "Successfully initialized project structure for '%s' at %s",
-                project.name,
-                project_base_path,
-            )
-        except Exception as e:
-            print(f"DEBUG: Exception during init_proj: {type(e).__name__}: {e}")
-            import traceback
-            print("DEBUG: Full traceback:")
-            traceback.print_exc()
-
-            logger.exception(
-                "Failed to initialize project structure for '%s'",
-                project.name,
-            )
-            # Clean up the created directory if initialization failed
-            try:
-                if project_base_path.exists():
-                    shutil.rmtree(project_base_path)
-                    print(f"DEBUG: Cleaned up failed project directory: {project_base_path}")
-                    logger.debug("Cleaned up failed project directory: %s", project_base_path)
-            except OSError as cleanup_error:
-                print(f"DEBUG: Failed to clean up: {cleanup_error}")
-                logger.warning("Failed to clean up project directory: %s", cleanup_error)
-            raise serializers.ValidationError(
-                {"non_field_errors": f"Failed to initialize project structure: {e}"}
-            ) from e
-
-        # Update the run.yml file with project configuration
+        # Update project configuration
         try:
             print("DEBUG: About to update run.yml")
             project.update_run_yml()
@@ -222,6 +140,72 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 project.name,
                 e,
             )
+
+    def perform_create(self, serializer: serializers.ModelSerializer) -> None:
+        """Create a project and initialize its directory structure.
+
+        Ensures that a user cannot have two projects with the same name.
+        """
+        print("=== DEBUG: Starting perform_create ===")
+
+        name = serializer.validated_data["name"]
+        print(f"DEBUG: Project name: {name}")
+        print(f"DEBUG: User ID: {self.request.user.id}")
+
+        # Check for duplicate project names
+        if Project.objects.filter(owner=self.request.user, name=name).exists():
+            msg = "Project name already exists for this user."
+            raise serializers.ValidationError({"name": msg})
+
+        # Create the project record
+        project = serializer.save(owner=self.request.user)
+        print(f"DEBUG: Project created with ID: {project.id}")
+
+        logger.info(
+            "Creating project structure for project '%s' (ID: %d) owned by user %d",
+            project.name,
+            project.id,
+            self.request.user.id,
+        )
+
+        # Setup paths and debug info
+        project_base_path, project_name = self._setup_project_paths_and_debug(project)
+
+        logger.debug(
+            "Project base path: %s, project name: %s",
+            project_base_path,
+            project_name,
+        )
+
+        # Initialize project structure
+        try:
+            self._initialize_project_structure(project_name, project_base_path, project)
+        except OSError as e:
+            print(f"DEBUG: OSError during project initialization: {e}")
+            logger.exception("Failed to create directory structure")
+            raise serializers.ValidationError({"non_field_errors": "Failed to create project directory"}) from e
+        except Exception as e:
+            print(f"DEBUG: Exception during init_proj: {type(e).__name__}: {e}")
+            traceback.print_exc()
+
+            logger.exception(
+                "Failed to initialize project structure for '%s'",
+                project.name,
+            )
+
+            # Clean up on failure
+            try:
+                if project_base_path.exists():
+                    shutil.rmtree(project_base_path)
+                    print(f"DEBUG: Cleaned up failed project directory: {project_base_path}")
+                    logger.debug("Cleaned up failed project directory: %s", project_base_path)
+            except OSError as cleanup_error:
+                print(f"DEBUG: Failed to clean up: {cleanup_error}")
+                logger.warning("Failed to clean up project directory: %s", cleanup_error)
+
+            raise serializers.ValidationError(
+                {"non_field_errors": f"Failed to initialize project structure: {e}"}
+            ) from e
 
         print("=== DEBUG: perform_create completed ===")
 
