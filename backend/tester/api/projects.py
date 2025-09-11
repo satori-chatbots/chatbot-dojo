@@ -64,62 +64,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Project.objects.filter(models.Q(public=True) | models.Q(owner=self.request.user))
 
     def _setup_project_paths_and_debug(self, project: Project) -> tuple[Path, str]:
-        """Setup project paths and log debug information."""
+        """Setup project paths and log basic debug information."""
         # Create path structure: projects/user_{user_id}/project_{project_id}/
         relative_path = Path("projects") / f"user_{self.request.user.id}" / f"project_{project.id}"
         project_base_path = Path(settings.MEDIA_ROOT) / relative_path
         project_name = f"project_{project.id}"
-
-        print(f"DEBUG: MEDIA_ROOT: {settings.MEDIA_ROOT}")
-        print(f"DEBUG: relative_path: {relative_path}")
-        print(f"DEBUG: project_base_path: {project_base_path}")
-        print(f"DEBUG: project_name: {project_name}")
-
-        try:
-            print(f"DEBUG: Current working directory: {Path.cwd()}")
-            print(f"DEBUG: User running process: {os.getuid()} (group: {os.getgid()})")
-
-            # Check MEDIA_ROOT
-            media_root_path = Path(settings.MEDIA_ROOT)
-            print(f"DEBUG: MEDIA_ROOT exists: {media_root_path.exists()}")
-            if media_root_path.exists():
-                stat_info = media_root_path.stat()
-                print(f"DEBUG: MEDIA_ROOT permissions: {oct(stat_info.st_mode)[-3:]}")
-                print(f"DEBUG: MEDIA_ROOT owner: {stat_info.st_uid}:{stat_info.st_gid}")
-        except OSError as e:
-            print(f"DEBUG: Error in debug info logging: {type(e).__name__}: {e}")
-            traceback.print_exc()
 
         return project_base_path, project_name
 
     def _initialize_project_structure(self, project_name: str, project_base_path: Path, project: Project) -> None:
         """Initialize the project directory structure and files."""
         # Create directory structure
-        print(f"DEBUG: About to create directory: {project_base_path.parent}")
         project_base_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"DEBUG: Successfully created directory structure: {project_base_path.parent}")
         logger.debug("Created directory structure: %s", project_base_path.parent)
 
         # Initialize project using user_sim package
-        print("DEBUG: Calling init_proj function...")
         logger.debug(
             "Initializing project structure with init_proj(name=%s, path=%s)",
             project_name,
             project_base_path.parent,
         )
         init_proj(project_name, str(project_base_path.parent))
-        print("DEBUG: init_proj completed successfully")
-
-        # Verify creation and list contents
-        expected_project_path = project_base_path.parent / project_name
-        if expected_project_path.exists():
-            try:
-                contents = list(expected_project_path.iterdir())
-                print(f"DEBUG: Contents of created project directory: {contents}")
-                for item in contents:
-                    print(f"DEBUG:   - {item.name} ({'dir' if item.is_dir() else 'file'})")
-            except OSError as list_error:
-                print(f"DEBUG: Error listing directory contents: {list_error}")
 
         logger.info(
             "Successfully initialized project structure for '%s' at %s",
@@ -129,12 +94,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         # Update project configuration
         try:
-            print("DEBUG: About to update run.yml")
             project.update_run_yml()
-            print("DEBUG: run.yml updated successfully")
             logger.debug("Updated run.yml configuration for project '%s'", project.name)
         except OSError as e:
-            print(f"DEBUG: Warning - failed to update run.yml: {e}")
             logger.warning(
                 "Project created successfully but failed to update run.yml for '%s': %s",
                 project.name,
@@ -146,11 +108,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         Ensures that a user cannot have two projects with the same name.
         """
-        print("=== DEBUG: Starting perform_create ===")
-
         name = serializer.validated_data["name"]
-        print(f"DEBUG: Project name: {name}")
-        print(f"DEBUG: User ID: {self.request.user.id}")
 
         # Check for duplicate project names
         if Project.objects.filter(owner=self.request.user, name=name).exists():
@@ -159,7 +117,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         # Create the project record
         project = serializer.save(owner=self.request.user)
-        print(f"DEBUG: Project created with ID: {project.id}")
 
         logger.info(
             "Creating project structure for project '%s' (ID: %d) owned by user %d",
@@ -181,33 +138,25 @@ class ProjectViewSet(viewsets.ModelViewSet):
         try:
             self._initialize_project_structure(project_name, project_base_path, project)
         except OSError as e:
-            print(f"DEBUG: OSError during project initialization: {e}")
             logger.exception("Failed to create directory structure")
             raise serializers.ValidationError({"non_field_errors": "Failed to create project directory"}) from e
         except Exception as e:
-            print(f"DEBUG: Exception during init_proj: {type(e).__name__}: {e}")
-            traceback.print_exc()
-
             logger.exception(
                 "Failed to initialize project structure for '%s'",
                 project.name,
             )
-
+            
             # Clean up on failure
             try:
                 if project_base_path.exists():
                     shutil.rmtree(project_base_path)
-                    print(f"DEBUG: Cleaned up failed project directory: {project_base_path}")
                     logger.debug("Cleaned up failed project directory: %s", project_base_path)
             except OSError as cleanup_error:
-                print(f"DEBUG: Failed to clean up: {cleanup_error}")
                 logger.warning("Failed to clean up project directory: %s", cleanup_error)
-
+                
             raise serializers.ValidationError(
                 {"non_field_errors": f"Failed to initialize project structure: {e}"}
             ) from e
-
-        print("=== DEBUG: perform_create completed ===")
 
     def get_object(self) -> Project:
         """Override get_object to return 403 instead of 404 when object exists but user has no access."""
