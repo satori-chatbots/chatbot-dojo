@@ -1,9 +1,7 @@
 """Projects API endpoints and related functionality."""
 
 import logging
-import os
 import shutil
-import traceback
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -145,7 +143,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "Failed to initialize project structure for '%s'",
                 project.name,
             )
-            
+
             # Clean up on failure
             try:
                 if project_base_path.exists():
@@ -153,7 +151,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     logger.debug("Cleaned up failed project directory: %s", project_base_path)
             except OSError as cleanup_error:
                 logger.warning("Failed to clean up project directory: %s", cleanup_error)
-                
+
             raise serializers.ValidationError(
                 {"non_field_errors": f"Failed to initialize project structure: {e}"}
             ) from e
