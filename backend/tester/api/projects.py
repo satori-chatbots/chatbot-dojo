@@ -1,10 +1,8 @@
 """Projects API endpoints and related functionality."""
 
-import subprocess
-import sys
+import logging
 from pathlib import Path
 from typing import Any, ClassVar
-import logging
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -17,11 +15,11 @@ from rest_framework.decorators import action, api_view
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
+from user_sim.cli.init_project import init_proj
 
 from tester.models import ChatbotConnector, Project, TestFile
 from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer
 from tester.validation_script import YamlValidator
-from user_sim.cli.init_project import init_proj
 
 logger = logging.getLogger(__name__)
 
@@ -152,9 +150,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         # Initialize project structure using user_sim package
         try:
-            print(f"DEBUG: About to call init_proj with:")
+            print("DEBUG: About to call init_proj with:")
             print(f"DEBUG:   name: {project_name}")
-            print(f"DEBUG:   path: {str(project_base_path.parent)}")
+            print(f"DEBUG:   path: {project_base_path.parent!s}")
             print(f"DEBUG:   path exists: {Path(str(project_base_path.parent)).exists()}")
 
             logger.debug(
@@ -191,7 +189,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"DEBUG: Exception during init_proj: {type(e).__name__}: {e}")
             import traceback
-            print(f"DEBUG: Full traceback:")
+            print("DEBUG: Full traceback:")
             traceback.print_exc()
 
             logger.exception(
