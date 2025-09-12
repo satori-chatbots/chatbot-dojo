@@ -2454,7 +2454,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "selenium", specifier = ">=4.33.0" },
     { name = "tiktoken", specifier = ">=0.9.0" },
-    { name = "user-simulator", specifier = "==0.3.4" },
+    { name = "user-simulator", specifier = "==0.3.6" },
     { name = "webdriver-manager", specifier = ">=4.0.2" },
 ]
 
@@ -2769,7 +2769,7 @@ socks = [
 
 [[package]]
 name = "user-simulator"
-version = "0.3.4"
+version = "0.3.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "allpairspy" },
@@ -2796,9 +2796,9 @@ dependencies = [
     { name = "webdriver-manager" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/fb/4f726747421969332f970566bd8db3d1fe5d56fa976f1bb5a137f7a300e6/user_simulator-0.3.4.tar.gz", hash = "sha256:4660aea96f80c1f6844bd916b235471a2e2256f853f03906eb5d6bcfa1e7a064", size = 1016059, upload-time = "2025-09-09T11:13:32.825Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/76/93/d7c20e83630d73e0a2813ae275d83221c16c86660124efc10e1835a88711/user_simulator-0.3.6.tar.gz", hash = "sha256:3ec873c8135e2ef5fbed9be3b92f0629196b23a7962a9821f56dd24358571248", size = 1016648, upload-time = "2025-09-11T09:54:53.748Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/c3/ae2627a574115c91d120957320da66653171a86e51749480039c0995ebe2/user_simulator-0.3.4-py3-none-any.whl", hash = "sha256:8268b5c374ba1352777941664830957e51084ff9d8c9709813a1a0c9511cb183", size = 1023706, upload-time = "2025-09-09T11:13:29.85Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/b7/b7cecb5a618ad633207f6511bb3ad80d9182e4624ff41a31bb98bfa4bb9a/user_simulator-0.3.6-py3-none-any.whl", hash = "sha256:6c7601dee5ada63f742c7acd1fc6b44e4bd8f6f4af478a84b2c8b40851857d4b", size = 1024015, upload-time = "2025-09-11T09:54:50.106Z" },
 ]
 
 [[package]]

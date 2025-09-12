@@ -62,15 +62,59 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # Default: show all public projects and projects owned by the user.
         return Project.objects.filter(models.Q(public=True) | models.Q(owner=self.request.user))
 
+    def _setup_project_paths_and_debug(self, project: Project) -> tuple[Path, str]:
+        """Setup project paths and log basic debug information."""
+        # Create path structure: projects/user_{user_id}/project_{project_id}/
+        relative_path = Path("projects") / f"user_{self.request.user.id}" / f"project_{project.id}"
+        project_base_path = Path(settings.MEDIA_ROOT) / relative_path
+        project_name = f"project_{project.id}"
+
+        return project_base_path, project_name
+
+    def _initialize_project_structure(self, project_name: str, project_base_path: Path, project: Project) -> None:
+        """Initialize the project directory structure and files."""
+        # Create directory structure
+        project_base_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.debug("Created directory structure: %s", project_base_path.parent)
+
+        # Initialize project using user_sim package
+        logger.debug(
+            "Initializing project structure with init_proj(name=%s, path=%s)",
+            project_name,
+            project_base_path.parent,
+        )
+        init_proj(project_name, str(project_base_path.parent))
+
+        logger.info(
+            "Successfully initialized project structure for '%s' at %s",
+            project.name,
+            project_base_path,
+        )
+
+        # Update project configuration
+        try:
+            project.update_run_yml()
+            logger.debug("Updated run.yml configuration for project '%s'", project.name)
+        except OSError as e:
+            logger.warning(
+                "Project created successfully but failed to update run.yml for '%s': %s",
+                project.name,
+                e,
+            )
+
     def perform_create(self, serializer: serializers.ModelSerializer) -> None:
         """Create a project and initialize its directory structure.
 
         Ensures that a user cannot have two projects with the same name.
         """
         name = serializer.validated_data["name"]
+
+        # Check for duplicate project names
         if Project.objects.filter(owner=self.request.user, name=name).exists():
             msg = "Project name already exists for this user."
             raise serializers.ValidationError({"name": msg})
+
+        # Create the project record
         project = serializer.save(owner=self.request.user)
 
         logger.info(
@@ -80,11 +124,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
             self.request.user.id,
         )
 
-        # Create path structure: projects/user_{user_id}/project_{project_id}/
-        # This should be consistent with the MEDIA_ROOT structure
-        relative_path = Path("projects") / f"user_{self.request.user.id}" / f"project_{project.id}"
-        project_base_path = Path(settings.MEDIA_ROOT) / relative_path
-        project_name = f"project_{project.id}"
+        # Setup paths and debug info
+        project_base_path, project_name = self._setup_project_paths_and_debug(project)
 
         logger.debug(
             "Project base path: %s, project name: %s",
@@ -92,36 +133,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
             project_name,
         )
 
-        # Ensure the parent directory exists
+        # Initialize project structure
         try:
-            project_base_path.parent.mkdir(parents=True, exist_ok=True)
-            logger.debug("Created directory structure: %s", project_base_path.parent)
+            self._initialize_project_structure(project_name, project_base_path, project)
         except OSError as e:
             logger.exception("Failed to create directory structure")
             raise serializers.ValidationError({"non_field_errors": "Failed to create project directory"}) from e
-
-        # Initialize project structure using user_sim package
-        try:
-            logger.debug(
-                "Initializing project structure with init_proj(name=%s, path=%s)",
-                project_name,
-                project_base_path.parent,
-            )
-
-            init_proj(project_name, str(project_base_path.parent))
-
-            logger.info(
-                "Successfully initialized project structure for '%s' at %s",
-                project.name,
-                project_base_path,
-            )
-
         except Exception as e:
             logger.exception(
                 "Failed to initialize project structure for '%s'",
                 project.name,
             )
-            # Clean up the created directory if initialization failed
+
+            # Clean up on failure
             try:
                 if project_base_path.exists():
                     shutil.rmtree(project_base_path)
@@ -132,17 +156,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 {"non_field_errors": f"Failed to initialize project structure: {e}"}
             ) from e
-
-        # Update the run.yml file with project configuration
-        try:
-            project.update_run_yml()
-            logger.debug("Updated run.yml configuration for project '%s'", project.name)
-        except OSError as e:
-            logger.warning(
-                "Project created successfully but failed to update run.yml for '%s': %s",
-                project.name,
-                e,
-            )
 
     def get_object(self) -> Project:
         """Override get_object to return 403 instead of 404 when object exists but user has no access."""

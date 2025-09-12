@@ -1,9 +1,17 @@
 #!/bin/sh
 set -e
 
+# Debug information
+echo "DEBUG: Current user: $(whoami) ($(id))"
+echo "DEBUG: Working directory: $(pwd)"
+echo "DEBUG: /app permissions: $(ls -la /app/)"
+
 # Ensure filevault and static directories exist with proper permissions
 mkdir -p /app/filevault /app/static
 chmod 755 /app/filevault /app/static
+
+# Check if we can write to filevault
+touch /app/filevault/test_write && rm /app/filevault/test_write && echo "DEBUG: Write test successful" || echo "DEBUG: Write test FAILED"
 
 # Run Django management commands
 uv run python manage.py migrate --noinput
