@@ -179,6 +179,13 @@ class TestRunner:
         try:
             test_case = TestCase.objects.get(id=config.test_case_id)
 
+            # NEW: Store results inside the project folder
+            # The results path should be inside the project directory.
+            # config.project_path is the absolute path to the project directory.
+            results_path = Path(config.project_path) / "sensei_results" / f"test_{test_case.id}"
+            results_path.mkdir(parents=True, exist_ok=True)
+            config.results_path = str(results_path)
+
             # Update initial progress
             celery_task.update_state(
                 state="PROGRESS",

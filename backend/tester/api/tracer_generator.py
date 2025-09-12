@@ -172,15 +172,25 @@ class TracerGenerator:
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         execution_name = f"TRACER_{timestamp}"
 
+        project = task.project
+        # The project path is projects/user_{user_id}/project_{project_id}
+        profiles_dir = str(
+            Path("projects")
+            / f"user_{project.owner.id}"
+            / f"project_{project.id}"
+            / "tracer_results"
+            / execution_name.lower()
+        )
+
         execution = ProfileExecution.objects.create(
-            project=task.project,
+            project=project,
             execution_name=execution_name,
             execution_type="tracer",
             sessions=conversations,
             turns_per_session=turns,
             verbosity=verbosity,
             status="RUNNING",
-            profiles_directory=f"project_data/{task.project.id}/executions/{execution_name.lower()}",
+            profiles_directory=profiles_dir,
         )
 
         task.execution = execution
