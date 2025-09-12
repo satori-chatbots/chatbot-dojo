@@ -16,6 +16,8 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
+  Tabs,
+  Tab,
 } from "@heroui/react";
 import {
   Upload,
@@ -38,6 +40,8 @@ import {
   fetchTracerExecutions,
   deleteProfileExecution,
   fetchFiles,
+  fetchSenseiCheckRules,
+  uploadSenseiCheckRules,
 } from "../api/file-api";
 import { deleteProject, fetchProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
@@ -55,6 +59,7 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { getProviderDisplayName } from "../constants/providers";
+import SenseiCheckRules from "../components/sensei-check-rules";
 
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
@@ -103,6 +108,10 @@ function Home() {
   const [executions, setExecutions] = useState([]);
   const [allProfiles, setAllProfiles] = useState([]);
   const [loadingExecutions, setLoadingExecutions] = useState(false);
+
+  // List of sensei check rules in the selected project
+  const [senseiCheckRules, setSenseiCheckRules] = useState([]);
+  const [loadingSenseiCheckRules, setLoadingSenseiCheckRules] = useState(false);
 
   // Track which execution folders are expanded to show all profiles
   const [expandedExecutions, setExpandedExecutions] = useState(new Set());
@@ -224,6 +233,26 @@ function Home() {
       setAllProfiles([]);
     } finally {
       setLoadingExecutions(false);
+    }
+  }, [selectedProject, showToast]);
+
+  // Function to reload sensei check rules
+  const reloadSenseiCheckRules = useCallback(async () => {
+    if (!selectedProject) {
+      setSenseiCheckRules([]);
+      return;
+    }
+
+    setLoadingSenseiCheckRules(true);
+    try {
+      const rules = await fetchSenseiCheckRules(selectedProject.id);
+      setSenseiCheckRules(rules);
+    } catch (error) {
+      console.error("Error fetching SENSEI Check rules:", error);
+      showToast("error", "Error loading SENSEI Check rules");
+      setSenseiCheckRules([]);
+    } finally {
+      setLoadingSenseiCheckRules(false);
     }
   }, [selectedProject, showToast]);
 
@@ -533,7 +562,8 @@ function Home() {
   // When the selected project changes, reload the executions
   useEffect(() => {
     reloadExecutions();
-  }, [selectedProject, reloadExecutions]);
+    reloadSenseiCheckRules();
+  }, [selectedProject, reloadExecutions, reloadSenseiCheckRules]);
 
   // When the list of projects changes, verify that the selected project still exists
   useEffect(() => {
@@ -942,214 +972,227 @@ function Home() {
 
           {/* Project Details */}
           <div>
-            {/* Upload Section */}
-            <div className="flex flex-col space-y-4">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
-                  isDragActive
-                    ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
-                    : "border-border dark:border-border-dark hover:border-gray-400 dark:hover:border-gray-500"
-                }`}
-              >
-                <input {...getInputProps()} />
-                <div className="flex flex-col items-center gap-2 mb-2">
-                  <Upload
-                    className={`transition-all duration-300 ease-in-out ${
+            <Tabs aria-label="Options">
+              <Tab key="profiles" title="User Profiles">
+                {/* Upload Section */}
+                <div className="flex flex-col space-y-4">
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
                       isDragActive
-                        ? "text-primary scale-125 opacity-80"
-                        : "text-foreground/50 dark:text-foreground-dark/50 hover:text-foreground/70 dark:hover:text-foreground-dark/70"
-                    } w-10 h-10`}
-                  />
-                  <div className="text-center">
-                    <p
-                      className={`text-sm font-medium transition-all duration-300 ${
-                        isDragActive
-                          ? "text-primary"
-                          : "text-foreground dark:text-foreground-dark"
-                      }`}
-                    >
-                      {isDragActive
-                        ? "Drop files here"
-                        : "Drag and drop YAML files here"}
-                    </p>
-                    <p className="text-xs mt-0.5 text-foreground/60 dark:text-foreground-dark/60">
-                      or click to browse
-                    </p>
+                        ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
+                        : "border-border dark:border-border-dark hover:border-gray-400 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <div className="flex flex-col items-center gap-2 mb-2">
+                      <Upload
+                        className={`transition-all duration-300 ease-in-out ${
+                          isDragActive
+                            ? "text-primary scale-125 opacity-80"
+                            : "text-foreground/50 dark:text-foreground-dark/50 hover:text-foreground/70 dark:hover:text-foreground-dark/70"
+                        } w-10 h-10`}
+                      />
+                      <div className="text-center">
+                        <p
+                          className={`text-sm font-medium transition-all duration-300 ${
+                            isDragActive
+                              ? "text-primary"
+                              : "text-foreground dark:text-foreground-dark"
+                          }`}
+                        >
+                          {isDragActive
+                            ? "Drop files here"
+                            : "Drag and drop YAML files here"}
+                        </p>
+                        <p className="text-xs mt-0.5 text-foreground/60 dark:text-foreground-dark/60">
+                          or click to browse
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* File list part, keep your existing implementation */}
+                    {selectedUploadFiles && selectedUploadFiles.length > 0 && (
+                      <div className="mt-4 w-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">
+                            {selectedUploadFiles.length === 1
+                              ? "1 file selected"
+                              : `${selectedUploadFiles.length} files selected`}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            onPress={() => {
+                              setSelectedUploadFiles(undefined);
+                              if (fileInputReference.current) {
+                                fileInputReference.current.value = undefined;
+                              }
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="bg-background-subtle dark:bg-darkbg-card rounded-md p-2 max-h-28 overflow-y-auto backdrop-blur-sm border border-border dark:border-border-dark">
+                          <ul className="text-sm text-foreground/70 dark:text-foreground-dark/70 space-y-1">
+                            {[...selectedUploadFiles].map((file, index) => (
+                              <li
+                                key={index}
+                                className="truncate flex items-center"
+                              >
+                                <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                                {file.name}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <Button
+                          className="mt-3 w-full"
+                          color="primary"
+                          onPress={handleUpload}
+                          startContent={<Upload className="w-4 h-4" />}
+                        >
+                          Upload{" "}
+                          {selectedUploadFiles.length > 1
+                            ? `${selectedUploadFiles.length} Files`
+                            : "File"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Create New YAML button */}
+                  <Button
+                    onPress={() => navigate("/yaml-editor")}
+                    fullWidth
+                    color="secondary"
+                    variant="ghost"
+                    startContent={<File className="w-4 h-4" />}
+                  >
+                    Create Profile Manually
+                  </Button>
+
+                  {/* Auto generate profiles */}
+                  <Button
+                    fullWidth
+                    color="secondary"
+                    variant="ghost"
+                    startContent={
+                      isGenerating ? undefined : (
+                        <Sparkles className="w-4 h-4" />
+                      )
+                    }
+                    isLoading={isGenerating}
+                    isDisabled={isGenerating}
+                    onPress={() => setIsGenerateModalOpen(true)}
+                  >
+                    {isGenerating
+                      ? "Generating Profiles..."
+                      : "Auto-Generate Profiles"}
+                  </Button>
+                  {isGenerating && (
+                    <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
+                      <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
+                      <h3 className="text-base font-medium mb-1 text-foreground dark:text-foreground-dark">
+                        Generating Profiles
+                      </h3>
+                      {generationStage && (
+                        <p className="text-sm font-medium text-primary mb-2 text-center">
+                          {generationStage}
+                        </p>
+                      )}
+                      <div className="w-full bg-muted dark:bg-muted-dark rounded-full h-2.5 mb-2">
+                        <div
+                          className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${generationProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 text-center">
+                        {generationProgress}% complete
+                      </p>
+                      <p className="text-xs text-foreground/50 dark:text-foreground-dark/50 text-center mt-1">
+                        This process may take a few minutes depending on the
+                        complexity of your chatbot.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* File list part, keep your existing implementation */}
-                {selectedUploadFiles && selectedUploadFiles.length > 0 && (
-                  <div className="mt-4 w-full">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {selectedUploadFiles.length === 1
-                          ? "1 file selected"
-                          : `${selectedUploadFiles.length} files selected`}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        onPress={() => {
-                          setSelectedUploadFiles(undefined);
-                          if (fileInputReference.current) {
-                            fileInputReference.current.value = undefined;
-                          }
-                        }}
-                      >
-                        Clear
-                      </Button>
+                {/* Profile Executions Section */}
+                <div className="flex-1 overflow-y-auto mt-4">
+                  {loadingExecutions ? (
+                    <div className="text-center py-4">
+                      <p className="text-default-500">Loading executions...</p>
                     </div>
-                    <div className="bg-background-subtle dark:bg-darkbg-card rounded-md p-2 max-h-28 overflow-y-auto backdrop-blur-sm border border-border dark:border-border-dark">
-                      <ul className="text-sm text-foreground/70 dark:text-foreground-dark/70 space-y-1">
-                        {[...selectedUploadFiles].map((file, index) => (
-                          <li
-                            key={index}
-                            className="truncate flex items-center"
-                          >
-                            <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                            {file.name}
-                          </li>
+                  ) : executions.length > 0 ? (
+                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                          📁 Profile Executions ({allProfiles.length} profiles
+                          total)
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="light"
+                          color="primary"
+                          onPress={toggleSelectAllFiles}
+                        >
+                          {selectedFiles.length === allProfiles.length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        {executions.map((execution) => (
+                          <ExecutionFolder
+                            key={execution.id}
+                            execution={execution}
+                            profiles={execution.profiles}
+                            selectedFiles={selectedFiles}
+                            onProfileSelect={selectFile}
+                            showAll={expandedExecutions.has(execution.id)}
+                            onToggleShowAll={toggleShowAllProfiles}
+                            onDeleteExecution={handleDeleteExecution}
+                          />
                         ))}
-                      </ul>
-                    </div>
-                    <Button
-                      className="mt-3 w-full"
-                      color="primary"
-                      onPress={handleUpload}
-                      startContent={<Upload className="w-4 h-4" />}
-                    >
-                      Upload{" "}
-                      {selectedUploadFiles.length > 1
-                        ? `${selectedUploadFiles.length} Files`
-                        : "File"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Create New YAML button */}
-              <Button
-                onPress={() => navigate("/yaml-editor")}
-                fullWidth
-                color="secondary"
-                variant="ghost"
-                startContent={<File className="w-4 h-4" />}
-              >
-                Create Profile Manually
-              </Button>
-
-              {/* Auto generate profiles */}
-              <Button
-                fullWidth
-                color="secondary"
-                variant="ghost"
-                startContent={
-                  isGenerating ? undefined : <Sparkles className="w-4 h-4" />
-                }
-                isLoading={isGenerating}
-                isDisabled={isGenerating}
-                onPress={() => setIsGenerateModalOpen(true)}
-              >
-                {isGenerating
-                  ? "Generating Profiles..."
-                  : "Auto-Generate Profiles"}
-              </Button>
-              {isGenerating && (
-                <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
-                  <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
-                  <h3 className="text-base font-medium mb-1 text-foreground dark:text-foreground-dark">
-                    Generating Profiles
-                  </h3>
-                  {generationStage && (
-                    <p className="text-sm font-medium text-primary mb-2 text-center">
-                      {generationStage}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-foreground/60 dark:text-foreground-dark/60 text-center">
+                      No profiles uploaded yet.
                     </p>
                   )}
-                  <div className="w-full bg-muted dark:bg-muted-dark rounded-full h-2.5 mb-2">
-                    <div
-                      className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${generationProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 text-center">
-                    {generationProgress}% complete
-                  </p>
-                  <p className="text-xs text-foreground/50 dark:text-foreground-dark/50 text-center mt-1">
-                    This process may take a few minutes depending on the
-                    complexity of your chatbot.
-                  </p>
                 </div>
-              )}
-            </div>
 
-            {/* Profile Executions Section */}
-            <div className="flex-1 overflow-y-auto mt-4">
-              {loadingExecutions ? (
-                <div className="text-center py-4">
-                  <p className="text-default-500">Loading executions...</p>
+                {/* Action Buttons */}
+                <div className="mt-4 flex space-x-4">
+                  <Button
+                    color="danger"
+                    className="flex-1"
+                    onPress={handleDelete}
+                    startContent={<Trash className="w-4 h-4" />}
+                  >
+                    Delete Selected
+                  </Button>
+                  <Button
+                    color="primary"
+                    className="flex-1"
+                    onPress={openExecuteModal}
+                    startContent={<Play className="w-4 h-4" />}
+                  >
+                    Execute Test
+                  </Button>
                 </div>
-              ) : executions.length > 0 ? (
-                <>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      📁 Profile Executions ({allProfiles.length} profiles
-                      total)
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      color="primary"
-                      onPress={toggleSelectAllFiles}
-                    >
-                      {selectedFiles.length === allProfiles.length
-                        ? "Deselect All"
-                        : "Select All"}
-                    </Button>
-                  </div>
-                  <div className="space-y-1">
-                    {executions.map((execution) => (
-                      <ExecutionFolder
-                        key={execution.id}
-                        execution={execution}
-                        profiles={execution.profiles}
-                        selectedFiles={selectedFiles}
-                        onProfileSelect={selectFile}
-                        showAll={expandedExecutions.has(execution.id)}
-                        onToggleShowAll={toggleShowAllProfiles}
-                        onDeleteExecution={handleDeleteExecution}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className="text-foreground/60 dark:text-foreground-dark/60 text-center">
-                  No profiles uploaded yet.
-                </p>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-4 flex space-x-4">
-              <Button
-                color="danger"
-                className="flex-1"
-                onPress={handleDelete}
-                startContent={<Trash className="w-4 h-4" />}
-              >
-                Delete Selected
-              </Button>
-              <Button
-                color="primary"
-                className="flex-1"
-                onPress={openExecuteModal}
-                startContent={<Play className="w-4 h-4" />}
-              >
-                Execute Test
-              </Button>
-            </div>
+              </Tab>
+              <Tab key="sensei-check" title="SENSEI Check">
+                <SenseiCheckRules
+                  project={selectedProject}
+                  rules={senseiCheckRules}
+                  reloadRules={reloadSenseiCheckRules}
+                />
+              </Tab>
+            </Tabs>
           </div>
         </Card>
       ) : (

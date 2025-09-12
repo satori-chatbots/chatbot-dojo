@@ -14,6 +14,7 @@ from .models import (
     Project,
     ProjectConfig,
     RuleFile,
+    SenseiCheckRule,
     TestCase,
     TestError,
     TestFile,
@@ -285,6 +286,19 @@ class TypeFileSerializer(FileURLMixin, serializers.ModelSerializer):
         """Meta class for TypeFileSerializer."""
 
         model = TypeFile
+        fields = "__all__"
+        read_only_fields: ClassVar[list[str]] = ["name"]
+
+
+class SenseiCheckRuleSerializer(FileURLMixin, serializers.ModelSerializer):
+    """Serializer for the SenseiCheckRule model."""
+
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        """Meta class for SenseiCheckRuleSerializer."""
+
+        model = SenseiCheckRule
         fields = "__all__"
         read_only_fields: ClassVar[list[str]] = ["name"]
 

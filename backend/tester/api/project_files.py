@@ -15,11 +15,12 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
-from tester.models import PersonalityFile, Project, ProjectConfig, RuleFile, TypeFile
+from tester.models import PersonalityFile, Project, ProjectConfig, RuleFile, SenseiCheckRule, TypeFile
 from tester.serializers import (
     PersonalityFileSerializer,
     ProjectConfigSerializer,
     RuleFileSerializer,
+    SenseiCheckRuleSerializer,
     TypeFileSerializer,
 )
 
@@ -202,6 +203,63 @@ class TypeFileViewSet(viewsets.ModelViewSet):
         for uploaded_file in uploaded_files:
             type_file = TypeFile.objects.create(file=uploaded_file, project=project)
             created_files.append(type_file)
+
+        serializer = self.get_serializer(created_files, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing SenseiCheckRule instances."""
+
+    queryset = SenseiCheckRule.objects.all()
+    serializer_class = SenseiCheckRuleSerializer
+    parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
+    permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
+        """Return a list of all sensei check rules, filtered by project if specified."""
+        project_id = request.query_params.get("project_id", None)
+        if project_id is not None:
+            project = get_object_or_404(Project, id=project_id)
+            queryset = self.filter_queryset(self.get_queryset()).filter(project=project)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
+
+        # Check if files are missing and clean up
+        for file in queryset:
+            if not Path(file.file.path).exists():
+                file.delete()
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="upload",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload(self, request: Request) -> Response:
+        """Upload sensei check rules to a project."""
+        uploaded_files = request.FILES.getlist("file")
+        project_id = request.data.get("project")
+
+        if not project_id:
+            return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        project = get_object_or_404(Project, id=project_id)
+
+        # Check permissions
+        if project.owner != request.user:
+            return Response(
+                {"error": "You do not own this project."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        created_files = []
+        for uploaded_file in uploaded_files:
+            sensei_check_rule = SenseiCheckRule.objects.create(file=uploaded_file, project=project)
+            created_files.append(sensei_check_rule)
 
         serializer = self.get_serializer(created_files, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

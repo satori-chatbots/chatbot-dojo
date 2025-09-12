@@ -17,6 +17,22 @@ export const fetchFiles = async (project_id) => {
   }
 };
 
+export const fetchSenseiCheckRules = async (project_id) => {
+  if (!project_id) {
+    return [];
+  }
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}?project_id=${project_id}`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching SENSEI Check rules:", error);
+    throw error;
+  }
+};
+
 export const uploadFiles = async (formData) => {
   try {
     const response = await apiClient(
@@ -30,6 +46,38 @@ export const uploadFiles = async (formData) => {
     return data;
   } catch (error) {
     console.error("Error uploading files:", error);
+    throw error;
+  }
+};
+
+export const uploadSenseiCheckRules = async (formData) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.UPLOAD_SENSEI_CHECK_RULES}`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error uploading SENSEI Check rules:", error);
+    throw error;
+  }
+};
+
+export const deleteSenseiCheckRule = async (id) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${id}/`,
+      {
+        method: "DELETE",
+      },
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting SENSEI Check rule:", error);
     throw error;
   }
 };

@@ -7,6 +7,8 @@ const MEDIA_URL = `${API_BASE_URL}/filevault/`;
 export const ENDPOINTS = {
   FETCH_FILES: `${API_PATH}/testfiles/`,
   UPLOAD_FILES: `${API_PATH}/testfiles/upload/`,
+  SENSEI_CHECK_RULES: `${API_PATH}/senseicheckrules/`,
+  UPLOAD_SENSEI_CHECK_RULES: `${API_PATH}/senseicheckrules/upload/`,
   DELETE_FILES: `${API_PATH}/testfiles/delete-bulk/`,
   EXECUTE_TEST: `${API_PATH}/execute-selected/`,
   FETCH_TEST_CASES: `${API_PATH}/testcases/`,

@@ -24,6 +24,7 @@ from .project_files import (
     PersonalityFileViewSet,
     ProjectConfigViewSet,
     RuleFileViewSet,
+    SenseiCheckRuleViewSet,
     TypeFileViewSet,
 )
 from .projects import ProjectViewSet, fetch_file_content, validate_yaml
@@ -60,6 +61,7 @@ __all__ = [
     "ProjectViewSet",
     "RegisterViewSet",
     "RuleFileViewSet",
+    "SenseiCheckRuleViewSet",
     "TestCaseViewSet",
     "TestErrorViewSet",
     "TestFileViewSet",
