@@ -137,6 +137,11 @@ urlpatterns = [
         get_all_providers,
         name="llm-providers",
     ),
+    path(
+        "execute-sensei-check/",
+        api.execute_sensei_check,
+        name="execute-sensei-check",
+    ),
     # Then Include Router URLs
     path("", include(router.urls)),
 ]

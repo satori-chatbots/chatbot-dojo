@@ -9,6 +9,7 @@ export const ENDPOINTS = {
   UPLOAD_FILES: `${API_PATH}/testfiles/upload/`,
   SENSEI_CHECK_RULES: `${API_PATH}/senseicheckrules/`,
   UPLOAD_SENSEI_CHECK_RULES: `${API_PATH}/senseicheckrules/upload/`,
+  EXECUTE_SENSEI_CHECK: `${API_PATH}/execute-sensei-check/`,
   DELETE_FILES: `${API_PATH}/testfiles/delete-bulk/`,
   EXECUTE_TEST: `${API_PATH}/execute-selected/`,
   FETCH_TEST_CASES: `${API_PATH}/testcases/`,

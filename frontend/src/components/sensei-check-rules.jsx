@@ -12,7 +12,7 @@ import {
   Spinner,
 } from "@heroui/react";
 import { Upload, Trash, Play, User, Calendar, FileText } from "lucide-react";
-import { uploadSenseiCheckRules, deleteSenseiCheckRule } from "../api/file-api";
+import { uploadSenseiCheckRules, deleteSenseiCheckRule, executeSenseiCheck } from "../api/file-api";
 import { fetchTestCasesByProjects } from "../api/test-cases-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
@@ -32,6 +32,10 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   const [selectedSenseiResults, setSelectedSenseiResults] = useState(new Set());
   const [testCases, setTestCases] = useState([]);
   const [loadingTestCases, setLoadingTestCases] = useState(false);
+  const [senseiCheckResults, setSenseiCheckResults] = useState(null);
+  const [resultsModal, setResultsModal] = useState({
+    isOpen: false,
+  });
 
   // Fetch test cases for the current project
   const fetchTestCases = useCallback(async () => {
@@ -163,22 +167,25 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     }));
 
     try {
-      // TODO: Implement actual API call to execute sensei-check on selected TestCase results
-      // const selectedTestCaseIds = Array.from(selectedSenseiResults);
-      // await executeSenseiCheckOnTestCases(selectedTestCaseIds, rules);
+      const selectedTestCaseIds = Array.from(selectedSenseiResults);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Execute SENSEI Check with verbose mode enabled
+      const result = await executeSenseiCheck(project.id, selectedTestCaseIds, true);
 
       showToast(
         "success",
         `SENSEI Check executed on ${selectedSenseiResults.size} result(s) successfully!`,
       );
+
+      // Store results and show results modal
+      setSenseiCheckResults(result);
+      setResultsModal({ isOpen: true });
+
       setExecuteSenseiCheckModal({ isOpen: false, isLoading: false });
       setSelectedSenseiResults(new Set());
     } catch (error) {
       console.error("Error executing SENSEI Check:", error);
-      showToast("error", "Error executing SENSEI Check.");
+      showToast("error", `Error executing SENSEI Check: ${error.message || "Unknown error"}`);
       setExecuteSenseiCheckModal((previous) => ({
         ...previous,
         isLoading: false,
@@ -554,6 +561,94 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
               {executeSenseiCheckModal.isLoading
                 ? `Executing on ${selectedSenseiResults.size} result(s)...`
                 : `Execute Check on ${selectedSenseiResults.size} result(s)`}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* SENSEI Check Results Modal */}
+      <Modal
+        isOpen={resultsModal.isOpen}
+        onOpenChange={(isOpen) => setResultsModal({ isOpen })}
+        size="5xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3>SENSEI Check Results</h3>
+            <p className="text-sm text-foreground/60 dark:text-foreground-dark/60">
+              Execution results and detailed output
+            </p>
+          </ModalHeader>
+          <ModalBody>
+            {senseiCheckResults && (
+              <div className="space-y-4">
+                {/* Summary Information */}
+                <div className="grid grid-cols-2 gap-4 p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
+                  <div>
+                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">Exit Code:</span>
+                    <p className="font-medium">
+                      <Chip
+                        size="sm"
+                        color={senseiCheckResults.exit_code === 0 ? "success" : "danger"}
+                        variant="flat"
+                      >
+                        {senseiCheckResults.exit_code}
+                      </Chip>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">Test Cases Checked:</span>
+                    <p className="font-medium">{senseiCheckResults.test_cases_checked}</p>
+                  </div>
+                </div>
+
+                {/* Command Executed */}
+                <div className="p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
+                  <h4 className="font-medium mb-2">Command Executed:</h4>
+                  <code className="text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded block overflow-x-auto">
+                    {senseiCheckResults.command_executed}
+                  </code>
+                </div>
+
+                {/* Standard Output */}
+                {senseiCheckResults.stdout && (
+                  <div className="p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
+                    <h4 className="font-medium mb-2">Output:</h4>
+                    <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap">
+                      {senseiCheckResults.stdout}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Standard Error */}
+                {senseiCheckResults.stderr && (
+                  <div className="p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800">
+                    <h4 className="font-medium mb-2 text-danger-600 dark:text-danger-400">Errors:</h4>
+                    <pre className="text-sm bg-danger-100 dark:bg-danger-900/40 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap text-danger-700 dark:text-danger-300">
+                      {senseiCheckResults.stderr}
+                    </pre>
+                  </div>
+                )}
+
+                {/* CSV Results */}
+                {senseiCheckResults.csv_results && (
+                  <div className="p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
+                    <h4 className="font-medium mb-2">Statistics (CSV):</h4>
+                    <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap">
+                      {senseiCheckResults.csv_results}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              onPress={() => setResultsModal({ isOpen: false })}
+            >
+              Close
             </Button>
           </ModalFooter>
         </ModalContent>

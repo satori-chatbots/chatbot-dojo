@@ -345,3 +345,28 @@ export const fetchTracerExecutionLogs = async (executionId) => {
     throw error;
   }
 };
+
+// Execute SENSEI Check on selected test cases
+export const executeSenseiCheck = async (projectId, testCaseIds, verbose = false) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.EXECUTE_SENSEI_CHECK}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          test_case_ids: testCaseIds,
+          verbose: verbose,
+        }),
+      },
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error executing SENSEI Check:", error);
+    throw error;
+  }
+};

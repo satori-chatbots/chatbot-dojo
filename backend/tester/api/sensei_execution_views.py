@@ -551,3 +551,167 @@ def delete_profile_execution(request: Request, execution_id: int) -> Response:
         return Response(
             {"error": "An error occurred while deleting the execution."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(["POST"])
+def execute_sensei_check(request: Request) -> Response:
+    """Execute SENSEI Check on selected test cases.
+
+    This endpoint executes sensei-check command on the conversation outputs
+    from selected test cases using the project's SENSEI Check rules.
+
+    Args:
+        request: POST request with:
+            - project_id: ID of the project containing rules
+            - test_case_ids: List of test case IDs to check
+            - verbose: Optional boolean for verbose output
+
+    Returns:
+        Response with execution results and output
+    """
+    import os
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    try:
+        data = request.data
+        project_id = data.get("project_id")
+        test_case_ids = data.get("test_case_ids", [])
+        verbose = data.get("verbose", False)
+
+        if not project_id:
+            return Response({"error": "project_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not test_case_ids:
+            return Response({"error": "test_case_ids is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get project and validate access
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get test cases
+        test_cases = TestCase.objects.filter(id__in=test_case_ids, project=project)
+
+        if not test_cases.exists():
+            return Response({"error": "No valid test cases found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if project has SENSEI Check rules
+        if not project.sensei_check_rules.exists():
+            return Response(
+                {"error": "No SENSEI Check rules found for this project"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Build paths
+        user_id = project.owner.id
+        project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{user_id}" / f"project_{project.id}"
+        rules_path = project_path / "sensei_check_rules"
+
+        # Verify rules directory exists
+        if not rules_path.exists():
+            return Response(
+                {"error": "SENSEI Check rules directory not found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Create temporary directory for conversations
+        with tempfile.TemporaryDirectory() as temp_dir:
+            conversations_path = Path(temp_dir) / "conversations"
+            conversations_path.mkdir(parents=True, exist_ok=True)
+
+            # Copy conversation files from selected test cases
+            for test_case in test_cases:
+                # Path to test case results
+                results_path = (
+                    Path(settings.MEDIA_ROOT)
+                    / "results"
+                    / f"user_{user_id}"
+                    / f"project_{project.id}"
+                    / f"testcase_{test_case.id}"
+                )
+
+                if results_path.exists():
+                    # Copy all YAML conversation files
+                    for yaml_file in results_path.rglob("*.yml"):
+                        # Create subdirectory structure in temp
+                        relative_path = yaml_file.relative_to(results_path)
+                        dest_file = conversations_path / f"testcase_{test_case.id}" / relative_path
+                        dest_file.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(yaml_file, dest_file)
+
+            # Check if we have any conversation files
+            if not any(conversations_path.rglob("*.yml")):
+                return Response(
+                    {"error": "No conversation files found in selected test cases"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Build sensei-check command
+            cmd = [
+                "sensei-check",  # Updated to use sensei-check without .py
+                "--rules",
+                str(rules_path),
+                "--conversations",
+                str(conversations_path),
+            ]
+
+            if verbose:
+                cmd.append("--verbose")
+
+            # Create temporary CSV file for results
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as csv_file:
+                csv_path = csv_file.name
+                cmd.extend(["--dump", csv_path])
+
+            try:
+                # Execute sensei-check command
+                logger.info(f"Executing SENSEI Check command: {' '.join(cmd)}")
+
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 minute timeout
+                    check=False,  # Don't raise exception on non-zero exit
+                )
+
+                # Read CSV results if file exists
+                csv_results = None
+                if os.path.exists(csv_path):
+                    try:
+                        with open(csv_path, encoding="utf-8") as f:
+                            csv_results = f.read()
+                    finally:
+                        os.unlink(csv_path)  # Clean up temp file
+
+                return Response(
+                    {
+                        "success": True,
+                        "exit_code": result.returncode,
+                        "stdout": result.stdout,
+                        "stderr": result.stderr,
+                        "csv_results": csv_results,
+                        "test_cases_checked": len(test_cases),
+                        "command_executed": " ".join(cmd),
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            except subprocess.TimeoutExpired:
+                # Clean up temp CSV file
+                if os.path.exists(csv_path):
+                    os.unlink(csv_path)
+                return Response(
+                    {"error": "SENSEI Check execution timed out (5 minutes)"}, status=status.HTTP_408_REQUEST_TIMEOUT
+                )
+            except subprocess.SubprocessError as e:
+                # Clean up temp CSV file
+                if os.path.exists(csv_path):
+                    os.unlink(csv_path)
+                return Response(
+                    {"error": f"Error executing SENSEI Check: {e!s}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in execute_sensei_check: {e}")
+        return Response({"error": f"Unexpected error: {e!s}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

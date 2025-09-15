@@ -33,6 +33,7 @@ from .sensei_execution_views import (
     ExecuteSelectedProfilesAPIView,
     check_sensei_execution_status,
     delete_profile_execution,
+    execute_sensei_check,
     get_profile_executions,
     stop_sensei_execution,
 )
