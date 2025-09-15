@@ -40,6 +40,7 @@
     "@heroui/theme": "^2.4.17",
     "@heroui/toast": "^2.0.12",
     "@heroui/tooltip": "^2.2.19",
+    "@nextui-org/react": "^2.6.11",
     "@react-stately/data": "^3.12.1",
     "@uiw/codemirror-theme-github": "^4.23.14",
     "@uiw/codemirror-theme-material": "^4.23.8",
