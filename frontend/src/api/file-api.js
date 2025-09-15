@@ -347,7 +347,11 @@ export const fetchTracerExecutionLogs = async (executionId) => {
 };
 
 // Execute SENSEI Check on selected test cases
-export const executeSenseiCheck = async (projectId, testCaseIds, verbose = false) => {
+export const executeSenseiCheck = async (
+  projectId,
+  testCaseIds,
+  verbose = false,
+) => {
   try {
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.EXECUTE_SENSEI_CHECK}`,

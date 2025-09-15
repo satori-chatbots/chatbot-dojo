@@ -11,10 +11,15 @@ import {
   Chip,
   Spinner,
 } from "@heroui/react";
-import { Upload, Trash, Play, User, Calendar, FileText } from "lucide-react";
-import { uploadSenseiCheckRules, deleteSenseiCheckRule, executeSenseiCheck } from "../api/file-api";
+import { Upload, Trash, Play, FileText } from "lucide-react";
+import {
+  uploadSenseiCheckRules,
+  deleteSenseiCheckRule,
+  executeSenseiCheck,
+} from "../api/file-api";
 import { fetchTestCasesByProjects } from "../api/test-cases-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import { saveSenseiCheckResult } from "../utils/sensei-check-results-storage";
 
 const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   const [selectedFiles, setSelectedFiles] = useState();
@@ -32,7 +37,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   const [selectedSenseiResults, setSelectedSenseiResults] = useState(new Set());
   const [testCases, setTestCases] = useState([]);
   const [loadingTestCases, setLoadingTestCases] = useState(false);
-  const [senseiCheckResults, setSenseiCheckResults] = useState(null);
+  const [senseiCheckResults, setSenseiCheckResults] = useState(undefined);
   const [resultsModal, setResultsModal] = useState({
     isOpen: false,
   });
@@ -136,9 +141,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     if (selectedSenseiResults.size === testCases.length) {
       setSelectedSenseiResults(new Set());
     } else {
-      setSelectedSenseiResults(
-        new Set(testCases.map((result) => result.id)),
-      );
+      setSelectedSenseiResults(new Set(testCases.map((result) => result.id)));
     }
   };
 
@@ -167,10 +170,14 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     }));
 
     try {
-      const selectedTestCaseIds = Array.from(selectedSenseiResults);
+      const selectedTestCaseIds = [...selectedSenseiResults];
 
       // Execute SENSEI Check with verbose mode enabled
-      const result = await executeSenseiCheck(project.id, selectedTestCaseIds, true);
+      const result = await executeSenseiCheck(
+        project.id,
+        selectedTestCaseIds,
+        true,
+      );
 
       showToast(
         "success",
@@ -181,11 +188,24 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
       setSenseiCheckResults(result);
       setResultsModal({ isOpen: true });
 
+      // Save result to persistent storage
+      try {
+        console.log("Saving SENSEI check result for project:", project.id);
+        saveSenseiCheckResult(project.id, result);
+        console.log("Successfully saved SENSEI check result");
+      } catch (storageError) {
+        console.error("Error saving result to storage:", storageError);
+        // Don't show error to user as the execution was successful
+      }
+
       setExecuteSenseiCheckModal({ isOpen: false, isLoading: false });
       setSelectedSenseiResults(new Set());
     } catch (error) {
       console.error("Error executing SENSEI Check:", error);
-      showToast("error", `Error executing SENSEI Check: ${error.message || "Unknown error"}`);
+      showToast(
+        "error",
+        `Error executing SENSEI Check: ${error.message || "Unknown error"}`,
+      );
       setExecuteSenseiCheckModal((previous) => ({
         ...previous,
         isLoading: false,
@@ -412,9 +432,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                 {/* Select All Checkbox */}
                 <div className="flex items-center justify-between border-b border-border dark:border-border-dark pb-3">
                   <Checkbox
-                    isSelected={
-                      selectedSenseiResults.size === testCases.length
-                    }
+                    isSelected={selectedSenseiResults.size === testCases.length}
                     isIndeterminate={
                       selectedSenseiResults.size > 0 &&
                       selectedSenseiResults.size < testCases.length
@@ -586,11 +604,17 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                 {/* Summary Information */}
                 <div className="grid grid-cols-2 gap-4 p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
                   <div>
-                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">Exit Code:</span>
+                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">
+                      Exit Code:
+                    </span>
                     <p className="font-medium">
                       <Chip
                         size="sm"
-                        color={senseiCheckResults.exit_code === 0 ? "success" : "danger"}
+                        color={
+                          senseiCheckResults.exit_code === 0
+                            ? "success"
+                            : "danger"
+                        }
                         variant="flat"
                       >
                         {senseiCheckResults.exit_code}
@@ -598,8 +622,12 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">Test Cases Checked:</span>
-                    <p className="font-medium">{senseiCheckResults.test_cases_checked}</p>
+                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">
+                      Test Cases Checked:
+                    </span>
+                    <p className="font-medium">
+                      {senseiCheckResults.test_cases_checked}
+                    </p>
                   </div>
                 </div>
 
@@ -624,7 +652,9 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                 {/* Standard Error */}
                 {senseiCheckResults.stderr && (
                   <div className="p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800">
-                    <h4 className="font-medium mb-2 text-danger-600 dark:text-danger-400">Errors:</h4>
+                    <h4 className="font-medium mb-2 text-danger-600 dark:text-danger-400">
+                      Errors:
+                    </h4>
                     <pre className="text-sm bg-danger-100 dark:bg-danger-900/40 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap text-danger-700 dark:text-danger-300">
                       {senseiCheckResults.stderr}
                     </pre>
