@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Button,
@@ -9,9 +9,11 @@ import {
   ModalFooter,
   Checkbox,
   Chip,
+  Spinner,
 } from "@heroui/react";
 import { Upload, Trash, Play, User, Calendar, FileText } from "lucide-react";
 import { uploadSenseiCheckRules, deleteSenseiCheckRule } from "../api/file-api";
+import { fetchTestCasesByProjects } from "../api/test-cases-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
 const SenseiCheckRules = ({ project, rules, reloadRules }) => {
@@ -28,69 +30,30 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     isLoading: false,
   });
   const [selectedSenseiResults, setSelectedSenseiResults] = useState(new Set());
+  const [testCases, setTestCases] = useState([]);
+  const [loadingTestCases, setLoadingTestCases] = useState(false);
 
-  // TODO: Replace with actual API call to fetch sensei test cases (TestCase model)
-  const fakeSenseiChatResults = [
-    {
-      id: 1,
-      name: "User Authentication Test",
-      executed_at: "2025-09-15T09:30:00Z",
-      status: "SUCCESS",
-      execution_time: 245.5,
-      llm_model: "gpt-4o-mini",
-      llm_provider: "openai",
-      total_conversations: 15,
-      executed_conversations: 15,
-      technology: "REST API",
-      profiles_names: ["auth_login", "auth_register", "auth_logout"],
-    },
-    {
-      id: 2,
-      name: "Database Query Performance",
-      executed_at: "2025-09-14T14:22:00Z",
-      status: "SUCCESS",
-      execution_time: 180.2,
-      llm_model: "gemini-2.0-flash",
-      llm_provider: "gemini",
-      total_conversations: 12,
-      executed_conversations: 12,
-      technology: "GraphQL",
-      profiles_names: ["db_select", "db_insert", "db_update", "db_delete"],
-    },
-    {
-      id: 3,
-      name: "API Rate Limiting Test",
-      executed_at: "2025-09-13T11:15:00Z",
-      status: "FAILED",
-      execution_time: 45.8,
-      llm_model: "gpt-4o-mini",
-      llm_provider: "openai",
-      total_conversations: 8,
-      executed_conversations: 5,
-      technology: "REST API",
-      profiles_names: ["rate_limit_basic", "rate_limit_burst"],
-      error_message: "Connection timeout after 30 seconds",
-    },
-    {
-      id: 4,
-      name: "Frontend Component Testing",
-      executed_at: "2025-09-12T16:45:00Z",
-      status: "SUCCESS",
-      execution_time: 320.1,
-      llm_model: "gemini-2.0-flash",
-      llm_provider: "gemini",
-      total_conversations: 25,
-      executed_conversations: 25,
-      technology: "WebDriver",
-      profiles_names: [
-        "component_render",
-        "component_interaction",
-        "component_state",
-        "component_props",
-        "component_lifecycle",
-      ],
-    },
-  ];
+  // Fetch test cases for the current project
+  const fetchTestCases = useCallback(async () => {
+    if (!project?.id) return;
+
+    setLoadingTestCases(true);
+    try {
+      const response = await fetchTestCasesByProjects([project.id]);
+      setTestCases(response || []);
+    } catch (error) {
+      console.error("Error fetching test cases:", error);
+      showToast("error", "Error fetching SENSEI test cases");
+      setTestCases([]);
+    } finally {
+      setLoadingTestCases(false);
+    }
+  }, [project?.id, showToast]);
+
+  // Fetch test cases when project changes
+  useEffect(() => {
+    fetchTestCases();
+  }, [fetchTestCases]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: useCallback((acceptedFiles) => {
@@ -161,14 +124,16 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     }
     setSelectedSenseiResults(new Set());
     setExecuteSenseiCheckModal({ isOpen: true, isLoading: false });
+    // Fetch fresh test cases when opening modal
+    fetchTestCases();
   };
 
   const handleSelectAllResults = () => {
-    if (selectedSenseiResults.size === fakeSenseiChatResults.length) {
+    if (selectedSenseiResults.size === testCases.length) {
       setSelectedSenseiResults(new Set());
     } else {
       setSelectedSenseiResults(
-        new Set(fakeSenseiChatResults.map((result) => result.id)),
+        new Set(testCases.map((result) => result.id)),
       );
     }
   };
@@ -223,6 +188,19 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const formatConversationCount = (result) => {
+    // For completed test cases, if executed_conversations doesn't match total_conversations,
+    // but the status is SUCCESS, then all conversations were actually completed
+    if (result.status === "SUCCESS" && result.total_conversations) {
+      return `${result.total_conversations}/${result.total_conversations}`;
+    }
+
+    // For other cases, use the actual counts
+    const executed = result.executed_conversations || 0;
+    const total = result.total_conversations || 0;
+    return `${executed}/${total}`;
   };
 
   const getTestCaseStatusColor = (status) => {
@@ -418,23 +396,26 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
             </p>
           </ModalHeader>
           <ModalBody>
-            {fakeSenseiChatResults.length > 0 ? (
+            {loadingTestCases ? (
+              <div className="flex justify-center py-8">
+                <Spinner label="Loading test cases..." />
+              </div>
+            ) : testCases.length > 0 ? (
               <div className="space-y-4">
                 {/* Select All Checkbox */}
                 <div className="flex items-center justify-between border-b border-border dark:border-border-dark pb-3">
                   <Checkbox
                     isSelected={
-                      selectedSenseiResults.size ===
-                      fakeSenseiChatResults.length
+                      selectedSenseiResults.size === testCases.length
                     }
                     isIndeterminate={
                       selectedSenseiResults.size > 0 &&
-                      selectedSenseiResults.size < fakeSenseiChatResults.length
+                      selectedSenseiResults.size < testCases.length
                     }
                     onValueChange={handleSelectAllResults}
                   >
                     <span className="font-medium">
-                      Select All ({fakeSenseiChatResults.length} results)
+                      Select All ({testCases.length} results)
                     </span>
                   </Checkbox>
                   <Chip size="sm" variant="flat" color="primary">
@@ -444,7 +425,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
 
                 {/* Sensei Results List */}
                 <div className="space-y-3">
-                  {fakeSenseiChatResults.map((result) => (
+                  {testCases.map((result) => (
                     <div
                       key={result.id}
                       className={`border rounded-lg p-4 transition-all duration-200 ${
@@ -502,34 +483,33 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                             <div>
                               <span className="block">Conversations:</span>
                               <span className="text-foreground dark:text-foreground-dark">
-                                {result.executed_conversations}/
-                                {result.total_conversations}
+                                {formatConversationCount(result)}
                               </span>
                             </div>
                           </div>
 
-                          {result.profiles_names &&
-                            result.profiles_names.length > 0 && (
+                          {result.copied_files &&
+                            result.copied_files.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {result.profiles_names
+                                {result.copied_files
                                   .slice(0, 3)
-                                  .map((profile, index) => (
+                                  .map((file, index) => (
                                     <Chip
                                       key={index}
                                       size="sm"
                                       variant="bordered"
                                       className="text-xs"
                                     >
-                                      {profile}
+                                      {file.name || file}
                                     </Chip>
                                   ))}
-                                {result.profiles_names.length > 3 && (
+                                {result.copied_files.length > 3 && (
                                   <Chip
                                     size="sm"
                                     variant="bordered"
                                     className="text-xs"
                                   >
-                                    +{result.profiles_names.length - 3} more
+                                    +{result.copied_files.length - 3} more
                                   </Chip>
                                 )}
                               </div>
