@@ -13,7 +13,14 @@ import {
   Pagination,
   Select,
   SelectItem,
-  Divider,
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Accordion,
+  AccordionItem,
 } from "@heroui/react";
 import {
   Search,
@@ -24,10 +31,98 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  Clock,
   RefreshCw,
+  Terminal,
+  BarChart3,
 } from "lucide-react";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+
+// Helper function to parse CSV data into table format
+const parseCsvData = (csvString) => {
+  if (!csvString) return [];
+
+  const lines = csvString.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',');
+  const data = lines.slice(1).map(line => {
+    const values = line.split(',');
+    const row = {};
+    for (const [index, header] of headers.entries()) {
+      row[header.trim()] = values[index]?.trim() || '';
+    }
+    return row;
+  });
+
+  return data;
+};
+
+// Terminal-style output component
+const TerminalOutput = ({ title, content, variant = "output" }) => {
+  const lines = React.useMemo(
+    () => (content ? content.split("\n") : []),
+    [content],
+  );
+
+  if (!content || content.trim() === "") {
+    return (
+      <div className="text-center py-8 text-default-500">
+        <Terminal className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p>No {variant} available</p>
+      </div>
+    );
+  }
+
+  const isError = variant === "error";
+  const consoleStyle = isError
+    ? "bg-gray-900 border-red-500/30"
+    : "bg-gray-900 border-green-500/30";
+  const textStyle = isError ? "text-red-400" : "text-green-400";
+
+  return (
+    <div className={`${consoleStyle} rounded-lg border-2 overflow-hidden`}>
+      {/* Console header */}
+      <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
+        <Terminal className="w-4 h-4 text-gray-400" />
+        <span className="text-gray-300 text-sm font-medium">{title}</span>
+        <div className="flex gap-1 ml-auto">
+          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+        </div>
+      </div>
+
+      {/* Console content */}
+      <div className="p-4 overflow-auto max-h-96">
+        <div className={`${textStyle} text-sm font-mono leading-relaxed`}>
+          {lines.map((line, index) => (
+            <div key={index} className="flex">
+              <span className="text-gray-500 select-none mr-4 text-xs w-10 text-right">
+                {String(index + 1).padStart(3, " ")}
+              </span>
+              <span className="flex-1 whitespace-pre-wrap break-words">
+                {line}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper functions moved outside component
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString();
+};
+
+const getStatusColor = (exitCode) => {
+  return exitCode === 0 ? "success" : "danger";
+};
+
+const getStatusIcon = (exitCode) => {
+  return exitCode === 0 ? <CheckCircle size={16} /> : <XCircle size={16} />;
+};
 
 const SenseiCheckResultsDashboard = ({ project }) => {
   const { showToast } = useMyCustomToast();
@@ -81,7 +176,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
               if (parsed.length > 0) {
                 allResults = [...allResults, ...parsed];
               }
-            } catch (e) {
+            } catch {
               // Skip invalid entries
             }
           }
@@ -129,14 +224,13 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     let filtered = results;
 
     // Filter by search term
-    if (searchTerm) {
+      if (searchTerm) {
       filtered = filtered.filter(
         (result) =>
           result.command_executed
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          result.stdout?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          result.executionId?.toLowerCase().includes(searchTerm.toLowerCase()),
+          result.stdout?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -169,15 +263,16 @@ const SenseiCheckResultsDashboard = ({ project }) => {
 
   // Export result as JSON
   const exportResult = (result) => {
-    const dataStr = JSON.stringify(result, null, 2);
+    const dataStr = JSON.stringify(result, undefined, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `sensei-check-result-${result.executionId}.json`;
-    document.body.appendChild(link);
+  const safeId = result.executionId && result.executionId.trim() !== "" ? `-${result.executionId}` : "";
+  link.download = `sensei-check-result${safeId}.json`;
+    document.body.append(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     URL.revokeObjectURL(url);
     showToast("success", "Result exported successfully");
   };
@@ -189,29 +284,17 @@ const SenseiCheckResultsDashboard = ({ project }) => {
       return;
     }
 
-    const dataStr = JSON.stringify(results, null, 2);
+    const dataStr = JSON.stringify(results, undefined, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `sensei-check-results-${project?.name || "all"}-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(link);
+  link.download = `sensei-check-results-${project?.name || "all"}-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.append(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     URL.revokeObjectURL(url);
     showToast("success", "All results exported successfully");
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  const getStatusColor = (exitCode) => {
-    return exitCode === 0 ? "success" : "danger";
-  };
-
-  const getStatusIcon = (exitCode) => {
-    return exitCode === 0 ? <CheckCircle size={16} /> : <XCircle size={16} />;
   };
 
   // Pagination
@@ -266,7 +349,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
             <Select
               label="Status Filter"
               value={statusFilter}
-              onSelectionChange={(keys) => setStatusFilter(Array.from(keys)[0])}
+              onSelectionChange={(keys) => setStatusFilter([...keys][0])}
               className="md:max-w-xs"
             >
               <SelectItem key="all" value="all">
@@ -304,8 +387,8 @@ const SenseiCheckResultsDashboard = ({ project }) => {
               <CardBody>
                 <div className="flex justify-between items-start">
                   <div className="flex-1 space-y-2">
-                    {/* Header with status */}
-                    <div className="flex items-center gap-3">
+                    {/* Header with status and execution ID */}
+                    <div className="flex items-center gap-3 mb-2">
                       <Chip
                         color={getStatusColor(result.exit_code)}
                         variant="flat"
@@ -313,13 +396,11 @@ const SenseiCheckResultsDashboard = ({ project }) => {
                       >
                         {result.exit_code === 0 ? "Success" : "Failed"}
                       </Chip>
-                      <span className="text-sm text-foreground-500">
-                        Exit Code: {result.exit_code}
-                      </span>
+                      {/* executionId removed - not shown in card */}
                     </div>
 
                     {/* Execution details */}
-                    <div className="flex items-center gap-4 text-sm text-foreground-600">
+                    <div className="flex items-center gap-4 text-sm text-foreground-600 mb-2">
                       <div className="flex items-center gap-1">
                         <Calendar size={14} />
                         {formatDate(result.executedAt)}
@@ -328,20 +409,33 @@ const SenseiCheckResultsDashboard = ({ project }) => {
                         <FileText size={14} />
                         {result.test_cases_checked} test cases
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock size={14} />
-                        ID: {result.executionId}
-                      </div>
                     </div>
 
-                    {/* Command preview */}
-                    <div className="bg-background-subtle rounded p-2">
-                      <code className="text-xs">
-                        {result.command_executed?.length > 100
-                          ? `${result.command_executed.substring(0, 100)}...`
-                          : result.command_executed}
-                      </code>
-                    </div>
+                    {/* CSV Results Preview */}
+                    {result.csv_results && (
+                      <div className="bg-background-subtle rounded p-3 mb-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BarChart3 size={16} className="text-primary" />
+                          <span className="text-sm font-medium">Statistics Summary</span>
+                        </div>
+                        {(() => {
+                          const csvData = parseCsvData(result.csv_results);
+                          if (csvData.length > 0) {
+                            const totalFails = csvData.reduce((sum, row) => sum + Number.parseInt(row.fail || 0, 10), 0);
+                            const totalChecks = csvData.reduce((sum, row) => sum + Number.parseInt(row.checks || 0, 10), 0);
+                            const overallFailRate = totalChecks > 0 ? ((totalFails / totalChecks) * 100).toFixed(1) : 0;
+                            return (
+                              <div className="text-sm">
+                                <span className="text-foreground-600">
+                                  {csvData.length} rules, {totalChecks} total checks, {totalFails} failures ({overallFailRate}% fail rate)
+                                </span>
+                              </div>
+                            );
+                          }
+                          return <span className="text-xs text-foreground-500">Statistics available</span>;
+                        })()}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -405,92 +499,170 @@ const SenseiCheckResultsDashboard = ({ project }) => {
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-3">
-              <span>SENSEI Check Result Details</span>
+              <BarChart3 className="w-6 h-6 text-primary" />
+              <span>SENSEI Check Results</span>
               {selectedResult && (
-                <Chip
-                  color={getStatusColor(selectedResult.exit_code)}
-                  variant="flat"
-                  startContent={getStatusIcon(selectedResult.exit_code)}
-                >
-                  {selectedResult.exit_code === 0 ? "Success" : "Failed"}
-                </Chip>
+                <>
+                  <Chip
+                    color={getStatusColor(selectedResult.exit_code)}
+                    variant="flat"
+                    startContent={getStatusIcon(selectedResult.exit_code)}
+                    size="sm"
+                  >
+                    {selectedResult.exit_code === 0 ? "Success" : "Failed"}
+                  </Chip>
+                </>
               )}
             </div>
           </ModalHeader>
           <ModalBody>
             {selectedResult && (
               <div className="space-y-6">
-                {/* Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <span className="text-sm text-foreground/60">
-                      Executed At:
-                    </span>
-                    <p className="font-medium">
-                      {formatDate(selectedResult.executedAt)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-foreground/60">
-                      Exit Code:
-                    </span>
-                    <p className="font-medium">{selectedResult.exit_code}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-foreground/60">
-                      Execution ID:
-                    </span>
-                    <p className="font-medium">{selectedResult.executionId}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-foreground/60">
-                      Test Cases Checked:
-                    </span>
-                    <p className="font-medium">
-                      {selectedResult.test_cases_checked}
-                    </p>
-                  </div>
-                </div>
-
-                <Divider />
-
-                {/* Command Executed */}
-                <div className="space-y-2">
-                  <h4 className="font-medium">Command Executed:</h4>
-                  <code className="text-sm bg-background-subtle p-3 rounded block overflow-x-auto">
-                    {selectedResult.command_executed}
-                  </code>
-                </div>
-
-                {/* Standard Output */}
-                {selectedResult.stdout && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Output:</h4>
-                    <pre className="text-sm bg-background-subtle p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap">
-                      {selectedResult.stdout}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Standard Error */}
-                {selectedResult.stderr && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-danger-600">Errors:</h4>
-                    <pre className="text-sm bg-danger-50 border border-danger-200 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap text-danger-700">
-                      {selectedResult.stderr}
-                    </pre>
-                  </div>
-                )}
-
-                {/* CSV Results */}
+                {/* Statistics Table - Main Focus */}
                 {selectedResult.csv_results && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Statistics (CSV):</h4>
-                    <pre className="text-sm bg-background-subtle p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap">
-                      {selectedResult.csv_results}
-                    </pre>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Test Results Statistics</h3>
+                    {(() => {
+                      const csvData = parseCsvData(selectedResult.csv_results);
+                      if (csvData.length > 0) {
+                        return (
+                          <Card>
+                            <CardBody className="p-0">
+                              <Table aria-label="SENSEI check results statistics">
+                                <TableHeader>
+                                  <TableColumn>RULE</TableColumn>
+                                  <TableColumn>CHECKS</TableColumn>
+                                  <TableColumn>PASS</TableColumn>
+                                  <TableColumn>FAIL</TableColumn>
+                                  <TableColumn>NOT APPLICABLE</TableColumn>
+                                  <TableColumn>FAIL RATE</TableColumn>
+                                </TableHeader>
+                                <TableBody>
+                                  {csvData.map((row, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell>
+                                        <span className="font-medium">{row.rule}</span>
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className="text-foreground-600">{row.checks}</span>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Chip color="success" variant="flat" size="sm">
+                                          {row.pass}
+                                        </Chip>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Chip
+                                          color={Number.parseInt(row.fail, 10) > 0 ? "danger" : "default"}
+                                          variant="flat"
+                                          size="sm"
+                                        >
+                                          {row.fail}
+                                        </Chip>
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className="text-foreground-500">{row.not_applicable}</span>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Chip
+                                          color={Number.parseFloat(row.fail_rate) > 0 ? "warning" : "success"}
+                                          variant="flat"
+                                          size="sm"
+                                        >
+                                          {row.fail_rate}
+                                        </Chip>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </CardBody>
+                          </Card>
+                        );
+                      }
+                      return (
+                        <div className="text-center py-8 text-foreground-500">
+                          <p>No statistics data available</p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
+
+                {/* Summary Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-background/50 rounded-lg">
+                  <div>
+                    <span className="text-sm text-foreground/60">Executed At:</span>
+                    <p className="font-medium">{formatDate(selectedResult.executedAt)}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-foreground/60">Test Cases:</span>
+                    <p className="font-medium">{selectedResult.test_cases_checked}</p>
+                  </div>
+                </div>
+
+                {/* Additional Details - Collapsible */}
+                <Accordion variant="bordered">
+                  {/* Command Details */}
+                  <AccordionItem
+                    key="command"
+                    aria-label="Command Details"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-4 h-4" />
+                        <span>Command Details</span>
+                      </div>
+                    }
+                  >
+                    <div className="space-y-2">
+                      <TerminalOutput
+                        title="Command Executed"
+                        content={selectedResult.command_executed}
+                        variant="command"
+                      />
+                    </div>
+                  </AccordionItem>
+
+                  {/* Output */}
+                  {selectedResult.stdout && (
+                    <AccordionItem
+                      key="output"
+                      aria-label="Standard Output"
+                      title={
+                        <div className="flex items-center gap-2">
+                          <Terminal className="w-4 h-4" />
+                          <span>Standard Output</span>
+                        </div>
+                      }
+                    >
+                      <TerminalOutput
+                        title="Standard Output"
+                        content={selectedResult.stdout}
+                        variant="output"
+                      />
+                    </AccordionItem>
+                  )}
+
+                  {/* Errors */}
+                  {selectedResult.stderr && (
+                    <AccordionItem
+                      key="errors"
+                      aria-label="Standard Error"
+                      title={
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-4 h-4 text-danger" />
+                          <span>Error Output</span>
+                        </div>
+                      }
+                    >
+                      <TerminalOutput
+                        title="Error Output"
+                        content={selectedResult.stderr}
+                        variant="error"
+                      />
+                    </AccordionItem>
+                  )}
+                </Accordion>
               </div>
             )}
           </ModalBody>
