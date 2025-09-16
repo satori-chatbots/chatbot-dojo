@@ -637,13 +637,12 @@ def execute_sensei_check(request: Request) -> Response:
             results_path = project_path / "sensei_results" / f"test_{test_case.id}"
 
             if results_path.exists():
-                # Copy all YAML conversation files
+                # Copy all YAML conversation files directly to conversations directory (flattened)
                 for yaml_file in results_path.rglob("*.yml"):
-                    # Create subdirectory structure in conversations directory
-                    relative_path = yaml_file.relative_to(results_path)
-                    dest_file = conversations_path / f"testcase_{test_case.id}" / relative_path
-                    dest_file.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(yaml_file, dest_file)
+                    # Skip report files - only include conversation files
+                    if "report" not in yaml_file.name.lower():
+                        dest_file = conversations_path / yaml_file.name
+                        shutil.copy2(yaml_file, dest_file)
 
         # Check if we have any conversation files
         if not any(conversations_path.rglob("*.yml")):
