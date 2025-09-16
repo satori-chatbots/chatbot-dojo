@@ -11,6 +11,7 @@ import {
   Chip,
   Spinner,
 } from "@heroui/react";
+import SenseiCheckResultsModal from "./sensei-check-results-modal";
 import { Upload, Trash, Play, FileText } from "lucide-react";
 import {
   uploadSenseiCheckRules,
@@ -585,104 +586,15 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
       </Modal>
 
       {/* SENSEI Check Results Modal */}
-      <Modal
+      <SenseiCheckResultsModal
         isOpen={resultsModal.isOpen}
-        onOpenChange={(isOpen) => setResultsModal({ isOpen })}
-        size="5xl"
-        scrollBehavior="inside"
-      >
-        <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            <h3>SENSEI Check Results</h3>
-            <p className="text-sm text-foreground/60 dark:text-foreground-dark/60">
-              Execution results and detailed output
-            </p>
-          </ModalHeader>
-          <ModalBody>
-            {senseiCheckResults && (
-              <div className="space-y-4">
-                {/* Summary Information */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
-                  <div>
-                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">
-                      Exit Code:
-                    </span>
-                    <p className="font-medium">
-                      <Chip
-                        size="sm"
-                        color={
-                          senseiCheckResults.exit_code === 0
-                            ? "success"
-                            : "danger"
-                        }
-                        variant="flat"
-                      >
-                        {senseiCheckResults.exit_code}
-                      </Chip>
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-foreground/60 dark:text-foreground-dark/60">
-                      Test Cases Checked:
-                    </span>
-                    <p className="font-medium">
-                      {senseiCheckResults.test_cases_checked}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Command Executed */}
-                <div className="p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
-                  <h4 className="font-medium mb-2">Command Executed:</h4>
-                  <code className="text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded block overflow-x-auto">
-                    {senseiCheckResults.command_executed}
-                  </code>
-                </div>
-
-                {/* Standard Output */}
-                {senseiCheckResults.stdout && (
-                  <div className="p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
-                    <h4 className="font-medium mb-2">Output:</h4>
-                    <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap">
-                      {senseiCheckResults.stdout}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Standard Error */}
-                {senseiCheckResults.stderr && (
-                  <div className="p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800">
-                    <h4 className="font-medium mb-2 text-danger-600 dark:text-danger-400">
-                      Errors:
-                    </h4>
-                    <pre className="text-sm bg-danger-100 dark:bg-danger-900/40 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap text-danger-700 dark:text-danger-300">
-                      {senseiCheckResults.stderr}
-                    </pre>
-                  </div>
-                )}
-
-                {/* CSV Results */}
-                {senseiCheckResults.csv_results && (
-                  <div className="p-4 bg-background-subtle dark:bg-darkbg-card rounded-lg border">
-                    <h4 className="font-medium mb-2">Statistics (CSV):</h4>
-                    <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap">
-                      {senseiCheckResults.csv_results}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              color="default"
-              onPress={() => setResultsModal({ isOpen: false })}
-            >
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+        onClose={() => setResultsModal({ isOpen: false })}
+        result={senseiCheckResults ? {
+          ...senseiCheckResults,
+          executedAt: senseiCheckResults.executed_at || new Date().toISOString(),
+          exitCode: senseiCheckResults.exit_code,
+        } : undefined}
+      />
     </div>
   );
 };

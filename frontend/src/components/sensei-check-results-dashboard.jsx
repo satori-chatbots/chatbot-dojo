@@ -3,25 +3,26 @@ import {
   Card,
   CardBody,
   Button,
-  Input,
-  Chip,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Pagination,
-  Select,
-  SelectItem,
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-  Accordion,
-  AccordionItem,
-} from "@heroui/react";
+  import {
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Chip,
+    Accordion,
+    AccordionItem,
+    Button,
+    Card,
+    CardBody,
+    Table,
+    TableHeader,
+    TableColumn,
+    TableBody,
+    TableRow,
+    TableCell,
+  } from "@heroui/react";
+  import SenseiCheckResultsModal from "./sensei-check-results-modal";
 import {
   Search,
   Eye,
@@ -489,202 +490,12 @@ const SenseiCheckResultsDashboard = ({ project }) => {
         </div>
       )}
 
-      {/* Detail Modal */}
-      <Modal
+      <SenseiCheckResultsModal
         isOpen={detailModal.isOpen}
         onClose={() => setDetailModal({ isOpen: false })}
-        size="5xl"
-        scrollBehavior="inside"
-      >
-        <ModalContent>
-          <ModalHeader>
-            <div className="flex items-center gap-3">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              <span>SENSEI Check Results</span>
-              {selectedResult && (
-                <>
-                  <Chip
-                    color={getStatusColor(selectedResult.exit_code)}
-                    variant="flat"
-                    startContent={getStatusIcon(selectedResult.exit_code)}
-                    size="sm"
-                  >
-                    {selectedResult.exit_code === 0 ? "Success" : "Failed"}
-                  </Chip>
-                </>
-              )}
-            </div>
-          </ModalHeader>
-          <ModalBody>
-            {selectedResult && (
-              <div className="space-y-6">
-                {/* Statistics Table - Main Focus */}
-                {selectedResult.csv_results && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Test Results Statistics</h3>
-                    {(() => {
-                      const csvData = parseCsvData(selectedResult.csv_results);
-                      if (csvData.length > 0) {
-                        return (
-                          <Card>
-                            <CardBody className="p-0">
-                              <Table aria-label="SENSEI check results statistics">
-                                <TableHeader>
-                                  <TableColumn>RULE</TableColumn>
-                                  <TableColumn>CHECKS</TableColumn>
-                                  <TableColumn>PASS</TableColumn>
-                                  <TableColumn>FAIL</TableColumn>
-                                  <TableColumn>NOT APPLICABLE</TableColumn>
-                                  <TableColumn>FAIL RATE</TableColumn>
-                                </TableHeader>
-                                <TableBody>
-                                  {csvData.map((row, index) => (
-                                    <TableRow key={index}>
-                                      <TableCell>
-                                        <span className="font-medium">{row.rule}</span>
-                                      </TableCell>
-                                      <TableCell>
-                                        <span className="text-foreground-600">{row.checks}</span>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Chip color="success" variant="flat" size="sm">
-                                          {row.pass}
-                                        </Chip>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Chip
-                                          color={Number.parseInt(row.fail, 10) > 0 ? "danger" : "default"}
-                                          variant="flat"
-                                          size="sm"
-                                        >
-                                          {row.fail}
-                                        </Chip>
-                                      </TableCell>
-                                      <TableCell>
-                                        <span className="text-foreground-500">{row.not_applicable}</span>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Chip
-                                          color={Number.parseFloat(row.fail_rate) > 0 ? "warning" : "success"}
-                                          variant="flat"
-                                          size="sm"
-                                        >
-                                          {row.fail_rate}
-                                        </Chip>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </CardBody>
-                          </Card>
-                        );
-                      }
-                      return (
-                        <div className="text-center py-8 text-foreground-500">
-                          <p>No statistics data available</p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* Summary Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-background/50 rounded-lg">
-                  <div>
-                    <span className="text-sm text-foreground/60">Executed At:</span>
-                    <p className="font-medium">{formatDate(selectedResult.executedAt)}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-foreground/60">Test Cases:</span>
-                    <p className="font-medium">{selectedResult.test_cases_checked}</p>
-                  </div>
-                </div>
-
-                {/* Additional Details - Collapsible */}
-                <Accordion variant="bordered">
-                  {/* Command Details */}
-                  <AccordionItem
-                    key="command"
-                    aria-label="Command Details"
-                    title={
-                      <div className="flex items-center gap-2">
-                        <Terminal className="w-4 h-4" />
-                        <span>Command Details</span>
-                      </div>
-                    }
-                  >
-                    <div className="space-y-2">
-                      <TerminalOutput
-                        title="Command Executed"
-                        content={selectedResult.command_executed}
-                        variant="command"
-                      />
-                    </div>
-                  </AccordionItem>
-
-                  {/* Output */}
-                  {selectedResult.stdout && (
-                    <AccordionItem
-                      key="output"
-                      aria-label="Standard Output"
-                      title={
-                        <div className="flex items-center gap-2">
-                          <Terminal className="w-4 h-4" />
-                          <span>Standard Output</span>
-                        </div>
-                      }
-                    >
-                      <TerminalOutput
-                        title="Standard Output"
-                        content={selectedResult.stdout}
-                        variant="output"
-                      />
-                    </AccordionItem>
-                  )}
-
-                  {/* Errors */}
-                  {selectedResult.stderr && (
-                    <AccordionItem
-                      key="errors"
-                      aria-label="Standard Error"
-                      title={
-                        <div className="flex items-center gap-2">
-                          <XCircle className="w-4 h-4 text-danger" />
-                          <span>Error Output</span>
-                        </div>
-                      }
-                    >
-                      <TerminalOutput
-                        title="Error Output"
-                        content={selectedResult.stderr}
-                        variant="error"
-                      />
-                    </AccordionItem>
-                  )}
-                </Accordion>
-              </div>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              variant="light"
-              onPress={() => setDetailModal({ isOpen: false })}
-            >
-              Close
-            </Button>
-            {selectedResult && (
-              <Button
-                color="primary"
-                onPress={() => exportResult(selectedResult)}
-                startContent={<Download size={16} />}
-              >
-                Export
-              </Button>
-            )}
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+        result={selectedResult}
+        onExport={exportResult}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal
