@@ -589,11 +589,16 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
       <SenseiCheckResultsModal
         isOpen={resultsModal.isOpen}
         onClose={() => setResultsModal({ isOpen: false })}
-        result={senseiCheckResults ? {
-          ...senseiCheckResults,
-          executedAt: senseiCheckResults.executed_at || new Date().toISOString(),
-          exitCode: senseiCheckResults.exit_code,
-        } : undefined}
+        result={
+          senseiCheckResults
+            ? {
+                ...senseiCheckResults,
+                executedAt:
+                  senseiCheckResults.executed_at || new Date().toISOString(),
+                exitCode: senseiCheckResults.exit_code,
+              }
+            : undefined
+        }
       />
     </div>
   );

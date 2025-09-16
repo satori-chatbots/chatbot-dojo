@@ -3,26 +3,26 @@ import {
   Card,
   CardBody,
   Button,
-  import {
-    Modal,
-    ModalContent,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-    Chip,
-    Accordion,
-    AccordionItem,
-    Button,
-    Card,
-    CardBody,
-    Table,
-    TableHeader,
-    TableColumn,
-    TableBody,
-    TableRow,
-    TableCell,
-  } from "@heroui/react";
-  import SenseiCheckResultsModal from "./sensei-check-results-modal";
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Chip,
+  Accordion,
+  AccordionItem,
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Input,
+  Select,
+  SelectItem,
+  Pagination,
+} from "@heroui/react";
+import SenseiCheckResultsModal from "./sensei-check-results-modal";
 import {
   Search,
   Eye,
@@ -42,15 +42,15 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 const parseCsvData = (csvString) => {
   if (!csvString) return [];
 
-  const lines = csvString.trim().split('\n');
+  const lines = csvString.trim().split("\n");
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(',');
-  const data = lines.slice(1).map(line => {
-    const values = line.split(',');
+  const headers = lines[0].split(",");
+  const data = lines.slice(1).map((line) => {
+    const values = line.split(",");
     const row = {};
     for (const [index, header] of headers.entries()) {
-      row[header.trim()] = values[index]?.trim() || '';
+      row[header.trim()] = values[index]?.trim() || "";
     }
     return row;
   });
@@ -225,7 +225,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     let filtered = results;
 
     // Filter by search term
-      if (searchTerm) {
+    if (searchTerm) {
       filtered = filtered.filter(
         (result) =>
           result.command_executed
@@ -269,8 +269,11 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-  const safeId = result.executionId && result.executionId.trim() !== "" ? `-${result.executionId}` : "";
-  link.download = `sensei-check-result${safeId}.json`;
+    const safeId =
+      result.executionId && result.executionId.trim() !== ""
+        ? `-${result.executionId}`
+        : "";
+    link.download = `sensei-check-result${safeId}.json`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -290,7 +293,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-  link.download = `sensei-check-results-${project?.name || "all"}-${new Date().toISOString().split("T")[0]}.json`;
+    link.download = `sensei-check-results-${project?.name || "all"}-${new Date().toISOString().split("T")[0]}.json`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -417,23 +420,42 @@ const SenseiCheckResultsDashboard = ({ project }) => {
                       <div className="bg-background-subtle rounded p-3 mb-2">
                         <div className="flex items-center gap-2 mb-2">
                           <BarChart3 size={16} className="text-primary" />
-                          <span className="text-sm font-medium">Statistics Summary</span>
+                          <span className="text-sm font-medium">
+                            Statistics Summary
+                          </span>
                         </div>
                         {(() => {
                           const csvData = parseCsvData(result.csv_results);
                           if (csvData.length > 0) {
-                            const totalFails = csvData.reduce((sum, row) => sum + Number.parseInt(row.fail || 0, 10), 0);
-                            const totalChecks = csvData.reduce((sum, row) => sum + Number.parseInt(row.checks || 0, 10), 0);
-                            const overallFailRate = totalChecks > 0 ? ((totalFails / totalChecks) * 100).toFixed(1) : 0;
+                            const totalFails = csvData.reduce(
+                              (sum, row) =>
+                                sum + Number.parseInt(row.fail || 0, 10),
+                              0,
+                            );
+                            const totalChecks = csvData.reduce(
+                              (sum, row) =>
+                                sum + Number.parseInt(row.checks || 0, 10),
+                              0,
+                            );
+                            const overallFailRate =
+                              totalChecks > 0
+                                ? ((totalFails / totalChecks) * 100).toFixed(1)
+                                : 0;
                             return (
                               <div className="text-sm">
                                 <span className="text-foreground-600">
-                                  {csvData.length} rules, {totalChecks} total checks, {totalFails} failures ({overallFailRate}% fail rate)
+                                  {csvData.length} rules, {totalChecks} total
+                                  checks, {totalFails} failures (
+                                  {overallFailRate}% fail rate)
                                 </span>
                               </div>
                             );
                           }
-                          return <span className="text-xs text-foreground-500">Statistics available</span>;
+                          return (
+                            <span className="text-xs text-foreground-500">
+                              Statistics available
+                            </span>
+                          );
                         })()}
                       </div>
                     )}

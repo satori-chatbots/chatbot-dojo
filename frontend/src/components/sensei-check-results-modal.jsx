@@ -41,19 +41,18 @@ function getStatusColor(exitCode) {
   return exitCode === 0 ? "success" : "danger";
 }
 function getStatusIcon(exitCode) {
-  return exitCode === 0 ? <BarChart3 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />;
+  return exitCode === 0 ? (
+    <BarChart3 className="w-4 h-4" />
+  ) : (
+    <XCircle className="w-4 h-4" />
+  );
 }
 function formatDate(dateString) {
   if (!dateString) return "-";
   return new Date(dateString).toLocaleString();
 }
 
-const SenseiCheckResultsModal = ({
-  isOpen,
-  onClose,
-  result,
-  onExport,
-}) => (
+const SenseiCheckResultsModal = ({ isOpen, onClose, result, onExport }) => (
   <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
     <ModalContent>
       <ModalHeader>
@@ -63,12 +62,12 @@ const SenseiCheckResultsModal = ({
           {result && (
             <>
               <Chip
-                color={getStatusColor(result.exit_code || result.exitCode)}
+                color={getStatusColor(result.exit_code)}
                 variant="flat"
-                startContent={getStatusIcon(result.exit_code || result.exitCode)}
+                startContent={getStatusIcon(result.exit_code)}
                 size="sm"
               >
-                {(result.exit_code || result.exitCode) === 0 ? "Success" : "Failed"}
+                {result.exit_code === 0 ? "Success" : "Failed"}
               </Chip>
             </>
           )}
@@ -80,7 +79,9 @@ const SenseiCheckResultsModal = ({
             {/* Statistics Table */}
             {result.csv_results && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Test Results Statistics</h3>
+                <h3 className="text-lg font-semibold">
+                  Test Results Statistics
+                </h3>
                 {(() => {
                   const csvData = parseCsvData(result.csv_results);
                   if (csvData.length > 0) {
@@ -100,19 +101,31 @@ const SenseiCheckResultsModal = ({
                               {csvData.map((row, index) => (
                                 <TableRow key={index}>
                                   <TableCell>
-                                    <span className="font-medium">{row.rule}</span>
+                                    <span className="font-medium">
+                                      {row.rule}
+                                    </span>
                                   </TableCell>
                                   <TableCell>
-                                    <span className="text-foreground-600">{row.checks}</span>
+                                    <span className="text-foreground-600">
+                                      {row.checks}
+                                    </span>
                                   </TableCell>
                                   <TableCell>
-                                    <Chip color="success" variant="flat" size="sm">
+                                    <Chip
+                                      color="success"
+                                      variant="flat"
+                                      size="sm"
+                                    >
                                       {row.pass}
                                     </Chip>
                                   </TableCell>
                                   <TableCell>
                                     <Chip
-                                      color={Number.parseInt(row.fail, 10) > 0 ? "danger" : "default"}
+                                      color={
+                                        Number.parseInt(row.fail, 10) > 0
+                                          ? "danger"
+                                          : "default"
+                                      }
                                       variant="flat"
                                       size="sm"
                                     >
@@ -120,11 +133,17 @@ const SenseiCheckResultsModal = ({
                                     </Chip>
                                   </TableCell>
                                   <TableCell>
-                                    <span className="text-foreground-500">{row.not_applicable}</span>
+                                    <span className="text-foreground-500">
+                                      {row.not_applicable}
+                                    </span>
                                   </TableCell>
                                   <TableCell>
                                     <Chip
-                                      color={Number.parseFloat(row.fail_rate) > 0 ? "warning" : "success"}
+                                      color={
+                                        Number.parseFloat(row.fail_rate) > 0
+                                          ? "warning"
+                                          : "success"
+                                      }
                                       variant="flat"
                                       size="sm"
                                     >
@@ -152,7 +171,9 @@ const SenseiCheckResultsModal = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-background/50 rounded-lg">
               <div>
                 <span className="text-sm text-foreground/60">Executed At:</span>
-                <p className="font-medium">{formatDate(result.executedAt || result.executed_at)}</p>
+                <p className="font-medium">
+                  {formatDate(result.executedAt || result.executed_at)}
+                </p>
               </div>
               <div>
                 <span className="text-sm text-foreground/60">Test Cases:</span>
@@ -230,7 +251,11 @@ const SenseiCheckResultsModal = ({
           Close
         </Button>
         {result && onExport && (
-          <Button color="primary" onPress={() => onExport(result)} startContent={<Download size={16} />}>
+          <Button
+            color="primary"
+            onPress={() => onExport(result)}
+            startContent={<Download size={16} />}
+          >
             Export
           </Button>
         )}
