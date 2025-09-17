@@ -73,6 +73,7 @@ __all__ = [
     "check_sensei_execution_status",
     "check_tracer_generation_status",
     "delete_profile_execution",
+    "execute_sensei_check",
     "fetch_file_content",
     "generate_profiles",
     "get_available_connectors",
