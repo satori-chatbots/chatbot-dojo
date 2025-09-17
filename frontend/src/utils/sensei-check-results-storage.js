@@ -48,7 +48,7 @@ export const saveSenseiCheckResult = (projectId, result) => {
  * @param {string} projectId - The project ID (optional, loads all if not provided)
  * @returns {Array} Array of SENSEI check results
  */
-export const loadSenseiCheckResults = (projectId = undefined) => {
+export const loadSenseiCheckResults = (projectId) => {
   try {
     const storageKey = `senseiCheckResults_${projectId || "all"}`;
     const results = JSON.parse(localStorage.getItem(storageKey) || "[]");
@@ -126,16 +126,16 @@ export const exportSenseiCheckResults = (
   filename = "sensei-check-results.json",
 ) => {
   try {
-    const dataStr = JSON.stringify(results, null, 2);
+    const dataStr = JSON.stringify(results, undefined, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(dataBlob);
 
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
-    document.body.appendChild(link);
+    document.body.append(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
 
     URL.revokeObjectURL(url);
   } catch (error) {

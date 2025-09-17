@@ -9,14 +9,6 @@ import {
   ModalBody,
   ModalFooter,
   Chip,
-  Accordion,
-  AccordionItem,
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Input,
   Select,
   SelectItem,
@@ -56,8 +48,6 @@ const parseCsvData = (csvString) => {
 
   return data;
 };
-
-
 
 // Helper functions moved outside component
 const formatDate = (dateString) => {
@@ -232,8 +222,6 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     showToast("success", "Result exported successfully");
   };
 
-  
-
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
   const paginatedResults = filteredResults.slice(
@@ -260,7 +248,6 @@ const SenseiCheckResultsDashboard = ({ project }) => {
           >
             Refresh
           </Button>
-          
         </div>
       </div>
 

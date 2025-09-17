@@ -41,7 +41,6 @@ import {
   deleteProfileExecution,
   fetchFiles,
   fetchSenseiCheckRules,
-  uploadSenseiCheckRules,
 } from "../api/file-api";
 import { deleteProject, fetchProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
@@ -111,7 +110,6 @@ function Home() {
 
   // List of sensei check rules in the selected project
   const [senseiCheckRules, setSenseiCheckRules] = useState([]);
-  const [loadingSenseiCheckRules, setLoadingSenseiCheckRules] = useState(false);
 
   // Track which execution folders are expanded to show all profiles
   const [expandedExecutions, setExpandedExecutions] = useState(new Set());
@@ -243,7 +241,6 @@ function Home() {
       return;
     }
 
-    setLoadingSenseiCheckRules(true);
     try {
       const rules = await fetchSenseiCheckRules(selectedProject.id);
       setSenseiCheckRules(rules);
@@ -252,7 +249,7 @@ function Home() {
       showToast("error", "Error loading SENSEI Check rules");
       setSenseiCheckRules([]);
     } finally {
-      setLoadingSenseiCheckRules(false);
+      // No need to do anything here
     }
   }, [selectedProject, showToast]);
 

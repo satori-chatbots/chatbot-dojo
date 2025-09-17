@@ -30,9 +30,9 @@ function parseCsvData(csv) {
   return lines.slice(1).map((line) => {
     const values = line.split(",");
     const obj = {};
-    headers.forEach((h, i) => {
-      obj[h.trim().toLowerCase().replace(/ /g, "_")] = values[i];
-    });
+    for (const [i, h] of headers.entries()) {
+      obj[h.trim().toLowerCase().replaceAll(" ", "_")] = values[i];
+    }
     return obj;
   });
 }

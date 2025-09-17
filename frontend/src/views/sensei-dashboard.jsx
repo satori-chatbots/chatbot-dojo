@@ -457,7 +457,7 @@ function Dashboard() {
     };
 
     // Depends on selectedProjects, testCases, and page for polling logic
-  }, [selectedProjects, testCases, page]);
+  }, [selectedProjects, testCases, page, fetchPagedTestCases]);
 
   // Initialize selected projects
   useEffect(() => {

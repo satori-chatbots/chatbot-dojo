@@ -225,7 +225,7 @@ function AppContent() {
                   <div className="flex flex-col gap-1">
                     <span className="font-medium">SENSEI Check Dashboard</span>
                     <span className="text-tiny text-default-400">
-                      Results from rules over SENSEI's conversations.
+                      Results from rules over SENSEI&apos;s conversations.
                     </span>
                   </div>
                 </DropdownItem>

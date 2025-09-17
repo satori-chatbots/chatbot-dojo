@@ -22,6 +22,37 @@ import { fetchTestCasesByProjects } from "../api/test-cases-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { saveSenseiCheckResult } from "../utils/sensei-check-results-storage";
 
+const formatConversationCount = (result) => {
+  // For completed test cases, if executed_conversations doesn't match total_conversations,
+  // but the status is SUCCESS, then all conversations were actually completed
+  if (result.status === "SUCCESS" && result.total_conversations) {
+    return `${result.total_conversations}/${result.total_conversations}`;
+  }
+
+  // For other cases, use the actual counts
+  const executed = result.executed_conversations || 0;
+  const total = result.total_conversations || 0;
+  return `${executed}/${total}`;
+};
+
+const getTestCaseStatusColor = (status) => {
+  switch (status?.toUpperCase()) {
+    case "SUCCESS": {
+      return "success";
+    }
+    case "FAILED":
+    case "FAILURE": {
+      return "danger";
+    }
+    case "RUNNING": {
+      return "warning";
+    }
+    default: {
+      return "default";
+    }
+  }
+};
+
 const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   const [selectedFiles, setSelectedFiles] = useState();
   const fileInputReference = useRef();
@@ -38,7 +69,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   const [selectedSenseiResults, setSelectedSenseiResults] = useState(new Set());
   const [testCases, setTestCases] = useState([]);
   const [loadingTestCases, setLoadingTestCases] = useState(false);
-  const [senseiCheckResults, setSenseiCheckResults] = useState(undefined);
+  const [senseiCheckResults, setSenseiCheckResults] = useState();
   const [resultsModal, setResultsModal] = useState({
     isOpen: false,
   });
@@ -90,7 +121,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     uploadSenseiCheckRules(formData)
       .then(async () => {
         await reloadRules();
-        setSelectedFiles(undefined);
+        setSelectedFiles();
         if (fileInputReference.current) {
           fileInputReference.current.value = undefined;
         }
@@ -119,7 +150,6 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
       setDeleteConfirmModal({
         isOpen: false,
         isLoading: false,
-        ruleId: undefined,
       });
     }
   };
@@ -218,33 +248,6 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     return new Date(dateString).toLocaleString();
   };
 
-  const formatConversationCount = (result) => {
-    // For completed test cases, if executed_conversations doesn't match total_conversations,
-    // but the status is SUCCESS, then all conversations were actually completed
-    if (result.status === "SUCCESS" && result.total_conversations) {
-      return `${result.total_conversations}/${result.total_conversations}`;
-    }
-
-    // For other cases, use the actual counts
-    const executed = result.executed_conversations || 0;
-    const total = result.total_conversations || 0;
-    return `${executed}/${total}`;
-  };
-
-  const getTestCaseStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case "SUCCESS":
-        return "success";
-      case "FAILED":
-      case "FAILURE":
-        return "danger";
-      case "RUNNING":
-        return "warning";
-      default:
-        return "default";
-    }
-  };
-
   return (
     <div className="flex flex-col space-y-4">
       {/* Execute SENSEI Check Button */}
@@ -307,9 +310,9 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                 variant="light"
                 color="danger"
                 onPress={() => {
-                  setSelectedFiles(undefined);
+                  setSelectedFiles();
                   if (fileInputReference.current) {
-                    fileInputReference.current.value = undefined;
+                    fileInputReference.current.value = "";
                   }
                 }}
               >
