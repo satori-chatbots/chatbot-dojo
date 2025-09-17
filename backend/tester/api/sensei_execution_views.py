@@ -588,7 +588,7 @@ def _setup_execution_paths(project: Project, test_case_ids: list) -> tuple[Path,
     """Setup execution paths and validate project structure."""
     user_id = project.owner.id
     project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{user_id}" / f"project_{project.id}"
-    rules_path = project_path / "sensei_check_rules"
+    rules_path = project_path / "rules"
 
     if not rules_path.exists():
         msg = "SENSEI Check rules directory not found"

@@ -137,7 +137,7 @@ def upload_to_sensei_check_rules(instance: "SenseiCheckRule", filename: str) -> 
     """Returns the path where the SENSEI Check Rules files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
-    return f"projects/user_{user_id}/project_{project_id}/sensei_check_rules/{filename}"
+    return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
 
 
 def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
