@@ -68,6 +68,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   });
   const [selectedSenseiResults, setSelectedSenseiResults] = useState(new Set());
   const [testCases, setTestCases] = useState([]);
+  const [hideNonSuccessful, setHideNonSuccessful] = useState(true);
   const [loadingTestCases, setLoadingTestCases] = useState(false);
   const [senseiCheckResults, setSenseiCheckResults] = useState();
   const [resultsModal, setResultsModal] = useState({
@@ -169,14 +170,32 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   };
 
   const handleSelectAllResults = () => {
-    if (selectedSenseiResults.size === testCases.length) {
-      setSelectedSenseiResults(new Set());
+    // Only consider currently visible (executable if toggle enabled) results
+    // When hideNonSuccessful is enabled, show only SUCCESS results; otherwise show all
+    const visible = hideNonSuccessful
+      ? testCases.filter((r) => (r.status || "").toUpperCase() === "SUCCESS")
+      : testCases;
+
+    const visibleIds = visible.map((r) => r.id);
+    const allSelected =
+      visibleIds.every((id) => selectedSenseiResults.has(id)) &&
+      visibleIds.length > 0;
+
+    if (allSelected) {
+      // Unselect only visible ones
+      const newSelected = new Set(selectedSenseiResults);
+      for (const id of visibleIds) newSelected.delete(id);
+      setSelectedSenseiResults(newSelected);
     } else {
-      setSelectedSenseiResults(new Set(testCases.map((result) => result.id)));
+      // Select all visible
+      setSelectedSenseiResults(
+        new Set([...selectedSenseiResults, ...visibleIds]),
+      );
     }
   };
 
   const handleResultSelection = (resultId) => {
+    // Toggle selection for any visible test case (no status restriction)
     const newSelected = new Set(selectedSenseiResults);
     if (newSelected.has(resultId)) {
       newSelected.delete(resultId);
@@ -201,7 +220,17 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
     }));
 
     try {
+      // Send all selected test case IDs to the backend (no client-side status filtering)
       const selectedTestCaseIds = [...selectedSenseiResults];
+
+      if (selectedTestCaseIds.length === 0) {
+        showToast("warning", "No test cases selected to execute.");
+        setExecuteSenseiCheckModal((previous) => ({
+          ...previous,
+          isLoading: false,
+        }));
+        return;
+      }
 
       // Execute SENSEI Check with verbose mode enabled
       const result = await executeSenseiCheck(
@@ -434,119 +463,154 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
             ) : testCases.length > 0 ? (
               <div className="space-y-4">
                 {/* Select All Checkbox */}
-                <div className="flex items-center justify-between border-b border-border dark:border-border-dark pb-3">
-                  <Checkbox
-                    isSelected={selectedSenseiResults.size === testCases.length}
-                    isIndeterminate={
-                      selectedSenseiResults.size > 0 &&
-                      selectedSenseiResults.size < testCases.length
-                    }
-                    onValueChange={handleSelectAllResults}
-                  >
-                    <span className="font-medium">
-                      Select All ({testCases.length} results)
-                    </span>
-                  </Checkbox>
-                  <Chip size="sm" variant="flat" color="primary">
-                    {selectedSenseiResults.size} selected
-                  </Chip>
-                </div>
+                {(() => {
+                  const visibleTestCases = hideNonSuccessful
+                    ? testCases.filter(
+                        (r) => (r.status || "").toUpperCase() === "SUCCESS",
+                      )
+                    : testCases;
+                  const visibleIds = visibleTestCases.map((r) => r.id);
+                  const selectedVisibleCount = visibleIds.filter((id) =>
+                    selectedSenseiResults.has(id),
+                  ).length;
+                  const allVisibleSelected =
+                    visibleTestCases.length > 0 &&
+                    selectedVisibleCount === visibleTestCases.length;
+                  const isIndeterminate =
+                    selectedVisibleCount > 0 &&
+                    selectedVisibleCount < visibleTestCases.length;
+
+                  return (
+                    <div className="flex items-center justify-between border-b border-border dark:border-border-dark pb-3">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          isSelected={allVisibleSelected}
+                          isIndeterminate={isIndeterminate}
+                          onValueChange={handleSelectAllResults}
+                        >
+                          <span className="font-medium">
+                            Select All ({visibleTestCases.length} results)
+                          </span>
+                        </Checkbox>
+                        <Checkbox
+                          isSelected={hideNonSuccessful}
+                          onValueChange={(val) => setHideNonSuccessful(!!val)}
+                        >
+                          <span className="text-sm text-foreground/70 dark:text-foreground-dark/70">
+                            Hide non-successful
+                          </span>
+                        </Checkbox>
+                      </div>
+                      <Chip size="sm" variant="flat" color="primary">
+                        {selectedSenseiResults.size} selected
+                      </Chip>
+                    </div>
+                  );
+                })()}
 
                 {/* Sensei Results List */}
                 <div className="space-y-3">
-                  {testCases.map((result) => (
-                    <div
-                      key={result.id}
-                      className={`border rounded-lg p-4 transition-all duration-200 ${
-                        selectedSenseiResults.has(result.id)
-                          ? "border-primary bg-primary-50 dark:bg-primary-900/20"
-                          : "border-border dark:border-border-dark bg-background-subtle dark:bg-darkbg-card"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          isSelected={selectedSenseiResults.has(result.id)}
-                          onValueChange={() => handleResultSelection(result.id)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-foreground dark:text-foreground-dark truncate">
-                              {result.name}
-                            </h4>
-                            <Chip
-                              size="sm"
-                              color={getTestCaseStatusColor(result.status)}
-                              variant="flat"
-                            >
-                              {result.status}
-                            </Chip>
-                          </div>
+                  {testCases
+                    .filter((r) =>
+                      hideNonSuccessful
+                        ? (r.status || "").toUpperCase() === "SUCCESS"
+                        : true,
+                    )
+                    .map((result) => (
+                      <div
+                        key={result.id}
+                        className={`border rounded-lg p-4 transition-all duration-200 ${
+                          selectedSenseiResults.has(result.id)
+                            ? "border-primary bg-primary-50 dark:bg-primary-900/20"
+                            : "border-border dark:border-border-dark bg-background-subtle dark:bg-darkbg-card"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            isSelected={selectedSenseiResults.has(result.id)}
+                            onValueChange={() =>
+                              handleResultSelection(result.id)
+                            }
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-foreground dark:text-foreground-dark truncate">
+                                {result.name}
+                              </h4>
+                              <Chip
+                                size="sm"
+                                color={getTestCaseStatusColor(result.status)}
+                                variant="flat"
+                              >
+                                {result.status}
+                              </Chip>
+                            </div>
 
-                          {result.error_message && (
-                            <p className="text-sm text-danger-600 dark:text-danger-400 mb-2 line-clamp-2">
-                              Error: {result.error_message}
-                            </p>
-                          )}
+                            {result.error_message && (
+                              <p className="text-sm text-danger-600 dark:text-danger-400 mb-2 line-clamp-2">
+                                Error: {result.error_message}
+                              </p>
+                            )}
 
-                          <div className="grid grid-cols-2 gap-4 text-xs text-foreground/60 dark:text-foreground-dark/60 mb-3">
-                            <div>
-                              <span className="block">Executed:</span>
-                              <span className="text-foreground dark:text-foreground-dark">
-                                {formatDate(result.executed_at)}
-                              </span>
+                            <div className="grid grid-cols-2 gap-4 text-xs text-foreground/60 dark:text-foreground-dark/60 mb-3">
+                              <div>
+                                <span className="block">Executed:</span>
+                                <span className="text-foreground dark:text-foreground-dark">
+                                  {formatDate(result.executed_at)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block">Execution Time:</span>
+                                <span className="text-foreground dark:text-foreground-dark">
+                                  {result.execution_time
+                                    ? `${result.execution_time.toFixed(1)}s`
+                                    : "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block">LLM Model:</span>
+                                <span className="text-foreground dark:text-foreground-dark">
+                                  {result.llm_model || "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block">Conversations:</span>
+                                <span className="text-foreground dark:text-foreground-dark">
+                                  {formatConversationCount(result)}
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="block">Execution Time:</span>
-                              <span className="text-foreground dark:text-foreground-dark">
-                                {result.execution_time
-                                  ? `${result.execution_time.toFixed(1)}s`
-                                  : "N/A"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="block">LLM Model:</span>
-                              <span className="text-foreground dark:text-foreground-dark">
-                                {result.llm_model || "N/A"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="block">Conversations:</span>
-                              <span className="text-foreground dark:text-foreground-dark">
-                                {formatConversationCount(result)}
-                              </span>
-                            </div>
-                          </div>
 
-                          {result.copied_files &&
-                            result.copied_files.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {result.copied_files
-                                  .slice(0, 3)
-                                  .map((file, index) => (
+                            {result.copied_files &&
+                              result.copied_files.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {result.copied_files
+                                    .slice(0, 3)
+                                    .map((file, index) => (
+                                      <Chip
+                                        key={index}
+                                        size="sm"
+                                        variant="bordered"
+                                        className="text-xs"
+                                      >
+                                        {file.name || file}
+                                      </Chip>
+                                    ))}
+                                  {result.copied_files.length > 3 && (
                                     <Chip
-                                      key={index}
                                       size="sm"
                                       variant="bordered"
                                       className="text-xs"
                                     >
-                                      {file.name || file}
+                                      +{result.copied_files.length - 3} more
                                     </Chip>
-                                  ))}
-                                {result.copied_files.length > 3 && (
-                                  <Chip
-                                    size="sm"
-                                    variant="bordered"
-                                    className="text-xs"
-                                  >
-                                    +{result.copied_files.length - 3} more
-                                  </Chip>
-                                )}
-                              </div>
-                            )}
+                                  )}
+                                </div>
+                              )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             ) : (
