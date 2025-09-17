@@ -82,6 +82,78 @@ export const deleteSenseiCheckRule = async (id) => {
   }
 };
 
+export const fetchSenseiCheckRule = async (id) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${id}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
+export const updateSenseiCheckRule = async (
+  id,
+  content,
+  projectId,
+  options = {},
+) => {
+  try {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: "application/x-yaml" });
+    formData.append("file", blob, "rule.yaml");
+    formData.append("project", projectId);
+    formData.append(
+      "ignore_validation_errors",
+      options.ignoreValidationErrors ? "true" : "false",
+    );
+
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${id}/`,
+      {
+        method: "PUT",
+        body: formData,
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
+export const createSenseiCheckRule = async (
+  content,
+  projectId,
+  options = {},
+) => {
+  try {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: "application/x-yaml" });
+    formData.append("file", blob, "rule.yaml");
+    formData.append("project", projectId);
+    formData.append(
+      "ignore_validation_errors",
+      options.ignoreValidationErrors ? "true" : "false",
+    );
+
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.UPLOAD_SENSEI_CHECK_RULES}`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
 export const deleteFiles = async (ids) => {
   try {
     const response = await apiClient(
@@ -169,6 +241,29 @@ export const fetchTemplate = async () => {
     console.error("Error fetching template:", error);
     throw error;
   }
+};
+
+export const fetchSenseiCheckRuleTemplate = async () => {
+  // Return a basic template - this can be enhanced later when the backend
+  // provides a specific template endpoint. There's no async work here so a
+  // try/catch is unnecessary and can make linting tools think the catch is
+  // unreachable.
+  return {
+    template: `# Sensei Check Rule Configuration
+# Define your validation rules here
+
+rules:
+  - name: "example_rule"
+    description: "Example validation rule"
+    enabled: true
+    conditions:
+      - field: "response"
+        operator: "contains"
+        value: "expected_text"
+
+# Add more rules as needed
+`,
+  };
 };
 
 export const validateYamlOnServer = async (content) => {

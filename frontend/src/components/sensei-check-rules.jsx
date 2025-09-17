@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Modal,
@@ -12,7 +13,7 @@ import {
   Spinner,
 } from "@heroui/react";
 import SenseiCheckResultsModal from "./sensei-check-results-modal";
-import { Upload, Trash, Play, FileText } from "lucide-react";
+import { Upload, Trash, Play, FileText, Edit } from "lucide-react";
 import {
   uploadSenseiCheckRules,
   deleteSenseiCheckRule,
@@ -57,6 +58,7 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   const [selectedFiles, setSelectedFiles] = useState();
   const fileInputReference = useRef();
   const { showToast } = useMyCustomToast();
+  const navigate = useNavigate();
   const [deleteConfirmModal, setDeleteConfirmModal] = useState({
     isOpen: false,
     isLoading: false,
@@ -292,6 +294,19 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
         </Button>
       </div>
 
+      {/* Create New Rule Button */}
+      <div className="flex justify-center">
+        <Button
+          color="secondary"
+          variant="flat"
+          startContent={<Edit className="w-4 h-4" />}
+          onPress={() => navigate("/sensei-check-rules")}
+          fullWidth
+        >
+          Create New Rule
+        </Button>
+      </div>
+
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
@@ -382,18 +397,43 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                 key={rule.id}
                 className="flex items-center justify-between bg-background-subtle dark:bg-darkbg-card rounded-md p-2 border border-border dark:border-border-dark"
               >
-                <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                <span
+                  className="text-sm font-medium text-foreground dark:text-foreground-dark cursor-pointer hover:text-primary transition-colors flex-1"
+                  onClick={() => navigate(`/sensei-check-rules/${rule.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/sensei-check-rules/${rule.id}`);
+                    }
+                  }}
+                  title="Click to edit rule"
+                >
                   {rule.name}
                 </span>
-                <Button
-                  size="sm"
-                  variant="light"
-                  color="danger"
-                  isIconOnly
-                  onPress={() => handleDelete(rule.id)}
-                >
-                  <Trash className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="primary"
+                    isIconOnly
+                    onPress={() => navigate(`/sensei-check-rules/${rule.id}`)}
+                    title="Edit rule"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="danger"
+                    isIconOnly
+                    onPress={() => handleDelete(rule.id)}
+                    title="Delete rule"
+                  >
+                    <Trash className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

@@ -45,6 +45,9 @@ const YamlEditor = React.lazy(() => import("./views/yaml-editor-view"));
 const CustomConnectorYamlEditor = React.lazy(
   () => import("./views/custom-connector-yaml-editor"),
 );
+const SenseiCheckRulesEditor = React.lazy(
+  () => import("./views/sensei-check-rules-editor"),
+);
 const SetupGuide = React.lazy(() => import("./views/setup-guide"));
 
 // Loading component
@@ -591,6 +594,22 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <CustomConnectorYamlEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/sensei-check-rules"
+                element={
+                  <PrivateRoute>
+                    <SenseiCheckRulesEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/sensei-check-rules/:ruleId"
+                element={
+                  <PrivateRoute>
+                    <SenseiCheckRulesEditor />
                   </PrivateRoute>
                 }
               />
