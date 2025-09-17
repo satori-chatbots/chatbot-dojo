@@ -68,6 +68,9 @@ const getApiKeyName = (apiKeyId, apiKeys) => {
   return apiKey ? apiKey.name : "Unknown";
 };
 
+// Helper function to get tab storage key
+const getTabStorageKey = (projectId) => `sensei-selected-tab-${projectId}`;
+
 function Home() {
   const { showToast } = useMyCustomToast();
   const { reloadProjects: reloadSetupProjects, reloadProfiles } = useSetup();
@@ -111,6 +114,34 @@ function Home() {
 
   // Track which execution folders are expanded to show all profiles
   const [expandedExecutions, setExpandedExecutions] = useState(new Set());
+
+  // Track selected tab per project
+  const [selectedTab, setSelectedTab] = useState("profiles");
+
+  // Helper functions for tab persistence
+  const saveSelectedTab = useCallback((projectId, tabKey) => {
+    if (projectId) {
+      localStorage.setItem(getTabStorageKey(projectId), tabKey);
+    }
+  }, []);
+
+  const loadSelectedTab = useCallback((projectId) => {
+    if (projectId) {
+      const saved = localStorage.getItem(getTabStorageKey(projectId));
+      return saved || "profiles"; // Default to "profiles" tab
+    }
+    return "profiles";
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tabKey) => {
+      setSelectedTab(tabKey);
+      if (selectedProject) {
+        saveSelectedTab(selectedProject.id, tabKey);
+      }
+    },
+    [selectedProject, saveSelectedTab],
+  );
 
   // Function to reload executions and profiles
   const reloadExecutions = useCallback(async () => {
@@ -472,6 +503,16 @@ function Home() {
       }
     }
   }, [selectedProject, checkForOngoingGeneration]);
+
+  // Load saved tab when project changes
+  useEffect(() => {
+    if (selectedProject) {
+      const savedTab = loadSelectedTab(selectedProject.id);
+      setSelectedTab(savedTab);
+    } else {
+      setSelectedTab("profiles"); // Reset to default when no project
+    }
+  }, [selectedProject, loadSelectedTab]);
 
   // Clear generation status when switching between projects
   useEffect(() => {
@@ -974,6 +1015,8 @@ function Home() {
                 tabList: "w-full",
                 tab: "flex-1",
               }}
+              selectedKey={selectedTab}
+              onSelectionChange={handleTabChange}
             >
               <Tab key="profiles" title="🔄 Generate & Test">
                 {/* Upload Section */}
