@@ -20,7 +20,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Copy full project (backend and user-simulator)
 COPY backend/ ./
-COPY user-simulator/ ./user-simulator/
 
 # Now install project + any extra dependencies into the venv
 RUN --mount=type=cache,target=/root/.cache/uv \

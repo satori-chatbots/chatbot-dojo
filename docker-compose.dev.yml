@@ -44,7 +44,6 @@ services:
       - ./backend:/app
       - backend_venv:/app/.venv
       - ./filevault:/app/filevault
-      - ./user-simulator:/app/user-simulator
     user: "1000:1000"
     depends_on:
       db:
@@ -63,7 +62,6 @@ services:
       - ./backend:/app
       - backend_venv:/app/.venv
       - ./filevault:/app/filevault
-      - ./user-simulator:/app/user-simulator
     user: "1000:1000"
     depends_on:
       db:
