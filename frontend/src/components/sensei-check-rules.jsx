@@ -11,6 +11,7 @@ import {
   Checkbox,
   Chip,
   Spinner,
+  Switch,
 } from "@heroui/react";
 import SenseiCheckResultsModal from "./sensei-check-results-modal";
 import { Upload, Trash, Play, FileText, Edit } from "lucide-react";
@@ -18,6 +19,7 @@ import {
   uploadSenseiCheckRules,
   deleteSenseiCheckRule,
   executeSenseiCheck,
+  toggleSenseiCheckRuleActive,
 } from "../api/file-api";
 import { fetchTestCasesByProjects } from "../api/test-cases-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
@@ -154,6 +156,20 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
         isOpen: false,
         isLoading: false,
       });
+    }
+  };
+
+  const handleToggleActive = async (ruleId, currentActive) => {
+    try {
+      await toggleSenseiCheckRuleActive(ruleId, !currentActive);
+      await reloadRules();
+      showToast(
+        "success",
+        `Rule ${currentActive ? "deactivated" : "activated"} successfully!`,
+      );
+    } catch (error) {
+      console.error("Error toggling rule active state:", error);
+      showToast("error", "Error updating rule active state.");
     }
   };
 
@@ -412,7 +428,24 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
                 >
                   {rule.name}
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    size="sm"
+                    isSelected={rule.active === true}
+                    onValueChange={() =>
+                      handleToggleActive(rule.id, rule.active)
+                    }
+                    color="primary"
+                    title={`${rule.active ? "Deactivate" : "Activate"} rule`}
+                  >
+                    <span className="text-tiny text-default-500">
+                      {rule.active === true
+                        ? "Active"
+                        : rule.active === false
+                          ? "Inactive"
+                          : "Unknown"}
+                    </span>
+                  </Switch>
                   <Button
                     size="sm"
                     variant="light"

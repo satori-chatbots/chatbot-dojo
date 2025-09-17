@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any, ClassVar
 
+import yaml
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
@@ -263,6 +264,67 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(created_files, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="toggle-active",
+    )
+    def toggle_active(self, request: Request, pk: str | None = None) -> Response:  # noqa: ARG002
+        """Toggle the 'active' field in a sensei check rule file."""
+        rule = self.get_object()
+
+        # Check permissions
+        if rule.project.owner != request.user:
+            return Response(
+                {"error": "You do not own this project."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        active_value = request.data.get("active")
+        if active_value is None:
+            return Response(
+                {"error": "Active value is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            if rule.file:
+                # Read the current content
+                with rule.file.open("r") as file:
+                    content = file.read()
+
+                # Parse YAML
+                data = yaml.safe_load(content) or {}
+
+                # Update the active field with Python boolean
+                data["active"] = bool(active_value)
+
+                # Write back to file with custom dumper to ensure True/False capitalization
+                with rule.file.open("w") as file:
+                    # Use a custom dumper that represents booleans as True/False
+                    class CustomDumper(yaml.SafeDumper):
+                        pass
+
+                    def bool_representer(dumper: yaml.SafeDumper, data: bool) -> yaml.ScalarNode:  # noqa: FBT001
+                        return dumper.represent_scalar("tag:yaml.org,2002:bool", "True" if data else "False")
+
+                    CustomDumper.add_representer(bool, bool_representer)
+                    yaml.dump(data, file, Dumper=CustomDumper, default_flow_style=False)
+
+                # Return updated data
+                serializer = self.get_serializer(rule)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(
+                {"error": "No file found for this rule."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        except (yaml.YAMLError, OSError, ValueError) as e:
+            return Response(
+                {"error": f"Error updating rule file: {e!s}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class ProjectConfigViewSet(viewsets.ModelViewSet):

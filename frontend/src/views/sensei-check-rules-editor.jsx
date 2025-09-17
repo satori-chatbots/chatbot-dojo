@@ -39,20 +39,35 @@ function senseiCheckCompletions(context) {
   }
 
   const options = [
-    { label: "rules", type: "keyword", info: "Array of validation rules" },
     { label: "name", type: "keyword", info: "Rule name identifier" },
     { label: "description", type: "keyword", info: "Rule description" },
-    { label: "enabled", type: "keyword", info: "Enable/disable rule" },
-    { label: "conditions", type: "keyword", info: "Array of conditions" },
-    { label: "field", type: "keyword", info: "Field to validate" },
-    { label: "operator", type: "keyword", info: "Validation operator" },
-    { label: "value", type: "keyword", info: "Expected value" },
-    { label: "contains", type: "value", info: "Contains operator" },
-    { label: "equals", type: "value", info: "Equals operator" },
-    { label: "matches", type: "value", info: "Regex matches operator" },
-    { label: "response", type: "value", info: "Response field" },
-    { label: "true", type: "value", info: "Boolean true" },
-    { label: "false", type: "value", info: "Boolean false" },
+    {
+      label: "active",
+      type: "keyword",
+      info: "Enable/disable rule (True/False)",
+    },
+    {
+      label: "conversations",
+      type: "keyword",
+      info: "Number of conversations to validate",
+    },
+    { label: "oracle", type: "keyword", info: "Validation logic expression" },
+    { label: "when", type: "keyword", info: "Condition when rule applies" },
+    { label: "if", type: "keyword", info: "If condition" },
+    { label: "then", type: "keyword", info: "Then condition" },
+    { label: "True", type: "value", info: "Boolean true" },
+    { label: "False", type: "value", info: "Boolean false" },
+    {
+      label: "conversation_length",
+      type: "function",
+      info: "Get conversation length",
+    },
+    {
+      label: "extract_float",
+      type: "function",
+      info: "Extract float from text",
+    },
+    { label: "conv", type: "variable", info: "Conversation array" },
   ];
 
   return {
@@ -647,27 +662,25 @@ function SenseiCheckRulesEditor() {
                             tabIndex={0}
                             className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
                             onClick={() => {
-                              const exampleCode = `rules:
-  - name: "response_validation"
-    description: "Validate response content"
-    enabled: true
-    conditions:
-      - field: "response"
-        operator: "contains"
-        value: "success"`;
+                              const exampleCode = `name: more_toppings_cost_more
+description: Adding more toppings to a custom pizza cost more
+active: True
+conversations: 2
+when: conv[0].size == conv[1].size and conv[0].drink == conv[1].drink
+if: len(conv[0].toppings) > len(conv[1].toppings)
+then: extract_float(conv[0].price) > extract_float(conv[1].price)`;
                               navigator.clipboard.writeText(exampleCode);
                               showToast("success", "Code copied to clipboard");
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
-                                const exampleCode = `rules:
-  - name: "response_validation"
-    description: "Validate response content"
-    enabled: true
-    conditions:
-      - field: "response"
-        operator: "contains"
-        value: "success"`;
+                                const exampleCode = `name: more_toppings_cost_more
+description: Adding more toppings to a custom pizza cost more
+active: True
+conversations: 2
+when: conv[0].size == conv[1].size and conv[0].drink == conv[1].drink
+if: len(conv[0].toppings) > len(conv[1].toppings)
+then: extract_float(conv[0].price) > extract_float(conv[1].price)`;
                                 navigator.clipboard.writeText(exampleCode);
                                 showToast(
                                   "success",
@@ -677,17 +690,17 @@ function SenseiCheckRulesEditor() {
                             }}
                             title="Click to copy"
                           >
-                            {`rules:
-  - name: "response_validation"
-    description: "Validate response content"
-    enabled: true
-    conditions:
-      - field: "response"
-        operator: "contains"
-        value: "success"`}
+                            {`name: more_toppings_cost_more
+description: Adding more toppings to a custom pizza cost more
+active: True
+conversations: 2
+when: conv[0].size == conv[1].size and conv[0].drink == conv[1].drink
+if: len(conv[0].toppings) > len(conv[1].toppings)
+then: extract_float(conv[0].price) > extract_float(conv[1].price)`}
                           </div>
                           <p className="text-xs sm:text-sm text-default-foreground">
-                            Example rule structure for validating responses.
+                            Example rule structure for validating pizza pricing
+                            logic.
                           </p>
                         </div>
                       </div>

@@ -2,6 +2,7 @@
 
 from typing import Any, ClassVar
 
+import yaml
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -294,6 +295,28 @@ class SenseiCheckRuleSerializer(FileURLMixin, serializers.ModelSerializer):
     """Serializer for the SenseiCheckRule model."""
 
     file_url = serializers.SerializerMethodField()
+    active = serializers.SerializerMethodField()
+
+    def get_active(self, obj: SenseiCheckRule) -> bool | None:
+        """Extract the 'active' field from the YAML file content."""
+        try:
+            if obj.file:
+                with obj.file.open("r") as file:
+                    content = file.read()
+                    data = yaml.safe_load(content)
+                    if isinstance(data, dict):
+                        active_value = data.get("active")
+                        # Handle both string and boolean values
+                        if isinstance(active_value, str):
+                            return active_value.lower() == "true"
+                        if isinstance(active_value, bool):
+                            return active_value
+                        return None
+                    return None
+        except (FileNotFoundError, yaml.YAMLError, OSError, ValueError):
+            # If file doesn't exist, can't be read, or isn't valid YAML, return None
+            return None
+        return None
 
     class Meta:
         """Meta class for SenseiCheckRuleSerializer."""

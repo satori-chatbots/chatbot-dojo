@@ -154,6 +154,25 @@ export const createSenseiCheckRule = async (
   }
 };
 
+export const toggleSenseiCheckRuleActive = async (ruleId, active) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${ruleId}/toggle-active/`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ active }),
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error toggling SENSEI Check rule active state:", error);
+    throw error;
+  }
+};
+
 export const deleteFiles = async (ids) => {
   try {
     const response = await apiClient(
@@ -250,18 +269,20 @@ export const fetchSenseiCheckRuleTemplate = async () => {
   // unreachable.
   return {
     template: `# Sensei Check Rule Configuration
-# Define your validation rules here
+# Define your validation rule here
 
-rules:
-  - name: "example_rule"
-    description: "Example validation rule"
-    enabled: true
-    conditions:
-      - field: "response"
-        operator: "contains"
-        value: "expected_text"
+name: example_rule
+description: Example validation rule
+active: True
+conversations: 1
+oracle: conversation_length() == conversation_length('assistant') + conversation_length('user')
 
-# Add more rules as needed
+# Adjust the rule parameters as needed
+# - name: unique identifier for the rule
+# - description: brief description of what the rule validates
+# - active: True/False to enable/disable the rule
+# - conversations: number of conversations to validate
+# - oracle: the validation logic
 `,
   };
 };
