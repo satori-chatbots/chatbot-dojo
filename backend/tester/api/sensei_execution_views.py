@@ -765,8 +765,9 @@ def execute_sensei_check(request: Request) -> Response:
 
     Results are saved in the project's filevault directory structure:
     project_path/sensei_check_results/execution_<timestamp>/
-    ├── conversations/          # Copied conversation files
-    │   ├── testcase_<id>/     # Organized by test case
+    ├── conversations/          # Copied conversation files (flat layout)
+    │   ├── conversation_1.yml  # All conversation files are copied here without per-testcase subfolders
+    │   ├── conversation_2.yml
     │   └── ...
     ├── results.csv            # CSV output
     └── execution.log          # Execution logs
