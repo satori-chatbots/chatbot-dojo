@@ -33,7 +33,6 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  Terminal,
   BarChart3,
 } from "lucide-react";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
@@ -58,59 +57,7 @@ const parseCsvData = (csvString) => {
   return data;
 };
 
-// Terminal-style output component
-const TerminalOutput = ({ title, content, variant = "output" }) => {
-  const lines = React.useMemo(
-    () => (content ? content.split("\n") : []),
-    [content],
-  );
 
-  if (!content || content.trim() === "") {
-    return (
-      <div className="text-center py-8 text-default-500">
-        <Terminal className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p>No {variant} available</p>
-      </div>
-    );
-  }
-
-  const isError = variant === "error";
-  const consoleStyle = isError
-    ? "bg-gray-900 border-red-500/30"
-    : "bg-gray-900 border-green-500/30";
-  const textStyle = isError ? "text-red-400" : "text-green-400";
-
-  return (
-    <div className={`${consoleStyle} rounded-lg border-2 overflow-hidden`}>
-      {/* Console header */}
-      <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
-        <Terminal className="w-4 h-4 text-gray-400" />
-        <span className="text-gray-300 text-sm font-medium">{title}</span>
-        <div className="flex gap-1 ml-auto">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-        </div>
-      </div>
-
-      {/* Console content */}
-      <div className="p-4 overflow-auto max-h-96">
-        <div className={`${textStyle} text-sm font-mono leading-relaxed`}>
-          {lines.map((line, index) => (
-            <div key={index} className="flex">
-              <span className="text-gray-500 select-none mr-4 text-xs w-10 text-right">
-                {String(index + 1).padStart(3, " ")}
-              </span>
-              <span className="flex-1 whitespace-pre-wrap break-words">
-                {line}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Helper functions moved outside component
 const formatDate = (dateString) => {
@@ -262,10 +209,14 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     showToast("success", "Result deleted successfully");
   };
 
-  // Export result as JSON
+  // Export result as CSV
   const exportResult = (result) => {
-    const dataStr = JSON.stringify(result, undefined, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    if (!result.csv_results) {
+      showToast("warning", "No CSV data to export");
+      return;
+    }
+
+    const dataBlob = new Blob([result.csv_results], { type: "text/csv" });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
@@ -273,7 +224,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
       result.executionId && result.executionId.trim() !== ""
         ? `-${result.executionId}`
         : "";
-    link.download = `sensei-check-result${safeId}.json`;
+    link.download = `sensei-check-result${safeId}.csv`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -281,25 +232,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
     showToast("success", "Result exported successfully");
   };
 
-  // Export all results as JSON
-  const exportAllResults = () => {
-    if (results.length === 0) {
-      showToast("warning", "No results to export");
-      return;
-    }
-
-    const dataStr = JSON.stringify(results, undefined, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `sensei-check-results-${project?.name || "all"}-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    showToast("success", "All results exported successfully");
-  };
+  
 
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
@@ -327,15 +260,7 @@ const SenseiCheckResultsDashboard = ({ project }) => {
           >
             Refresh
           </Button>
-          <Button
-            color="primary"
-            variant="bordered"
-            startContent={<Download size={16} />}
-            onPress={exportAllResults}
-            isDisabled={results.length === 0}
-          >
-            Export All
-          </Button>
+          
         </div>
       </div>
 
