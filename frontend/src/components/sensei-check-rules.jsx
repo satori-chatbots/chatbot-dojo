@@ -280,12 +280,13 @@ const SenseiCheckRules = ({ project, rules, reloadRules }) => {
   return (
     <div className="flex flex-col space-y-4">
       {/* Execute SENSEI Check Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-center">
         <Button
           color="primary"
           startContent={<Play className="w-4 h-4" />}
           onPress={handleExecuteSenseiCheck}
           isDisabled={rules.length === 0}
+          fullWidth
         >
           Execute SENSEI Check
         </Button>

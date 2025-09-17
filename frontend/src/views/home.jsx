@@ -10,8 +10,6 @@ import {
   ModalHeader,
   Form,
   useDisclosure,
-  Select,
-  SelectItem,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
@@ -307,7 +305,7 @@ function Home() {
   const [profileGenParameters, setProfileGenParameters] = useState({
     sessions: 8,
     turns_per_session: 5,
-    verbosity: "normal",
+    verbosity: "verbose", // Always use verbose mode
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const statusIntervalReference = useRef();
@@ -330,7 +328,7 @@ function Home() {
   const handleProfileGenParameterChange = (field, value) => {
     setProfileGenParameters((previous) => ({
       ...previous,
-      [field]: field === "verbosity" ? value : Number.parseInt(value) || 0,
+      [field]: Number.parseInt(value) || 0,
     }));
   };
 
@@ -969,8 +967,15 @@ function Home() {
 
           {/* Project Details */}
           <div>
-            <Tabs aria-label="Options">
-              <Tab key="profiles" title="User Profiles">
+            <Tabs
+              aria-label="Chatbot Testing Workflow"
+              className="w-full"
+              classNames={{
+                tabList: "w-full",
+                tab: "flex-1",
+              }}
+            >
+              <Tab key="profiles" title="🔄 Generate & Test">
                 {/* Upload Section */}
                 <div className="flex flex-col space-y-4">
                   <div
@@ -1086,13 +1091,13 @@ function Home() {
                   >
                     {isGenerating
                       ? "Generating Profiles..."
-                      : "Auto-Generate Profiles"}
+                      : "Auto-Generate with TRACER"}
                   </Button>
                   {isGenerating && (
                     <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
                       <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
                       <h3 className="text-base font-medium mb-1 text-foreground dark:text-foreground-dark">
-                        Generating Profiles
+                        TRACER is exploring your chatbot...
                       </h3>
                       {generationStage && (
                         <p className="text-sm font-medium text-primary mb-2 text-center">
@@ -1178,11 +1183,11 @@ function Home() {
                     onPress={openExecuteModal}
                     startContent={<Play className="w-4 h-4" />}
                   >
-                    Execute Test
+                    Run SENSEI Test
                   </Button>
                 </div>
               </Tab>
-              <Tab key="sensei-check" title="SENSEI Check">
+              <Tab key="sensei-check" title="📊 Analyze Results">
                 <SenseiCheckRules
                   project={selectedProject}
                   rules={senseiCheckRules}
@@ -1226,12 +1231,19 @@ function Home() {
       {/* Generate Profiles Modal */}
       <Modal isOpen={isGenerateModalOpen} onOpenChange={setIsGenerateModalOpen}>
         <ModalContent>
-          <ModalHeader>Generate Profiles with TRACER</ModalHeader>
+          <ModalHeader>🔍 Generate Profiles with TRACER</ModalHeader>
           <ModalBody className="flex flex-col gap-4">
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>TRACER</strong> will automatically explore your chatbot
+                by having conversations with it, discovering different user
+                behaviors and creating realistic user profiles for testing.
+              </p>
+            </div>
             <div className="space-y-3">
               <div>
                 <h4 className="text-sm font-medium text-foreground mb-2">
-                  📊 Configuration
+                  📊 Exploration Configuration
                 </h4>
                 <div className="space-y-3">
                   <Input
@@ -1242,6 +1254,7 @@ function Home() {
                     onValueChange={(value) =>
                       handleProfileGenParameterChange("sessions", value)
                     }
+                    description="Number of separate conversation sessions to run"
                   />
                   <Input
                     label="Turns per session"
@@ -1254,61 +1267,28 @@ function Home() {
                         value,
                       )
                     }
+                    description="Number of conversation turns in each session"
                   />
-                  <Select
-                    label="Log Verbosity"
-                    selectedKeys={[profileGenParameters.verbosity]}
-                    onSelectionChange={(selection) => {
-                      const verbosity = [...selection][0];
-                      handleProfileGenParameterChange("verbosity", verbosity);
-                    }}
-                    description="Choose log detail level for debugging"
-                  >
-                    <SelectItem key="normal" textValue="Normal">
-                      <div className="flex flex-col">
-                        <span className="text-small">Normal</span>
-                        <span className="text-tiny text-default-400">
-                          Standard output
-                        </span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem key="verbose" textValue="Verbose">
-                      <div className="flex flex-col">
-                        <span className="text-small">Verbose (-v)</span>
-                        <span className="text-tiny text-default-400">
-                          Shows conversations and interactions
-                        </span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem key="debug" textValue="Debug">
-                      <div className="flex flex-col">
-                        <span className="text-small">Debug (-vv)</span>
-                        <span className="text-tiny text-default-400">
-                          Debug mode with detailed technical info
-                        </span>
-                      </div>
-                    </SelectItem>
-                  </Select>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-default-200">
                 <h4 className="text-sm font-medium text-foreground mb-2">
-                  📝 Using:
+                  Using Models:
                 </h4>
                 <div className="text-sm text-default-600 space-y-1">
                   <div>
-                    Exploration Model:{" "}
-                    {selectedProject?.llm_model || "gpt-4o-mini"} (TRACER
+                    <strong>Exploration:</strong>{" "}
+                    {selectedProject?.llm_model || "gpt-4o-mini"} (for TRACER
                     exploration)
                   </div>
                   <div>
-                    Profile Model:{" "}
+                    <strong>Profile Generation:</strong>{" "}
                     {selectedProject?.profile_model || "gpt-4o-mini"} (embedded
                     in profiles)
                   </div>
                   <div>
-                    Technology:{" "}
+                    <strong>Technology:</strong>{" "}
                     {availableConnectors.find(
                       (c) => c.id === selectedProject?.chatbot_connector,
                     )?.technology || "Unknown"}{" "}
@@ -1332,7 +1312,7 @@ function Home() {
               isDisabled={isGenerating}
               onPress={handleGenerateProfiles}
             >
-              Generate Profiles
+              🚀 Start TRACER Exploration
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -1353,8 +1333,15 @@ function Home() {
       {/* Modal execution name */}
       <Modal isOpen={isExecuteOpen} onOpenChange={setIsExecuteOpen}>
         <ModalContent>
-          <ModalHeader>Execute Test</ModalHeader>
-          <ModalBody className="flex flex-col gap-4 items-center">
+          <ModalHeader>🤖 Run SENSEI Test</ModalHeader>
+          <ModalBody className="flex flex-col gap-4">
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>SENSEI</strong> will simulate realistic conversations
+                using your selected user profiles to test how your chatbot
+                responds to different user behaviors and scenarios.
+              </p>
+            </div>
             <Form
               className="w-full"
               onSubmit={handleSubmitPressed}
@@ -1363,10 +1350,12 @@ function Home() {
             >
               <Input
                 name="name"
-                label="Execution Name (optional)"
+                label="Test Execution Name (optional)"
+                placeholder="e.g., Customer Support Test v1"
                 value={executionName}
                 onValueChange={setExecutionName}
                 isDisabled={loadingValidation}
+                description="Leave blank for auto-generated name"
               />
               <ModalFooter className="w-full flex justify-center gap-4">
                 <Button type="reset" color="danger" variant="light">
@@ -1374,7 +1363,7 @@ function Home() {
                 </Button>
                 {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
                 <Button type="submit" color="primary">
-                  Execute
+                  🚀 Start SENSEI Test
                 </Button>
               </ModalFooter>
             </Form>
