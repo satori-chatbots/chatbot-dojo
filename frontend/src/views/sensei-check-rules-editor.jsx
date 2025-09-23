@@ -1,4 +1,38 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+// Simple YAML syntax highlighting (top-level module scope)
+function highlightYaml(yamlCode) {
+  return (
+    yamlCode
+      // Comments first
+      .replaceAll(/(#.*$)/gm, '<span class="text-gray-500 italic">$1</span>')
+      // Keys (before colon) - avoid already highlighted content
+      .replaceAll(
+        /^(\s*)([^#\s<][^:<]*?):/gm,
+        '$1<span class="text-red-600 font-semibold">$2</span>:',
+      )
+      // String values (in quotes)
+      .replaceAll(
+        /: *(['"])((?:[^'"\\]|\\.)*)?\1/g,
+        ': <span class="text-green-600">$1$2$1</span>',
+      )
+      // Boolean and special values - avoid already highlighted content
+      .replaceAll(
+        /: *(True|False|true|false|null|all|\d+\.?\d*)(?!\w)/g,
+        ': <span class="text-purple-600 font-semibold">$1</span>',
+      )
+      // Functions - avoid already highlighted content
+      .replaceAll(
+        /(?<!<[^>]*)\b([a-zA-Z_][a-zA-Z0-9_]*)\(/g,
+        '<span class="text-blue-600 font-semibold">$1</span>(',
+      )
+  );
+}
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -14,10 +48,27 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
   Save,
-  Edit,
+  // Edit,
   Loader2,
+  BookOpen,
+  Settings,
+  Copy,
+  Check,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+  ExternalLink,
 } from "lucide-react";
-import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
+import {
+  Button,
+  Card,
+  CardBody,
+  Switch,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Tooltip,
+  Link,
+} from "@heroui/react";
 import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
@@ -30,6 +81,205 @@ import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { senseiCheckDocumentationSections } from "../data/sensei-check-documentation";
+
+// Constants
+const SCROLL_SENSITIVITY_THRESHOLD = 5;
+
+// Code block component for documentation with syntax highlighting
+const CodeBlock = ({ code, description }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy code:", error);
+    }
+  }, [code]);
+
+  return (
+    <Card className="w-full">
+      <CardBody className="p-4">
+        <div className="space-y-3">
+          <p className="text-sm text-default-600">{description}</p>
+          <div className="relative">
+            <pre className="bg-default-100 dark:bg-default-50 p-3 rounded-md text-sm overflow-x-auto font-mono">
+              <code
+                dangerouslySetInnerHTML={{
+                  __html: highlightYaml(code),
+                }}
+              />
+            </pre>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="flat"
+              className="absolute top-2 right-2"
+              onPress={handleCopy}
+              aria-label="Copy code"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-success" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+};
+
+// Scrollable tabs component
+const ScrollableTabs = ({ sections }) => {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [activeTab, setActiveTab] = useState(Object.keys(sections)[0]);
+  const tabsContainerRef = useRef(null);
+
+  const updateScrollButtons = useCallback(() => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(
+        scrollLeft < scrollWidth - clientWidth - SCROLL_SENSITIVITY_THRESHOLD,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    updateScrollButtons();
+    const container = tabsContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", updateScrollButtons);
+      window.addEventListener("resize", updateScrollButtons);
+
+      const observer = new ResizeObserver(() => {
+        updateScrollButtons();
+      });
+      observer.observe(container);
+
+      return () => {
+        container.removeEventListener("scroll", updateScrollButtons);
+        window.removeEventListener("resize", updateScrollButtons);
+        observer.disconnect();
+      };
+    }
+  }, [updateScrollButtons]);
+
+  useEffect(() => {
+    const timer = setTimeout(updateScrollButtons, 100);
+    return () => clearTimeout(timer);
+  }, [sections, updateScrollButtons]);
+
+  const scrollTabs = useCallback((direction) => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 250;
+      const newScrollLeft =
+        direction === "left"
+          ? Math.max(0, tabsContainerRef.current.scrollLeft - scrollAmount)
+          : Math.min(
+              tabsContainerRef.current.scrollWidth -
+                tabsContainerRef.current.clientWidth,
+              tabsContainerRef.current.scrollLeft + scrollAmount,
+            );
+
+      tabsContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  }, []);
+
+  return (
+    <div className="w-full">
+      {/* Tab navigation with scroll arrows */}
+      <div className="relative mb-4">
+        {/* Left gradient fade when scrollable */}
+        {canScrollLeft && (
+          <div className="absolute left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
+        )}
+
+        {/* Right gradient fade when scrollable */}
+        {canScrollRight && (
+          <div className="absolute right-8 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
+        )}
+
+        {canScrollLeft && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="flat"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
+            onPress={() => scrollTabs("left")}
+            aria-label="Scroll tabs left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        )}
+
+        {canScrollRight && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="flat"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-background/90 backdrop-blur-sm shadow-md border border-default-200 hover:bg-default-100"
+            onPress={() => scrollTabs("right")}
+            aria-label="Scroll tabs right"
+          >
+            <ChevronRightIcon className="w-4 h-4" />
+          </Button>
+        )}
+
+        {/* Scrollable tab headers container */}
+        <div
+          ref={tabsContainerRef}
+          className="overflow-x-auto"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          <div className="flex gap-1 border-b border-divider min-w-max">
+            {Object.keys(sections).map((sectionName) => (
+              <button
+                key={sectionName}
+                className={`flex items-center space-x-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                  activeTab === sectionName
+                    ? "border-primary text-primary font-medium"
+                    : "border-transparent text-foreground-600 hover:text-foreground hover:border-default-300"
+                }`}
+                onClick={() => setActiveTab(sectionName)}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>{sectionName}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="space-y-4">
+        {activeTab && sections[activeTab] && (
+          <div className="space-y-3">
+            {sections[activeTab].items.map((item, index) => (
+              <CodeBlock
+                key={index}
+                code={item.code}
+                description={item.description}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Basic YAML autocomplete for sensei-check rules
 function senseiCheckCompletions(context) {
@@ -49,25 +299,102 @@ function senseiCheckCompletions(context) {
     {
       label: "conversations",
       type: "keyword",
-      info: "Number of conversations to validate",
+      info: "Number of conversations to validate (1, 2, 3... or 'all')",
     },
     { label: "oracle", type: "keyword", info: "Validation logic expression" },
     { label: "when", type: "keyword", info: "Condition when rule applies" },
-    { label: "if", type: "keyword", info: "If condition" },
-    { label: "then", type: "keyword", info: "Then condition" },
+    {
+      label: "if",
+      type: "keyword",
+      info: "If condition for metamorphic rules",
+    },
+    {
+      label: "then",
+      type: "keyword",
+      info: "Then condition for metamorphic rules",
+    },
+    { label: "on-error", type: "keyword", info: "Custom error message" },
     { label: "True", type: "value", info: "Boolean true" },
     { label: "False", type: "value", info: "Boolean false" },
     {
-      label: "conversation_length",
-      type: "function",
-      info: "Get conversation length",
+      label: "all",
+      type: "value",
+      info: "All conversations (for global rules)",
     },
+
+    // Text analysis functions
+    { label: "language", type: "function", info: "Detect language of phrases" },
+    {
+      label: "length",
+      type: "function",
+      info: "Get character length statistics",
+    },
+    { label: "tone", type: "function", info: "Analyze emotional tone" },
+    {
+      label: "only_talks_about",
+      type: "function",
+      info: "Check if chatbot stays on topic",
+    },
+    {
+      label: "missing_outputs",
+      type: "function",
+      info: "Get output data with no value",
+    },
+    {
+      label: "utterance_index",
+      type: "function",
+      info: "Find conversation turn about topic",
+    },
+    {
+      label: "chatbot_returns",
+      type: "function",
+      info: "Select phrases containing pattern",
+    },
+    {
+      label: "repeated_answers",
+      type: "function",
+      info: "Detect duplicate responses",
+    },
+    {
+      label: "semantic_content",
+      type: "function",
+      info: "Check semantic agreement",
+    },
+    {
+      label: "is_unique",
+      type: "function",
+      info: "Check uniqueness across conversations",
+    },
+    { label: "currency", type: "function", info: "Extract currency from text" },
+
+    // Utility functions
     {
       label: "extract_float",
       type: "function",
       info: "Extract float from text",
     },
-    { label: "conv", type: "variable", info: "Conversation array" },
+    {
+      label: "conversation_length",
+      type: "function",
+      info: "Get conversation length",
+    },
+
+    // Built-in variables
+    {
+      label: "conv",
+      type: "variable",
+      info: "Conversation array for multi-conversation rules",
+    },
+    {
+      label: "chatbot_phrases",
+      type: "variable",
+      info: "All chatbot phrases in conversation",
+    },
+    {
+      label: "user_phrases",
+      type: "variable",
+      info: "All user phrases in conversation",
+    },
   ];
 
   return {
@@ -107,27 +434,56 @@ function createSenseiCheckYamlLinter() {
 
 function SenseiCheckRulesEditor() {
   const { ruleId } = useParams();
-  const [editorContent, setEditorContent] = useState("");
-  const [isValid, setIsValid] = useState(true);
-  const [fontSize, setFontSize] = useState(14);
-  const [errorInfo, setErrorInfo] = useState();
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const navigate = useNavigate();
   const [selectedProject] = useSelectedProject();
   const { reloadProfiles } = useSetup();
   const { showToast } = useMyCustomToast();
 
-  // UI state
+  // Editor state
+  const [editorContent, setEditorContent] = useState("");
+  const [originalContent, setOriginalContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [originalContent, setOriginalContent] = useState("");
-  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
-  const [lastSaved, setLastSaved] = useState();
+  const [isValid, setIsValid] = useState(true);
+  const [errorInfo, setErrorInfo] = useState();
+
+  // UI state
+  const [fontSize, setFontSize] = useState(14);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
-  const [editorRef, setEditorRef] = useState();
+  const [lastSaved, setLastSaved] = useState();
+  // editorRef removed (unused)
   const [ruleProject, setRuleProject] = useState();
+
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sensei-check-sidebar-collapsed");
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Autosave state
+  const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
+    const saved = localStorage.getItem("sensei-check-autosave-enabled");
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  // Persist sidebar state
+  useEffect(() => {
+    localStorage.setItem(
+      "sensei-check-sidebar-collapsed",
+      JSON.stringify(sidebarCollapsed),
+    );
+  }, [sidebarCollapsed]);
+
+  // Persist autosave setting
+  useEffect(() => {
+    localStorage.setItem(
+      "sensei-check-autosave-enabled",
+      JSON.stringify(autosaveEnabled),
+    );
+  }, [autosaveEnabled]);
 
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
@@ -135,27 +491,7 @@ function SenseiCheckRulesEditor() {
   const senseiCheckYamlLinter = linter(createSenseiCheckYamlLinter());
 
   // Jump to error location functionality
-  const jumpToError = useCallback(
-    (line) => {
-      if (editorRef && editorRef.view) {
-        try {
-          const lineNumber = Math.max(
-            1,
-            Math.min(line, editorRef.view.state.doc.lines),
-          );
-          const pos = editorRef.view.state.doc.line(lineNumber).from;
-          editorRef.view.dispatch({
-            selection: { anchor: pos },
-            scrollIntoView: true,
-          });
-          editorRef.view.focus();
-        } catch (error) {
-          console.error("Error jumping to line:", error);
-        }
-      }
-    },
-    [editorRef],
-  );
+  // ...existing code...
 
   // Track cursor position
   const cursorPositionExtension = EditorView.updateListener.of((update) => {
@@ -399,316 +735,278 @@ function SenseiCheckRulesEditor() {
     [editorContent],
   );
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <span className="ml-2">Loading rule configuration...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-2 sm:p-4">
-      <div className="flex items-center mb-4">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <h1 className="text-lg sm:text-2xl font-bold">
-            {ruleId ? "Edit Sensei-Check Rule" : "Create New Sensei-Check Rule"}
-          </h1>
-          {isLoading && (
-            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md">
-              <Loader2 className="w-3 sm:w-4 h-3 sm:h-4 animate-spin" />
-              <span className="text-xs sm:text-sm font-medium">Loading...</span>
-            </div>
-          )}
+    <div className="container mx-auto p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          <div>
+            <h1 className="text-xl font-semibold">
+              {ruleId
+                ? "Edit Sensei-Check Rule"
+                : "Create New Sensei-Check Rule"}
+            </h1>
+            <p className="text-sm text-foreground-500">
+              Conversation Correctness Rules Configuration
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="mb-3 flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-4">
-            <div className="min-h-[32px] flex items-center flex-1 w-full">
-              {isValid ? (
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span className="font-medium">Valid YAML</span>
+        {/* Main Editor Area */}
+        <div className="flex-1">
+          {/* Validation status and toolbar */}
+          <div className="mb-3 flex items-start justify-between gap-4">
+            {/* Validation Status */}
+            <div className="min-h-[32px] flex items-center flex-1">
+              {errorInfo ? (
+                <div className="flex items-center space-x-2 text-danger-600 bg-danger-50 dark:bg-danger-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="font-medium">
+                    YAML Error: {errorInfo.message}
+                  </span>
                 </div>
-              ) : (
-                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium">Invalid YAML</div>
-                    {errorInfo && (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className="text-xs opacity-75 mt-0.5 cursor-pointer hover:opacity-100 underline decoration-dotted"
-                        onClick={() =>
-                          errorInfo.line && jumpToError(errorInfo.line)
-                        }
-                        onKeyDown={(e) => {
-                          if (
-                            (e.key === "Enter" || e.key === " ") &&
-                            errorInfo.line
-                          ) {
-                            jumpToError(errorInfo.line);
-                          }
-                        }}
-                        title={
-                          errorInfo.line
-                            ? `Click to jump to line ${errorInfo.line}`
-                            : undefined
-                        }
-                      >
-                        {errorInfo.message}
-                        {errorInfo.line && ` at line ${errorInfo.line}`}
-                      </div>
-                    )}
-                  </div>
+              ) : isValid && editorContent.trim() ? (
+                <div className="flex items-center space-x-2 text-success-600 bg-success-50 dark:bg-success-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-medium">YAML is valid</span>
                 </div>
-              )}
+              ) : undefined}
             </div>
 
-            <div className="flex items-center justify-end w-full sm:w-auto">
+            {/* Editor Toolbar */}
+            <div className="flex items-center space-x-2">
+              {/* Save Button - Primary Action */}
               <Button
-                size="sm"
-                color="primary"
+                color={hasUnsavedChanges ? "primary" : "default"}
                 variant={hasUnsavedChanges ? "solid" : "flat"}
-                onPress={() => handleSave()}
+                size="sm"
                 isLoading={isSaving}
-                isDisabled={isLoading}
-                className="h-8 px-3 text-sm w-full sm:w-auto"
+                isDisabled={!hasUnsavedChanges || !isValid || isSaving}
+                startContent={!isSaving && <Save className="w-4 h-4" />}
+                onPress={handleSave}
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    Saving...
-                  </>
-                ) : ruleId ? (
-                  <>
-                    <Edit className="mr-1.5 h-3.5 w-3.5" />
-                    {hasUnsavedChanges ? "Update*" : "Update"}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
-                    {hasUnsavedChanges ? "Save*" : "Save"}
-                  </>
-                )}
+                {isSaving ? "Saving..." : "Save"}
               </Button>
+
+              {/* Documentation Toggle */}
+              <Tooltip
+                content={
+                  sidebarCollapsed ? "Show Documentation" : "Hide Documentation"
+                }
+              >
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  aria-label={
+                    sidebarCollapsed
+                      ? "Show Documentation"
+                      : "Hide Documentation"
+                  }
+                >
+                  <BookOpen className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+
+              {/* Editor Settings */}
+              <Popover placement="bottom-end">
+                <PopoverTrigger>
+                  <Button
+                    variant="flat"
+                    size="sm"
+                    isIconOnly
+                    aria-label="Editor Settings"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64">
+                  <div className="px-4 py-3">
+                    <h4 className="text-medium font-semibold mb-3">
+                      Editor Settings
+                    </h4>
+
+                    {/* Font Size Controls */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium">Font Size</span>
+                      </div>
+                      <div className="flex items-center justify-center space-x-2">
+                        <Button
+                          variant="flat"
+                          size="sm"
+                          isIconOnly
+                          onPress={zoomOut}
+                          isDisabled={fontSize <= 8}
+                          aria-label="Decrease font size"
+                        >
+                          <ZoomOutIcon className="w-4 h-4" />
+                        </Button>
+                        <div className="text-sm px-3 py-1 bg-default-100 rounded min-w-[50px] text-center">
+                          {fontSize}px
+                        </div>
+                        <Button
+                          variant="flat"
+                          size="sm"
+                          isIconOnly
+                          onPress={zoomIn}
+                          isDisabled={fontSize >= 24}
+                          aria-label="Increase font size"
+                        >
+                          <ZoomInIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Autosave Toggle */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col flex-1">
+                        <span className="text-sm font-medium">Autosave</span>
+                        <span className="text-xs text-foreground-500 mt-1">
+                          Saves automatically every 5 seconds
+                        </span>
+                      </div>
+                      <div className="flex-shrink-0 pt-1">
+                        <Switch
+                          isSelected={autosaveEnabled}
+                          onValueChange={setAutosaveEnabled}
+                          size="sm"
+                          aria-label="Toggle autosave"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
+          {/* Editor */}
           <div className="relative">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-[70vh] bg-default-100 rounded-lg">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-default-500">Loading editor...</p>
-                </div>
-              </div>
-            ) : (
-              <CodeMirror
-                value={editorContent}
-                height="60vh"
-                width="100%"
-                extensions={[
-                  yaml(),
-                  EditorView.lineWrapping,
-                  autocompletion({
-                    override: [senseiCheckCompletions],
-                    closeOnBlur: false,
-                    activateOnTyping: true,
-                    maxRenderedOptions: 20,
-                  }),
-                  senseiCheckYamlLinter,
-                  lintGutter(),
-                  customKeymap,
-                  highlightSelectionMatches(),
-                  cursorPositionExtension,
-                ]}
-                onChange={handleEditorChange}
-                theme={isDark ? materialDark : githubLight}
-                basicSetup={{
-                  lineNumbers: true,
-                  foldGutter: true,
-                  highlightActiveLineGutter: true,
-                  highlightActiveLine: true,
-                  lineWrapping: true,
-                  autocompletion: true,
-                }}
-                style={{ fontSize: `${fontSize}px` }}
-                ref={setEditorRef}
-              />
-            )}
+            <CodeMirror
+              value={editorContent}
+              onChange={handleEditorChange}
+              theme={isDark ? materialDark : githubLight}
+              height="70vh"
+              width="100%"
+              extensions={[
+                yaml(),
+                EditorView.lineWrapping,
+                autocompletion({
+                  override: [senseiCheckCompletions],
+                  closeOnBlur: false,
+                  activateOnTyping: true,
+                  maxRenderedOptions: 20,
+                }),
+                senseiCheckYamlLinter,
+                lintGutter(),
+                customKeymap,
+                highlightSelectionMatches(),
+                cursorPositionExtension,
+              ]}
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: true,
+                dropCursor: false,
+                allowMultipleSelections: false,
+                indentOnInput: true,
+                bracketMatching: true,
+                closeBrackets: true,
+                autocompletion: true,
+                highlightSelectionMatches: false,
+                searchKeymap: true,
+              }}
+              placeholder="Enter your Sensei-check rule YAML configuration here..."
+              style={{ fontSize: `${fontSize}px` }}
+            />
 
-            {/* Status Bar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-2 sm:px-4 py-2 rounded-b-lg gap-2 sm:gap-0">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            {/* Status bar directly under editor */}
+            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex items-center gap-4">
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
                 <span>{lineCount} lines</span>
-                <span className="hidden sm:inline">
-                  {editorContent.length} characters
-                </span>
-                {editorContent.length > 0 && (
-                  <span className="hidden sm:inline">{wordCount} words</span>
-                )}
-
-                {/* Zoom controls */}
-                <div className="flex items-center gap-1 sm:ml-2 sm:border-l sm:border-default-300 sm:pl-3">
-                  <Button
-                    variant="light"
-                    size="sm"
-                    onPress={zoomOut}
-                    aria-label="Zoom out"
-                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
-                  >
-                    <ZoomOutIcon className="w-3 h-3" />
-                  </Button>
-                  <span className="text-default-400 text-xs font-mono">
-                    {fontSize}px
+                <span>{editorContent.length} characters</span>
+                {editorContent.length > 0 && <span>{wordCount} words</span>}
+                {hasUnsavedChanges && (
+                  <span className="text-warning-600 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-warning-500 rounded-full" />
+                    <span>Unsaved changes</span>
                   </span>
-                  <Button
-                    variant="light"
-                    size="sm"
-                    onPress={zoomIn}
-                    aria-label="Zoom in"
-                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
-                  >
-                    <ZoomInIcon className="w-3 h-3" />
-                  </Button>
-                </div>
+                )}
+                {autosaveEnabled && ruleId && (
+                  <span className="text-success-600 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
+                    <span>Autosave enabled</span>
+                  </span>
+                )}
+                {lastSaved && (
+                  <span className="text-foreground-400">
+                    Last saved: {lastSaved.toLocaleTimeString()}
+                  </span>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {/* Autosave controls */}
-                {ruleId && (
-                  <label className="flex items-center gap-1 sm:gap-2 cursor-pointer text-default-600 hover:text-default-700">
-                    <input
-                      type="checkbox"
-                      checked={autosaveEnabled}
-                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
-                      className="w-3 h-3"
-                    />
-                    <span className="hidden sm:inline">Auto-save</span>
-                    <span className="sm:hidden">Auto</span>
-                  </label>
-                )}
-                {hasUnsavedChanges ? (
-                  autosaveEnabled && ruleId ? (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                      <span className="hidden sm:inline">
-                        Auto-save pending
-                      </span>
-                      <span className="sm:hidden">Pending</span>
-                    </span>
-                  ) : (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                      <span>Unsaved</span>
-                    </span>
-                  )
-                ) : lastSaved ? (
-                  <span className="text-green-600">
-                    <span className="hidden sm:inline">
-                      Saved: {lastSaved.toLocaleTimeString()}
-                    </span>
-                    <span className="sm:hidden">Saved</span>
-                  </span>
-                ) : undefined}
+              <div className="flex items-center gap-3">
+                <span>Ctrl+S to save</span>
                 <span className="text-default-400">YAML</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Documentation Panel */}
-        <div className="w-full lg:w-1/3">
-          <div className="sticky top-4">
-            <Tabs defaultValue="sensei-rules" className="space-y-3 -mt-1">
-              <Tab key="sensei-rules" title="Sensei-Check Rules Help">
-                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    Sensei-Check Rules Documentation
-                  </h2>
-                  <div className="text-xs text-default-500 mb-3 space-y-1">
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+F
-                      </kbd>{" "}
-                      to search in editor
-                    </div>
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+S
-                      </kbd>{" "}
-                      to save the file
-                    </div>
-                    <div>Click any code example to copy it</div>
-                  </div>
-                  <Accordion variant="light" className="px-0">
-                    <AccordionItem
-                      key="placeholder"
-                      title={
-                        <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                          Documentation Placeholder
-                        </span>
-                      }
-                    >
-                      <div className="space-y-3 pt-1 pb-2">
-                        <p className="text-xs sm:text-sm text-default-foreground">
-                          Detailed documentation for Sensei-Check rules will be
-                          added here. This section will include examples, best
-                          practices, and configuration options.
-                        </p>
-                        <div className="space-y-1.5">
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
-                            onClick={() => {
-                              const exampleCode = `name: more_toppings_cost_more
-description: Adding more toppings to a custom pizza cost more
-active: True
-conversations: 2
-when: conv[0].size == conv[1].size and conv[0].drink == conv[1].drink
-if: len(conv[0].toppings) > len(conv[1].toppings)
-then: extract_float(conv[0].price) > extract_float(conv[1].price)`;
-                              navigator.clipboard.writeText(exampleCode);
-                              showToast("success", "Code copied to clipboard");
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                const exampleCode = `name: more_toppings_cost_more
-description: Adding more toppings to a custom pizza cost more
-active: True
-conversations: 2
-when: conv[0].size == conv[1].size and conv[0].drink == conv[1].drink
-if: len(conv[0].toppings) > len(conv[1].toppings)
-then: extract_float(conv[0].price) > extract_float(conv[1].price)`;
-                                navigator.clipboard.writeText(exampleCode);
-                                showToast(
-                                  "success",
-                                  "Code copied to clipboard",
-                                );
-                              }
-                            }}
-                            title="Click to copy"
-                          >
-                            {`name: more_toppings_cost_more
-description: Adding more toppings to a custom pizza cost more
-active: True
-conversations: 2
-when: conv[0].size == conv[1].size and conv[0].drink == conv[1].drink
-if: len(conv[0].toppings) > len(conv[1].toppings)
-then: extract_float(conv[0].price) > extract_float(conv[1].price)`}
-                          </div>
-                          <p className="text-xs sm:text-sm text-default-foreground">
-                            Example rule structure for validating pizza pricing
-                            logic.
-                          </p>
-                        </div>
-                      </div>
-                    </AccordionItem>
-                  </Accordion>
+        {/* Documentation Sidebar */}
+        <div
+          className={`${
+            sidebarCollapsed ? "hidden lg:hidden" : "w-96"
+          } transition-all duration-300`}
+        >
+          <div className="h-full flex flex-col border border-border bg-background rounded-lg">
+            {/* Sidebar Header */}
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Documentation</h2>
                 </div>
-              </Tab>
-            </Tabs>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(true)}
+                  className="lg:hidden"
+                >
+                  <ChevronRightIcon className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="mt-2">
+                <Link
+                  href="https://github.com/sensei-chat/sensei"
+                  target="_blank"
+                  className="flex items-center space-x-1 text-sm text-primary hover:text-primary-600"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>Full Documentation</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Documentation Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <ScrollableTabs sections={senseiCheckDocumentationSections} />
+            </div>
           </div>
         </div>
       </div>
