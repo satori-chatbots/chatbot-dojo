@@ -10,12 +10,12 @@ import {
   ModalHeader,
   Form,
   useDisclosure,
-  Select,
-  SelectItem,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
+  Tabs,
+  Tab,
 } from "@heroui/react";
 import {
   Upload,
@@ -38,6 +38,7 @@ import {
   fetchTracerExecutions,
   deleteProfileExecution,
   fetchFiles,
+  fetchSenseiCheckRules,
 } from "../api/file-api";
 import { deleteProject, fetchProject } from "../api/project-api";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
@@ -55,6 +56,7 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { getProviderDisplayName } from "../constants/providers";
+import SenseiCheckRules from "../components/sensei-check-rules";
 
 // Move preventDefault to the outer scope
 const preventDefault = (event) => event.preventDefault();
@@ -65,6 +67,9 @@ const getApiKeyName = (apiKeyId, apiKeys) => {
   const apiKey = apiKeys.find((key) => key.id === apiKeyId);
   return apiKey ? apiKey.name : "Unknown";
 };
+
+// Helper function to get tab storage key
+const getTabStorageKey = (projectId) => `sensei-selected-tab-${projectId}`;
 
 function Home() {
   const { showToast } = useMyCustomToast();
@@ -104,8 +109,39 @@ function Home() {
   const [allProfiles, setAllProfiles] = useState([]);
   const [loadingExecutions, setLoadingExecutions] = useState(false);
 
+  // List of sensei check rules in the selected project
+  const [senseiCheckRules, setSenseiCheckRules] = useState([]);
+
   // Track which execution folders are expanded to show all profiles
   const [expandedExecutions, setExpandedExecutions] = useState(new Set());
+
+  // Track selected tab per project
+  const [selectedTab, setSelectedTab] = useState("profiles");
+
+  // Helper functions for tab persistence
+  const saveSelectedTab = useCallback((projectId, tabKey) => {
+    if (projectId) {
+      localStorage.setItem(getTabStorageKey(projectId), tabKey);
+    }
+  }, []);
+
+  const loadSelectedTab = useCallback((projectId) => {
+    if (projectId) {
+      const saved = localStorage.getItem(getTabStorageKey(projectId));
+      return saved || "profiles"; // Default to "profiles" tab
+    }
+    return "profiles";
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tabKey) => {
+      setSelectedTab(tabKey);
+      if (selectedProject) {
+        saveSelectedTab(selectedProject.id, tabKey);
+      }
+    },
+    [selectedProject, saveSelectedTab],
+  );
 
   // Function to reload executions and profiles
   const reloadExecutions = useCallback(async () => {
@@ -227,6 +263,25 @@ function Home() {
     }
   }, [selectedProject, showToast]);
 
+  // Function to reload sensei check rules
+  const reloadSenseiCheckRules = useCallback(async () => {
+    if (!selectedProject) {
+      setSenseiCheckRules([]);
+      return;
+    }
+
+    try {
+      const rules = await fetchSenseiCheckRules(selectedProject.id);
+      setSenseiCheckRules(rules);
+    } catch (error) {
+      console.error("Error fetching SENSEI Check rules:", error);
+      showToast("error", "Error loading SENSEI Check rules");
+      setSenseiCheckRules([]);
+    } finally {
+      // No need to do anything here
+    }
+  }, [selectedProject, showToast]);
+
   // Handler for execution deletion
   const handleDeleteExecution = useCallback(
     async (executionId) => {
@@ -281,7 +336,7 @@ function Home() {
   const [profileGenParameters, setProfileGenParameters] = useState({
     sessions: 8,
     turns_per_session: 5,
-    verbosity: "normal",
+    verbosity: "verbose", // Always use verbose mode
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const statusIntervalReference = useRef();
@@ -304,7 +359,7 @@ function Home() {
   const handleProfileGenParameterChange = (field, value) => {
     setProfileGenParameters((previous) => ({
       ...previous,
-      [field]: field === "verbosity" ? value : Number.parseInt(value) || 0,
+      [field]: Number.parseInt(value) || 0,
     }));
   };
 
@@ -449,6 +504,16 @@ function Home() {
     }
   }, [selectedProject, checkForOngoingGeneration]);
 
+  // Load saved tab when project changes
+  useEffect(() => {
+    if (selectedProject) {
+      const savedTab = loadSelectedTab(selectedProject.id);
+      setSelectedTab(savedTab);
+    } else {
+      setSelectedTab("profiles"); // Reset to default when no project
+    }
+  }, [selectedProject, loadSelectedTab]);
+
   // Clear generation status when switching between projects
   useEffect(() => {
     // Reset generation status immediately when project changes
@@ -533,7 +598,8 @@ function Home() {
   // When the selected project changes, reload the executions
   useEffect(() => {
     reloadExecutions();
-  }, [selectedProject, reloadExecutions]);
+    reloadSenseiCheckRules();
+  }, [selectedProject, reloadExecutions, reloadSenseiCheckRules]);
 
   // When the list of projects changes, verify that the selected project still exists
   useEffect(() => {
@@ -942,214 +1008,236 @@ function Home() {
 
           {/* Project Details */}
           <div>
-            {/* Upload Section */}
-            <div className="flex flex-col space-y-4">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
-                  isDragActive
-                    ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
-                    : "border-border dark:border-border-dark hover:border-gray-400 dark:hover:border-gray-500"
-                }`}
-              >
-                <input {...getInputProps()} />
-                <div className="flex flex-col items-center gap-2 mb-2">
-                  <Upload
-                    className={`transition-all duration-300 ease-in-out ${
+            <Tabs
+              aria-label="Chatbot Testing Workflow"
+              className="w-full"
+              classNames={{
+                tabList: "w-full",
+                tab: "flex-1",
+              }}
+              selectedKey={selectedTab}
+              onSelectionChange={handleTabChange}
+            >
+              <Tab key="profiles" title="🔄 Generate & Test">
+                {/* Upload Section */}
+                <div className="flex flex-col space-y-4">
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-5 transition-all duration-300 ease-in-out flex flex-col items-center justify-center ${
                       isDragActive
-                        ? "text-primary scale-125 opacity-80"
-                        : "text-foreground/50 dark:text-foreground-dark/50 hover:text-foreground/70 dark:hover:text-foreground-dark/70"
-                    } w-10 h-10`}
-                  />
-                  <div className="text-center">
-                    <p
-                      className={`text-sm font-medium transition-all duration-300 ${
-                        isDragActive
-                          ? "text-primary"
-                          : "text-foreground dark:text-foreground-dark"
-                      }`}
-                    >
-                      {isDragActive
-                        ? "Drop files here"
-                        : "Drag and drop YAML files here"}
-                    </p>
-                    <p className="text-xs mt-0.5 text-foreground/60 dark:text-foreground-dark/60">
-                      or click to browse
-                    </p>
+                        ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-lg"
+                        : "border-border dark:border-border-dark hover:border-gray-400 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <div className="flex flex-col items-center gap-2 mb-2">
+                      <Upload
+                        className={`transition-all duration-300 ease-in-out ${
+                          isDragActive
+                            ? "text-primary scale-125 opacity-80"
+                            : "text-foreground/50 dark:text-foreground-dark/50 hover:text-foreground/70 dark:hover:text-foreground-dark/70"
+                        } w-10 h-10`}
+                      />
+                      <div className="text-center">
+                        <p
+                          className={`text-sm font-medium transition-all duration-300 ${
+                            isDragActive
+                              ? "text-primary"
+                              : "text-foreground dark:text-foreground-dark"
+                          }`}
+                        >
+                          {isDragActive
+                            ? "Drop files here"
+                            : "Drag and drop YAML files here"}
+                        </p>
+                        <p className="text-xs mt-0.5 text-foreground/60 dark:text-foreground-dark/60">
+                          or click to browse
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* File list part, keep your existing implementation */}
+                    {selectedUploadFiles && selectedUploadFiles.length > 0 && (
+                      <div className="mt-4 w-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">
+                            {selectedUploadFiles.length === 1
+                              ? "1 file selected"
+                              : `${selectedUploadFiles.length} files selected`}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            onPress={() => {
+                              setSelectedUploadFiles(undefined);
+                              if (fileInputReference.current) {
+                                fileInputReference.current.value = undefined;
+                              }
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="bg-background-subtle dark:bg-darkbg-card rounded-md p-2 max-h-28 overflow-y-auto backdrop-blur-sm border border-border dark:border-border-dark">
+                          <ul className="text-sm text-foreground/70 dark:text-foreground-dark/70 space-y-1">
+                            {[...selectedUploadFiles].map((file, index) => (
+                              <li
+                                key={index}
+                                className="truncate flex items-center"
+                              >
+                                <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                                {file.name}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <Button
+                          className="mt-3 w-full"
+                          color="primary"
+                          onPress={handleUpload}
+                          startContent={<Upload className="w-4 h-4" />}
+                        >
+                          Upload{" "}
+                          {selectedUploadFiles.length > 1
+                            ? `${selectedUploadFiles.length} Files`
+                            : "File"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Create New YAML button */}
+                  <Button
+                    onPress={() => navigate("/yaml-editor")}
+                    fullWidth
+                    color="secondary"
+                    variant="ghost"
+                    startContent={<File className="w-4 h-4" />}
+                  >
+                    Create Profile Manually
+                  </Button>
+
+                  {/* Auto generate profiles */}
+                  <Button
+                    fullWidth
+                    color="secondary"
+                    variant="ghost"
+                    startContent={
+                      isGenerating ? undefined : (
+                        <Sparkles className="w-4 h-4" />
+                      )
+                    }
+                    isLoading={isGenerating}
+                    isDisabled={isGenerating}
+                    onPress={() => setIsGenerateModalOpen(true)}
+                  >
+                    {isGenerating
+                      ? "Generating Profiles..."
+                      : "Auto-Generate with TRACER"}
+                  </Button>
+                  {isGenerating && (
+                    <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
+                      <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
+                      <h3 className="text-base font-medium mb-1 text-foreground dark:text-foreground-dark">
+                        TRACER is exploring your chatbot...
+                      </h3>
+                      {generationStage && (
+                        <p className="text-sm font-medium text-primary mb-2 text-center">
+                          {generationStage}
+                        </p>
+                      )}
+                      <div className="w-full bg-muted dark:bg-muted-dark rounded-full h-2.5 mb-2">
+                        <div
+                          className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${generationProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 text-center">
+                        {generationProgress}% complete
+                      </p>
+                      <p className="text-xs text-foreground/50 dark:text-foreground-dark/50 text-center mt-1">
+                        This process may take a few minutes depending on the
+                        complexity of your chatbot.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* File list part, keep your existing implementation */}
-                {selectedUploadFiles && selectedUploadFiles.length > 0 && (
-                  <div className="mt-4 w-full">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {selectedUploadFiles.length === 1
-                          ? "1 file selected"
-                          : `${selectedUploadFiles.length} files selected`}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        onPress={() => {
-                          setSelectedUploadFiles(undefined);
-                          if (fileInputReference.current) {
-                            fileInputReference.current.value = undefined;
-                          }
-                        }}
-                      >
-                        Clear
-                      </Button>
+                {/* Profile Executions Section */}
+                <div className="flex-1 overflow-y-auto mt-4">
+                  {loadingExecutions ? (
+                    <div className="text-center py-4">
+                      <p className="text-default-500">Loading executions...</p>
                     </div>
-                    <div className="bg-background-subtle dark:bg-darkbg-card rounded-md p-2 max-h-28 overflow-y-auto backdrop-blur-sm border border-border dark:border-border-dark">
-                      <ul className="text-sm text-foreground/70 dark:text-foreground-dark/70 space-y-1">
-                        {[...selectedUploadFiles].map((file, index) => (
-                          <li
-                            key={index}
-                            className="truncate flex items-center"
-                          >
-                            <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                            {file.name}
-                          </li>
+                  ) : executions.length > 0 ? (
+                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                          📁 Profile Executions ({allProfiles.length} profiles
+                          total)
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="light"
+                          color="primary"
+                          onPress={toggleSelectAllFiles}
+                        >
+                          {selectedFiles.length === allProfiles.length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        {executions.map((execution) => (
+                          <ExecutionFolder
+                            key={execution.id}
+                            execution={execution}
+                            profiles={execution.profiles}
+                            selectedFiles={selectedFiles}
+                            onProfileSelect={selectFile}
+                            showAll={expandedExecutions.has(execution.id)}
+                            onToggleShowAll={toggleShowAllProfiles}
+                            onDeleteExecution={handleDeleteExecution}
+                          />
                         ))}
-                      </ul>
-                    </div>
-                    <Button
-                      className="mt-3 w-full"
-                      color="primary"
-                      onPress={handleUpload}
-                      startContent={<Upload className="w-4 h-4" />}
-                    >
-                      Upload{" "}
-                      {selectedUploadFiles.length > 1
-                        ? `${selectedUploadFiles.length} Files`
-                        : "File"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Create New YAML button */}
-              <Button
-                onPress={() => navigate("/yaml-editor")}
-                fullWidth
-                color="secondary"
-                variant="ghost"
-                startContent={<File className="w-4 h-4" />}
-              >
-                Create Profile Manually
-              </Button>
-
-              {/* Auto generate profiles */}
-              <Button
-                fullWidth
-                color="secondary"
-                variant="ghost"
-                startContent={
-                  isGenerating ? undefined : <Sparkles className="w-4 h-4" />
-                }
-                isLoading={isGenerating}
-                isDisabled={isGenerating}
-                onPress={() => setIsGenerateModalOpen(true)}
-              >
-                {isGenerating
-                  ? "Generating Profiles..."
-                  : "Auto-Generate Profiles"}
-              </Button>
-              {isGenerating && (
-                <div className="mt-4 border-2 border-primary/20 rounded-lg p-4 flex flex-col items-center">
-                  <Sparkles className="h-8 w-8 text-primary animate-pulse mb-2" />
-                  <h3 className="text-base font-medium mb-1 text-foreground dark:text-foreground-dark">
-                    Generating Profiles
-                  </h3>
-                  {generationStage && (
-                    <p className="text-sm font-medium text-primary mb-2 text-center">
-                      {generationStage}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-foreground/60 dark:text-foreground-dark/60 text-center">
+                      No profiles uploaded yet.
                     </p>
                   )}
-                  <div className="w-full bg-muted dark:bg-muted-dark rounded-full h-2.5 mb-2">
-                    <div
-                      className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${generationProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-foreground/60 dark:text-foreground-dark/60 text-center">
-                    {generationProgress}% complete
-                  </p>
-                  <p className="text-xs text-foreground/50 dark:text-foreground-dark/50 text-center mt-1">
-                    This process may take a few minutes depending on the
-                    complexity of your chatbot.
-                  </p>
                 </div>
-              )}
-            </div>
 
-            {/* Profile Executions Section */}
-            <div className="flex-1 overflow-y-auto mt-4">
-              {loadingExecutions ? (
-                <div className="text-center py-4">
-                  <p className="text-default-500">Loading executions...</p>
+                {/* Action Buttons */}
+                <div className="mt-4 flex space-x-4">
+                  <Button
+                    color="danger"
+                    className="flex-1"
+                    onPress={handleDelete}
+                    startContent={<Trash className="w-4 h-4" />}
+                  >
+                    Delete Selected
+                  </Button>
+                  <Button
+                    color="primary"
+                    className="flex-1"
+                    onPress={openExecuteModal}
+                    startContent={<Play className="w-4 h-4" />}
+                  >
+                    Run SENSEI Test
+                  </Button>
                 </div>
-              ) : executions.length > 0 ? (
-                <>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
-                      📁 Profile Executions ({allProfiles.length} profiles
-                      total)
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      color="primary"
-                      onPress={toggleSelectAllFiles}
-                    >
-                      {selectedFiles.length === allProfiles.length
-                        ? "Deselect All"
-                        : "Select All"}
-                    </Button>
-                  </div>
-                  <div className="space-y-1">
-                    {executions.map((execution) => (
-                      <ExecutionFolder
-                        key={execution.id}
-                        execution={execution}
-                        profiles={execution.profiles}
-                        selectedFiles={selectedFiles}
-                        onProfileSelect={selectFile}
-                        showAll={expandedExecutions.has(execution.id)}
-                        onToggleShowAll={toggleShowAllProfiles}
-                        onDeleteExecution={handleDeleteExecution}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className="text-foreground/60 dark:text-foreground-dark/60 text-center">
-                  No profiles uploaded yet.
-                </p>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-4 flex space-x-4">
-              <Button
-                color="danger"
-                className="flex-1"
-                onPress={handleDelete}
-                startContent={<Trash className="w-4 h-4" />}
-              >
-                Delete Selected
-              </Button>
-              <Button
-                color="primary"
-                className="flex-1"
-                onPress={openExecuteModal}
-                startContent={<Play className="w-4 h-4" />}
-              >
-                Execute Test
-              </Button>
-            </div>
+              </Tab>
+              <Tab key="sensei-check" title="📊 Analyze Results">
+                <SenseiCheckRules
+                  project={selectedProject}
+                  rules={senseiCheckRules}
+                  reloadRules={reloadSenseiCheckRules}
+                />
+              </Tab>
+            </Tabs>
           </div>
         </Card>
       ) : (
@@ -1186,12 +1274,19 @@ function Home() {
       {/* Generate Profiles Modal */}
       <Modal isOpen={isGenerateModalOpen} onOpenChange={setIsGenerateModalOpen}>
         <ModalContent>
-          <ModalHeader>Generate Profiles with TRACER</ModalHeader>
+          <ModalHeader>🔍 Generate Profiles with TRACER</ModalHeader>
           <ModalBody className="flex flex-col gap-4">
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>TRACER</strong> will automatically explore your chatbot
+                by having conversations with it, discovering different user
+                behaviors and creating realistic user profiles for testing.
+              </p>
+            </div>
             <div className="space-y-3">
               <div>
                 <h4 className="text-sm font-medium text-foreground mb-2">
-                  📊 Configuration
+                  📊 Exploration Configuration
                 </h4>
                 <div className="space-y-3">
                   <Input
@@ -1202,6 +1297,7 @@ function Home() {
                     onValueChange={(value) =>
                       handleProfileGenParameterChange("sessions", value)
                     }
+                    description="Number of separate conversation sessions to run"
                   />
                   <Input
                     label="Turns per session"
@@ -1214,61 +1310,28 @@ function Home() {
                         value,
                       )
                     }
+                    description="Number of conversation turns in each session"
                   />
-                  <Select
-                    label="Log Verbosity"
-                    selectedKeys={[profileGenParameters.verbosity]}
-                    onSelectionChange={(selection) => {
-                      const verbosity = [...selection][0];
-                      handleProfileGenParameterChange("verbosity", verbosity);
-                    }}
-                    description="Choose log detail level for debugging"
-                  >
-                    <SelectItem key="normal" textValue="Normal">
-                      <div className="flex flex-col">
-                        <span className="text-small">Normal</span>
-                        <span className="text-tiny text-default-400">
-                          Standard output
-                        </span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem key="verbose" textValue="Verbose">
-                      <div className="flex flex-col">
-                        <span className="text-small">Verbose (-v)</span>
-                        <span className="text-tiny text-default-400">
-                          Shows conversations and interactions
-                        </span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem key="debug" textValue="Debug">
-                      <div className="flex flex-col">
-                        <span className="text-small">Debug (-vv)</span>
-                        <span className="text-tiny text-default-400">
-                          Debug mode with detailed technical info
-                        </span>
-                      </div>
-                    </SelectItem>
-                  </Select>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-default-200">
                 <h4 className="text-sm font-medium text-foreground mb-2">
-                  📝 Using:
+                  Using Models:
                 </h4>
                 <div className="text-sm text-default-600 space-y-1">
                   <div>
-                    Exploration Model:{" "}
-                    {selectedProject?.llm_model || "gpt-4o-mini"} (TRACER
+                    <strong>Exploration:</strong>{" "}
+                    {selectedProject?.llm_model || "gpt-4o-mini"} (for TRACER
                     exploration)
                   </div>
                   <div>
-                    Profile Model:{" "}
+                    <strong>Profile Generation:</strong>{" "}
                     {selectedProject?.profile_model || "gpt-4o-mini"} (embedded
                     in profiles)
                   </div>
                   <div>
-                    Technology:{" "}
+                    <strong>Technology:</strong>{" "}
                     {availableConnectors.find(
                       (c) => c.id === selectedProject?.chatbot_connector,
                     )?.technology || "Unknown"}{" "}
@@ -1292,7 +1355,7 @@ function Home() {
               isDisabled={isGenerating}
               onPress={handleGenerateProfiles}
             >
-              Generate Profiles
+              🚀 Start TRACER Exploration
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -1313,8 +1376,15 @@ function Home() {
       {/* Modal execution name */}
       <Modal isOpen={isExecuteOpen} onOpenChange={setIsExecuteOpen}>
         <ModalContent>
-          <ModalHeader>Execute Test</ModalHeader>
-          <ModalBody className="flex flex-col gap-4 items-center">
+          <ModalHeader>🤖 Run SENSEI Test</ModalHeader>
+          <ModalBody className="flex flex-col gap-4">
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>SENSEI</strong> will simulate realistic conversations
+                using your selected user profiles to test how your chatbot
+                responds to different user behaviors and scenarios.
+              </p>
+            </div>
             <Form
               className="w-full"
               onSubmit={handleSubmitPressed}
@@ -1323,10 +1393,12 @@ function Home() {
             >
               <Input
                 name="name"
-                label="Execution Name (optional)"
+                label="Test Execution Name (optional)"
+                placeholder="e.g., Customer Support Test v1"
                 value={executionName}
                 onValueChange={setExecutionName}
                 isDisabled={loadingValidation}
+                description="Leave blank for auto-generated name"
               />
               <ModalFooter className="w-full flex justify-center gap-4">
                 <Button type="reset" color="danger" variant="light">
@@ -1334,7 +1406,7 @@ function Home() {
                 </Button>
                 {/* Didn't add isLoading={loadingValidation} because it looks werid since it loads instantly */}
                 <Button type="submit" color="primary">
-                  Execute
+                  🚀 Start SENSEI Test
                 </Button>
               </ModalFooter>
             </Form>

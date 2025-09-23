@@ -133,6 +133,13 @@ def upload_to_types(instance: "TypeFile", filename: str) -> str:
     return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
 
 
+def upload_to_sensei_check_rules(instance: "SenseiCheckRule", filename: str) -> str:
+    """Returns the path where the SENSEI Check Rules files are stored."""
+    user_id = instance.project.owner.id
+    project_id = instance.project.id
+    return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
+
+
 def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
     """Returns the path where custom connector YAML files are stored."""
     user_id = instance.owner.id
@@ -782,6 +789,25 @@ class TypeFile(models.Model):
         super().save(*args, **kwargs)
 
 
+class SenseiCheckRule(models.Model):
+    """Model to store SENSEI Check rule files."""
+
+    file = models.FileField(upload_to=upload_to_sensei_check_rules, max_length=500)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=255, blank=True)
+    project = models.ForeignKey("Project", related_name="sensei_check_rules", on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        """Return the base name of the file."""
+        return Path(self.file.name).name
+
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+        """Save the SenseiCheckRule instance."""
+        if not self.name:
+            self.name = Path(self.file.name).stem
+        super().save(*args, **kwargs)
+
+
 class ProjectConfig(models.Model):
     """Model to store the run.yml configuration for each project."""
 
@@ -811,6 +837,14 @@ def delete_personality_file_from_media(
 @receiver(post_delete, sender=RuleFile)
 def delete_rule_file_from_media(sender: type[RuleFile], instance: RuleFile, **_kwargs: Any) -> None:  # noqa: ANN401
     """Delete the rule file from media when the RuleFile is deleted."""
+    instance.file.delete(save=False)
+
+
+@receiver(post_delete, sender=SenseiCheckRule)
+def delete_sensei_check_rule_file_from_media(
+    sender: type[SenseiCheckRule], instance: SenseiCheckRule, **_kwargs: object
+) -> None:
+    """Delete the SENSEI Check rule file from media when the SenseiCheckRule is deleted."""
     instance.file.delete(save=False)
 
 

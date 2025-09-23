@@ -36,11 +36,17 @@ const ProjectsDashboard = React.lazy(
 const TestCase = React.lazy(() => import("./views/test-case"));
 const LoginView = React.lazy(() => import("./views/login-view"));
 const TracerDashboard = React.lazy(() => import("./views/tracer-dashboard"));
+const SenseiCheckResultsView = React.lazy(
+  () => import("./views/sensei-check-results-view"),
+);
 const SignupView = React.lazy(() => import("./views/signup-view"));
 const UserProfileView = React.lazy(() => import("./views/user-profile-view"));
 const YamlEditor = React.lazy(() => import("./views/yaml-editor-view"));
 const CustomConnectorYamlEditor = React.lazy(
   () => import("./views/custom-connector-yaml-editor"),
+);
+const SenseiCheckRulesEditor = React.lazy(
+  () => import("./views/sensei-check-rules-editor"),
 );
 const SetupGuide = React.lazy(() => import("./views/setup-guide"));
 
@@ -155,20 +161,79 @@ function AppContent() {
                 </Link>
               </NavbarItem>
             )}
-            {/* SENSEI Dashboard */}
-            <NavbarItem isActive={location.pathname === "/dashboard"}>
-              <Link to="/dashboard" className="hover:underline text-sm">
-                <span className="hidden lg:inline">SENSEI Dashboard</span>
-                <span className="lg:hidden">SENSEI</span>
-              </Link>
-            </NavbarItem>
-            {/* TRACER Dashboard */}
-            <NavbarItem isActive={location.pathname === "/tracer-dashboard"}>
-              <Link to="/tracer-dashboard" className="hover:underline text-sm">
-                <span className="hidden lg:inline">TRACER Dashboard</span>
-                <span className="lg:hidden">TRACER</span>
-              </Link>
-            </NavbarItem>
+            {/* Results Dashboards Dropdown */}
+            <Dropdown>
+              <NavbarItem>
+                <DropdownTrigger>
+                  <Button
+                    disableRipple
+                    className="p-0 bg-transparent data-[hover=true]:bg-transparent"
+                    endContent={<ChevronDown className="w-4 h-4" />}
+                    radius="sm"
+                    variant="light"
+                  >
+                    <span className="hidden lg:inline font-medium">
+                      Results Dashboards
+                    </span>
+                    <span className="lg:hidden">Results</span>
+                  </Button>
+                </DropdownTrigger>
+              </NavbarItem>
+              <DropdownMenu
+                aria-label="Results dashboard options"
+                className="w-[340px]"
+                itemClasses={{
+                  base: "gap-4",
+                }}
+              >
+                <DropdownItem
+                  key="tracer-dashboard"
+                  onPress={() => navigate("/tracer-dashboard")}
+                  className={
+                    location.pathname === "/tracer-dashboard"
+                      ? "bg-primary/10"
+                      : ""
+                  }
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">TRACER Dashboard</span>
+                    <span className="text-tiny text-default-400">
+                      Results from TRACER exploration and profile generation.
+                    </span>
+                  </div>
+                </DropdownItem>
+                <DropdownItem
+                  key="sensei-dashboard"
+                  onPress={() => navigate("/dashboard")}
+                  className={
+                    location.pathname === "/dashboard" ? "bg-primary/10" : ""
+                  }
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">SENSEI Dashboard</span>
+                    <span className="text-tiny text-default-400">
+                      Results from SENSEI user simulator tests.
+                    </span>
+                  </div>
+                </DropdownItem>
+                <DropdownItem
+                  key="sensei-check-results"
+                  onPress={() => navigate("/sensei-check-results")}
+                  className={
+                    location.pathname === "/sensei-check-results"
+                      ? "bg-primary/10"
+                      : ""
+                  }
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">SENSEI Check Dashboard</span>
+                    <span className="text-tiny text-default-400">
+                      Results from rules over SENSEI&apos;s conversations.
+                    </span>
+                  </div>
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
             {/* Setup Guide */}
             {user && (
               <Dropdown>
@@ -338,6 +403,20 @@ function AppContent() {
                 </Link>
               </NavbarMenuItem>
             )}
+            <div className="px-4 py-2 text-tiny text-default-400 font-medium">
+              RESULTS DASHBOARDS
+            </div>
+            <NavbarMenuItem
+              isActive={location.pathname === "/tracer-dashboard"}
+            >
+              <Link
+                to="/tracer-dashboard"
+                className="hover:underline text-sm"
+                onClick={handleLinkClick}
+              >
+                TRACER Dashboard
+              </Link>
+            </NavbarMenuItem>
             <NavbarMenuItem isActive={location.pathname === "/dashboard"}>
               <Link
                 to="/dashboard"
@@ -348,14 +427,14 @@ function AppContent() {
               </Link>
             </NavbarMenuItem>
             <NavbarMenuItem
-              isActive={location.pathname === "/tracer-dashboard"}
+              isActive={location.pathname === "/sensei-check-results"}
             >
               <Link
-                to="/tracer-dashboard"
+                to="/sensei-check-results"
                 className="hover:underline text-sm"
                 onClick={handleLinkClick}
               >
-                TRACER Dashboard
+                SENSEI Check Results
               </Link>
             </NavbarMenuItem>
             {user && (
@@ -464,6 +543,10 @@ function AppContent() {
               <Route path="/sensei-dashboard" element={<SenseiDashboard />} />
               <Route path="/tracer-dashboard" element={<TracerDashboard />} />
               <Route
+                path="/sensei-check-results"
+                element={<SenseiCheckResultsView />}
+              />
+              <Route
                 path="/chatbot-connectors"
                 element={
                   <PrivateRoute>
@@ -511,6 +594,22 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <CustomConnectorYamlEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/sensei-check-rules"
+                element={
+                  <PrivateRoute>
+                    <SenseiCheckRulesEditor />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/sensei-check-rules/:ruleId"
+                element={
+                  <PrivateRoute>
+                    <SenseiCheckRulesEditor />
                   </PrivateRoute>
                 }
               />

@@ -17,6 +17,22 @@ export const fetchFiles = async (project_id) => {
   }
 };
 
+export const fetchSenseiCheckRules = async (project_id) => {
+  if (!project_id) {
+    return [];
+  }
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}?project_id=${project_id}`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching SENSEI Check rules:", error);
+    throw error;
+  }
+};
+
 export const uploadFiles = async (formData) => {
   try {
     const response = await apiClient(
@@ -30,6 +46,129 @@ export const uploadFiles = async (formData) => {
     return data;
   } catch (error) {
     console.error("Error uploading files:", error);
+    throw error;
+  }
+};
+
+export const uploadSenseiCheckRules = async (formData) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.UPLOAD_SENSEI_CHECK_RULES}`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error uploading SENSEI Check rules:", error);
+    throw error;
+  }
+};
+
+export const deleteSenseiCheckRule = async (id) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${id}/`,
+      {
+        method: "DELETE",
+      },
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
+export const fetchSenseiCheckRule = async (id) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${id}/`,
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
+export const updateSenseiCheckRule = async (
+  id,
+  content,
+  projectId,
+  options = {},
+) => {
+  try {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: "application/x-yaml" });
+    formData.append("file", blob, "rule.yaml");
+    formData.append("project", projectId);
+    formData.append(
+      "ignore_validation_errors",
+      options.ignoreValidationErrors ? "true" : "false",
+    );
+
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${id}/`,
+      {
+        method: "PUT",
+        body: formData,
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
+export const createSenseiCheckRule = async (
+  content,
+  projectId,
+  options = {},
+) => {
+  try {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: "application/x-yaml" });
+    formData.append("file", blob, "rule.yaml");
+    formData.append("project", projectId);
+    formData.append(
+      "ignore_validation_errors",
+      options.ignoreValidationErrors ? "true" : "false",
+    );
+
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.UPLOAD_SENSEI_CHECK_RULES}`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating SENSEI Check rule:", error);
+    throw error;
+  }
+};
+
+export const toggleSenseiCheckRuleActive = async (ruleId, active) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENSEI_CHECK_RULES}${ruleId}/toggle-active/`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ active }),
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error toggling SENSEI Check rule active state:", error);
     throw error;
   }
 };
@@ -121,6 +260,31 @@ export const fetchTemplate = async () => {
     console.error("Error fetching template:", error);
     throw error;
   }
+};
+
+export const fetchSenseiCheckRuleTemplate = async () => {
+  // Return a basic template - this can be enhanced later when the backend
+  // provides a specific template endpoint. There's no async work here so a
+  // try/catch is unnecessary and can make linting tools think the catch is
+  // unreachable.
+  return {
+    template: `# Sensei Check Rule Configuration
+# Define your validation rule here
+
+name: example_rule
+description: Example validation rule
+active: True
+conversations: 1
+oracle: conversation_length() == conversation_length('assistant') + conversation_length('user')
+
+# Adjust the rule parameters as needed
+# - name: unique identifier for the rule
+# - description: brief description of what the rule validates
+# - active: True/False to enable/disable the rule
+# - conversations: number of conversations to validate
+# - oracle: the validation logic
+`,
+  };
 };
 
 export const validateYamlOnServer = async (content) => {
@@ -294,6 +458,35 @@ export const fetchTracerExecutionLogs = async (executionId) => {
     return data;
   } catch (error) {
     console.error("Error fetching TRACER execution logs:", error);
+    throw error;
+  }
+};
+
+// Execute SENSEI Check on selected test cases
+export const executeSenseiCheck = async (
+  projectId,
+  testCaseIds,
+  verbose = false,
+) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.EXECUTE_SENSEI_CHECK}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          test_case_ids: testCaseIds,
+          verbose: verbose,
+        }),
+      },
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error executing SENSEI Check:", error);
     throw error;
   }
 };

@@ -24,6 +24,7 @@ from .project_files import (
     PersonalityFileViewSet,
     ProjectConfigViewSet,
     RuleFileViewSet,
+    SenseiCheckRuleViewSet,
     TypeFileViewSet,
 )
 from .projects import ProjectViewSet, fetch_file_content, validate_yaml
@@ -32,6 +33,7 @@ from .sensei_execution_views import (
     ExecuteSelectedProfilesAPIView,
     check_sensei_execution_status,
     delete_profile_execution,
+    execute_sensei_check,
     get_profile_executions,
     stop_sensei_execution,
 )
@@ -60,6 +62,7 @@ __all__ = [
     "ProjectViewSet",
     "RegisterViewSet",
     "RuleFileViewSet",
+    "SenseiCheckRuleViewSet",
     "TestCaseViewSet",
     "TestErrorViewSet",
     "TestFileViewSet",
@@ -70,6 +73,7 @@ __all__ = [
     "check_sensei_execution_status",
     "check_tracer_generation_status",
     "delete_profile_execution",
+    "execute_sensei_check",
     "fetch_file_content",
     "generate_profiles",
     "get_available_connectors",

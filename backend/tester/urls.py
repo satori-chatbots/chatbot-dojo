@@ -12,6 +12,7 @@ router.register(r"testfiles", api.TestFileViewSet, basename="testfile")
 router.register(r"projects", api.ProjectViewSet, basename="project")
 router.register(r"personalityfiles", api.PersonalityFileViewSet, basename="personalityfile")
 router.register(r"rulefiles", api.RuleFileViewSet, basename="rulefile")
+router.register(r"senseicheckrules", api.SenseiCheckRuleViewSet, basename="senseicheckrule")
 router.register(r"typefiles", api.TypeFileViewSet, basename="typefile")
 router.register(r"projectconfigs", api.ProjectConfigViewSet, basename="projectconfig")
 router.register(r"chatbotconnectors", api.ChatbotConnectorViewSet, basename="chatbotconnector")
@@ -135,6 +136,11 @@ urlpatterns = [
         "llm-providers/",
         get_all_providers,
         name="llm-providers",
+    ),
+    path(
+        "execute-sensei-check/",
+        api.execute_sensei_check,
+        name="execute-sensei-check",
     ),
     # Then Include Router URLs
     path("", include(router.urls)),

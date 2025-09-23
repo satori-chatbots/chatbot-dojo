@@ -6,6 +6,8 @@ and executes them against chatbot systems for testing.
 """
 
 import shutil
+import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -551,3 +553,249 @@ def delete_profile_execution(request: Request, execution_id: int) -> Response:
         return Response(
             {"error": "An error occurred while deleting the execution."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+def _validate_sensei_check_request(data: dict) -> tuple[str | None, list, bool]:
+    """Validate SENSEI Check request data."""
+    project_id = data.get("project_id")
+    test_case_ids = data.get("test_case_ids", [])
+    verbose = data.get("verbose", False)
+
+    return project_id, test_case_ids, verbose
+
+
+def _get_project_and_test_cases(project_id: str, test_case_ids: list) -> tuple[Project, QuerySet]:
+    """Get project and test cases with validation."""
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist as e:
+        msg = "Project not found"
+        raise ValueError(msg) from e
+
+    test_cases = TestCase.objects.filter(id__in=test_case_ids, project=project)
+    if not test_cases.exists():
+        msg = "No valid test cases found"
+        raise ValueError(msg)
+
+    if not project.sensei_check_rules.exists():
+        msg = "No SENSEI Check rules found for this project"
+        raise ValueError(msg)
+
+    return project, test_cases
+
+
+def _setup_execution_paths(project: Project, test_case_ids: list) -> tuple[Path, Path, Path]:
+    """Setup execution paths and validate project structure."""
+    user_id = project.owner.id
+    project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{user_id}" / f"project_{project.id}"
+    rules_path = project_path / "rules"
+
+    if not rules_path.exists():
+        msg = "SENSEI Check rules directory not found"
+        raise ValueError(msg)
+
+    # Create execution directory with timestamp
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    execution_dir = project_path / "sensei_check_results" / f"execution_{timestamp}"
+    execution_dir.mkdir(parents=True, exist_ok=True)
+
+    return project_path, rules_path, execution_dir
+
+
+def _copy_conversation_files(test_cases: QuerySet, project_path: Path, conversations_path: Path) -> None:
+    """Copy conversation files from selected test cases to execution directory."""
+    for test_case in test_cases:
+        # Path to test case results in the project's sensei_results directory
+        results_path = project_path / "sensei_results" / f"test_{test_case.id}"
+
+        if results_path.exists():
+            # Copy all YAML conversation files directly to conversations directory (flattened)
+            for yaml_file in results_path.rglob("*.yml"):
+                # Skip report files - only include conversation files
+                if "report" not in yaml_file.name.lower():
+                    dest_file = conversations_path / yaml_file.name
+                    shutil.copy2(yaml_file, dest_file)
+
+
+def _build_sensei_command(rules_path: Path, conversations_path: Path, csv_path: Path, *, verbose: bool) -> list[str]:
+    """Build the sensei-check command."""
+    cmd = [
+        "sensei-check",  # Updated to use sensei-check without .py
+        "--rules",
+        str(rules_path),
+        "--conversations",
+        str(conversations_path),
+    ]
+
+    if verbose:
+        cmd.append("--verbose")
+
+    # Create CSV file path for results in execution directory
+    cmd.extend(["--dump", str(csv_path)])
+
+    return cmd
+
+
+def _execute_sensei_command(cmd: list[str], log_path: Path, csv_path: Path) -> dict:
+    """Execute the sensei-check command and return results."""
+    try:
+        # Execute sensei-check command
+        logger.info(f"Executing SENSEI Check command: {' '.join(cmd)}")
+
+        result = subprocess.run(  # noqa: S603  # Internal command with controlled input
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+            check=False,  # Don't raise exception on non-zero exit
+        )
+
+        # Write execution logs to file
+        with log_path.open("w", encoding="utf-8") as log_file:
+            log_file.write(f"Command: {' '.join(cmd)}\n")
+            log_file.write(f"Exit Code: {result.returncode}\n")
+            log_file.write(f"Timestamp: {datetime.now(UTC).isoformat()}\n")
+            log_file.write("\n--- STDOUT ---\n")
+            log_file.write(result.stdout)
+            log_file.write("\n--- STDERR ---\n")
+            log_file.write(result.stderr)
+
+        # Read CSV results if file exists
+        csv_results = None
+        if csv_path.exists():
+            with csv_path.open(encoding="utf-8") as f:
+                csv_results = f.read()
+
+    except subprocess.TimeoutExpired:
+        # Log timeout to execution log
+        with log_path.open("w", encoding="utf-8") as log_file:
+            log_file.write(f"Command: {' '.join(cmd)}\n")
+            log_file.write("Status: TIMEOUT (5 minutes)\n")
+            log_file.write(f"Timestamp: {datetime.now(UTC).isoformat()}\n")
+
+        return {"error": "SENSEI Check execution timed out (5 minutes)", "status": status.HTTP_408_REQUEST_TIMEOUT}
+
+    except subprocess.SubprocessError as e:
+        # Log error to execution log
+        with log_path.open("w", encoding="utf-8") as log_file:
+            log_file.write(f"Command: {' '.join(cmd)}\n")
+            log_file.write("Status: ERROR\n")
+            log_file.write(f"Error: {e!s}\n")
+            log_file.write(f"Timestamp: {datetime.now(UTC).isoformat()}\n")
+
+        return {"error": f"Error executing SENSEI Check: {e!s}", "status": status.HTTP_500_INTERNAL_SERVER_ERROR}
+
+    else:
+        return {
+            "success": True,
+            "exit_code": result.returncode,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "csv_results": csv_results,
+        }
+
+
+def _create_success_response(execution_result: dict, test_cases_count: int, cmd: list[str], paths: dict) -> Response:
+    """Create a successful execution response."""
+    return Response(
+        {
+            **execution_result,
+            "test_cases_checked": test_cases_count,
+            "command_executed": " ".join(cmd),
+            "execution_directory": str(paths["execution_dir"]),
+            "results_file": str(paths["csv_path"]),
+            "log_file": str(paths["log_path"]),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+def _create_error_response(error_msg: str, error_status: int) -> Response:
+    """Create an error response."""
+    return Response({"error": error_msg}, status=error_status)
+
+
+def _handle_sensei_execution(project_id: str, test_case_ids: list, *, verbose: bool) -> Response:
+    """Handle the main logic for SENSEI execution."""
+    # Get project and setup paths with validation
+    try:
+        project, test_cases = _get_project_and_test_cases(project_id, test_case_ids)
+        project_path, rules_path, execution_dir = _setup_execution_paths(project, test_case_ids)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            error_status = status.HTTP_404_NOT_FOUND
+        elif "rules directory" in str(e).lower():
+            error_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+        else:
+            error_status = status.HTTP_400_BAD_REQUEST
+        return _create_error_response(str(e), error_status)
+
+    # Create conversations directory within execution directory
+    conversations_path = execution_dir / "conversations"
+    conversations_path.mkdir(parents=True, exist_ok=True)
+
+    # Copy conversation files and check if we have any
+    _copy_conversation_files(test_cases, project_path, conversations_path)
+    if not any(conversations_path.rglob("*.yml")):
+        return _create_error_response("No conversation files found in selected test cases", status.HTTP_400_BAD_REQUEST)
+
+    # Build and execute sensei-check command
+    csv_path = execution_dir / "results.csv"
+    log_path = execution_dir / "execution.log"
+    cmd = _build_sensei_command(rules_path, conversations_path, csv_path, verbose=verbose)
+    execution_result = _execute_sensei_command(cmd, log_path, csv_path)
+
+    # Check execution result and return appropriate response
+    if "error" in execution_result:
+        return _create_error_response(
+            execution_result["error"], execution_result.get("status", status.HTTP_500_INTERNAL_SERVER_ERROR)
+        )
+
+    # Success case
+    paths = {"execution_dir": execution_dir, "csv_path": csv_path, "log_path": log_path}
+    return _create_success_response(execution_result, len(test_cases), cmd, paths)
+
+
+@api_view(["POST"])
+def execute_sensei_check(request: Request) -> Response:
+    """Execute SENSEI Check on selected test cases.
+
+    This endpoint executes sensei-check command on the conversation outputs
+    from selected test cases using the project's SENSEI Check rules.
+
+    Results are saved in the project's filevault directory structure:
+    project_path/sensei_check_results/execution_<timestamp>/
+    ├── conversations/          # Copied conversation files (flat layout)
+    │   ├── conversation_1.yml  # All conversation files are copied here without per-testcase subfolders
+    │   ├── conversation_2.yml
+    │   └── ...
+    ├── results.csv            # CSV output
+    └── execution.log          # Execution logs
+
+    Args:
+        request: POST request with:
+            - project_id: ID of the project containing rules
+            - test_case_ids: List of test case IDs to check
+            - verbose: Optional boolean for verbose output
+
+    Returns:
+        Response with execution results and output
+    """
+    try:
+        # Validate request data
+        project_id, test_case_ids, verbose = _validate_sensei_check_request(request.data)
+
+        # Validate required fields
+        if not project_id or not test_case_ids:
+            missing_field = "project_id" if not project_id else "test_case_ids"
+            return _create_error_response(f"{missing_field} is required", status.HTTP_400_BAD_REQUEST)
+
+        # Handle the main execution logic
+        return _handle_sensei_execution(project_id, test_case_ids, verbose=verbose)
+
+    except (Project.DoesNotExist, TestCase.DoesNotExist, ValueError, OSError, DatabaseError) as e:
+        if isinstance(e, DatabaseError):
+            logger.error(f"Database error in execute_sensei_check: {e}")
+            return _create_error_response("Database error occurred", status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"Error in execute_sensei_check: {e}")
+        return _create_error_response(f"Error processing request: {e!s}", status.HTTP_400_BAD_REQUEST)
