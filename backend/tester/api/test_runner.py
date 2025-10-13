@@ -31,7 +31,6 @@ class TestExecutionConfig:
     """Configuration for test execution."""
 
     test_case_id: int
-    script_path: str
     project_path: str
     profiles_directory: str
     results_path: str
@@ -255,7 +254,8 @@ class TestRunner:
     ) -> tuple[subprocess.Popen[bytes], int]:
         """Setup test execution configuration for Celery version."""
         project = test_case.project
-        user_simulator_dir = str(Path(config.script_path).parent.parent)
+        working_directory = config.project_path
+        Path(working_directory).mkdir(parents=True, exist_ok=True)
 
         # Calculate total conversations for monitoring
         self.execution_utils.calculate_total_conversations(test_case)
@@ -267,13 +267,13 @@ class TestRunner:
                 test_case=test_case,
                 results_path=config.results_path,
                 technology=config.technology,
-                user_simulator_dir=user_simulator_dir,
+                user_simulator_dir=working_directory,
             )
         )
 
         # Build command
         cmd = self._build_command(config_data, config.project_path)
-        logger.info(f"Executing command: {' '.join(cmd)} from directory: {user_simulator_dir}")
+        logger.info(f"Executing command: {' '.join(cmd)} from directory: {working_directory}")
 
         # Prepare environment for subprocess
         env = os.environ.copy()
@@ -289,7 +289,7 @@ class TestRunner:
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=user_simulator_dir,
+            cwd=working_directory,
             env=env,
         )
 
