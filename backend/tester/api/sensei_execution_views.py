@@ -157,8 +157,6 @@ class ExecuteSelectedProfilesAPIView(APIView):
         execution_name = request.data.get("test_name")
         api_key = SenseiApiKeyManager.setup_api_key(project)
 
-        base_dir = Path(settings.BASE_DIR)
-        sensei_script_path = str(base_dir / "user-simulator" / "src" / "sensei_chat.py")
         project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{request.user.id}" / f"project_{project.id}"
 
         with transaction.atomic():
@@ -189,7 +187,6 @@ class ExecuteSelectedProfilesAPIView(APIView):
 
             execution_config = TestExecutionConfig(
                 test_case_id=test_case.id,
-                script_path=sensei_script_path,
                 project_path=str(project_path),
                 profiles_directory=f"testcase_{test_case.id}",
                 results_path=str(results_path),
@@ -201,7 +198,6 @@ class ExecuteSelectedProfilesAPIView(APIView):
             # Convert config to dict for Celery serialization
             config_dict = {
                 "test_case_id": execution_config.test_case_id,
-                "script_path": execution_config.script_path,
                 "project_path": execution_config.project_path,
                 "profiles_directory": execution_config.profiles_directory,
                 "results_path": execution_config.results_path,

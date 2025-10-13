@@ -68,7 +68,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: uv run celery -A senseiweb worker -l info
+    command: /app/.venv/bin/celery -A senseiweb worker -l info
 
   frontend:
     build:
