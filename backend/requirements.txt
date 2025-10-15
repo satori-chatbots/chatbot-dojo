@@ -59,11 +59,11 @@ cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.4.2
     # via requests
-chatbot-connectors==0.5.0
+chatbot-connectors==0.5.1
     # via
     #   chatbot-tracer
     #   user-simulator
-chatbot-tracer==0.5.0
+chatbot-tracer==0.5.1
     # via sensei-web
 click==8.2.1
     # via
@@ -259,7 +259,7 @@ langchain==0.3.26
     # via
     #   sensei-web
     #   user-simulator
-langchain-core==0.3.68
+langchain-core==0.3.79
     # via
     #   chatbot-tracer
     #   langchain
@@ -274,7 +274,7 @@ langchain-google-genai==2.0.10
     # via chatbot-tracer
 langchain-google-vertexai==2.0.27
     # via sensei-web
-langchain-openai==0.3.28
+langchain-openai==0.3.35
     # via
     #   chatbot-tracer
     #   user-simulator
@@ -323,7 +323,7 @@ numpy==2.3.1
     #   scikit-learn
     #   scipy
     #   shapely
-openai==1.95.0
+openai==2.3.0
     # via
     #   langchain-openai
     #   sensei-web
@@ -571,7 +571,7 @@ urllib3==2.4.0
     #   selenium
     #   twine
     #   types-requests
-user-simulator==0.4.2
+user-simulator==0.4.3
     # via sensei-web
 validators==0.35.0
     # via langchain-google-vertexai

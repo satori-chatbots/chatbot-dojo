@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -292,20 +292,20 @@ wheels = [
 
 [[package]]
 name = "chatbot-connectors"
-version = "0.5.0"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/a5/b6643e508ccf6bd3d998057e41b722cf0897bf7b351957ae0e325b3c489d/chatbot_connectors-0.5.0.tar.gz", hash = "sha256:8a2f5ccb0f4cd6eb9b241f513cdbf6281410ba24091c7f1c9897246b74720b76", size = 41974, upload-time = "2025-10-13T11:29:13.323Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/eb/906883692f6da8ad56e7cfba80018af2efde7699d1c8408a708de8270d55/chatbot_connectors-0.5.1.tar.gz", hash = "sha256:8b310295361df90af34093eaf518aea0852709abefa6c7d53e18fab7ff08b253", size = 41946, upload-time = "2025-10-15T09:49:22.156Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/b2/21a2829446b6c76f68ed0b660cb9f595512ad6fc5e108d95793962352ffe/chatbot_connectors-0.5.0-py3-none-any.whl", hash = "sha256:7bafcea7df7e3b7701e1ffba385474c85affa6c1e1b8f2bb74de5b8589992018", size = 27854, upload-time = "2025-10-13T11:29:11.714Z" },
+    { url = "https://files.pythonhosted.org/packages/08/9b/cb6b702629b1abaa656ff7d333c620e73461c98c1e40243305340a61ea96/chatbot_connectors-0.5.1-py3-none-any.whl", hash = "sha256:0d92a9925013871215c7a7eaf2c8b91519ad8f742bb05f9da19dea3ec3192227", size = 27761, upload-time = "2025-10-15T09:49:21.252Z" },
 ]
 
 [[package]]
 name = "chatbot-tracer"
-version = "0.5.0"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bs4" },
@@ -318,9 +318,9 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langgraph" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/3d/4dbc165b894af4b201ab04db10420ebec0ca19572e644e0788b5c6343df7/chatbot_tracer-0.5.0.tar.gz", hash = "sha256:c25d4220b07b70287d2bc11ece6ff364f041d2d5b3684cffdf8983b7f18e9c7e", size = 159844, upload-time = "2025-10-13T11:59:34.817Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/ff/979d654d876f826503c5b56c83934d9f49e6be7de3c43d8752afc1b2fda7/chatbot_tracer-0.5.1.tar.gz", hash = "sha256:e5f065fd0a4f795ae3f561609bbd8530f82feb12c53de4e8dfbea5751d0779c3", size = 159813, upload-time = "2025-10-15T10:14:48.933Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/97/5a2888d9f38b08078a15219a55e8e2758caddc3894509345bf473acaece4/chatbot_tracer-0.5.0-py3-none-any.whl", hash = "sha256:54f18b41d6f247bf37bc9df1232cd8490ead58669c0de2ca676b8bd0f1a7c084", size = 191492, upload-time = "2025-10-13T11:59:33.368Z" },
+    { url = "https://files.pythonhosted.org/packages/51/31/23e6c9f015e605fabb36f648126640a2b17a37d9d75d6c1f99041a7d1d6e/chatbot_tracer-0.5.1-py3-none-any.whl", hash = "sha256:1391e24a15b2b4cb11e4345d64dda3caa9a4310325e2e8d08ca5b0bc0d6c486a", size = 191491, upload-time = "2025-10-15T10:14:47.534Z" },
 ]
 
 [[package]]
@@ -1192,7 +1192,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "0.3.68"
+version = "0.3.79"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -1203,9 +1203,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/23/20/f5b18a17bfbe3416177e702ab2fd230b7d168abb17be31fb48f43f0bb772/langchain_core-0.3.68.tar.gz", hash = "sha256:312e1932ac9aa2eaf111b70fdc171776fa571d1a86c1f873dcac88a094b19c6f", size = 563041, upload-time = "2025-07-03T17:02:28.704Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/99/f926495f467e0f43289f12e951655d267d1eddc1136c3cf4dd907794a9a7/langchain_core-0.3.79.tar.gz", hash = "sha256:024ba54a346dd9b13fb8b2342e0c83d0111e7f26fa01f545ada23ad772b55a60", size = 580895, upload-time = "2025-10-09T21:59:08.359Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/da/c89be0a272993bfcb762b2a356b9f55de507784c2755ad63caec25d183bf/langchain_core-0.3.68-py3-none-any.whl", hash = "sha256:5e5c1fbef419590537c91b8c2d86af896fbcbaf0d5ed7fdcdd77f7d8f3467ba0", size = 441405, upload-time = "2025-07-03T17:02:27.115Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/71/46b0efaf3fc6ad2c2bd600aef500f1cb2b7038a4042f58905805630dd29d/langchain_core-0.3.79-py3-none-any.whl", hash = "sha256:92045bfda3e741f8018e1356f83be203ec601561c6a7becfefe85be5ddc58fdb", size = 449779, upload-time = "2025-10-09T21:59:06.493Z" },
 ]
 
 [[package]]
@@ -1246,16 +1246,16 @@ wheels = [
 
 [[package]]
 name = "langchain-openai"
-version = "0.3.28"
+version = "0.3.35"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6b/1d/90cd764c62d5eb822113d3debc3abe10c8807d2c0af90917bfe09acd6f86/langchain_openai-0.3.28.tar.gz", hash = "sha256:6c669548dbdea325c034ae5ef699710e2abd054c7354fdb3ef7bf909dc739d9e", size = 753951, upload-time = "2025-07-14T10:50:44.076Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fb/96/06d0d25a37e05a0ff2d918f0a4b0bf0732aed6a43b472b0b68426ce04ef8/langchain_openai-0.3.35.tar.gz", hash = "sha256:fa985fd041c3809da256a040c98e8a43e91c6d165b96dcfeb770d8bd457bf76f", size = 786635, upload-time = "2025-10-06T15:09:28.463Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/56/75f3d84b69b8bdae521a537697375e1241377627c32b78edcae337093502/langchain_openai-0.3.28-py3-none-any.whl", hash = "sha256:4cd6d80a5b2ae471a168017bc01b2e0f01548328d83532400a001623624ede67", size = 70571, upload-time = "2025-07-14T10:50:42.492Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/d5/c90c5478215c20ee71d8feaf676f7ffd78d0568f8c98bd83f81ce7562ed7/langchain_openai-0.3.35-py3-none-any.whl", hash = "sha256:76d5707e6e81fd461d33964ad618bd326cb661a1975cef7c1cb0703576bdada5", size = 75952, upload-time = "2025-10-06T15:09:27.137Z" },
 ]
 
 [[package]]
@@ -1561,7 +1561,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.95.0"
+version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1573,9 +1573,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/2f/0c6f509a1585545962bfa6e201d7fb658eb2a6f52fb8c26765632d91706c/openai-1.95.0.tar.gz", hash = "sha256:54bc42df9f7142312647dd485d34cca5df20af825fa64a30ca55164be2cf4cc9", size = 488144, upload-time = "2025-07-10T18:35:49.946Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/90/8f26554d24d63ed4f94d33c24271559863223a67e624f4d2e65ba8e48dca/openai-2.3.0.tar.gz", hash = "sha256:8d213ee5aaf91737faea2d7fc1cd608657a5367a18966372a3756ceaabfbd812", size = 589616, upload-time = "2025-10-10T01:12:50.851Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/a5/57d0bb58b938a3e3f352ff26e645da1660436402a6ad1b29780d261cc5a5/openai-1.95.0-py3-none-any.whl", hash = "sha256:a7afc9dca7e7d616371842af8ea6dbfbcb739a85d183f5f664ab1cc311b9ef18", size = 755572, upload-time = "2025-07-10T18:35:47.507Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/5b/4be258ff072ed8ee15f6bfd8d5a1a4618aa4704b127c0c5959212ad177d6/openai-2.3.0-py3-none-any.whl", hash = "sha256:a7aa83be6f7b0ab2e4d4d7bcaf36e3d790874c0167380c5d0afd0ed99a86bd7b", size = 999768, upload-time = "2025-10-10T01:12:48.647Z" },
 ]
 
 [[package]]
@@ -2443,7 +2443,7 @@ requires-dist = [
     { name = "allpairspy", specifier = ">=2.5.1" },
     { name = "boto3", specifier = ">=1.38.30" },
     { name = "celery", specifier = ">=5.5.3" },
-    { name = "chatbot-tracer", specifier = "==0.5.0" },
+    { name = "chatbot-tracer", specifier = "==0.5.1" },
     { name = "cryptography", specifier = ">=45.0.3" },
     { name = "dj-database-url", specifier = ">=3.0.1" },
     { name = "django", specifier = ">=5.2.2" },
@@ -2468,7 +2468,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "selenium", specifier = ">=4.33.0" },
     { name = "tiktoken", specifier = ">=0.9.0" },
-    { name = "user-simulator", specifier = "==0.4.2" },
+    { name = "user-simulator", specifier = "==0.4.3" },
     { name = "webdriver-manager", specifier = ">=4.0.2" },
 ]
 
@@ -2783,7 +2783,7 @@ socks = [
 
 [[package]]
 name = "user-simulator"
-version = "0.4.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "allpairspy" },
@@ -2810,9 +2810,9 @@ dependencies = [
     { name = "webdriver-manager" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ee/91/b6b243cb4fbf268becc1bfd93be1ff1de94963eed16f7dcccb893158c3fd/user_simulator-0.4.2.tar.gz", hash = "sha256:ebf6fe37fa6481e2de2caedf45480ca83e54a9cd633eabb478f3ab9878430556", size = 1042509, upload-time = "2025-10-13T12:25:07.926Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/08/9a3e84d1cf0a1fbdc381ad33cafc11fdb712884246fe58c4051f2766bc5f/user_simulator-0.4.3.tar.gz", hash = "sha256:058f31464131ca6a969b403d3cd78c8f1da26ff3972f40c3a1b6444205c4c583", size = 1042653, upload-time = "2025-10-15T10:08:45.792Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/3b/77562d0ba84732c218c68ba389b736c8e1ab6d9a3033a72dbe3ac930d993/user_simulator-0.4.2-py3-none-any.whl", hash = "sha256:f276060b86f0031128e8a13f651e5fec56c8908eee13914a9be1ecffc25f3bbc", size = 1053326, upload-time = "2025-10-13T12:25:01.629Z" },
+    { url = "https://files.pythonhosted.org/packages/73/d1/10b7599f880d68ee0e0064dfddc095bfe9429e734362c40b30ac7d410d4b/user_simulator-0.4.3-py3-none-any.whl", hash = "sha256:3f2314c1d71a06260d414671a90a14cafdd8f5b258190a02e7c4746e65a7b126", size = 1053337, upload-time = "2025-10-15T10:08:44.538Z" },
 ]
 
 [[package]]
