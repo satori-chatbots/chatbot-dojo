@@ -305,7 +305,7 @@ wheels = [
 
 [[package]]
 name = "chatbot-tracer"
-version = "0.5.2"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bs4" },
@@ -318,9 +318,9 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langgraph" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/1e/f89be2970b9c317d7b8ab871c9d90d3b6d7aea88d003ed9f0a086f37c482/chatbot_tracer-0.5.2.tar.gz", hash = "sha256:ff9a3670a413d92a9cd6e52f45319efd08c1de756de0b93b41375f06e5c33c19", size = 159853, upload-time = "2025-10-15T14:00:55.048Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/95/71/501632a70ac7643239426ca0b6edc34a74ec61b0a5e18e7201cb5502a95d/chatbot_tracer-0.6.0.tar.gz", hash = "sha256:9108c1d6453bad9babb3bf896ab3dbaf96ae025a3d4b84cddbb88822fc02019c", size = 160502, upload-time = "2025-10-16T08:43:42.318Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/f3/1a7d9d54996e12d1df9f0e47343524716c904b5323b4a594f5f2a5df4ef1/chatbot_tracer-0.5.2-py3-none-any.whl", hash = "sha256:b4a4bdf1275c95f697c795d6ce6a4d7d8f627aca2dd6210523a6d5e844bf42d1", size = 191491, upload-time = "2025-10-15T14:00:53.723Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/73/6e480d6121e4516f036447f82c88c0868f236b289a03cf21f8887987f93d/chatbot_tracer-0.6.0-py3-none-any.whl", hash = "sha256:5f1e02f6a89711d8e5a5764255939f8617dfa0a08da09171e3e450188fe01323", size = 192297, upload-time = "2025-10-16T08:43:41.211Z" },
 ]
 
 [[package]]
@@ -2443,7 +2443,7 @@ requires-dist = [
     { name = "allpairspy", specifier = ">=2.5.1" },
     { name = "boto3", specifier = ">=1.38.30" },
     { name = "celery", specifier = ">=5.5.3" },
-    { name = "chatbot-tracer", specifier = "==0.5.2" },
+    { name = "chatbot-tracer", specifier = "==0.6.0" },
     { name = "cryptography", specifier = ">=45.0.3" },
     { name = "dj-database-url", specifier = ">=3.0.1" },
     { name = "django", specifier = ">=5.2.2" },
