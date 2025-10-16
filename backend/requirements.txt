@@ -63,7 +63,7 @@ chatbot-connectors==0.5.2
     # via
     #   chatbot-tracer
     #   user-simulator
-chatbot-tracer==0.5.2
+chatbot-tracer==0.6.0
     # via sensei-web
 click==8.2.1
     # via
