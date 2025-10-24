@@ -63,7 +63,7 @@ chatbot-connectors==0.5.2
     # via
     #   chatbot-tracer
     #   user-simulator
-chatbot-tracer==0.6.0
+chatbot-tracer==0.7.0
     # via sensei-web
 click==8.2.1
     # via
@@ -255,8 +255,9 @@ keyring==25.6.0 ; platform_machine != 'ppc64le' and platform_machine != 's390x'
     # via twine
 kombu==5.5.4
     # via celery
-langchain==0.3.26
+langchain==0.3.27
     # via
+    #   chatbot-tracer
     #   sensei-web
     #   user-simulator
 langchain-core==0.3.79
@@ -278,7 +279,7 @@ langchain-openai==0.3.35
     # via
     #   chatbot-tracer
     #   user-simulator
-langchain-text-splitters==0.3.8
+langchain-text-splitters==0.3.11
     # via langchain
 langgraph==0.6.10
     # via chatbot-tracer
