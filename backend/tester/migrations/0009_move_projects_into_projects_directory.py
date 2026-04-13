@@ -1,6 +1,7 @@
 """Move project storage under a lowercase projects subdirectory for each user."""
 
 import re
+import shutil
 from pathlib import Path
 from typing import ClassVar
 
@@ -37,11 +38,15 @@ def _move_project_directories(apps, *, reverse: bool = False):  # noqa: ANN001, 
         source_path = Path(settings.MEDIA_ROOT) / source_relative
         destination_path = Path(settings.MEDIA_ROOT) / destination_relative
 
-        if not source_path.exists() or destination_path.exists():
+        if not source_path.exists():
             continue
 
+        if destination_path.exists():
+            msg = f"Cannot move project directory from {source_relative} to {destination_relative}: destination exists."
+            raise RuntimeError(msg)
+
         destination_path.parent.mkdir(parents=True, exist_ok=True)
-        source_path.rename(destination_path)
+        shutil.move(str(source_path), str(destination_path))
 
 
 def _update_file_field_paths(apps, *, reverse: bool = False):  # noqa: ANN001, ANN202
@@ -137,6 +142,7 @@ def move_project_storage_backward(apps: StateApps, _schema_editor: BaseDatabaseS
 class Migration(migrations.Migration):
     """Migration to nest project storage under a user-level projects directory."""
 
+    atomic: ClassVar[bool] = False
     dependencies: ClassVar[list[tuple[str, str]]] = [
         ("tester", "0008_migrate_sensei_check_rules_directory"),
     ]
