@@ -110,7 +110,7 @@ def get_user_projects_relative_path(user_id: int) -> Path:
     return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}" / USER_PROJECTS_SUBDIRECTORY
 
 
-def ensure_user_projects_directory(user_id: int) -> Path:
+def ensure_user_projects_directory(user_id: int) -> Path | None:
     """Ensure the user's projects directory exists and return its absolute path."""
     user_projects_path = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(user_id)
     try:
@@ -121,6 +121,7 @@ def ensure_user_projects_directory(user_id: int) -> Path:
             user_id,
             user_projects_path,
         )
+        return None
     return user_projects_path
 
 
@@ -313,7 +314,8 @@ def create_user_projects_directory(
 ) -> None:
     """Create the default projects directory for each new user."""
     if created:
-        transaction.on_commit(lambda: ensure_user_projects_directory(instance.id))
+        user_id = instance.id
+        transaction.on_commit(lambda: ensure_user_projects_directory(user_id))
 
 
 class Project(models.Model):
