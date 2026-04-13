@@ -110,6 +110,13 @@ def get_user_projects_relative_path(user_id: int) -> Path:
     return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}" / USER_PROJECTS_SUBDIRECTORY
 
 
+def ensure_user_projects_directory(user_id: int) -> Path:
+    """Ensure the user's projects directory exists and return its absolute path."""
+    user_projects_path = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(user_id)
+    user_projects_path.mkdir(parents=True, exist_ok=True)
+    return user_projects_path
+
+
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
     """Return the relative path to a project directory or one of its descendants."""
     return get_user_projects_relative_path(user_id) / f"project_{project_id}" / Path(*parts)
@@ -291,6 +298,15 @@ def delete_file_from_media(sender: type[TestFile], instance: TestFile, **_kwargs
 @receiver(post_save, sender=TestFile)
 def set_name(sender: type[TestFile], instance: TestFile, *, created: bool, **kwargs: Any) -> None:  # noqa: ANN401
     """Set the name of the TestFile to the "test_name" field in the YAML file."""
+
+
+@receiver(post_save, sender=CustomUser)
+def create_user_projects_directory(
+    sender: type[CustomUser], instance: CustomUser, *, created: bool, **_kwargs: object
+) -> None:
+    """Create the default projects directory for each new user."""
+    if created:
+        ensure_user_projects_directory(instance.id)
 
 
 class Project(models.Model):
