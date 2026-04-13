@@ -42,8 +42,10 @@ class ProjectStorageLayoutTests(TestCase):
 
     def test_user_creation_initializes_projects_directory(self) -> None:
         """Creating a user should also create the default projects directory."""
-        expected_projects_dir = self.media_root / "projects" / f"user_{self.user.id}" / "projects"
+        with self.captureOnCommitCallbacks(execute=True):
+            user = CustomUser.objects.create_user(email="new-owner@example.com")
 
+        expected_projects_dir = self.media_root / "projects" / f"user_{user.id}" / "projects"
         self.assertTrue(expected_projects_dir.exists())  # noqa: PT009
         self.assertTrue(expected_projects_dir.is_dir())  # noqa: PT009
 

@@ -113,7 +113,14 @@ def get_user_projects_relative_path(user_id: int) -> Path:
 def ensure_user_projects_directory(user_id: int) -> Path:
     """Ensure the user's projects directory exists and return its absolute path."""
     user_projects_path = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(user_id)
-    user_projects_path.mkdir(parents=True, exist_ok=True)
+    try:
+        user_projects_path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        logger.exception(
+            "Failed to create user projects directory for user_id=%s at %s",
+            user_id,
+            user_projects_path,
+        )
     return user_projects_path
 
 
