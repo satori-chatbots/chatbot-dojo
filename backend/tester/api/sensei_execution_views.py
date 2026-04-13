@@ -157,7 +157,7 @@ class ExecuteSelectedProfilesAPIView(APIView):
         execution_name = request.data.get("test_name")
         api_key = SenseiApiKeyManager.setup_api_key(project)
 
-        project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{request.user.id}" / f"project_{project.id}"
+        project_path = Path(project.get_project_path())
 
         with transaction.atomic():
             technology = project.chatbot_connector.technology
@@ -582,8 +582,7 @@ def _get_project_and_test_cases(project_id: str, test_case_ids: list) -> tuple[P
 
 def _setup_execution_paths(project: Project, test_case_ids: list) -> tuple[Path, Path, Path]:
     """Setup execution paths and validate project structure."""
-    user_id = project.owner.id
-    project_path = Path(settings.MEDIA_ROOT) / "projects" / f"user_{user_id}" / f"project_{project.id}"
+    project_path = Path(project.get_project_path())
     rules_path = project_path / "rules"
 
     if not rules_path.exists():

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Error messages
 FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
 EMAIL_REQUIRED_ERROR = "Email is a required field"
+PROJECTS_DIRECTORY_NAME = "projects"
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -103,41 +104,56 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS: ClassVar[list[str]] = []
 
 
+def get_user_projects_relative_path(user_id: int) -> Path:
+    """Return the relative path to the user's projects directory."""
+    return Path("projects") / f"user_{user_id}" / PROJECTS_DIRECTORY_NAME
+
+
+def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
+    """Return the relative path to a project directory or one of its descendants."""
+    return get_user_projects_relative_path(user_id) / f"project_{project_id}" / Path(*parts)
+
+
+def get_project_relative_path_str(user_id: int, project_id: int, *parts: str) -> str:
+    """Return the relative path to a project directory as a string."""
+    return str(get_project_relative_path(user_id, project_id, *parts))
+
+
 def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
     # The test_name should have been set by the model's clean method
     # Get the user and project id
     user_id = instance.project.owner.id
     project_id = instance.project.id
-    return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
+    return get_project_relative_path_str(user_id, project_id, "profiles", filename)
 
 
 def upload_to_personalities(instance: "PersonalityFile", filename: str) -> str:
     """Returns the path where the Personality files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
-    return f"projects/user_{user_id}/project_{project_id}/personalities/{filename}"
+    return get_project_relative_path_str(user_id, project_id, "personalities", filename)
 
 
 def upload_to_rules(instance: "RuleFile", filename: str) -> str:
     """Returns the path where the Rules files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
-    return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
+    return get_project_relative_path_str(user_id, project_id, "rules", filename)
 
 
 def upload_to_types(instance: "TypeFile", filename: str) -> str:
     """Returns the path where the Types files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
-    return f"projects/user_{user_id}/project_{project_id}/types/{filename}"
+    return get_project_relative_path_str(user_id, project_id, "types", filename)
 
 
 def upload_to_sensei_check_rules(instance: "SenseiCheckRule", filename: str) -> str:
     """Returns the path where the SENSEI Check Rules files are stored."""
     user_id = instance.project.owner.id
     project_id = instance.project.id
-    return f"projects/user_{user_id}/project_{project_id}/rules/{filename}"
+    return get_project_relative_path_str(user_id, project_id, "rules", filename)
 
 
 def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
@@ -154,10 +170,9 @@ def upload_to_execution(instance: "TestFile", filename: str) -> str:
     # If execution is provided, use execution-based path
     if instance.execution:
         execution_name = instance.execution.execution_name.lower()
-        return f"projects/user_{user_id}/project_{project_id}/executions/{execution_name}/profiles/{filename}"
+        return get_project_relative_path_str(user_id, project_id, "executions", execution_name, "profiles", filename)
 
-    # Fallback to old path structure (backward compatibility)
-    return f"projects/user_{user_id}/project_{project_id}/profiles/{filename}"
+    return get_project_relative_path_str(user_id, project_id, "profiles", filename)
 
 
 class TestFile(models.Model):
@@ -220,10 +235,11 @@ class TestFile(models.Model):
 
                 if self.execution:
                     execution_name = self.execution.execution_name.lower()
-                    new_path = f"projects/user_{user_id}/project_{project_id}/executions/{execution_name}/profiles/{new_filename}"
+                    new_path = get_project_relative_path_str(
+                        user_id, project_id, "executions", execution_name, "profiles", new_filename
+                    )
                 else:
-                    # Fallback to old structure
-                    new_path = f"projects/user_{user_id}/project_{project_id}/profiles/{new_filename}"
+                    new_path = get_project_relative_path_str(user_id, project_id, "profiles", new_filename)
 
                 # Rename the file
                 old_path = self.file.path
@@ -329,9 +345,17 @@ class Project(models.Model):
             return self.api_key.provider
         return None
 
+    def get_project_folder_name(self) -> str:
+        """Return the on-disk directory name for this project."""
+        return f"project_{self.id}"
+
+    def get_relative_project_path(self, *parts: str) -> Path:
+        """Return the relative path to this project's directory or descendants."""
+        return get_project_relative_path(self.owner.id, self.id, *parts)
+
     def get_project_path(self) -> str:
         """Get the full filesystem path to the project folder."""
-        return str(Path(settings.MEDIA_ROOT) / "projects" / f"user_{self.owner.id}" / f"project_{self.id}")
+        return str(Path(settings.MEDIA_ROOT) / self.get_relative_project_path())
 
     def get_run_yml_path(self) -> str:
         """Get the path to the run.yml file for this project."""
@@ -340,7 +364,7 @@ class Project(models.Model):
     def update_run_yml(self) -> None:
         """Update the run.yml file with current project configuration."""
         config_data: dict[str, Any] = {
-            "project_folder": f"project_{self.id}",
+            "project_folder": self.get_project_folder_name(),
             "user_profile": "",
             "technology": self.chatbot_connector.technology if self.chatbot_connector else "",
             "connector_parameters": {},
@@ -385,7 +409,7 @@ class Project(models.Model):
         # Create directory structure
         user_id = self.owner.id
         project_id = self.id
-        execution_dir = f"projects/user_{user_id}/project_{project_id}/executions/manual_profiles"
+        execution_dir = get_project_relative_path_str(user_id, project_id, "executions", "manual_profiles")
 
         # Create execution record
         return ProfileExecution.objects.create(
@@ -531,13 +555,8 @@ def delete_test_case_directories(sender: type[TestCase], instance: TestCase, **_
         test_case_id = instance.id
 
         # Path to the profiles directory for this test case
-        profiles_path = (
-            Path(settings.MEDIA_ROOT)
-            / "projects"
-            / f"user_{user_id}"
-            / f"project_{project_id}"
-            / "profiles"
-            / f"testcase_{test_case_id}"
+        profiles_path = Path(settings.MEDIA_ROOT) / get_project_relative_path(
+            user_id, project_id, "profiles", f"testcase_{test_case_id}"
         )
 
         # Path to the results directory for this test case

@@ -110,7 +110,7 @@ class ExecutionUtils:
 
         # Build the run.yml configuration
         config_data = {
-            "project_folder": f"project_{params.project.id}",
+            "project_folder": params.project.get_project_folder_name(),
             "user_profile": user_profile,
             "technology": params.technology,
             "connector": connector_path,

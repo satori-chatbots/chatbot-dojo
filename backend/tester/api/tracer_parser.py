@@ -50,12 +50,8 @@ class TracerResultsProcessor:
     def _create_editable_profiles_directory(self, execution: ProfileExecution) -> Path:
         """Create the editable profiles directory structure."""
         project = execution.project
-        user_id = project.owner.id
-        project_id = project.id
 
-        editable_profiles_dir = (
-            Path(settings.MEDIA_ROOT) / "projects" / f"user_{user_id}" / f"project_{project_id}" / "profiles"
-        )
+        editable_profiles_dir = Path(project.get_project_path()) / "profiles"
         editable_profiles_dir.mkdir(parents=True, exist_ok=True)
         return editable_profiles_dir
 
@@ -109,15 +105,13 @@ class TracerResultsProcessor:
     ) -> None:
         """Create an editable TestFile from the profile."""
         project = execution.project
-        user_id = project.owner.id
-        project_id = project.id
 
         # Copy to editable location
         editable_file_path = editable_profiles_dir / yaml_file.name
         shutil.copy(yaml_file, editable_file_path)
 
         # Create TestFile with proper file reference
-        relative_path = f"projects/user_{user_id}/project_{project_id}/profiles/{yaml_file.name}"
+        relative_path = str(project.get_relative_project_path("profiles", yaml_file.name))
         test_file = TestFile(project=project, execution=execution)
         test_file.file.name = relative_path
         test_file.save()
