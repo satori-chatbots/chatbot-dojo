@@ -5,7 +5,6 @@ import shutil
 from pathlib import Path
 from typing import Any, ClassVar
 
-from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models.query import QuerySet
@@ -64,10 +63,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def _setup_project_paths_and_debug(self, project: Project) -> tuple[Path, str]:
         """Setup project paths and log basic debug information."""
-        # Create path structure: projects/user_{user_id}/project_{project_id}/
-        relative_path = Path("projects") / f"user_{self.request.user.id}" / f"project_{project.id}"
-        project_base_path = Path(settings.MEDIA_ROOT) / relative_path
-        project_name = f"project_{project.id}"
+        project_base_path = Path(project.get_project_path())
+        project_name = project.get_project_folder_name()
 
         return project_base_path, project_name
 
