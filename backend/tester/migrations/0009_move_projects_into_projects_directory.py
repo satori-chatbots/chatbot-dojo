@@ -28,7 +28,7 @@ def _move_project_directories(apps, *, reverse: bool = False):  # noqa: ANN001, 
     """Move project directories on disk to match the active storage layout."""
     Project = apps.get_model("tester", "Project")
 
-    for project in Project.objects.all():
+    for project in Project.objects.all().iterator():
         old_relative = Path(f"projects/user_{project.owner_id}/project_{project.id}")
         new_relative = Path(f"projects/user_{project.owner_id}/projects/project_{project.id}")
 
@@ -55,7 +55,7 @@ def _update_file_field_paths(apps, *, reverse: bool = False):  # noqa: ANN001, A
 
     for model_name in model_names:
         model = apps.get_model("tester", model_name)
-        for instance in model.objects.exclude(file=""):
+        for instance in model.objects.exclude(file="").iterator():
             current_path = instance.file.name
             new_path = _translate_project_path(current_path, reverse=reverse)
             if new_path == current_path:
@@ -69,7 +69,7 @@ def _update_test_case_paths(apps, *, reverse: bool = False):  # noqa: ANN001, AN
     """Update copied profile paths stored in TestCase JSON metadata."""
     TestCase = apps.get_model("tester", "TestCase")
 
-    for test_case in TestCase.objects.exclude(copied_files__isnull=True):
+    for test_case in TestCase.objects.exclude(copied_files__isnull=True).iterator():
         copied_files = test_case.copied_files or []
         updated = False
 
@@ -94,7 +94,7 @@ def _update_execution_paths(apps, *, reverse: bool = False):  # noqa: ANN001, AN
     ProfileExecution = apps.get_model("tester", "ProfileExecution")
     TracerAnalysisResult = apps.get_model("tester", "TracerAnalysisResult")
 
-    for execution in ProfileExecution.objects.all():
+    for execution in ProfileExecution.objects.all().iterator():
         new_path = _translate_project_path(execution.profiles_directory, reverse=reverse)
         if new_path == execution.profiles_directory:
             continue
@@ -108,7 +108,7 @@ def _update_execution_paths(apps, *, reverse: bool = False):  # noqa: ANN001, AN
         "workflow_graph_png_path",
         "workflow_graph_pdf_path",
     )
-    for analysis in TracerAnalysisResult.objects.all():
+    for analysis in TracerAnalysisResult.objects.all().iterator():
         updated_fields = []
         for field_name in analysis_fields:
             current_path = getattr(analysis, field_name)

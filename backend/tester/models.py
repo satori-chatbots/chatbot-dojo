@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 # Error messages
 FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
 EMAIL_REQUIRED_ERROR = "Email is a required field"
-PROJECTS_DIRECTORY_NAME = "projects"
+MEDIA_PROJECTS_ROOT_DIR = "projects"
+USER_PROJECTS_SUBDIRECTORY = "projects"
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -106,7 +107,7 @@ class CustomUser(AbstractUser):
 
 def get_user_projects_relative_path(user_id: int) -> Path:
     """Return the relative path to the user's projects directory."""
-    return Path("projects") / f"user_{user_id}" / PROJECTS_DIRECTORY_NAME
+    return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}" / USER_PROJECTS_SUBDIRECTORY
 
 
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
