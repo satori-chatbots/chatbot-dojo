@@ -173,7 +173,7 @@ class TracerGenerator:
         execution_name = f"TRACER_{timestamp}"
 
         project = task.project
-        profiles_dir = str(project.get_relative_project_path("tracer_results", execution_name.lower()))
+        profiles_dir = project.get_relative_project_path("tracer_results", execution_name.lower()).as_posix()
 
         execution = ProfileExecution.objects.create(
             project=project,

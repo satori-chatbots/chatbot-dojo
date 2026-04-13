@@ -111,7 +111,7 @@ class TracerResultsProcessor:
         shutil.copy(yaml_file, editable_file_path)
 
         # Create TestFile with proper file reference
-        relative_path = str(project.get_relative_project_path("profiles", yaml_file.name))
+        relative_path = project.get_relative_project_path("profiles", yaml_file.name).as_posix()
         test_file = TestFile(project=project, execution=execution)
         test_file.file.name = relative_path
         test_file.save()

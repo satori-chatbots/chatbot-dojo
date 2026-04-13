@@ -116,7 +116,7 @@ def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Pat
 
 def get_project_relative_path_str(user_id: int, project_id: int, *parts: str) -> str:
     """Return the relative path to a project directory as a string."""
-    return str(get_project_relative_path(user_id, project_id, *parts))
+    return get_project_relative_path(user_id, project_id, *parts).as_posix()
 
 
 def upload_to(instance: "TestFile", filename: str) -> str:

@@ -2,9 +2,12 @@
 
 import re
 from pathlib import Path
+from typing import ClassVar
 
 from django.conf import settings
 from django.db import migrations
+from django.db.backends.base.schema import BaseDatabaseSchemaEditor
+from django.db.migrations.state import StateApps
 
 OLD_PROJECT_PATH_RE = re.compile(r"^projects/user_(\d+)/project_(\d+)(/.*)?$")
 NEW_PROJECT_PATH_RE = re.compile(r"^projects/user_(\d+)/projects/project_(\d+)(/.*)?$")
@@ -115,7 +118,7 @@ def _update_execution_paths(apps, *, reverse: bool = False):  # noqa: ANN001, AN
             analysis.save(update_fields=updated_fields)
 
 
-def move_project_storage_forward(apps, schema_editor):  # noqa: ARG001
+def move_project_storage_forward(apps: StateApps, _schema_editor: BaseDatabaseSchemaEditor) -> None:
     """Move existing project storage into the lowercase projects subdirectory."""
     _move_project_directories(apps)
     _update_file_field_paths(apps)
@@ -123,7 +126,7 @@ def move_project_storage_forward(apps, schema_editor):  # noqa: ARG001
     _update_execution_paths(apps)
 
 
-def move_project_storage_backward(apps, schema_editor):  # noqa: ARG001
+def move_project_storage_backward(apps: StateApps, _schema_editor: BaseDatabaseSchemaEditor) -> None:
     """Move project storage back to the old user-level layout."""
     _move_project_directories(apps, reverse=True)
     _update_file_field_paths(apps, reverse=True)
@@ -132,10 +135,11 @@ def move_project_storage_backward(apps, schema_editor):  # noqa: ARG001
 
 
 class Migration(migrations.Migration):
-    dependencies = [
+    """Migration to nest project storage under a user-level projects directory."""
+
+    dependencies: ClassVar[list[tuple[str, str]]] = [
         ("tester", "0008_migrate_sensei_check_rules_directory"),
     ]
-
-    operations = [
+    operations: ClassVar[list[migrations.RunPython]] = [
         migrations.RunPython(move_project_storage_forward, move_project_storage_backward),
     ]
