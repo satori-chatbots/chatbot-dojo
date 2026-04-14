@@ -9,15 +9,6 @@ Demo Video
 - Docker
 - Docker Compose
 
-## Git Submodule
-
-To initialize user simulator (sensei)
-
-```bash
-git submodule init
-git submodule update
-```
-
 ## Generate `.env` and `.env.dev`
 
 Use the script `generate_env.py`
@@ -56,7 +47,6 @@ to override any variable that you may have in your environment.
 docker compose
 ```
 
-
 ### Other commands
 
 Get a shell in the backend (can be changed for another container or for production).
@@ -83,7 +73,6 @@ and test them in a development container before taking it to production.
 python manage.py makemigrations
 ```
 
-
 If that doesn't work run the migrations within the container:
 
 ```bash
@@ -91,6 +80,7 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python
 ```
 
 And then:
+
 ```bash
 
 docker compose -f docker-compose.dev.yml --env-file .env.dev exec backend python manage.py migrate
