@@ -167,6 +167,8 @@ RABBITMQ_HOST="{config["RABBITMQ_HOST"]}"
 RABBITMQ_PORT="{config["RABBITMQ_PORT"]}"
 RABBITMQ_USER="{config["RABBITMQ_USER"]}"
 RABBITMQ_PASSWORD='{config["RABBITMQ_PASSWORD"]}'
+RABBITMQ_DEFAULT_USER="{config["RABBITMQ_USER"]}"
+RABBITMQ_DEFAULT_PASS='{config["RABBITMQ_PASSWORD"]}'
 RABBITMQ_VHOST="{config["RABBITMQ_VHOST"]}"
 
 # Celery Configuration (will be built from RabbitMQ settings above)
