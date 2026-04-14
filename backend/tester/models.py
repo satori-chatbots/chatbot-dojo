@@ -11,7 +11,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -108,6 +108,21 @@ class CustomUser(AbstractUser):
 def get_user_projects_relative_path(user_id: int) -> Path:
     """Return the relative path to the user's projects directory."""
     return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}" / USER_PROJECTS_SUBDIRECTORY
+
+
+def ensure_user_projects_directory(user_id: int) -> Path | None:
+    """Ensure the user's projects directory exists and return its absolute path."""
+    user_projects_path = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(user_id)
+    try:
+        user_projects_path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        logger.exception(
+            "Failed to create user projects directory for user_id=%s at %s",
+            user_id,
+            user_projects_path,
+        )
+        return None
+    return user_projects_path
 
 
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
@@ -291,6 +306,16 @@ def delete_file_from_media(sender: type[TestFile], instance: TestFile, **_kwargs
 @receiver(post_save, sender=TestFile)
 def set_name(sender: type[TestFile], instance: TestFile, *, created: bool, **kwargs: Any) -> None:  # noqa: ANN401
     """Set the name of the TestFile to the "test_name" field in the YAML file."""
+
+
+@receiver(post_save, sender=CustomUser)
+def create_user_projects_directory(
+    sender: type[CustomUser], instance: CustomUser, *, created: bool, **_kwargs: object
+) -> None:
+    """Create the default projects directory for each new user."""
+    if created:
+        user_id = instance.id
+        transaction.on_commit(lambda: ensure_user_projects_directory(user_id))
 
 
 class Project(models.Model):

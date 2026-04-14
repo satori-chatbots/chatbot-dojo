@@ -8,7 +8,13 @@ from django.test import TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from tester.api.projects import ProjectViewSet
-from tester.models import ChatbotConnector, CustomUser, Project, TestFile, upload_to_execution
+from tester.models import (
+    ChatbotConnector,
+    CustomUser,
+    Project,
+    TestFile,
+    upload_to_execution,
+)
 
 HTTP_CREATED = 201
 
@@ -33,6 +39,15 @@ class ProjectStorageLayoutTests(TestCase):
             owner=self.user,
         )
         self.request_factory = APIRequestFactory()
+
+    def test_user_creation_initializes_projects_directory(self) -> None:
+        """Creating a user should also create the default projects directory."""
+        with self.captureOnCommitCallbacks(execute=True):
+            user = CustomUser.objects.create_user(email="new-owner@example.com")
+
+        expected_projects_dir = self.media_root / "projects" / f"user_{user.id}" / "projects"
+        self.assertTrue(expected_projects_dir.exists())  # noqa: PT009
+        self.assertTrue(expected_projects_dir.is_dir())  # noqa: PT009
 
     def test_project_creation_initializes_under_projects_folder(self) -> None:
         """New projects should be initialized inside the lowercase projects directory."""
