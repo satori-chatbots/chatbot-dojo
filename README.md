@@ -1,8 +1,18 @@
-# Chatbot dōjō Web
+# [Chatbot dōjō Web](http://miso.ii.uam.es:8081/)
 
 Demo Video
 
 [![Watch the video](https://img.youtube.com/vi/dFsbN1FKGVg/0.jpg)](https://www.youtube.com/watch?v=dFsbN1FKGVg)
+
+The website is deployed at the port `8081` due to conflicts with other services, if you wish to deploy at `80` or `443` change the `docker-compose.yml` from `8081` to your desired port.
+
+```yaml
+  nginx:
+    image: nginx:latest
+    ports:
+      - 8081:80
+
+```
 
 ## Requirements
 
