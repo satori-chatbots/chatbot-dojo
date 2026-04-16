@@ -3,10 +3,27 @@
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase, override_settings
 
-from tester.senpai import configure_embedding_model_environment, get_senpai_embedding_model_cache_root
+from tester.senpai import (
+    build_chat_model_for_user_api_key,
+    configure_embedding_model_environment,
+    get_senpai_embedding_model_cache_root,
+)
+
+
+class StubAPIKey:
+    """Small stub that matches the fields Senpai uses from UserAPIKey."""
+
+    def __init__(self, provider: str, secret: str) -> None:
+        self.provider = provider
+        self._secret = secret
+
+    def get_api_key(self) -> str:
+        """Return the configured secret."""
+        return self._secret
 
 
 class SenpaiRuntimeTests(SimpleTestCase):
@@ -50,3 +67,27 @@ class SenpaiRuntimeTests(SimpleTestCase):
 
             self.assertEqual(resolved, cache_root)  # noqa: PT009
             self.assertTrue(cache_root.is_dir())  # noqa: PT009
+
+    @patch("tester.senpai.init_chat_model")
+    def test_build_chat_model_for_openai_key_uses_expected_defaults(self, init_chat_model_mock: MagicMock) -> None:
+        """OpenAI assistant keys should map to the Senpai default OpenAI model."""
+        build_chat_model_for_user_api_key(StubAPIKey(provider="openai", secret="sk-test"))  # type: ignore[arg-type]
+
+        init_chat_model_mock.assert_called_once_with(
+            "gpt-4o-mini",
+            model_provider="openai",
+            api_key="sk-test",
+            temperature=0.3,
+        )
+
+    @patch("tester.senpai.init_chat_model")
+    def test_build_chat_model_for_gemini_key_uses_expected_defaults(self, init_chat_model_mock: MagicMock) -> None:
+        """Gemini assistant keys should map to the Senpai default Gemini model."""
+        build_chat_model_for_user_api_key(StubAPIKey(provider="gemini", secret="gm-test"))  # type: ignore[arg-type]
+
+        init_chat_model_mock.assert_called_once_with(
+            "gemini-2.5-flash",
+            model_provider="google_genai",
+            api_key="gm-test",
+            temperature=0.3,
+        )

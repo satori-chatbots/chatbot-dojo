@@ -38,6 +38,11 @@ urlpatterns = [
         name="senpai-conversation-message",
     ),
     path(
+        "senpai/conversation/api-key/",
+        api.SenpaiConversationAPIKeyView.as_view(),
+        name="senpai-conversation-api-key",
+    ),
+    path(
         "execute-selected/",
         api.ExecuteSelectedProfilesAPIView.as_view(),
         name="execute-selected-profiles",

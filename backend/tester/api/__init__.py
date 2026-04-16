@@ -29,7 +29,7 @@ from .project_files import (
 )
 from .projects import ProjectViewSet, fetch_file_content, validate_yaml
 from .reports import GlobalReportViewSet, ProfileReportViewSet
-from .senpai import SenpaiConversationInitializeView, SenpaiConversationMessageView
+from .senpai import SenpaiConversationAPIKeyView, SenpaiConversationInitializeView, SenpaiConversationMessageView
 from .sensei_execution_views import (
     ExecuteSelectedProfilesAPIView,
     check_sensei_execution_status,
@@ -63,6 +63,7 @@ __all__ = [
     "ProjectViewSet",
     "RegisterViewSet",
     "RuleFileViewSet",
+    "SenpaiConversationAPIKeyView",
     "SenpaiConversationInitializeView",
     "SenpaiConversationMessageView",
     "SenseiCheckRuleViewSet",

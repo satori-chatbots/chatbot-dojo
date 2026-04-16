@@ -9,13 +9,27 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from django.conf import settings
+from langchain.chat_models import init_chat_model
 
-from tester.models import CustomUser, SenpaiConversation, ensure_user_sensei_directory, get_user_sensei_root_path
+from tester.models import (
+    CustomUser,
+    SenpaiConversation,
+    UserAPIKey,
+    ensure_user_sensei_directory,
+    get_user_sensei_root_path,
+)
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from senpai_assistant import Assistant
+    from langchain_core.language_models.chat_models import BaseChatModel
+
+
+DEFAULT_ASSISTANT_MODELS = {
+    "openai": ("gpt-4o-mini", "openai"),
+    "gemini": ("gemini-2.5-flash", "google_genai"),
+}
 
 
 def _ensure_directory(path: Path) -> Path:
@@ -66,6 +80,27 @@ def warmup_senpai_embedding_model() -> None:
         embedding_cache_root,
     )
     get_embedding("warmup")
+
+
+def build_chat_model_for_user_api_key(api_key: UserAPIKey) -> "BaseChatModel":
+    """Build the assistant chat model using the selected stored API key."""
+    provider_config = DEFAULT_ASSISTANT_MODELS.get(api_key.provider)
+    if provider_config is None:
+        msg = f"Unsupported assistant API key provider: {api_key.provider}"
+        raise RuntimeError(msg)
+
+    decrypted_api_key = api_key.get_api_key()
+    if not decrypted_api_key:
+        msg = "The selected assistant API key is empty."
+        raise RuntimeError(msg)
+
+    model_name, model_provider = provider_config
+    return init_chat_model(
+        model_name,
+        model_provider=model_provider,
+        api_key=decrypted_api_key,
+        temperature=0.3,
+    )
 
 
 def get_senpai_runtime_root() -> Path:
@@ -125,22 +160,28 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> "Assis
     runtime_root = get_senpai_runtime_root()
     embedding_model_cache_root = get_senpai_embedding_model_cache_root()
     configure_embedding_model_environment(embedding_model_cache_root)
+    if conversation.assistant_api_key is None:
+        msg = "No assistant API key is configured for this conversation."
+        raise RuntimeError(msg)
+    model = build_chat_model_for_user_api_key(conversation.assistant_api_key)
 
     logger.debug(
         (
             "Creating Senpai assistant for user_id=%s thread_id=%s "
-            "user_path=%s runtime_root=%s embedding_model_cache_root=%s"
+            "user_path=%s runtime_root=%s embedding_model_cache_root=%s provider=%s"
         ),
         conversation.user_id,
         conversation.thread_id,
         user_path,
         runtime_root,
         embedding_model_cache_root,
+        conversation.assistant_api_key.provider,
     )
 
     return create_assistant_for_paths(
         user_path=user_path,
         thread_id=conversation.thread_id,
         runtime_root=runtime_root,
+        model=model,
         require_checkpointer=False,
     )

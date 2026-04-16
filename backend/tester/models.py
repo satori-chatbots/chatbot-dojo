@@ -742,6 +742,13 @@ class SenpaiConversation(models.Model):
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="senpai_conversation")
     thread_id = models.CharField(max_length=255, unique=True)
+    assistant_api_key = models.ForeignKey(
+        UserAPIKey,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="senpai_conversations",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
