@@ -30,9 +30,12 @@ services:
       retries: 5
 
   backend:
+    image: sensei-web-python:latest
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        PRELOAD_SENPAI_EMBEDDING_MODEL: "1"
     env_file:
       - .env
     environment:
@@ -49,9 +52,7 @@ services:
         condition: service_healthy
 
   celery:
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+    image: sensei-web-python:latest
     env_file:
       - .env
     volumes:
