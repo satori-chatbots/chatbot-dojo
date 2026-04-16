@@ -1,0 +1,23 @@
+info:
+  name: Initialize Conversation
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{host}}/api/senpai/conversation/initialize/"
+  headers:
+    - name: Authorization
+      value: Token {{token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: "{}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

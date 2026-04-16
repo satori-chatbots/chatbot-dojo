@@ -1,0 +1,12 @@
+name: chatbot-dojo
+variables:
+  - name: host
+    value: http://localhost:8000
+  - secret: true
+    name: email
+  - secret: true
+    name: password
+  - secret: true
+    name: assistantOpenAIApiKey
+  - name: assistantApiKeyId
+    value: "1"

@@ -1,0 +1,35 @@
+info:
+  name: Login
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{host}}/api/login/"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{email}}",
+        "password": "{{password}}"
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: email
+      value: ivan@ivan.es
+    - name: host
+      value: http://localhost:8000
+  scripts:
+    - type: after-response
+      code: bru.setVar("token", res.body.token);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
