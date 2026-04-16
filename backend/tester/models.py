@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Error messages
 FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
 EMAIL_REQUIRED_ERROR = "Email is a required field"
-MEDIA_PROJECTS_ROOT_DIR = "projects"
+MEDIA_USERS_ROOT_DIR = "users"
 USER_PROJECTS_SUBDIRECTORY = "projects"
 USER_CONNECTORS_SUBDIRECTORY = "connectors"
 
@@ -108,7 +108,7 @@ class CustomUser(AbstractUser):
 
 def get_user_sensei_relative_path(user_id: int) -> Path:
     """Return the relative path to the user's SENSEI root directory."""
-    return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}"
+    return Path(MEDIA_USERS_ROOT_DIR) / f"user_{user_id}"
 
 
 def get_user_projects_relative_path(user_id: int) -> Path:
@@ -155,6 +155,14 @@ def ensure_user_projects_directory(user_id: int) -> Path | None:
     return user_root_path / USER_PROJECTS_SUBDIRECTORY
 
 
+def ensure_user_connectors_directory(user_id: int) -> Path | None:
+    """Ensure the user's connectors directory exists and return its absolute path."""
+    user_root_path = ensure_user_sensei_directory(user_id)
+    if user_root_path is None:
+        return None
+    return user_root_path / USER_CONNECTORS_SUBDIRECTORY
+
+
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
     """Return the relative path to a project directory or one of its descendants."""
     return get_user_projects_relative_path(user_id) / f"project_{project_id}" / Path(*parts)
@@ -167,8 +175,6 @@ def get_project_relative_path_str(user_id: int, project_id: int, *parts: str) ->
 
 def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
-    # The test_name should have been set by the model's clean method
-    # Get the user and project id
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return get_project_relative_path_str(user_id, project_id, "profiles", filename)
@@ -205,20 +211,63 @@ def upload_to_sensei_check_rules(instance: "SenseiCheckRule", filename: str) -> 
 def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
     """Returns the path where custom connector YAML files are stored."""
     user_id = instance.owner.id
-    return f"projects/user_{user_id}/connectors/{filename}"
+    return f"users/user_{user_id}/connectors/{filename}"
 
 
 def upload_to_execution(instance: "TestFile", filename: str) -> str:
-    """Returns the path where Test Files are stored in execution folders."""
-    user_id = instance.project.owner.id
-    project_id = instance.project.id
+    """Return the canonical project profiles path for a TestFile."""
+    return upload_to(instance, filename)
 
-    # If execution is provided, use execution-based path
-    if instance.execution:
-        execution_name = instance.execution.execution_name.lower()
-        return get_project_relative_path_str(user_id, project_id, "executions", execution_name, "profiles", filename)
 
-    return get_project_relative_path_str(user_id, project_id, "profiles", filename)
+def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
+    """Return the relative path for the flat connector YAML export."""
+    return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}.yaml"
+
+
+def build_connector_export_content(connector: "ChatbotConnector") -> str:
+    """Render the flat connector YAML export that Senpai indexes."""
+    config_content = ""
+    config_file_path = ""
+    if connector.custom_config_file and hasattr(connector.custom_config_file, "path"):
+        config_file_path = connector.custom_config_file.name
+        custom_config_path = Path(connector.custom_config_file.path)
+        if custom_config_path.exists():
+            config_content = custom_config_path.read_text(encoding="utf-8")
+
+    mirror_payload = {
+        "name": connector.name,
+        "technology": connector.technology,
+        "parameters": connector.parameters or {},
+        "custom_config_file": config_file_path,
+        "custom_config_content": config_content,
+    }
+    return yaml.safe_dump(mirror_payload, sort_keys=False, allow_unicode=True)
+
+
+def sync_connector_export_file(connector: "ChatbotConnector") -> None:
+    """Write or refresh the flat connector YAML export."""
+    if connector.id is None:
+        msg = "Connector must be saved before its YAML export can be synchronized."
+        raise RuntimeError(msg)
+
+    connectors_dir = ensure_user_connectors_directory(connector.owner_id)
+    if connectors_dir is None:
+        msg = f"Unable to prepare connectors directory for user {connector.owner_id}."
+        raise RuntimeError(msg)
+
+    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
+    export_path.parent.mkdir(parents=True, exist_ok=True)
+    export_path.write_text(build_connector_export_content(connector), encoding="utf-8")
+
+
+def delete_connector_export_file(connector: "ChatbotConnector") -> None:
+    """Delete the flat connector YAML export if it exists."""
+    if connector.id is None:
+        return
+
+    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
+    if export_path.exists():
+        export_path.unlink()
 
 
 class TestFile(models.Model):
@@ -275,17 +324,10 @@ class TestFile(models.Model):
                 # Create new filename and change the extension to yaml
                 new_filename = f"{test_name}.yaml"
 
-                # Generate new path using execution folder structure
+                # Keep the canonical editable profile under project/profiles for Senpai discovery.
                 user_id = self.project.owner.id
                 project_id = self.project.id
-
-                if self.execution:
-                    execution_name = self.execution.execution_name.lower()
-                    new_path = get_project_relative_path_str(
-                        user_id, project_id, "executions", execution_name, "profiles", new_filename
-                    )
-                else:
-                    new_path = get_project_relative_path_str(user_id, project_id, "profiles", new_filename)
+                new_path = get_project_relative_path_str(user_id, project_id, "profiles", new_filename)
 
                 # Rename the file
                 old_path = self.file.path
@@ -293,7 +335,9 @@ class TestFile(models.Model):
 
                 # Create parent directories if they don't exist
                 new_full_path.parent.mkdir(parents=True, exist_ok=True)
-                Path(old_path).rename(new_full_path)
+                old_full_path = Path(old_path)
+                if old_full_path != new_full_path:
+                    old_full_path.rename(new_full_path)
 
                 # Update the model
                 self.file.name = new_path
@@ -962,11 +1006,25 @@ def delete_custom_config_file_from_media(
 ) -> None:
     """Delete the custom config file from media when the ChatbotConnector is deleted."""
     try:
+        delete_connector_export_file(instance)
         if instance.custom_config_file and Path(instance.custom_config_file.path).exists():
             Path(instance.custom_config_file.path).unlink()
             logger.info("Deleted custom config file %s from media.", instance.custom_config_file.path)
     except (FileNotFoundError, PermissionError, OSError):
         logger.exception("Error deleting custom config file %s", instance.custom_config_file.path)
+
+
+@receiver(post_save, sender=ChatbotConnector)
+def sync_chatbot_connector_export(
+    sender: type[ChatbotConnector],
+    instance: ChatbotConnector,
+    **_kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Keep a flat connector YAML export in the user's connectors directory."""
+    try:
+        sync_connector_export_file(instance)
+    except OSError:
+        logger.exception("Failed to sync connector YAML export for connector %s", instance.pk)
 
 
 class ProfileExecution(models.Model):

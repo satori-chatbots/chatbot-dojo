@@ -57,7 +57,7 @@ class SenpaiConversationAPITests(TestCase):
             second_response.data["conversation"]["thread_id"],
         )
 
-        user_root = self.media_root / "projects" / f"user_{self.user.id}"
+        user_root = self.media_root / "users" / f"user_{self.user.id}"
         self.assertTrue((user_root / "projects").is_dir())  # noqa: PT009
         self.assertTrue((user_root / "connectors").is_dir())  # noqa: PT009
 
