@@ -25,6 +25,7 @@ FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
 EMAIL_REQUIRED_ERROR = "Email is a required field"
 MEDIA_PROJECTS_ROOT_DIR = "projects"
 USER_PROJECTS_SUBDIRECTORY = "projects"
+USER_CONNECTORS_SUBDIRECTORY = "connectors"
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -105,24 +106,53 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS: ClassVar[list[str]] = []
 
 
+def get_user_sensei_relative_path(user_id: int) -> Path:
+    """Return the relative path to the user's SENSEI root directory."""
+    return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}"
+
+
 def get_user_projects_relative_path(user_id: int) -> Path:
     """Return the relative path to the user's projects directory."""
-    return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}" / USER_PROJECTS_SUBDIRECTORY
+    return get_user_sensei_relative_path(user_id) / USER_PROJECTS_SUBDIRECTORY
+
+
+def get_user_connectors_relative_path(user_id: int) -> Path:
+    """Return the relative path to the user's connectors directory."""
+    return get_user_sensei_relative_path(user_id) / USER_CONNECTORS_SUBDIRECTORY
+
+
+def get_user_sensei_root_path(user_id: int) -> Path:
+    """Return the absolute path to the user's SENSEI root directory."""
+    return Path(settings.MEDIA_ROOT) / get_user_sensei_relative_path(user_id)
+
+
+def ensure_user_sensei_directory(user_id: int) -> Path | None:
+    """Ensure the user's SENSEI root structure exists and return its absolute path."""
+    user_root_path = get_user_sensei_root_path(user_id)
+    required_directories = (
+        user_root_path,
+        user_root_path / USER_PROJECTS_SUBDIRECTORY,
+        user_root_path / USER_CONNECTORS_SUBDIRECTORY,
+    )
+    try:
+        for directory in required_directories:
+            directory.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        logger.exception(
+            "Failed to create user SENSEI directory structure for user_id=%s at %s",
+            user_id,
+            user_root_path,
+        )
+        return None
+    return user_root_path
 
 
 def ensure_user_projects_directory(user_id: int) -> Path | None:
     """Ensure the user's projects directory exists and return its absolute path."""
-    user_projects_path = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(user_id)
-    try:
-        user_projects_path.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        logger.exception(
-            "Failed to create user projects directory for user_id=%s at %s",
-            user_id,
-            user_projects_path,
-        )
+    user_root_path = ensure_user_sensei_directory(user_id)
+    if user_root_path is None:
         return None
-    return user_projects_path
+    return user_root_path / USER_PROJECTS_SUBDIRECTORY
 
 
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
@@ -315,7 +345,7 @@ def create_user_projects_directory(
     """Create the default projects directory for each new user."""
     if created:
         user_id = instance.id
-        transaction.on_commit(lambda: ensure_user_projects_directory(user_id))
+        transaction.on_commit(lambda: ensure_user_sensei_directory(user_id))
 
 
 class Project(models.Model):
@@ -705,6 +735,19 @@ class Conversation(models.Model):
     def __str__(self) -> str:
         """Return the name of the conversation."""
         return self.name
+
+
+class SenpaiConversation(models.Model):
+    """Single active Senpai conversation owned by a user."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="senpai_conversation")
+    thread_id = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        """Return a readable identifier for the Senpai conversation."""
+        return f"SenpaiConversation(user={self.user_id}, thread_id={self.thread_id})"
 
 
 class TestError(models.Model):

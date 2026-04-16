@@ -181,9 +181,13 @@ MEDIA_URL = "/filevault/"
 # Use environment variable to allow flexibility between dev/prod
 FILEVAULT_ROOT = os.getenv("FILEVAULT_ROOT", str(BASE_DIR.parent / "filevault"))
 MEDIA_ROOT = Path(FILEVAULT_ROOT)
+SENPAI_ASSISTANT_RUNTIME_ROOT = Path(
+    os.getenv("SENPAI_ASSISTANT_RUNTIME_ROOT", str(MEDIA_ROOT / "senpai-assistant"))
+)
 
 # Ensure the filevault directory exists
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+SENPAI_ASSISTANT_RUNTIME_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Celery Configuration
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")

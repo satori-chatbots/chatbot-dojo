@@ -15,6 +15,7 @@ from .models import (
     Project,
     ProjectConfig,
     RuleFile,
+    SenpaiConversation,
     SenseiCheckRule,
     TestCase,
     TestError,
@@ -90,6 +91,29 @@ class ConversationSerializer(serializers.ModelSerializer):
 
         model = Conversation
         fields = "__all__"
+
+
+class SenpaiConversationSerializer(serializers.ModelSerializer):
+    """Serializer for the active Senpai conversation."""
+
+    class Meta:
+        """Meta class for SenpaiConversationSerializer."""
+
+        model = SenpaiConversation
+        fields: ClassVar[list[str]] = ["id", "thread_id", "created_at", "updated_at"]
+        read_only_fields: ClassVar[list[str]] = fields
+
+
+class SenpaiConversationInitializeSerializer(serializers.Serializer):
+    """Serializer for initializing or resetting a Senpai conversation."""
+
+    force_new = serializers.BooleanField(required=False, default=False)
+
+
+class SenpaiConversationMessageSerializer(serializers.Serializer):
+    """Serializer for sending a message to the Senpai assistant."""
+
+    message = serializers.CharField()
 
 
 class ProfileReportSerializer(serializers.ModelSerializer):

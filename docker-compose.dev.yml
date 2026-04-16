@@ -57,7 +57,7 @@ services:
       - ./.env.dev
     volumes:
       - ./backend:/app
-      - backend_venv:/app/.venv
+      - celery_venv:/app/.venv
       - ./filevault:/app/filevault
     user: "1000:1000"
     depends_on:
@@ -92,4 +92,5 @@ volumes:
   postgres_data_dev:
   rabbitmq_data_dev:
   backend_venv:
+  celery_venv:
   filevault_data_dev:
