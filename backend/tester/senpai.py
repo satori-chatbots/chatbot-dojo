@@ -24,13 +24,18 @@ def _ensure_directory(path: Path) -> Path:
     return path
 
 
-def configure_model_cache_environment(runtime_root: Path) -> None:
-    """Point Hugging Face, sentence-transformers, and Torch caches at a writable runtime root."""
-    hf_home = _ensure_directory(runtime_root / "huggingface")
+def get_senpai_embedding_model_cache_root() -> Path:
+    """Return the shared writable root for embedding model caches."""
+    return _ensure_directory(Path(settings.SENPAI_EMBEDDING_MODEL_CACHE_ROOT))
+
+
+def configure_embedding_model_environment(cache_root: Path) -> None:
+    """Point Hugging Face, sentence-transformers, and Torch caches at a writable embedding cache root."""
+    hf_home = _ensure_directory(cache_root / "huggingface")
     hub_cache = _ensure_directory(hf_home / "hub")
     transformers_cache = _ensure_directory(hf_home / "transformers")
     sentence_transformers_home = _ensure_directory(hf_home / "sentence-transformers")
-    torch_home = _ensure_directory(runtime_root / "torch")
+    torch_home = _ensure_directory(cache_root / "torch")
 
     os.environ["HF_HOME"] = str(hf_home)
     os.environ["HF_HUB_CACHE"] = str(hub_cache)
@@ -38,7 +43,29 @@ def configure_model_cache_environment(runtime_root: Path) -> None:
     os.environ["TRANSFORMERS_CACHE"] = str(transformers_cache)
     os.environ["SENTENCE_TRANSFORMERS_HOME"] = str(sentence_transformers_home)
     os.environ["TORCH_HOME"] = str(torch_home)
-    os.environ["HOME"] = str(runtime_root)
+    os.environ["HOME"] = str(cache_root)
+
+
+def warmup_senpai_embedding_model() -> None:
+    """Download and initialize Senpai's embedding model into the configured cache root."""
+    embedding_cache_root = get_senpai_embedding_model_cache_root()
+    configure_embedding_model_environment(embedding_cache_root)
+
+    try:
+        from senpai_assistant.embeddings.get_embedding import MODEL_NAME, get_embedding
+    except ModuleNotFoundError as exc:
+        msg = (
+            "Senpai Assistant is not installed in this backend environment. "
+            "Rebuild the backend image so the new dependency is installed."
+        )
+        raise RuntimeError(msg) from exc
+
+    logger.info(
+        "Warming up Senpai embedding model %s using cache root %s",
+        MODEL_NAME,
+        embedding_cache_root,
+    )
+    get_embedding("warmup")
 
 
 def get_senpai_runtime_root() -> Path:
@@ -96,14 +123,19 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> "Assis
 
     user_path = get_user_senpai_path(conversation.user)
     runtime_root = get_senpai_runtime_root()
-    configure_model_cache_environment(runtime_root)
+    embedding_model_cache_root = get_senpai_embedding_model_cache_root()
+    configure_embedding_model_environment(embedding_model_cache_root)
 
     logger.debug(
-        "Creating Senpai assistant for user_id=%s thread_id=%s user_path=%s runtime_root=%s",
+        (
+            "Creating Senpai assistant for user_id=%s thread_id=%s "
+            "user_path=%s runtime_root=%s embedding_model_cache_root=%s"
+        ),
         conversation.user_id,
         conversation.thread_id,
         user_path,
         runtime_root,
+        embedding_model_cache_root,
     )
 
     return create_assistant_for_paths(

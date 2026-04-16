@@ -184,10 +184,17 @@ MEDIA_ROOT = Path(FILEVAULT_ROOT)
 SENPAI_ASSISTANT_RUNTIME_ROOT = Path(
     os.getenv("SENPAI_ASSISTANT_RUNTIME_ROOT", str(MEDIA_ROOT / "senpai-assistant"))
 )
+SENPAI_EMBEDDING_MODEL_CACHE_ROOT = Path(
+    os.getenv(
+        "SENPAI_EMBEDDING_MODEL_CACHE_ROOT",
+        os.getenv("SENPAI_MODEL_CACHE_ROOT", str(SENPAI_ASSISTANT_RUNTIME_ROOT / "embedding-model-cache")),
+    )
+)
 
 # Ensure the filevault directory exists
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 SENPAI_ASSISTANT_RUNTIME_ROOT.mkdir(parents=True, exist_ok=True)
+SENPAI_EMBEDDING_MODEL_CACHE_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Celery Configuration
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")

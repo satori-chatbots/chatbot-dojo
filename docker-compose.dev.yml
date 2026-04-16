@@ -65,7 +65,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: /app/.venv/bin/celery -A senseiweb worker -l info
+    command: sh /app/entrypoint.celery.sh
 
   frontend:
     build:
