@@ -1,0 +1,26 @@
+info:
+  name: Assign Assistant API Key
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{host}}/api/senpai/conversation/api-key/"
+  headers:
+    - name: Authorization
+      value: Token {{token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "assistant_api_key_id": {{assistantApiKeyId}}
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

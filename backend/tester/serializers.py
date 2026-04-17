@@ -15,6 +15,7 @@ from .models import (
     Project,
     ProjectConfig,
     RuleFile,
+    SenpaiConversation,
     SenseiCheckRule,
     TestCase,
     TestError,
@@ -90,6 +91,48 @@ class ConversationSerializer(serializers.ModelSerializer):
 
         model = Conversation
         fields = "__all__"
+
+
+class UserAPIKeySummarySerializer(serializers.ModelSerializer):
+    """Safe summary serializer for exposing selected API key metadata."""
+
+    class Meta:
+        """Meta class for UserAPIKeySummarySerializer."""
+
+        model = UserAPIKey
+        fields: ClassVar[list[str]] = ["id", "name", "provider"]
+        read_only_fields: ClassVar[list[str]] = fields
+
+
+class SenpaiConversationSerializer(serializers.ModelSerializer):
+    """Serializer for the active Senpai conversation."""
+
+    assistant_api_key = UserAPIKeySummarySerializer(read_only=True)
+
+    class Meta:
+        """Meta class for SenpaiConversationSerializer."""
+
+        model = SenpaiConversation
+        fields: ClassVar[list[str]] = ["id", "thread_id", "assistant_api_key", "created_at", "updated_at"]
+        read_only_fields: ClassVar[list[str]] = fields
+
+
+class SenpaiConversationInitializeSerializer(serializers.Serializer):
+    """Serializer for initializing or resetting a Senpai conversation."""
+
+    force_new = serializers.BooleanField(required=False, default=False)
+
+
+class SenpaiConversationMessageSerializer(serializers.Serializer):
+    """Serializer for sending a message to the Senpai assistant."""
+
+    message = serializers.CharField()
+
+
+class SenpaiConversationAPIKeySerializer(serializers.Serializer):
+    """Serializer for assigning a stored user API key to Senpai."""
+
+    assistant_api_key_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class ProfileReportSerializer(serializers.ModelSerializer):

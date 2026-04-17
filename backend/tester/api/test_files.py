@@ -222,7 +222,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
     def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
         """Save processed file data to the database in a single transaction."""
-        saved_instances = []
+        saved_file_ids = []
 
         # Create or get a manual execution folder for grouping these uploads
         manual_execution = project.get_or_create_current_manual_execution()
@@ -236,12 +236,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
                     is_valid=data["is_valid"],
                     execution=manual_execution,  # Assign to manual execution
                 )
-                saved_instances.append(instance)
-            TestFile.objects.bulk_create(saved_instances)
-        # We need to return the IDs, which are only available after creation.
-        # A simple way is to fetch them back by name, assuming names are now unique.
-        names = [data["test_name"] for data in file_data]
-        return list(TestFile.objects.filter(project=project, name__in=names).values_list("id", flat=True))
+                instance.save()
+                saved_file_ids.append(instance.id)
+        return saved_file_ids
 
     @action(detail=False, methods=["get"], url_path="template")
     def get_template(self, _request: Request) -> Response:

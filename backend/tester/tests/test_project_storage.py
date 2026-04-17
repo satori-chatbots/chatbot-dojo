@@ -4,10 +4,12 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from tester.api.projects import ProjectViewSet
+from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import (
     ChatbotConnector,
     CustomUser,
@@ -45,7 +47,7 @@ class ProjectStorageLayoutTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             user = CustomUser.objects.create_user(email="new-owner@example.com")
 
-        expected_projects_dir = self.media_root / "projects" / f"user_{user.id}" / "projects"
+        expected_projects_dir = self.media_root / "users" / f"user_{user.id}" / "projects"
         self.assertTrue(expected_projects_dir.exists())  # noqa: PT009
         self.assertTrue(expected_projects_dir.is_dir())  # noqa: PT009
 
@@ -64,7 +66,7 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertEqual(response.status_code, HTTP_CREATED)  # noqa: PT009
 
         project = Project.objects.get(name="Alpha")
-        expected_parent = self.media_root / "projects" / f"user_{self.user.id}" / "projects"
+        expected_parent = self.media_root / "users" / f"user_{self.user.id}" / "projects"
         expected_project_dir = expected_parent / f"project_{project.id}"
 
         init_proj_mock.assert_called_once_with(project.get_project_folder_name(), str(expected_parent))
@@ -72,15 +74,102 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue((expected_project_dir / "run.yml").exists())  # noqa: PT009
 
     def test_execution_file_paths_include_projects_subdirectory(self) -> None:
-        """Manual execution uploads should be stored under the lowercase projects directory."""
+        """Profiles should be stored under the project profiles directory even when tied to an execution."""
         project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
         execution = project.create_manual_execution_folder()
 
         test_file = TestFile(project=project, execution=execution)
-        expected_path = f"projects/user_{self.user.id}/projects/project_{project.id}/executions/manual_profiles/profiles/profile.yaml"
+        expected_path = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/profile.yaml"
 
         self.assertEqual(upload_to_execution(test_file, "profile.yaml"), expected_path)  # noqa: PT009
         self.assertEqual(  # noqa: PT009
             execution.profiles_directory,
-            f"projects/user_{self.user.id}/projects/project_{project.id}/executions/manual_profiles",
+            f"users/user_{self.user.id}/projects/project_{project.id}/executions/manual_profiles",
         )
+
+    def test_test_file_save_keeps_manual_profiles_in_project_profiles_directory(self) -> None:
+        """Manual profile uploads should end up in the canonical project profiles directory."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        execution = project.create_manual_execution_folder()
+        profile = TestFile(project=project, execution=execution)
+        profile.file.save(
+            "upload.yaml",
+            ContentFile("test_name: Manual Profile\nmessages: []\n"),
+            save=False,
+        )
+
+        profile.save()
+
+        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Manual Profile.yaml"
+        self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
+        self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
+
+    def test_tracer_results_create_editable_profiles_in_project_profiles_directory(self) -> None:
+        """TRACER-generated editable profiles should be stored where Senpai can index them."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        execution = project.profile_executions.create(
+            execution_name="TRACER_1",
+            execution_type="tracer",
+            status="SUCCESS",
+            profiles_directory=f"users/user_{self.user.id}/projects/project_{project.id}/tracer_results/tracer_1",
+        )
+        output_dir = self.media_root / execution.profiles_directory
+        profiles_dir = output_dir / "profiles"
+        profiles_dir.mkdir(parents=True, exist_ok=True)
+        (profiles_dir / "generated.yaml").write_text("test_name: Generated Profile\nmessages: []\n", encoding="utf-8")
+
+        TracerResultsProcessor().process_tracer_results_dual_storage(execution, output_dir)
+
+        generated = TestFile.objects.get(project=project, execution=execution)
+        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Generated Profile.yaml"
+        self.assertEqual(generated.file.name, expected_relative)  # noqa: PT009
+        self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
+
+    def test_profile_save_avoids_overwriting_existing_canonical_profile(self) -> None:
+        """Saving a second profile with the same test_name should suffix the canonical filename."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+
+        first_profile = TestFile(project=project)
+        first_profile.file.save(
+            "first-upload.yaml",
+            ContentFile("test_name: Shared Name\nmessages:\n  - role: user\n    content: first\n"),
+            save=False,
+        )
+        first_profile.save()
+
+        second_profile = TestFile(project=project)
+        second_profile.file.save(
+            "second-upload.yaml",
+            ContentFile("test_name: Shared Name\nmessages:\n  - role: user\n    content: second\n"),
+            save=False,
+        )
+        second_profile.save()
+
+        expected_primary = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name.yaml"
+        expected_conflict = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name_1.yaml"
+
+        self.assertEqual(first_profile.file.name, expected_primary)  # noqa: PT009
+        self.assertEqual(second_profile.file.name, expected_conflict)  # noqa: PT009
+        self.assertTrue((self.media_root / expected_primary).exists())  # noqa: PT009
+        self.assertTrue((self.media_root / expected_conflict).exists())  # noqa: PT009
+        self.assertTrue("content: first" in (self.media_root / expected_primary).read_text(encoding="utf-8"))  # noqa: PT009
+        self.assertTrue("content: second" in (self.media_root / expected_conflict).read_text(encoding="utf-8"))  # noqa: PT009
+
+    def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
+        """Every connector should have a YAML mirror under the user connectors directory."""
+        connector = ChatbotConnector.objects.create(
+            name="Webhook Connector",
+            technology="rest",
+            parameters={"url": "https://example.com/hook", "method": "POST"},
+            owner=self.user,
+        )
+
+        mirror_path = (
+            self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector.id}.yaml"
+        )
+        self.assertTrue(mirror_path.exists())  # noqa: PT009
+
+        mirror_content = mirror_path.read_text(encoding="utf-8")
+        self.assertTrue("name: Webhook Connector" in mirror_content)  # noqa: PT009
+        self.assertTrue("technology: rest" in mirror_content)  # noqa: PT009
+        self.assertTrue("url: https://example.com/hook" in mirror_content)  # noqa: PT009
