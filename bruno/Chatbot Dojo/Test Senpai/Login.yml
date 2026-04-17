@@ -19,11 +19,6 @@ http:
   auth: inherit
 
 runtime:
-  variables:
-    - name: email
-      value: ivan@ivan.es
-    - name: host
-      value: http://localhost:8000
   scripts:
     - type: after-response
       code: bru.setVar("token", res.body.token);

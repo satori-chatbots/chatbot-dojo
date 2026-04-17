@@ -13,7 +13,10 @@ http:
       value: application/json
   body:
     type: json
-    data: "{}"
+    data: |-
+      {
+        "force_new": true
+      }
   auth: inherit
 
 settings:
