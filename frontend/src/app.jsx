@@ -529,106 +529,104 @@ function AppContent() {
         </Navbar>
 
         {/* Main Content */}
-        <main className="relative z-10 flex min-h-0 w-full flex-1 overflow-hidden">
-          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-            <div className="min-h-0 min-w-0 flex-1 overflow-auto">
-              <Suspense fallback={<LoadingSpinner />}>
-                <Routes>
-                  <Route
-                    path="/"
-                    element={
-                      <PrivateRoute>
-                        <Home />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route path="/dashboard" element={<SenseiDashboard />} />
-                  <Route path="/sensei-dashboard" element={<SenseiDashboard />} />
-                  <Route path="/tracer-dashboard" element={<TracerDashboard />} />
-                  <Route
-                    path="/sensei-check-results"
-                    element={<SenseiCheckResultsView />}
-                  />
-                  <Route
-                    path="/chatbot-connectors"
-                    element={
-                      <PrivateRoute>
-                        <ChatbotConnectors />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/projects"
-                    element={
-                      <PrivateRoute>
-                        <ProjectsDashboard />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route path="/test-case/:id" element={<TestCase />} />
-                  <Route path="/login" element={<LoginView />} />
-                  <Route path="/signup" element={<SignupView />} />
-                  <Route
-                    path="/profile"
-                    element={
-                      <PrivateRoute>
-                        <UserProfileView />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/yaml-editor"
-                    element={
-                      <PrivateRoute>
-                        <YamlEditor />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/yaml-editor/:fileId"
-                    element={
-                      <PrivateRoute>
-                        <YamlEditor />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/custom-connector-editor/:connectorId"
-                    element={
-                      <PrivateRoute>
-                        <CustomConnectorYamlEditor />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/sensei-check-rules"
-                    element={
-                      <PrivateRoute>
-                        <SenseiCheckRulesEditor />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/sensei-check-rules/:ruleId"
-                    element={
-                      <PrivateRoute>
-                        <SenseiCheckRulesEditor />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/setup"
-                    element={
-                      <PrivateRoute>
-                        <SetupGuide />
-                      </PrivateRoute>
-                    }
-                  />
-                </Routes>
-              </Suspense>
-            </div>
-            {user && <SenpaiAssistantSidebar />}
+        <main className="relative z-10 min-h-0 w-full flex-1 overflow-hidden">
+          <div className="min-h-0 h-full w-full overflow-auto">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <PrivateRoute>
+                      <Home />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="/dashboard" element={<SenseiDashboard />} />
+                <Route path="/sensei-dashboard" element={<SenseiDashboard />} />
+                <Route path="/tracer-dashboard" element={<TracerDashboard />} />
+                <Route
+                  path="/sensei-check-results"
+                  element={<SenseiCheckResultsView />}
+                />
+                <Route
+                  path="/chatbot-connectors"
+                  element={
+                    <PrivateRoute>
+                      <ChatbotConnectors />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/projects"
+                  element={
+                    <PrivateRoute>
+                      <ProjectsDashboard />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="/test-case/:id" element={<TestCase />} />
+                <Route path="/login" element={<LoginView />} />
+                <Route path="/signup" element={<SignupView />} />
+                <Route
+                  path="/profile"
+                  element={
+                    <PrivateRoute>
+                      <UserProfileView />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/yaml-editor"
+                  element={
+                    <PrivateRoute>
+                      <YamlEditor />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/yaml-editor/:fileId"
+                  element={
+                    <PrivateRoute>
+                      <YamlEditor />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/custom-connector-editor/:connectorId"
+                  element={
+                    <PrivateRoute>
+                      <CustomConnectorYamlEditor />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/sensei-check-rules"
+                  element={
+                    <PrivateRoute>
+                      <SenseiCheckRulesEditor />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/sensei-check-rules/:ruleId"
+                  element={
+                    <PrivateRoute>
+                      <SenseiCheckRulesEditor />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/setup"
+                  element={
+                    <PrivateRoute>
+                      <SetupGuide />
+                    </PrivateRoute>
+                  }
+                />
+              </Routes>
+            </Suspense>
           </div>
+          {user && <SenpaiAssistantSidebar />}
         </main>
 
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex h-12 items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">

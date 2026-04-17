@@ -250,13 +250,7 @@ const SenpaiAssistantPanel = ({
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
             <Bot className="h-4 w-4 flex-shrink-0 text-primary" />
             <div className="min-w-0 truncate text-sm">
-              <span className="font-semibold">Chat</span>
-              <span className="mx-2 text-foreground/30">•</span>
-              <span className="truncate text-xs text-foreground/60 dark:text-foreground-dark/60">
-                {conversation?.thread_id
-                  ? conversation.thread_id.slice(0, 8)
-                  : "No thread"}
-              </span>
+              <span className="font-semibold">Senpai</span>
               <span className="mx-2 text-foreground/30">•</span>
               <span
                 className={`text-xs ${
@@ -381,34 +375,32 @@ const SenpaiAssistantPanel = ({
                 <div ref={endOfMessagesReference} />
               </div>
 
-              <div className="flex-shrink-0 border-t border-divider px-3 py-3">
-                <div className="space-y-3">
+              <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
+                <div className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]">
                   <Textarea
                     placeholder="Ask Senpai..."
                     minRows={3}
                     maxRows={8}
-                    variant="bordered"
+                    variant="flat"
                     value={draft}
                     onValueChange={setDraft}
                     onKeyDown={handleComposerKeyDown}
                     isDisabled={isSending}
                     classNames={{
-                      inputWrapper:
-                        "rounded-2xl border-default-200 dark:border-white/10",
+                      inputWrapper: "border-none bg-transparent shadow-none",
                     }}
                   />
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-foreground/60 dark:text-foreground-dark/60">
-                      Enter to send
-                    </p>
+                  <div className="mt-2 flex items-center justify-end">
                     <Button
+                      isIconOnly
                       color="primary"
-                      endContent={<Send className="h-4 w-4" />}
+                      radius="full"
                       onPress={() => void submitMessage(draft)}
                       isLoading={isSending}
                       isDisabled={!draft.trim() || isSending}
+                      aria-label="Send message"
                     >
-                      Send
+                      <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -499,27 +491,26 @@ const SenpaiAssistantSidebar = () => {
   return (
     <>
       <aside
-        className={`hidden border-l border-divider bg-content2 dark:bg-[#18181b] xl:flex xl:h-full xl:flex-shrink-0 ${
+        className={`absolute inset-y-0 right-0 z-30 hidden overflow-hidden border-l border-divider bg-content2 shadow-2xl transition-[width,transform,opacity] duration-200 ease-out dark:bg-[#18181b] xl:flex ${
           isDesktopCollapsed ? "xl:w-14" : "xl:w-[420px]"
         }`}
       >
         {isDesktopCollapsed ? (
-          <div className="flex h-full w-full flex-col items-center gap-2 py-3">
-            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Bot className="h-4 w-4" />
+          <div className="flex h-full w-full flex-col">
+            <div className="flex h-14 flex-shrink-0 items-center justify-center border-b border-divider">
+              <Button
+                isIconOnly
+                variant="light"
+                size="sm"
+                onPress={toggleDesktopSidebar}
+                aria-label="Expand Senpai Assistant"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              isIconOnly
-              variant="light"
-              size="sm"
-              onPress={toggleDesktopSidebar}
-              aria-label="Expand Senpai Assistant"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
           </div>
         ) : (
-          <div className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1 animate-in fade-in-0 slide-in-from-right-1 duration-200">
             <SenpaiAssistantPanel onCollapse={toggleDesktopSidebar} />
           </div>
         )}
@@ -545,7 +536,7 @@ const SenpaiAssistantSidebar = () => {
               onClick={() => setIsMobileOpen(false)}
               aria-label="Close Senpai Assistant"
             />
-            <div className="absolute inset-y-0 right-0 w-full max-w-md border-l border-divider bg-content2 dark:bg-[#18181b]">
+            <div className="absolute inset-y-0 right-0 w-full max-w-md border-l border-divider bg-content2 transition-transform duration-200 ease-out dark:bg-[#18181b]">
               <SenpaiAssistantPanel
                 isMobile={true}
                 onClose={() => setIsMobileOpen(false)}
