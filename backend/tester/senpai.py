@@ -65,7 +65,6 @@ def configure_embedding_model_environment(cache_root: Path) -> None:
     os.environ["TRANSFORMERS_CACHE"] = str(transformers_cache)
     os.environ["SENTENCE_TRANSFORMERS_HOME"] = str(sentence_transformers_home)
     os.environ["TORCH_HOME"] = str(torch_home)
-    os.environ["HOME"] = str(cache_root)
 
 
 def warmup_senpai_embedding_model() -> None:

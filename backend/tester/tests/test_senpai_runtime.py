@@ -34,25 +34,27 @@ class SenpaiRuntimeTests(SimpleTestCase):
         """All relevant cache environment variables should be pointed at the embedding model cache root."""
         with tempfile.TemporaryDirectory() as temp_dir:
             cache_root = Path(temp_dir) / "senpai-embedding-model-cache"
+            original_home = "/original-home"
 
-            configure_embedding_model_environment(cache_root)
+            with patch.dict(os.environ, {"HOME": original_home}, clear=False):
+                configure_embedding_model_environment(cache_root)
 
-            self.assertEqual(os.environ["HOME"], str(cache_root))  # noqa: PT009
-            self.assertEqual(os.environ["HF_HOME"], str(cache_root / "huggingface"))  # noqa: PT009
-            self.assertEqual(os.environ["HF_HUB_CACHE"], str(cache_root / "huggingface" / "hub"))  # noqa: PT009
-            self.assertEqual(  # noqa: PT009
-                os.environ["HUGGINGFACE_HUB_CACHE"],
-                str(cache_root / "huggingface" / "hub"),
-            )
-            self.assertEqual(  # noqa: PT009
-                os.environ["TRANSFORMERS_CACHE"],
-                str(cache_root / "huggingface" / "transformers"),
-            )
-            self.assertEqual(  # noqa: PT009
-                os.environ["SENTENCE_TRANSFORMERS_HOME"],
-                str(cache_root / "huggingface" / "sentence-transformers"),
-            )
-            self.assertEqual(os.environ["TORCH_HOME"], str(cache_root / "torch"))  # noqa: PT009
+                self.assertEqual(os.environ["HOME"], original_home)  # noqa: PT009
+                self.assertEqual(os.environ["HF_HOME"], str(cache_root / "huggingface"))  # noqa: PT009
+                self.assertEqual(os.environ["HF_HUB_CACHE"], str(cache_root / "huggingface" / "hub"))  # noqa: PT009
+                self.assertEqual(  # noqa: PT009
+                    os.environ["HUGGINGFACE_HUB_CACHE"],
+                    str(cache_root / "huggingface" / "hub"),
+                )
+                self.assertEqual(  # noqa: PT009
+                    os.environ["TRANSFORMERS_CACHE"],
+                    str(cache_root / "huggingface" / "transformers"),
+                )
+                self.assertEqual(  # noqa: PT009
+                    os.environ["SENTENCE_TRANSFORMERS_HOME"],
+                    str(cache_root / "huggingface" / "sentence-transformers"),
+                )
+                self.assertEqual(os.environ["TORCH_HOME"], str(cache_root / "torch"))  # noqa: PT009
 
             self.assertTrue((cache_root / "huggingface" / "hub").is_dir())  # noqa: PT009
             self.assertTrue((cache_root / "huggingface" / "transformers").is_dir())  # noqa: PT009
