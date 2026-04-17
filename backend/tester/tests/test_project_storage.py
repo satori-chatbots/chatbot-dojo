@@ -125,6 +125,36 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertEqual(generated.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
+    def test_profile_save_avoids_overwriting_existing_canonical_profile(self) -> None:
+        """Saving a second profile with the same test_name should suffix the canonical filename."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+
+        first_profile = TestFile(project=project)
+        first_profile.file.save(
+            "first-upload.yaml",
+            ContentFile("test_name: Shared Name\nmessages:\n  - role: user\n    content: first\n"),
+            save=False,
+        )
+        first_profile.save()
+
+        second_profile = TestFile(project=project)
+        second_profile.file.save(
+            "second-upload.yaml",
+            ContentFile("test_name: Shared Name\nmessages:\n  - role: user\n    content: second\n"),
+            save=False,
+        )
+        second_profile.save()
+
+        expected_primary = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name.yaml"
+        expected_conflict = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name_1.yaml"
+
+        self.assertEqual(first_profile.file.name, expected_primary)  # noqa: PT009
+        self.assertEqual(second_profile.file.name, expected_conflict)  # noqa: PT009
+        self.assertTrue((self.media_root / expected_primary).exists())  # noqa: PT009
+        self.assertTrue((self.media_root / expected_conflict).exists())  # noqa: PT009
+        self.assertTrue("content: first" in (self.media_root / expected_primary).read_text(encoding="utf-8"))  # noqa: PT009
+        self.assertTrue("content: second" in (self.media_root / expected_conflict).read_text(encoding="utf-8"))  # noqa: PT009
+
     def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
         """Every connector should have a YAML mirror under the user connectors directory."""
         connector = ChatbotConnector.objects.create(

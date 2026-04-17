@@ -173,6 +173,33 @@ def get_project_relative_path_str(user_id: int, project_id: int, *parts: str) ->
     return get_project_relative_path(user_id, project_id, *parts).as_posix()
 
 
+def resolve_unique_project_relative_path(
+    user_id: int,
+    project_id: int,
+    directory: str,
+    filename: str,
+    *,
+    reserved_paths: set[Path] | None = None,
+) -> tuple[str, Path]:
+    """Return a project-relative path that does not collide with an existing file."""
+    reserved_paths = reserved_paths or set()
+    relative_path = get_project_relative_path(user_id, project_id, directory, filename)
+    full_path = Path(settings.MEDIA_ROOT) / relative_path
+    if full_path not in reserved_paths and not full_path.exists():
+        return relative_path.as_posix(), full_path
+
+    base_name = Path(filename).stem
+    suffix = Path(filename).suffix
+    counter = 1
+    while True:
+        candidate_filename = f"{base_name}_{counter}{suffix}"
+        candidate_relative_path = get_project_relative_path(user_id, project_id, directory, candidate_filename)
+        candidate_full_path = Path(settings.MEDIA_ROOT) / candidate_relative_path
+        if candidate_full_path not in reserved_paths and not candidate_full_path.exists():
+            return candidate_relative_path.as_posix(), candidate_full_path
+        counter += 1
+
+
 def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
     user_id = instance.project.owner.id
@@ -337,6 +364,14 @@ class TestFile(models.Model):
                 new_full_path.parent.mkdir(parents=True, exist_ok=True)
                 old_full_path = Path(old_path)
                 if old_full_path != new_full_path:
+                    new_path, new_full_path = resolve_unique_project_relative_path(
+                        user_id,
+                        project_id,
+                        "profiles",
+                        new_filename,
+                        reserved_paths={old_full_path},
+                    )
+                    new_full_path.parent.mkdir(parents=True, exist_ok=True)
                     old_full_path.rename(new_full_path)
 
                 # Update the model
