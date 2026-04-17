@@ -129,7 +129,9 @@ function AppContent() {
       theme={theme}
       className={theme}
     >
-      <div className={`relative flex min-h-screen flex-col overflow-hidden ${theme}`}>
+      <div
+        className={`relative flex min-h-screen flex-col overflow-hidden ${theme}`}
+      >
         <Navbar
           onMenuOpenChange={setIsMenuOpen}
           maxWidth="full"
@@ -630,7 +632,10 @@ function AppContent() {
         </main>
 
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex h-12 items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
-          <a className="pointer-events-auto text-primary" href="https://miso.es/">
+          <a
+            className="pointer-events-auto text-primary"
+            href="https://miso.es/"
+          >
             MISO
           </a>
         </footer>

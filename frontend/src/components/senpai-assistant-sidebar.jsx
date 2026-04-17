@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Button,
   Modal,
@@ -67,11 +73,7 @@ const formatTimestamp = (value) =>
     month: "short",
   }).format(new Date(value));
 
-const SenpaiAssistantPanel = ({
-  onClose,
-  isMobile = false,
-  onCollapse,
-}) => {
+const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const endOfMessagesReference = useRef(undefined);
 
@@ -325,7 +327,8 @@ const SenpaiAssistantPanel = ({
                     <Bot className="mb-3 h-8 w-8 text-primary/70" />
                     <p className="text-sm font-medium">Start a conversation</p>
                     <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
-                      This panel stays available across the app for quick checks.
+                      This panel stays available across the app for quick
+                      checks.
                     </p>
                   </div>
                 ) : (
@@ -445,7 +448,10 @@ const SenpaiAssistantPanel = ({
                     No API key selected
                   </SelectItem>
                   {supportedApiKeys.map((apiKey) => (
-                    <SelectItem key={String(apiKey.id)} value={String(apiKey.id)}>
+                    <SelectItem
+                      key={String(apiKey.id)}
+                      value={String(apiKey.id)}
+                    >
                       {apiKey.name} ({apiKey.provider})
                     </SelectItem>
                   ))}
@@ -482,10 +488,7 @@ const SenpaiAssistantSidebar = () => {
   const toggleDesktopSidebar = () => {
     const nextValue = !isDesktopCollapsed;
     setIsDesktopCollapsed(nextValue);
-    globalThis.localStorage.setItem(
-      DESKTOP_COLLAPSED_KEY,
-      String(nextValue),
-    );
+    globalThis.localStorage.setItem(DESKTOP_COLLAPSED_KEY, String(nextValue));
   };
 
   return (
