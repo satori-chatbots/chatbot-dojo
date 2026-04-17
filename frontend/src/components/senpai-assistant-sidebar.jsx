@@ -59,10 +59,14 @@ const writeStoredThreadMessages = (threadId, messages) => {
     return;
   }
 
-  globalThis.sessionStorage.setItem(
-    buildThreadStorageKey(threadId),
-    JSON.stringify(messages),
-  );
+  try {
+    globalThis.sessionStorage.setItem(
+      buildThreadStorageKey(threadId),
+      JSON.stringify(messages),
+    );
+  } catch {
+    // Ignore storage failures so message updates do not crash the sidebar.
+  }
 };
 
 const formatTimestamp = (value) =>
