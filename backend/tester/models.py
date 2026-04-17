@@ -1058,7 +1058,7 @@ def sync_chatbot_connector_export(
     """Keep a flat connector YAML export in the user's connectors directory."""
     try:
         sync_connector_export_file(instance)
-    except OSError:
+    except (OSError, RuntimeError):
         logger.exception("Failed to sync connector YAML export for connector %s", instance.pk)
 
 
