@@ -121,9 +121,7 @@ class ProjectStorageLayoutTests(TestCase):
         TracerResultsProcessor().process_tracer_results_dual_storage(execution, output_dir)
 
         generated = TestFile.objects.get(project=project, execution=execution)
-        expected_relative = (
-            f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Generated Profile.yaml"
-        )
+        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Generated Profile.yaml"
         self.assertEqual(generated.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -136,7 +134,9 @@ class ProjectStorageLayoutTests(TestCase):
             owner=self.user,
         )
 
-        mirror_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector.id}.yaml"
+        mirror_path = (
+            self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector.id}.yaml"
+        )
         self.assertTrue(mirror_path.exists())  # noqa: PT009
 
         mirror_content = mirror_path.read_text(encoding="utf-8")

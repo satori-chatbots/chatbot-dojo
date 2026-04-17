@@ -181,9 +181,7 @@ MEDIA_URL = "/filevault/"
 # Use environment variable to allow flexibility between dev/prod
 FILEVAULT_ROOT = os.getenv("FILEVAULT_ROOT", str(BASE_DIR.parent / "filevault"))
 MEDIA_ROOT = Path(FILEVAULT_ROOT)
-SENPAI_ASSISTANT_RUNTIME_ROOT = Path(
-    os.getenv("SENPAI_ASSISTANT_RUNTIME_ROOT", str(MEDIA_ROOT / "senpai-assistant"))
-)
+SENPAI_ASSISTANT_RUNTIME_ROOT = Path(os.getenv("SENPAI_ASSISTANT_RUNTIME_ROOT", str(MEDIA_ROOT / "senpai-assistant")))
 SENPAI_EMBEDDING_MODEL_CACHE_ROOT = Path(
     os.getenv(
         "SENPAI_EMBEDDING_MODEL_CACHE_ROOT",
