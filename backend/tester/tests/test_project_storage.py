@@ -13,8 +13,8 @@ from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import (
     ChatbotConnector,
     CustomUser,
-    TestFile,
     Project,
+    TestFile,
     upload_to_execution,
 )
 
@@ -140,6 +140,6 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue(mirror_path.exists())  # noqa: PT009
 
         mirror_content = mirror_path.read_text(encoding="utf-8")
-        self.assertIn("name: Webhook Connector", mirror_content)
-        self.assertIn("technology: rest", mirror_content)
-        self.assertIn("url: https://example.com/hook", mirror_content)
+        self.assertTrue("name: Webhook Connector" in mirror_content)  # noqa: PT009
+        self.assertTrue("technology: rest" in mirror_content)  # noqa: PT009
+        self.assertTrue("url: https://example.com/hook" in mirror_content)  # noqa: PT009

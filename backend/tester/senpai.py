@@ -11,6 +11,14 @@ from uuid import uuid4
 from django.conf import settings
 from langchain.chat_models import init_chat_model
 
+try:
+    from senpai_assistant import create_assistant_for_paths
+    from senpai_assistant.embeddings.get_embedding import MODEL_NAME, get_embedding
+except ModuleNotFoundError:
+    create_assistant_for_paths = None
+    MODEL_NAME = None
+    get_embedding = None
+
 from tester.models import (
     CustomUser,
     SenpaiConversation,
@@ -22,8 +30,8 @@ from tester.models import (
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from senpai_assistant import Assistant
     from langchain_core.language_models.chat_models import BaseChatModel
+    from senpai_assistant import Assistant
 
 
 DEFAULT_ASSISTANT_MODELS = {
@@ -65,14 +73,12 @@ def warmup_senpai_embedding_model() -> None:
     embedding_cache_root = get_senpai_embedding_model_cache_root()
     configure_embedding_model_environment(embedding_cache_root)
 
-    try:
-        from senpai_assistant.embeddings.get_embedding import MODEL_NAME, get_embedding
-    except ModuleNotFoundError as exc:
+    if MODEL_NAME is None or get_embedding is None:
         msg = (
             "Senpai Assistant is not installed in this backend environment. "
             "Rebuild the backend image so the new dependency is installed."
         )
-        raise RuntimeError(msg) from exc
+        raise RuntimeError(msg)
 
     logger.info(
         "Warming up Senpai embedding model %s using cache root %s",
@@ -82,7 +88,7 @@ def warmup_senpai_embedding_model() -> None:
     get_embedding("warmup")
 
 
-def build_chat_model_for_user_api_key(api_key: UserAPIKey) -> "BaseChatModel":
+def build_chat_model_for_user_api_key(api_key: UserAPIKey) -> BaseChatModel:
     """Build the assistant chat model using the selected stored API key."""
     provider_config = DEFAULT_ASSISTANT_MODELS.get(api_key.provider)
     if provider_config is None:
@@ -145,16 +151,14 @@ def get_or_create_senpai_conversation(
     return conversation, False
 
 
-def build_assistant_for_conversation(conversation: SenpaiConversation) -> "Assistant":
+def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assistant:
     """Create a Senpai assistant bound to the stored conversation thread."""
-    try:
-        from senpai_assistant import create_assistant_for_paths
-    except ModuleNotFoundError as exc:
+    if create_assistant_for_paths is None:
         msg = (
             "Senpai Assistant is not installed in this backend environment. "
             "Rebuild the backend image so the new dependency is installed."
         )
-        raise RuntimeError(msg) from exc
+        raise RuntimeError(msg)
 
     user_path = get_user_senpai_path(conversation.user)
     runtime_root = get_senpai_runtime_root()
