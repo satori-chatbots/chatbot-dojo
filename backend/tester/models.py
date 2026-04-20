@@ -391,15 +391,16 @@ class TestFile(models.Model):
 
                 # Parse the YAML content for further processing
                 data = yaml.safe_load(yaml_content)
-                test_name = data.get("test_name")
+                yaml_test_name = data.get("test_name") if isinstance(data, dict) else None
+                effective_name = self.name or yaml_test_name
 
-                if not test_name:
+                if not effective_name:
                     self.is_valid = False
                     TestFile.objects.filter(pk=self.pk).update(is_valid=False)
                     return
 
                 # Create new filename and change the extension to yaml
-                new_filename = f"{test_name}.yaml"
+                new_filename = f"{effective_name}.yaml"
 
                 # Keep the canonical editable profile under project/profiles for Senpai discovery.
                 user_id = self.project.owner.id
@@ -426,7 +427,7 @@ class TestFile(models.Model):
 
                 # Update the model
                 self.file.name = new_path
-                self.name = test_name
+                self.name = effective_name
 
                 # Set validation status - only boolean flag
                 self.is_valid = not bool(validation_errors)

@@ -188,6 +188,45 @@ class ProjectStorageLayoutTests(TestCase):
         execution.refresh_from_db()
         self.assertEqual(execution.generated_profiles_count, 2)  # noqa: PT009
 
+    def test_bulk_upload_preserves_conflict_resolved_name_from_processed_file_data(self) -> None:
+        """Bulk uploads should keep the unique name chosen during conflict resolution."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+
+        existing_profile = TestFile(project=project)
+        existing_profile.file.save(
+            "existing.yaml",
+            ContentFile("test_name: Shared Name\nmessages:\n  - role: user\n    content: existing\n"),
+            save=False,
+        )
+        existing_profile.save()
+
+        request = self.request_factory.post(
+            "/api/testfiles/upload/",
+            {
+                "project": str(project.id),
+                "ignore_validation_errors": "true",
+                "file": [
+                    SimpleUploadedFile(
+                        "duplicate.yaml",
+                        b"test_name: Shared Name\nmessages:\n  - role: user\n    content: duplicate\n",
+                    ),
+                ],
+            },
+            format="multipart",
+        )
+        force_authenticate(request, user=self.user)
+
+        response = TestFileViewSet.as_view({"post": "upload"})(request)
+
+        self.assertEqual(response.status_code, HTTP_CREATED)  # noqa: PT009
+        uploaded_profile = TestFile.objects.get(id=response.data["uploaded_file_ids"][0])
+        expected_conflict = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name_1.yaml"
+
+        self.assertEqual(uploaded_profile.name, "Shared Name_1")  # noqa: PT009
+        self.assertEqual(uploaded_profile.file.name, expected_conflict)  # noqa: PT009
+        self.assertFalse(uploaded_profile.is_valid)  # noqa: PT009
+        self.assertTrue((self.media_root / expected_conflict).exists())  # noqa: PT009
+
     def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
         """Every connector should have a YAML mirror under the user connectors directory."""
         with self.captureOnCommitCallbacks(execute=True):
