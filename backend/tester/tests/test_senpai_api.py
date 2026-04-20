@@ -134,6 +134,23 @@ class SenpaiConversationAPITests(TestCase):
         )
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_preserves_safe_runtime_error_details(self, build_assistant_mock: MagicMock) -> None:
+        """User-actionable runtime failures should keep their safe client message."""
+        build_assistant_mock.side_effect = RuntimeError("The selected assistant API key is empty.")
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": "Hello"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            response.data["error"],
+            "The selected assistant API key is empty.",
+        )
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_hides_filesystem_error_details(self, build_assistant_mock: MagicMock) -> None:
         """Filesystem failures should return a generic error without leaking server paths."""
         build_assistant_mock.side_effect = FileNotFoundError("/srv/private/users/1/projects missing")
@@ -150,6 +167,26 @@ class SenpaiConversationAPITests(TestCase):
             "Senpai Assistant workspace is unavailable.",
         )
         self.assertNotIn("/srv/private", response.data["error"])  # noqa: PT009
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_hides_internal_runtime_error_details(self, build_assistant_mock: MagicMock) -> None:
+        """Internal runtime failures should not leak implementation details to clients."""
+        build_assistant_mock.side_effect = RuntimeError(
+            "Unable to prepare SENSEI workspace for user 42.",
+        )
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": "Hello"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            response.data["error"],
+            "Senpai Assistant is unavailable right now.",
+        )
+        self.assertNotIn("user 42", response.data["error"])  # noqa: PT009
 
     def test_api_key_endpoint_assigns_selected_user_api_key(self) -> None:
         """Users should be able to assign one of their stored API keys to Senpai."""

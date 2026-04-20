@@ -51,6 +51,18 @@ class SenpaiConversationMessageView(APIView):
 
     permission_classes: ClassVar = [permissions.IsAuthenticated]
     FILESYSTEM_ERROR_MESSAGE: ClassVar[str] = "Senpai Assistant workspace is unavailable."
+    GENERIC_RUNTIME_ERROR_MESSAGE: ClassVar[str] = "Senpai Assistant is unavailable right now."
+    SAFE_RUNTIME_ERROR_MESSAGES: ClassVar[set[str]] = {
+        "No assistant API key is configured for this conversation.",
+        "The selected assistant API key is empty.",
+    }
+
+    def _get_safe_runtime_error_message(self, exc: Exception) -> str:
+        """Return a user-safe message for runtime and validation failures."""
+        error_message = str(exc)
+        if error_message in self.SAFE_RUNTIME_ERROR_MESSAGES:
+            return error_message
+        return self.GENERIC_RUNTIME_ERROR_MESSAGE
 
     def post(self, request: Request) -> Response:
         """Send a single message to Senpai and return the assistant response."""
@@ -82,7 +94,7 @@ class SenpaiConversationMessageView(APIView):
                 exc,
             )
             return Response(
-                {"error": str(exc)},
+                {"error": self._get_safe_runtime_error_message(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
