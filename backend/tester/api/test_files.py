@@ -236,8 +236,11 @@ class TestFileViewSet(viewsets.ModelViewSet):
                     is_valid=data["is_valid"],
                     execution=manual_execution,  # Assign to manual execution
                 )
-                instance.save()
+                instance.save(update_execution_profile_count=False)
                 saved_file_ids.append(instance.id)
+
+            manual_execution.generated_profiles_count = manual_execution.test_files.count()
+            manual_execution.save(update_fields=["generated_profiles_count"])
         return saved_file_ids
 
     @action(detail=False, methods=["get"], url_path="template")

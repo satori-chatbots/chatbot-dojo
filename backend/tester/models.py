@@ -322,6 +322,8 @@ class TestFile(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TestFile instance."""
+        update_execution_profile_count = kwargs.pop("update_execution_profile_count", True)
+
         # If no execution is assigned and this is a new file, create/assign a manual execution
         if not self.execution and not self.pk:
             self.execution = self.project.get_or_create_current_manual_execution()
@@ -382,7 +384,7 @@ class TestFile(models.Model):
                 self.is_valid = not bool(validation_errors)
 
                 # Update execution profile count
-                if self.execution:
+                if self.execution and update_execution_profile_count:
                     profile_count = self.execution.test_files.count()
                     self.execution.generated_profiles_count = profile_count
                     self.execution.save(update_fields=["generated_profiles_count"])

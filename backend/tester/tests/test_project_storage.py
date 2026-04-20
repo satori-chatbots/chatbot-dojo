@@ -5,9 +5,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from tester.api.test_files import TestFileViewSet
 from tester.api.projects import ProjectViewSet
 from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import (
@@ -154,6 +156,33 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue((self.media_root / expected_conflict).exists())  # noqa: PT009
         self.assertTrue("content: first" in (self.media_root / expected_primary).read_text(encoding="utf-8"))  # noqa: PT009
         self.assertTrue("content: second" in (self.media_root / expected_conflict).read_text(encoding="utf-8"))  # noqa: PT009
+
+    def test_bulk_test_file_creation_updates_manual_execution_count_once(self) -> None:
+        """Bulk uploads should defer execution profile recounts until the batch is complete."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        execution = project.create_manual_execution_folder()
+        viewset = TestFileViewSet()
+        file_data = [
+            {
+                "file": SimpleUploadedFile("first.yaml", b"test_name: First Profile\nmessages: []\n"),
+                "test_name": "First Profile",
+                "is_valid": True,
+            },
+            {
+                "file": SimpleUploadedFile("second.yaml", b"test_name: Second Profile\nmessages: []\n"),
+                "test_name": "Second Profile",
+                "is_valid": True,
+            },
+        ]
+
+        with patch.object(project, "get_or_create_current_manual_execution", return_value=execution):
+            with patch.object(execution, "save", wraps=execution.save) as execution_save_spy:
+                saved_file_ids = viewset._create_test_files_from_data(project, file_data)
+
+        self.assertEqual(len(saved_file_ids), 2)  # noqa: PT009
+        execution_save_spy.assert_called_once_with(update_fields=["generated_profiles_count"])
+        execution.refresh_from_db()
+        self.assertEqual(execution.generated_profiles_count, 2)  # noqa: PT009
 
     def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
         """Every connector should have a YAML mirror under the user connectors directory."""
