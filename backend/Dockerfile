@@ -1,7 +1,7 @@
 # ─────────────── Builder stage ───────────────
 FROM python:3.12-slim-bookworm AS builder
 
-ARG PRELOAD_SENPAI_EMBEDDING_MODEL=1
+ARG PRELOAD_SENPAI_EMBEDDING_MODEL=0
 ENV SENPAI_EMBEDDING_MODEL_CACHE_ROOT="/opt/senpai-embedding-model-cache"
 
 # Install build dependencies

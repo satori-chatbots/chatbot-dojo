@@ -34,8 +34,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        PRELOAD_SENPAI_EMBEDDING_MODEL: "1"
     env_file:
       - ./.env.dev
     environment:
