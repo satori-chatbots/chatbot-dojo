@@ -125,6 +125,7 @@ const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const endOfMessagesReference = useRef(undefined);
+  const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
 
@@ -148,6 +149,14 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   );
 
   useEffect(() => {
+    isMountedReference.current = true;
+
+    return () => {
+      isMountedReference.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     setSelectedApiKeyKey(
       conversation?.assistant_api_key?.id
         ? String(conversation.assistant_api_key.id)
@@ -164,6 +173,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       setLoadingState(true);
       try {
         const data = await initializeSenpaiConversation(forceNew);
+        if (!isMountedReference.current) {
+          return;
+        }
+
         setConversation(data.conversation);
         if (forceNew) {
           setDraft("");
@@ -171,12 +184,16 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           showToast("success", "New Senpai conversation started");
         }
       } catch (error) {
-        showToast(
-          "error",
-          error.message || "Failed to initialize Senpai Assistant",
-        );
+        if (isMountedReference.current) {
+          showToast(
+            "error",
+            error.message || "Failed to initialize Senpai Assistant",
+          );
+        }
       } finally {
-        setLoadingState(false);
+        if (isMountedReference.current) {
+          setLoadingState(false);
+        }
       }
     },
     [showToast],
@@ -185,9 +202,13 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const loadApiKeys = useCallback(async () => {
     try {
       const data = await getUserApiKeys();
-      setApiKeys(data);
+      if (isMountedReference.current) {
+        setApiKeys(data);
+      }
     } catch {
-      showToast("error", "Failed to load available API keys");
+      if (isMountedReference.current) {
+        showToast("error", "Failed to load available API keys");
+      }
     }
   }, [showToast]);
 
@@ -230,23 +251,36 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     setIsUpdatingApiKey(true);
     try {
       const data = await assignSenpaiApiKey(apiKeyId);
+      if (!isMountedReference.current) {
+        return;
+      }
+
       setConversation(data.conversation);
       showToast("success", "Assistant API key updated");
     } catch (error) {
-      setSelectedApiKeyKey(
-        conversation?.assistant_api_key?.id
-          ? String(conversation.assistant_api_key.id)
-          : "none",
-      );
-      showToast("error", error.message || "Failed to update assistant API key");
+      if (isMountedReference.current) {
+        setSelectedApiKeyKey(
+          conversation?.assistant_api_key?.id
+            ? String(conversation.assistant_api_key.id)
+            : "none",
+        );
+        showToast(
+          "error",
+          error.message || "Failed to update assistant API key",
+        );
+      }
     } finally {
-      setIsUpdatingApiKey(false);
+      if (isMountedReference.current) {
+        setIsUpdatingApiKey(false);
+      }
     }
   };
 
   const selectedApiKey = supportedApiKeys.find(
     (apiKey) => String(apiKey.id) === selectedApiKeyKey,
   );
+  const hasPendingRequest =
+    isBootstrapping || isRefreshingThread || isSending || isUpdatingApiKey;
 
   const submitMessage = useCallback(
     async (messageText) => {
@@ -278,6 +312,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 
       try {
         const data = await sendSenpaiMessage(trimmedMessage);
+        if (!isMountedReference.current) {
+          return;
+        }
+
         setConversation(data.conversation);
         setMessages((currentMessages) => [
           ...currentMessages,
@@ -289,13 +327,20 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           },
         ]);
       } catch (error) {
-        setMessages((currentMessages) =>
-          currentMessages.filter((message) => message.id !== userMessage.id),
-        );
-        showToast("error", error.message || "Senpai Assistant request failed");
+        if (isMountedReference.current) {
+          setMessages((currentMessages) =>
+            currentMessages.filter((message) => message.id !== userMessage.id),
+          );
+          showToast(
+            "error",
+            error.message || "Senpai Assistant request failed",
+          );
+        }
       } finally {
         sendMessageLock.current = false;
-        setIsSending(false);
+        if (isMountedReference.current) {
+          setIsSending(false);
+        }
       }
     },
     [conversation?.assistant_api_key, createMessageId, isSending, showToast],
@@ -358,6 +403,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                 variant="light"
                 size="sm"
                 onPress={onCollapse}
+                isDisabled={hasPendingRequest}
                 aria-label="Collapse Senpai Assistant"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -369,6 +415,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                 variant="light"
                 size="sm"
                 onPress={onClose}
+                isDisabled={hasPendingRequest}
                 aria-label="Close Senpai Assistant"
               >
                 <X className="h-4 w-4" />
