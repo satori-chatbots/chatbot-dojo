@@ -468,10 +468,10 @@ def set_name(sender: type[TestFile], instance: TestFile, *, created: bool, **kwa
 
 
 @receiver(post_save, sender=CustomUser)
-def create_user_projects_directory(
+def initialize_user_sensei_workspace(
     sender: type[CustomUser], instance: CustomUser, *, created: bool, **_kwargs: object
 ) -> None:
-    """Create the default projects directory for each new user."""
+    """Create the default Senpai workspace structure for each new user."""
     if created:
         user_id = instance.id
         transaction.on_commit(lambda: ensure_user_sensei_directory(user_id))
