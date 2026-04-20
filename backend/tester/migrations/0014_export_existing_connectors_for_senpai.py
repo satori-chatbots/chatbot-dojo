@@ -29,7 +29,7 @@ def _redact_sensitive_connector_data(value: object) -> object:
     )
 
     if isinstance(value, dict):
-        redacted_dict = {}
+        redacted_dict: dict[object, object] = {}
         for nested_key, nested_value in value.items():
             normalized_key = str(nested_key).strip().lower()
             if any(fragment in normalized_key for fragment in sensitive_key_fragments):
@@ -49,7 +49,7 @@ def _redact_sensitive_connector_data(value: object) -> object:
 
 def _build_connector_export_content(connector) -> str:  # noqa: ANN001
     """Render the flat connector YAML export for a historical connector instance."""
-    payload = {
+    payload: dict[str, object] = {
         "name": connector.name,
         "technology": connector.technology,
         "parameters": _redact_sensitive_connector_data(connector.parameters or {}),
