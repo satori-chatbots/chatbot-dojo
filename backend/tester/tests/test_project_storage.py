@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
@@ -190,22 +191,40 @@ class ProjectStorageLayoutTests(TestCase):
     def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
         """Every connector should have a YAML mirror under the user connectors directory."""
         with self.captureOnCommitCallbacks(execute=True):
-            connector = ChatbotConnector.objects.create(
+            connector = ChatbotConnector(
                 name="Webhook Connector",
                 technology="rest",
-                parameters={"url": "https://example.com/hook", "method": "POST"},
+                parameters={
+                    "url": "https://example.com/hook",
+                    "method": "POST",
+                    "api_key": "super-secret-token",
+                    "nested": {"client_secret": "very-secret"},
+                },
                 owner=self.user,
             )
+            connector.custom_config_file.save(
+                "custom-connector.yaml",
+                ContentFile("api_key: top-secret\nendpoint: https://example.com\n"),
+                save=False,
+            )
+            connector.save()
 
         mirror_path = (
             self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector.id}.yaml"
         )
         self.assertTrue(mirror_path.exists())  # noqa: PT009
 
-        mirror_content = mirror_path.read_text(encoding="utf-8")
-        self.assertTrue("name: Webhook Connector" in mirror_content)  # noqa: PT009
-        self.assertTrue("technology: rest" in mirror_content)  # noqa: PT009
-        self.assertTrue("url: https://example.com/hook" in mirror_content)  # noqa: PT009
+        mirror_payload = yaml.safe_load(mirror_path.read_text(encoding="utf-8"))
+        self.assertEqual(mirror_payload["name"], "Webhook Connector")  # noqa: PT009
+        self.assertEqual(mirror_payload["technology"], "rest")  # noqa: PT009
+        self.assertEqual(mirror_payload["parameters"]["url"], "https://example.com/hook")  # noqa: PT009
+        self.assertEqual(mirror_payload["parameters"]["api_key"], "***REDACTED***")  # noqa: PT009
+        self.assertEqual(mirror_payload["parameters"]["nested"]["client_secret"], "***REDACTED***")  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            mirror_payload["custom_config_file"],
+            f"users/user_{self.user.id}/connectors/custom-connector.yaml",
+        )
+        self.assertTrue("custom_config_content" not in mirror_payload)  # noqa: PT009
 
     def test_connector_rollback_does_not_create_senpai_yaml_mirror(self) -> None:
         """Connector export files should only be written after a successful commit."""

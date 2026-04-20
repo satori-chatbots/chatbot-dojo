@@ -251,22 +251,54 @@ def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
     return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}.yaml"
 
 
+def redact_sensitive_connector_data(value: Any) -> Any:  # noqa: ANN401
+    """Return connector metadata with likely secret fields redacted."""
+    sensitive_key_fragments = (
+        "token",
+        "secret",
+        "password",
+        "passwd",
+        "api_key",
+        "apikey",
+        "access_key",
+        "private_key",
+        "client_secret",
+        "authorization",
+        "auth",
+        "credential",
+        "signature",
+    )
+
+    if isinstance(value, dict):
+        redacted_dict = {}
+        for nested_key, nested_value in value.items():
+            normalized_key = str(nested_key).strip().lower()
+            if any(fragment in normalized_key for fragment in sensitive_key_fragments):
+                redacted_dict[nested_key] = "***REDACTED***"
+            else:
+                redacted_dict[nested_key] = redact_sensitive_connector_data(nested_value)
+        return redacted_dict
+
+    if isinstance(value, list):
+        return [redact_sensitive_connector_data(item) for item in value]
+
+    if isinstance(value, tuple):
+        return tuple(redact_sensitive_connector_data(item) for item in value)
+
+    return value
+
+
 def build_connector_export_content(connector: "ChatbotConnector") -> str:
     """Render the flat connector YAML export that Senpai indexes."""
-    config_content = ""
     config_file_path = ""
-    if connector.custom_config_file and hasattr(connector.custom_config_file, "path"):
+    if connector.custom_config_file and hasattr(connector.custom_config_file, "name"):
         config_file_path = connector.custom_config_file.name
-        custom_config_path = Path(connector.custom_config_file.path)
-        if custom_config_path.exists():
-            config_content = custom_config_path.read_text(encoding="utf-8")
 
     mirror_payload = {
         "name": connector.name,
         "technology": connector.technology,
-        "parameters": connector.parameters or {},
+        "parameters": redact_sensitive_connector_data(connector.parameters or {}),
         "custom_config_file": config_file_path,
-        "custom_config_content": config_content,
     }
     return yaml.safe_dump(mirror_payload, sort_keys=False, allow_unicode=True)
 
