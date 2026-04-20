@@ -221,13 +221,13 @@ class TestFileViewSet(viewsets.ModelViewSet):
         return file_data, errors, reported_names
 
     def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
-        """Save processed file data to the database in a single transaction."""
+        """Save processed file data while keeping DB transactions short."""
         saved_file_ids = []
 
         # Create or get a manual execution folder for grouping these uploads
         manual_execution = project.get_or_create_current_manual_execution()
 
-        with transaction.atomic():
+        try:
             for data in file_data:
                 instance = TestFile(
                     file=data["file"],
@@ -238,7 +238,14 @@ class TestFileViewSet(viewsets.ModelViewSet):
                 )
                 instance.save(update_execution_profile_count=False)
                 saved_file_ids.append(instance.id)
+        except Exception:
+            if saved_file_ids:
+                with transaction.atomic():
+                    manual_execution.generated_profiles_count = manual_execution.test_files.count()
+                    manual_execution.save(update_fields=["generated_profiles_count"])
+            raise
 
+        with transaction.atomic():
             manual_execution.generated_profiles_count = manual_execution.test_files.count()
             manual_execution.save(update_fields=["generated_profiles_count"])
         return saved_file_ids
