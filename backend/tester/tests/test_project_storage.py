@@ -157,6 +157,8 @@ class ProjectStorageLayoutTests(TestCase):
         expected_primary = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name.yaml"
         expected_conflict = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name_1.yaml"
 
+        self.assertEqual(first_profile.name, "Shared Name")  # noqa: PT009
+        self.assertEqual(second_profile.name, "Shared Name_1")  # noqa: PT009
         self.assertEqual(first_profile.file.name, expected_primary)  # noqa: PT009
         self.assertEqual(second_profile.file.name, expected_conflict)  # noqa: PT009
         self.assertTrue((self.media_root / expected_primary).exists())  # noqa: PT009

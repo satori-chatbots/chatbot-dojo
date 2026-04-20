@@ -411,7 +411,7 @@ class TestFile(models.Model):
 
                 # Update the model
                 self.file.name = new_path
-                self.name = effective_name
+                self.name = Path(new_path).stem
 
                 # Set validation status - only boolean flag
                 self.is_valid = not bool(validation_errors)
