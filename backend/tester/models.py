@@ -1098,9 +1098,17 @@ def sync_chatbot_connector_export(
     """Keep a flat connector YAML export in the user's connectors directory."""
 
     def _sync_after_commit(
-        connector: ChatbotConnector = instance,
         connector_pk: int | None = instance.pk,
     ) -> None:
+        if connector_pk is None:
+            return
+
+        try:
+            connector = sender.objects.get(pk=connector_pk)
+        except sender.DoesNotExist:
+            logger.info("Skipping connector YAML export sync for deleted connector %s", connector_pk)
+            return
+
         try:
             sync_connector_export_file(connector)
         except (OSError, RuntimeError):

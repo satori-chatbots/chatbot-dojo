@@ -380,3 +380,25 @@ class ProjectStorageLayoutTests(TestCase):
         )
         self.assertEqual(callbacks, [])  # noqa: PT009
         self.assertFalse(mirror_path.exists())  # noqa: PT009
+
+    def test_deleted_connector_does_not_recreate_senpai_yaml_mirror_on_commit(self) -> None:
+        """A connector deleted before commit should not be re-exported by the save callback."""
+        with self.captureOnCommitCallbacks(execute=True):
+            with transaction.atomic():
+                connector = ChatbotConnector.objects.create(
+                    name="Delete Before Commit Connector",
+                    technology="rest",
+                    parameters={"url": "https://example.com/delete-before-commit", "method": "POST"},
+                    owner=self.user,
+                )
+                connector_id = connector.id
+                connector.delete()
+
+        mirror_path = (
+            self.media_root
+            / "users"
+            / f"user_{self.user.id}"
+            / "connectors"
+            / f"connector_{connector_id}__senpai_export.yaml"
+        )
+        self.assertFalse(mirror_path.exists())  # noqa: PT009
