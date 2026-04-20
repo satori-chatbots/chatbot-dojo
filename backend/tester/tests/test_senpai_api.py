@@ -133,6 +133,24 @@ class SenpaiConversationAPITests(TestCase):
             "No assistant API key is configured for this conversation.",
         )
 
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_hides_filesystem_error_details(self, build_assistant_mock: MagicMock) -> None:
+        """Filesystem failures should return a generic error without leaking server paths."""
+        build_assistant_mock.side_effect = FileNotFoundError("/srv/private/users/1/projects missing")
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": "Hello"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            response.data["error"],
+            "Senpai Assistant workspace is unavailable.",
+        )
+        self.assertNotIn("/srv/private", response.data["error"])  # noqa: PT009
+
     def test_api_key_endpoint_assigns_selected_user_api_key(self) -> None:
         """Users should be able to assign one of their stored API keys to Senpai."""
         response = self.client.patch(

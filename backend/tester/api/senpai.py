@@ -50,6 +50,7 @@ class SenpaiConversationMessageView(APIView):
     """Send a message to the authenticated user's Senpai conversation."""
 
     permission_classes: ClassVar = [permissions.IsAuthenticated]
+    FILESYSTEM_ERROR_MESSAGE: ClassVar[str] = "Senpai Assistant workspace is unavailable."
 
     def post(self, request: Request) -> Response:
         """Send a single message to Senpai and return the assistant response."""
@@ -62,7 +63,18 @@ class SenpaiConversationMessageView(APIView):
         try:
             assistant = build_assistant_for_conversation(conversation)
             reply = assistant.send_message(serializer.validated_data["message"])
-        except (FileNotFoundError, NotADirectoryError, RuntimeError, ValueError) as exc:
+        except (FileNotFoundError, NotADirectoryError) as exc:
+            logger.warning(
+                "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",
+                request.user.id,
+                conversation.thread_id,
+                exc,
+            )
+            return Response(
+                {"error": self.FILESYSTEM_ERROR_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (RuntimeError, ValueError) as exc:
             logger.warning(
                 "Senpai Assistant request failed for user_id=%s thread_id=%s: %s",
                 request.user.id,
