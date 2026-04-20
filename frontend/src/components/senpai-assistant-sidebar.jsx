@@ -28,13 +28,13 @@ import {
   User,
   X,
 } from "lucide-react";
-import { getUserApiKeys } from "../api/authentication-api";
 import {
   assignSenpaiApiKey,
   initializeSenpaiConversation,
   sendSenpaiMessage,
 } from "../api/senpai-api";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import { useSetup } from "../contexts/setup-context";
 
 const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
@@ -124,13 +124,13 @@ const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
 
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
+  const { setupData, reloadApiKeys } = useSetup();
   const endOfMessagesReference = useRef(undefined);
   const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
 
   const [conversation, setConversation] = useState();
-  const [apiKeys, setApiKeys] = useState([]);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -142,10 +142,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 
   const supportedApiKeys = useMemo(
     () =>
-      apiKeys.filter((apiKey) =>
+      (setupData.apiKeys || []).filter((apiKey) =>
         ["openai", "gemini"].includes(apiKey.provider),
       ),
-    [apiKeys],
+    [setupData.apiKeys],
   );
 
   useEffect(() => {
@@ -199,25 +199,16 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     [showToast],
   );
 
-  const loadApiKeys = useCallback(async () => {
-    try {
-      const data = await getUserApiKeys();
-      if (isMountedReference.current) {
-        setApiKeys(data);
-      }
-    } catch {
-      if (isMountedReference.current) {
-        showToast("error", "Failed to load available API keys");
-      }
-    }
-  }, [showToast]);
+  useEffect(() => {
+    void loadConversation({ showFullSpinner: true });
+    void reloadApiKeys();
+  }, [loadConversation, reloadApiKeys]);
 
   useEffect(() => {
-    void Promise.all([
-      loadConversation({ showFullSpinner: true }),
-      loadApiKeys(),
-    ]);
-  }, [loadConversation, loadApiKeys]);
+    if (isSettingsOpen || (conversation && !conversation.assistant_api_key)) {
+      void reloadApiKeys();
+    }
+  }, [conversation, conversation?.assistant_api_key, isSettingsOpen, reloadApiKeys]);
 
   useEffect(() => {
     setMessages(readStoredThreadMessages(conversation?.thread_id));
@@ -281,15 +272,81 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   );
   const hasPendingRequest =
     isBootstrapping || isRefreshingThread || isSending || isUpdatingApiKey;
+  const isConversationLoaded = Boolean(conversation);
+  const hasAssistantApiKey = Boolean(conversation?.assistant_api_key);
+  const showApiKeySetup = isConversationLoaded && !hasAssistantApiKey;
+  const canSubmitMessage =
+    hasAssistantApiKey &&
+    isConversationLoaded &&
+    Boolean(draft.trim()) &&
+    !hasPendingRequest;
+  let statusLabel = "Unavailable";
+  let statusClassName = "text-danger";
+
+  if (isConversationLoaded) {
+    statusLabel = hasAssistantApiKey ? "Ready" : "No key";
+    statusClassName = hasAssistantApiKey ? "text-success" : "text-warning";
+  }
 
   const submitMessage = useCallback(
     async (messageText) => {
       const trimmedMessage = messageText.trim();
-      if (!trimmedMessage || isSending || sendMessageLock.current) {
-        return;
-      }
+      const canStartRequest =
+        trimmedMessage &&
+        !hasPendingRequest &&
+        !sendMessageLock.current &&
+        conversation;
+      if (canStartRequest) {
+        if (conversation.assistant_api_key) {
+          sendMessageLock.current = true;
+          const userMessage = {
+            id: createMessageId("user"),
+            role: "user",
+            content: trimmedMessage,
+            timestamp: new Date().toISOString(),
+          };
 
-      if (!conversation?.assistant_api_key) {
+          setDraft("");
+          setIsSending(true);
+          setMessages((currentMessages) => [...currentMessages, userMessage]);
+
+          try {
+            const data = await sendSenpaiMessage(trimmedMessage);
+            if (!isMountedReference.current) {
+              return;
+            }
+
+            setConversation(data.conversation);
+            setMessages((currentMessages) => [
+              ...currentMessages,
+              {
+                id: createMessageId("assistant"),
+                role: "assistant",
+                content: data.response,
+                timestamp: new Date().toISOString(),
+              },
+            ]);
+          } catch (error) {
+            if (isMountedReference.current) {
+              setMessages((currentMessages) =>
+                currentMessages.filter(
+                  (message) => message.id !== userMessage.id,
+                ),
+              );
+              showToast(
+                "error",
+                error.message || "Senpai Assistant request failed",
+              );
+            }
+          } finally {
+            sendMessageLock.current = false;
+            if (isMountedReference.current) {
+              setIsSending(false);
+            }
+          }
+          return;
+        }
+
         setIsSettingsOpen(true);
         showToast(
           "error",
@@ -297,61 +354,49 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         );
         return;
       }
-
-      sendMessageLock.current = true;
-      const userMessage = {
-        id: createMessageId("user"),
-        role: "user",
-        content: trimmedMessage,
-        timestamp: new Date().toISOString(),
-      };
-
-      setDraft("");
-      setIsSending(true);
-      setMessages((currentMessages) => [...currentMessages, userMessage]);
-
-      try {
-        const data = await sendSenpaiMessage(trimmedMessage);
-        if (!isMountedReference.current) {
-          return;
-        }
-
-        setConversation(data.conversation);
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          {
-            id: createMessageId("assistant"),
-            role: "assistant",
-            content: data.response,
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-      } catch (error) {
-        if (isMountedReference.current) {
-          setMessages((currentMessages) =>
-            currentMessages.filter((message) => message.id !== userMessage.id),
-          );
-          showToast(
-            "error",
-            error.message || "Senpai Assistant request failed",
-          );
-        }
-      } finally {
-        sendMessageLock.current = false;
-        if (isMountedReference.current) {
-          setIsSending(false);
-        }
-      }
     },
-    [conversation?.assistant_api_key, createMessageId, isSending, showToast],
+    [conversation, createMessageId, hasPendingRequest, showToast],
   );
 
   const handleComposerKeyDown = (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey && canSubmitMessage) {
       event.preventDefault();
       void submitMessage(draft);
     }
   };
+
+  const apiKeySelector = (
+    <Select
+      label="Assistant API key"
+      selectedKeys={new Set([selectedApiKeyKey])}
+      selectionMode="single"
+      onSelectionChange={handleApiKeyChange}
+      isDisabled={isUpdatingApiKey}
+      variant="bordered"
+      description="Choose the API key Senpai should use."
+      renderValue={() =>
+        selectedApiKey ? (
+          <div className="flex items-center gap-2">
+            <span>{selectedApiKey.name}</span>
+            <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
+              {selectedApiKey.provider}
+            </span>
+          </div>
+        ) : (
+          "No API key selected"
+        )
+      }
+    >
+      <SelectItem key="none" value="none">
+        No API key selected
+      </SelectItem>
+      {supportedApiKeys.map((apiKey) => (
+        <SelectItem key={String(apiKey.id)} value={String(apiKey.id)}>
+          {apiKey.name} ({apiKey.provider})
+        </SelectItem>
+      ))}
+    </Select>
+  );
 
   return (
     <>
@@ -362,14 +407,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             <div className="min-w-0 truncate text-sm">
               <span className="font-semibold">Senpai</span>
               <span className="mx-2 text-foreground/30">•</span>
-              <span
-                className={`text-xs ${
-                  conversation?.assistant_api_key
-                    ? "text-success"
-                    : "text-warning"
-                }`}
-              >
-                {conversation?.assistant_api_key ? "Ready" : "No key"}
+              <span className={`text-xs ${statusClassName}`}>
+                {statusLabel}
               </span>
             </div>
           </div>
@@ -379,7 +418,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
               variant="light"
               size="sm"
               onPress={() => void loadConversation({ forceNew: true })}
-              isDisabled={isRefreshingThread || isSending}
+              isDisabled={hasPendingRequest}
               aria-label="New conversation"
             >
               {isRefreshingThread ? (
@@ -431,93 +470,156 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         ) : (
           <>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
-                {messages.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center px-5 text-center">
-                    <Bot className="mb-3 h-8 w-8 text-primary/70" />
-                    <p className="text-sm font-medium">Start a conversation</p>
-                    <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
-                      This panel stays available across the app for quick
-                      checks.
-                    </p>
-                  </div>
-                ) : (
-                  messages.map((message) => {
-                    const isAssistant = message.role === "assistant";
+              {hasAssistantApiKey ? (
+                <>
+                  <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
+                    {messages.length === 0 ? (
+                      <div className="flex h-full flex-col items-center justify-center px-5 text-center">
+                        <Bot className="mb-3 h-8 w-8 text-primary/70" />
+                        <p className="text-sm font-medium">
+                          Start a conversation
+                        </p>
+                        <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
+                          This panel stays available across the app for quick
+                          checks.
+                        </p>
+                      </div>
+                    ) : (
+                      messages.map((message) => {
+                        const isAssistant = message.role === "assistant";
 
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
-                      >
-                        <div
-                          className={`max-w-[92%] rounded-2xl px-3 py-2.5 ${
-                            isAssistant
-                              ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
-                              : "bg-primary text-primary-foreground"
-                          }`}
-                        >
-                          <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
-                            {isAssistant ? (
-                              <Bot className="h-3 w-3" />
-                            ) : (
-                              <User className="h-3 w-3" />
-                            )}
-                            <span>{isAssistant ? "Senpai" : "You"}</span>
-                            <span>{formatTimestamp(message.timestamp)}</span>
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
+                          >
+                            <div
+                              className={`max-w-[92%] rounded-2xl px-3 py-2.5 ${
+                                isAssistant
+                                  ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
+                                  : "bg-primary text-primary-foreground"
+                              }`}
+                            >
+                              <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
+                                {isAssistant ? (
+                                  <Bot className="h-3 w-3" />
+                                ) : (
+                                  <User className="h-3 w-3" />
+                                )}
+                                <span>{isAssistant ? "Senpai" : "You"}</span>
+                                <span>{formatTimestamp(message.timestamp)}</span>
+                              </div>
+                              <p className="whitespace-pre-wrap text-sm leading-6">
+                                {message.content}
+                              </p>
+                            </div>
                           </div>
-                          <p className="whitespace-pre-wrap text-sm leading-6">
-                            {message.content}
-                          </p>
+                        );
+                      })
+                    )}
+
+                    {isSending && (
+                      <div className="flex justify-start">
+                        <div className="rounded-2xl bg-default-100 px-3 py-2.5 text-sm dark:bg-white/5">
+                          <div className="flex items-center gap-2">
+                            <Spinner size="sm" color="primary" />
+                            Senpai is thinking...
+                          </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
+                    )}
+                    <div ref={endOfMessagesReference} />
+                  </div>
 
-                {isSending && (
-                  <div className="flex justify-start">
-                    <div className="rounded-2xl bg-default-100 px-3 py-2.5 text-sm dark:bg-white/5">
-                      <div className="flex items-center gap-2">
-                        <Spinner size="sm" color="primary" />
-                        Senpai is thinking...
+                  <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
+                    <div className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]">
+                      <Textarea
+                        placeholder="Ask Senpai..."
+                        minRows={3}
+                        maxRows={8}
+                        variant="flat"
+                        value={draft}
+                        onValueChange={setDraft}
+                        onKeyDown={handleComposerKeyDown}
+                        isDisabled={hasPendingRequest || !conversation}
+                        classNames={{
+                          inputWrapper: "border-none bg-transparent shadow-none",
+                        }}
+                      />
+                      <div className="mt-2 flex items-center justify-end">
+                        <Button
+                          isIconOnly
+                          color="primary"
+                          radius="full"
+                          onPress={() => void submitMessage(draft)}
+                          isLoading={isSending}
+                          isDisabled={!canSubmitMessage}
+                          aria-label="Send message"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-                )}
-                <div ref={endOfMessagesReference} />
-              </div>
+                </>
+              ) : showApiKeySetup ? (
+                <div className="flex flex-1 items-center justify-center px-4 py-6">
+                  <div className="w-full max-w-sm rounded-3xl border border-default-200 bg-content1 p-5 shadow-sm dark:border-white/10 dark:bg-[#202024]">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-primary/10 p-2 text-primary">
+                        <Settings className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Select an API key
+                        </p>
+                        <p className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                          Senpai needs an OpenAI or Gemini key before starting a
+                          conversation.
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
-                <div className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]">
-                  <Textarea
-                    placeholder="Ask Senpai..."
-                    minRows={3}
-                    maxRows={8}
-                    variant="flat"
-                    value={draft}
-                    onValueChange={setDraft}
-                    onKeyDown={handleComposerKeyDown}
-                    isDisabled={isSending}
-                    classNames={{
-                      inputWrapper: "border-none bg-transparent shadow-none",
-                    }}
-                  />
-                  <div className="mt-2 flex items-center justify-end">
-                    <Button
-                      isIconOnly
-                      color="primary"
-                      radius="full"
-                      onPress={() => void submitMessage(draft)}
-                      isLoading={isSending}
-                      isDisabled={!draft.trim() || isSending}
-                      aria-label="Send message"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                    <div className="mt-5">{apiKeySelector}</div>
+
+                    {supportedApiKeys.length === 0 && (
+                      <p className="mt-3 text-sm text-warning">
+                        No compatible API keys found. Add one in your profile
+                        first.
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center px-4 py-6">
+                  <div className="w-full max-w-sm rounded-3xl border border-danger/20 bg-content1 p-5 shadow-sm dark:border-danger/20 dark:bg-[#202024]">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-danger/10 p-2 text-danger">
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Conversation unavailable
+                        </p>
+                        <p className="text-xs text-foreground/60 dark:text-foreground-dark/60">
+                          Senpai could not load the current conversation. Try
+                          reloading it.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        color="primary"
+                        onPress={() => void loadConversation({ showFullSpinner: true })}
+                        isDisabled={hasPendingRequest}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -533,39 +635,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             <>
               <ModalHeader>Senpai Settings</ModalHeader>
               <ModalBody>
-                <Select
-                  label="Assistant API key"
-                  selectedKeys={new Set([selectedApiKeyKey])}
-                  selectionMode="single"
-                  onSelectionChange={handleApiKeyChange}
-                  isDisabled={isUpdatingApiKey}
-                  variant="bordered"
-                  description="Choose the API key Senpai should use."
-                  renderValue={() =>
-                    selectedApiKey ? (
-                      <div className="flex items-center gap-2">
-                        <span>{selectedApiKey.name}</span>
-                        <span className="text-xs text-foreground/50 dark:text-foreground-dark/50">
-                          {selectedApiKey.provider}
-                        </span>
-                      </div>
-                    ) : (
-                      "No API key selected"
-                    )
-                  }
-                >
-                  <SelectItem key="none" value="none">
-                    No API key selected
-                  </SelectItem>
-                  {supportedApiKeys.map((apiKey) => (
-                    <SelectItem
-                      key={String(apiKey.id)}
-                      value={String(apiKey.id)}
-                    >
-                      {apiKey.name} ({apiKey.provider})
-                    </SelectItem>
-                  ))}
-                </Select>
+                {apiKeySelector}
                 {supportedApiKeys.length === 0 && (
                   <p className="text-sm text-warning">
                     No compatible API keys found. Add one in your profile first.
