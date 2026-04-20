@@ -532,7 +532,7 @@ function AppContent() {
 
         {/* Main Content */}
         <main className="relative z-10 min-h-0 w-full flex-1 overflow-hidden">
-          <div className="min-h-0 h-full w-full overflow-auto">
+          <div className="min-h-0 h-full w-full overflow-auto pb-12">
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
                 <Route
