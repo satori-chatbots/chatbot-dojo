@@ -38,6 +38,24 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 
 const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
+const MESSAGE_ROLES = new Set(["assistant", "user"]);
+
+const isValidStoredThreadMessage = (message) => {
+  if (!message || typeof message !== "object" || Array.isArray(message)) {
+    return false;
+  }
+
+  if (
+    typeof message.id !== "string" ||
+    !MESSAGE_ROLES.has(message.role) ||
+    typeof message.content !== "string" ||
+    typeof message.timestamp !== "string"
+  ) {
+    return false;
+  }
+
+  return !Number.isNaN(Date.parse(message.timestamp));
+};
 
 const readStoredThreadMessages = (threadId) => {
   if (!threadId) {
@@ -48,7 +66,15 @@ const readStoredThreadMessages = (threadId) => {
     const stored = globalThis.sessionStorage.getItem(
       buildThreadStorageKey(threadId),
     );
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) {
+      return [];
+    }
+
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) &&
+      parsed.every((message) => isValidStoredThreadMessage(message))
+      ? parsed
+      : [];
   } catch {
     return [];
   }
