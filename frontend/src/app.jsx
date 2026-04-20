@@ -532,7 +532,7 @@ function AppContent() {
 
         {/* Main Content */}
         <main className="relative z-10 min-h-0 w-full flex-1 overflow-hidden">
-          <div className="min-h-0 h-full w-full overflow-auto pb-12">
+          <div className="min-h-0 h-full w-full overflow-auto">
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
                 <Route
@@ -631,9 +631,9 @@ function AppContent() {
           {user && <SenpaiAssistantSidebar />}
         </main>
 
-        <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex h-12 items-center justify-center backdrop-blur-md bg-opacity-40 sm:bg-opacity-0 bg-background">
+        <footer className="flex h-12 shrink-0 items-center justify-center bg-background">
           <a
-            className="pointer-events-auto text-primary"
+            className="text-primary"
             href="https://miso.es/"
           >
             MISO
