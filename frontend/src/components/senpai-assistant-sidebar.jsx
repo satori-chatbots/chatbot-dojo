@@ -101,6 +101,25 @@ const writeStoredThreadMessages = (threadId, messages) => {
   }
 };
 
+const readDesktopSidebarCollapsed = () => {
+  try {
+    return globalThis.localStorage?.getItem(DESKTOP_COLLAPSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const writeDesktopSidebarCollapsed = (isCollapsed) => {
+  try {
+    globalThis.localStorage?.setItem(
+      DESKTOP_COLLAPSED_KEY,
+      String(isCollapsed),
+    );
+  } catch {
+    // Ignore storage failures so the sidebar remains usable.
+  }
+};
+
 const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
 
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
@@ -521,15 +540,13 @@ const SenpaiAssistantSidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
-    setIsDesktopCollapsed(
-      globalThis.localStorage.getItem(DESKTOP_COLLAPSED_KEY) === "true",
-    );
+    setIsDesktopCollapsed(readDesktopSidebarCollapsed());
   }, []);
 
   const toggleDesktopSidebar = () => {
     const nextValue = !isDesktopCollapsed;
     setIsDesktopCollapsed(nextValue);
-    globalThis.localStorage.setItem(DESKTOP_COLLAPSED_KEY, String(nextValue));
+    writeDesktopSidebarCollapsed(nextValue);
   };
 
   return (
