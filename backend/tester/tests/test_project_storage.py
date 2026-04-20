@@ -210,7 +210,11 @@ class ProjectStorageLayoutTests(TestCase):
             connector.save()
 
         mirror_path = (
-            self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector.id}.yaml"
+            self.media_root
+            / "users"
+            / f"user_{self.user.id}"
+            / "connectors"
+            / f"connector_{connector.id}__senpai_export.yaml"
         )
         self.assertTrue(mirror_path.exists())  # noqa: PT009
 
@@ -225,6 +229,41 @@ class ProjectStorageLayoutTests(TestCase):
             f"users/user_{self.user.id}/connectors/custom-connector.yaml",
         )
         self.assertTrue("custom_config_content" not in mirror_payload)  # noqa: PT009
+
+    def test_connector_export_does_not_collide_with_same_named_custom_config_file(self) -> None:
+        """The Senpai export should not overwrite a custom connector file with the legacy export name."""
+        with self.captureOnCommitCallbacks(execute=True):
+            connector = ChatbotConnector.objects.create(
+                name="Collision Safe Connector",
+                technology="rest",
+                parameters={"url": "https://example.com/collision", "method": "POST"},
+                owner=self.user,
+            )
+
+        legacy_named_config = f"connector_{connector.id}.yaml"
+        with self.captureOnCommitCallbacks(execute=True):
+            connector.custom_config_file.save(
+                legacy_named_config,
+                ContentFile("endpoint: https://example.com/custom\n"),
+                save=False,
+            )
+            connector.save()
+
+        custom_config_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / legacy_named_config
+        export_path = (
+            self.media_root
+            / "users"
+            / f"user_{self.user.id}"
+            / "connectors"
+            / f"connector_{connector.id}__senpai_export.yaml"
+        )
+
+        self.assertTrue(custom_config_path.exists())  # noqa: PT009
+        self.assertTrue(export_path.exists())  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            custom_config_path.read_text(encoding="utf-8"),
+            "endpoint: https://example.com/custom\n",
+        )
 
     def test_connector_rollback_does_not_create_senpai_yaml_mirror(self) -> None:
         """Connector export files should only be written after a successful commit."""
@@ -248,7 +287,11 @@ class ProjectStorageLayoutTests(TestCase):
                 pass
 
         mirror_path = (
-            self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector_id}.yaml"
+            self.media_root
+            / "users"
+            / f"user_{self.user.id}"
+            / "connectors"
+            / f"connector_{connector_id}__senpai_export.yaml"
         )
         self.assertEqual(callbacks, [])  # noqa: PT009
         self.assertFalse(mirror_path.exists())  # noqa: PT009

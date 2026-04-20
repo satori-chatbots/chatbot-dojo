@@ -248,6 +248,11 @@ def upload_to_execution(instance: "TestFile", filename: str) -> str:
 
 def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
     """Return the relative path for the flat connector YAML export."""
+    return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}__senpai_export.yaml"
+
+
+def get_legacy_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
+    """Return the historical flat connector YAML export path."""
     return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}.yaml"
 
 
@@ -318,15 +323,26 @@ def sync_connector_export_file(connector: "ChatbotConnector") -> None:
     export_path.parent.mkdir(parents=True, exist_ok=True)
     export_path.write_text(build_connector_export_content(connector), encoding="utf-8")
 
+    legacy_export_path = Path(settings.MEDIA_ROOT) / get_legacy_connector_export_relative_path(
+        connector.owner_id,
+        connector.id,
+    )
+    if legacy_export_path.exists():
+        legacy_export_path.unlink()
+
 
 def delete_connector_export_file(connector: "ChatbotConnector") -> None:
     """Delete the flat connector YAML export if it exists."""
     if connector.id is None:
         return
 
-    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
-    if export_path.exists():
-        export_path.unlink()
+    export_paths = (
+        Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id),
+        Path(settings.MEDIA_ROOT) / get_legacy_connector_export_relative_path(connector.owner_id, connector.id),
+    )
+    for export_path in export_paths:
+        if export_path.exists():
+            export_path.unlink()
 
 
 class TestFile(models.Model):
