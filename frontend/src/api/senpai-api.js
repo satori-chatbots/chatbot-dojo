@@ -57,7 +57,8 @@ export const assignSenpaiApiKey = async (assistantApiKeyId) => {
       {
         method: "PATCH",
         body: JSON.stringify({
-          assistant_api_key_id: assistantApiKeyId,
+          // eslint-disable-next-line unicorn/no-null
+          assistant_api_key_id: assistantApiKeyId ?? null,
         }),
       },
     );
