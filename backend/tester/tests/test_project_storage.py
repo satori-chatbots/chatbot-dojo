@@ -10,8 +10,8 @@ from django.db import transaction
 from django.test import TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from tester.api.test_files import TestFileViewSet
 from tester.api.projects import ProjectViewSet
+from tester.api.test_files import TestFileViewSet
 from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import (
     ChatbotConnector,
@@ -221,6 +221,8 @@ class ProjectStorageLayoutTests(TestCase):
             except RuntimeError:
                 pass
 
-        mirror_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector_id}.yaml"
+        mirror_path = (
+            self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector_id}.yaml"
+        )
         self.assertEqual(callbacks, [])  # noqa: PT009
         self.assertFalse(mirror_path.exists())  # noqa: PT009

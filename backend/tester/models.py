@@ -1058,6 +1058,7 @@ def sync_chatbot_connector_export(
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Keep a flat connector YAML export in the user's connectors directory."""
+
     def _sync_after_commit(
         connector: ChatbotConnector = instance,
         connector_pk: Any = instance.pk,
