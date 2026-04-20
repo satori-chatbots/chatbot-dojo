@@ -34,7 +34,7 @@ RUN if [ "$PRELOAD_SENPAI_EMBEDDING_MODEL" = "1" ]; then \
       SENTENCE_TRANSFORMERS_HOME="${SENPAI_EMBEDDING_MODEL_CACHE_ROOT}/huggingface/sentence-transformers" \
       TORCH_HOME="${SENPAI_EMBEDDING_MODEL_CACHE_ROOT}/torch" \
       HOME="${SENPAI_EMBEDDING_MODEL_CACHE_ROOT}" \
-      ./.venv/bin/python -c "from langchain_huggingface import HuggingFaceEmbeddings; from senpai_assistant.embeddings.get_embedding import MODEL_NAME; print(f'Preloading Senpai embedding model: {MODEL_NAME}'); HuggingFaceEmbeddings(model_name=MODEL_NAME).embed_query('warmup')"; \
+      ./.venv/bin/python -c "from senpai_assistant.embeddings.get_embedding import MODEL_NAME, get_embedding; print(f'Preloading Senpai embedding model: {MODEL_NAME}'); get_embedding('warmup')"; \
     fi
 
 # Copy backend source
