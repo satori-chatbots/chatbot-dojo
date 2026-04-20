@@ -122,23 +122,24 @@ class SenpaiConversationAPIKeyView(APIView):
         serializer.is_valid(raise_exception=True)
 
         conversation, _created_new_thread = get_or_create_senpai_conversation(request.user)
-        assistant_api_key_id = serializer.validated_data.get("assistant_api_key_id")
+        if "assistant_api_key_id" in serializer.validated_data:
+            assistant_api_key_id = serializer.validated_data["assistant_api_key_id"]
 
-        if assistant_api_key_id is None:
-            conversation.assistant_api_key = None
-        else:
-            try:
-                conversation.assistant_api_key = UserAPIKey.objects.get(
-                    id=assistant_api_key_id,
-                    user=request.user,
-                )
-            except UserAPIKey.DoesNotExist:
-                return Response(
-                    {"error": "The selected API key does not belong to the authenticated user."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            if assistant_api_key_id is None:
+                conversation.assistant_api_key = None
+            else:
+                try:
+                    conversation.assistant_api_key = UserAPIKey.objects.get(
+                        id=assistant_api_key_id,
+                        user=request.user,
+                    )
+                except UserAPIKey.DoesNotExist:
+                    return Response(
+                        {"error": "The selected API key does not belong to the authenticated user."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
-        conversation.save(update_fields=["assistant_api_key", "updated_at"])
+            conversation.save(update_fields=["assistant_api_key", "updated_at"])
         return Response(
             {"conversation": SenpaiConversationSerializer(conversation).data},
             status=status.HTTP_200_OK,

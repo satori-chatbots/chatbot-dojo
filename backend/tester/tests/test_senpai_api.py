@@ -166,3 +166,44 @@ class SenpaiConversationAPITests(TestCase):
             response.data["conversation"]["assistant_api_key"]["id"],
             self.api_key.id,
         )
+
+    def test_api_key_endpoint_omitted_field_keeps_existing_assignment(self) -> None:
+        """Omitting assistant_api_key_id should not clear the current assignment."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+
+        response = self.client.patch(
+            "/api/senpai/conversation/api-key/",
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        conversation = SenpaiConversation.objects.get(user=self.user)
+        self.assertEqual(conversation.assistant_api_key, self.api_key)  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            response.data["conversation"]["assistant_api_key"]["id"],
+            self.api_key.id,
+        )
+
+    def test_api_key_endpoint_null_clears_existing_assignment(self) -> None:
+        """Passing assistant_api_key_id=null should explicitly clear the assignment."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+
+        response = self.client.patch(
+            "/api/senpai/conversation/api-key/",
+            {"assistant_api_key_id": None},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        conversation = SenpaiConversation.objects.get(user=self.user)
+        self.assertIsNone(conversation.assistant_api_key)  # noqa: PT009
+        self.assertIsNone(response.data["conversation"]["assistant_api_key"])  # noqa: PT009
