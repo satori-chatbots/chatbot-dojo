@@ -250,12 +250,6 @@ def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
     """Return the relative path for the flat connector YAML export."""
     return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}__senpai_export.yaml"
 
-
-def get_legacy_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
-    """Return the historical flat connector YAML export path."""
-    return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}.yaml"
-
-
 def redact_sensitive_connector_data(value: Any) -> Any:  # noqa: ANN401
     """Return connector metadata with likely secret fields redacted."""
     sensitive_key_fragments = (
@@ -323,26 +317,15 @@ def sync_connector_export_file(connector: "ChatbotConnector") -> None:
     export_path.parent.mkdir(parents=True, exist_ok=True)
     export_path.write_text(build_connector_export_content(connector), encoding="utf-8")
 
-    legacy_export_path = Path(settings.MEDIA_ROOT) / get_legacy_connector_export_relative_path(
-        connector.owner_id,
-        connector.id,
-    )
-    if legacy_export_path.exists():
-        legacy_export_path.unlink()
-
 
 def delete_connector_export_file(connector: "ChatbotConnector") -> None:
     """Delete the flat connector YAML export if it exists."""
     if connector.id is None:
         return
 
-    export_paths = (
-        Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id),
-        Path(settings.MEDIA_ROOT) / get_legacy_connector_export_relative_path(connector.owner_id, connector.id),
-    )
-    for export_path in export_paths:
-        if export_path.exists():
-            export_path.unlink()
+    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
+    if export_path.exists():
+        export_path.unlink()
 
 
 class TestFile(models.Model):
@@ -1094,6 +1077,10 @@ def delete_custom_config_file_from_media(
     custom_config_path = getattr(instance.custom_config_file, "path", "")
     try:
         delete_connector_export_file(instance)
+    except (FileNotFoundError, PermissionError, OSError):
+        logger.exception("Error deleting connector export file for connector %s", instance.pk)
+
+    try:
         if instance.custom_config_file and Path(instance.custom_config_file.path).exists():
             Path(instance.custom_config_file.path).unlink()
             logger.info("Deleted custom config file %s from media.", instance.custom_config_file.path)

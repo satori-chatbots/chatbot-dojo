@@ -314,7 +314,7 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue("custom_config_content" not in mirror_payload)  # noqa: PT009
 
     def test_connector_export_does_not_collide_with_same_named_custom_config_file(self) -> None:
-        """The Senpai export should not overwrite a custom connector file with the legacy export name."""
+        """The Senpai export should not overwrite a same-named custom connector file."""
         with self.captureOnCommitCallbacks(execute=True):
             connector = ChatbotConnector.objects.create(
                 name="Collision Safe Connector",
@@ -323,16 +323,16 @@ class ProjectStorageLayoutTests(TestCase):
                 owner=self.user,
             )
 
-        legacy_named_config = f"connector_{connector.id}.yaml"
+        same_named_config = f"connector_{connector.id}.yaml"
         with self.captureOnCommitCallbacks(execute=True):
             connector.custom_config_file.save(
-                legacy_named_config,
+                same_named_config,
                 ContentFile("endpoint: https://example.com/custom\n"),
                 save=False,
             )
             connector.save()
 
-        custom_config_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / legacy_named_config
+        custom_config_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / same_named_config
         export_path = (
             self.media_root
             / "users"
