@@ -265,7 +265,9 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertEqual(TestFile.objects.filter(project=project).count(), 0)  # noqa: PT009
         execution = project.get_or_create_current_manual_execution()
         self.assertEqual(execution.generated_profiles_count, 0)  # noqa: PT009
-        profiles_dir = self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"project_{project.id}" / "profiles"
+        profiles_dir = (
+            self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"project_{project.id}" / "profiles"
+        )
         self.assertFalse((profiles_dir / "First Profile.yaml").exists())  # noqa: PT009
         self.assertFalse((profiles_dir / "Second Profile.yaml").exists())  # noqa: PT009
 
