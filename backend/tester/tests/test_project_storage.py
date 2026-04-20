@@ -383,16 +383,21 @@ class ProjectStorageLayoutTests(TestCase):
 
     def test_deleted_connector_does_not_recreate_senpai_yaml_mirror_on_commit(self) -> None:
         """A connector deleted before commit should not be re-exported by the save callback."""
-        with self.captureOnCommitCallbacks(execute=True):
-            with transaction.atomic():
-                connector = ChatbotConnector.objects.create(
-                    name="Delete Before Commit Connector",
-                    technology="rest",
-                    parameters={"url": "https://example.com/delete-before-commit", "method": "POST"},
-                    owner=self.user,
-                )
-                connector_id = connector.id
-                connector.delete()
+        with self.captureOnCommitCallbacks(execute=True), transaction.atomic():
+            connector = ChatbotConnector(
+                name="Delete Before Commit Connector",
+                technology="rest",
+                parameters={"url": "https://example.com/delete-before-commit", "method": "POST"},
+                owner=self.user,
+            )
+            connector.custom_config_file.save(
+                "delete-before-commit.yaml",
+                ContentFile("endpoint: https://example.com/delete-before-commit\n"),
+                save=False,
+            )
+            connector.save()
+            connector_id = connector.id
+            connector.delete()
 
         mirror_path = (
             self.media_root
