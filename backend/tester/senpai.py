@@ -132,22 +132,17 @@ def get_or_create_senpai_conversation(
     """Return the user's active Senpai conversation, optionally replacing it."""
     get_user_senpai_path(user)
 
-    conversation = getattr(user, "senpai_conversation", None)
-    if conversation is None:
-        return (
-            SenpaiConversation.objects.create(
-                user=user,
-                thread_id=uuid4().hex,
-            ),
-            True,
-        )
+    conversation, created = SenpaiConversation.objects.get_or_create(
+        user=user,
+        defaults={"thread_id": uuid4().hex},
+    )
 
     if force_new:
         conversation.thread_id = uuid4().hex
         conversation.save(update_fields=["thread_id", "updated_at"])
         return conversation, True
 
-    return conversation, False
+    return conversation, created
 
 
 def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assistant:

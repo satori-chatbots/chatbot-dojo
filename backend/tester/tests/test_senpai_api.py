@@ -8,6 +8,7 @@ from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from tester.models import CustomUser, SenpaiConversation, UserAPIKey
+from tester.senpai import get_or_create_senpai_conversation
 
 HTTP_CREATED = 201
 HTTP_OK = 200
@@ -75,6 +76,20 @@ class SenpaiConversationAPITests(TestCase):
             first_response.data["conversation"]["thread_id"],
             second_response.data["conversation"]["thread_id"],
         )
+        self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
+
+    def test_get_or_create_senpai_conversation_returns_existing_row_without_creating_duplicate(self) -> None:
+        """The helper should reuse the user's OneToOne conversation row when it already exists."""
+        existing = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-existing",
+        )
+
+        conversation, created = get_or_create_senpai_conversation(self.user)
+
+        self.assertFalse(created)  # noqa: PT009
+        self.assertEqual(conversation.pk, existing.pk)  # noqa: PT009
+        self.assertEqual(conversation.thread_id, existing.thread_id)  # noqa: PT009
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
