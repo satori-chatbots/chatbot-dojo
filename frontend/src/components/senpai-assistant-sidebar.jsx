@@ -106,6 +106,7 @@ const formatTimestamp = (value) =>
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const endOfMessagesReference = useRef(undefined);
+  const messageIdSequence = useRef(0);
 
   const [conversation, setConversation] = useState();
   const [apiKeys, setApiKeys] = useState([]);
@@ -191,6 +192,16 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     endOfMessagesReference.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
 
+  const createMessageId = useCallback((role) => {
+    const uuid = globalThis.crypto?.randomUUID?.();
+    if (typeof uuid === "string") {
+      return `${role}-${uuid}`;
+    }
+
+    messageIdSequence.current += 1;
+    return `${role}-${Date.now()}-${messageIdSequence.current}`;
+  }, []);
+
   const handleApiKeyChange = async (keys) => {
     const nextValue = [...keys][0] || "none";
     const apiKeyId = nextValue === "none" ? undefined : Number(nextValue);
@@ -234,7 +245,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       }
 
       const userMessage = {
-        id: `${Date.now()}-user`,
+        id: createMessageId("user"),
         role: "user",
         content: trimmedMessage,
         timestamp: new Date().toISOString(),
@@ -250,7 +261,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         setMessages((currentMessages) => [
           ...currentMessages,
           {
-            id: `${Date.now()}-assistant`,
+            id: createMessageId("assistant"),
             role: "assistant",
             content: data.response,
             timestamp: new Date().toISOString(),
@@ -265,7 +276,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         setIsSending(false);
       }
     },
-    [conversation?.assistant_api_key, isSending, showToast],
+    [conversation?.assistant_api_key, createMessageId, isSending, showToast],
   );
 
   const handleComposerKeyDown = (event) => {
