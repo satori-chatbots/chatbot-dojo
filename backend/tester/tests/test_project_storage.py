@@ -23,6 +23,11 @@ from tester.models import (
 )
 
 HTTP_CREATED = 201
+FAILURE_ON_SECOND_SAVE_CALL = 2
+
+
+class SimulatedUploadFailureError(RuntimeError):
+    """Raised by tests to simulate a late failure during batch upload."""
 
 
 class ProjectStorageLayoutTests(TestCase):
@@ -226,6 +231,43 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertEqual(uploaded_profile.file.name, expected_conflict)  # noqa: PT009
         self.assertFalse(uploaded_profile.is_valid)  # noqa: PT009
         self.assertTrue((self.media_root / expected_conflict).exists())  # noqa: PT009
+
+    def test_bulk_upload_cleans_up_partial_files_when_later_save_fails(self) -> None:
+        """A failed batch upload should not leave behind partially created TestFiles."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        request = self.request_factory.post(
+            "/api/testfiles/upload/",
+            {
+                "project": str(project.id),
+                "file": [
+                    SimpleUploadedFile("first.yaml", b"test_name: First Profile\nmessages: []\n"),
+                    SimpleUploadedFile("second.yaml", b"test_name: Second Profile\nmessages: []\n"),
+                ],
+            },
+            format="multipart",
+        )
+        force_authenticate(request, user=self.user)
+
+        original_save = TestFile.save
+        save_call_count = 0
+
+        def flaky_save(test_file: TestFile, *args: object, **kwargs: object) -> None:
+            nonlocal save_call_count
+            save_call_count += 1
+            original_save(test_file, *args, **kwargs)
+            if save_call_count == FAILURE_ON_SECOND_SAVE_CALL:
+                raise SimulatedUploadFailureError
+
+        with patch.object(TestFile, "save", autospec=True, side_effect=flaky_save):
+            response = TestFileViewSet.as_view({"post": "upload"})(request)
+
+        self.assertEqual(response.status_code, 500)  # noqa: PT009
+        self.assertEqual(TestFile.objects.filter(project=project).count(), 0)  # noqa: PT009
+        execution = project.get_or_create_current_manual_execution()
+        self.assertEqual(execution.generated_profiles_count, 0)  # noqa: PT009
+        profiles_dir = self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"project_{project.id}" / "profiles"
+        self.assertFalse((profiles_dir / "First Profile.yaml").exists())  # noqa: PT009
+        self.assertFalse((profiles_dir / "Second Profile.yaml").exists())  # noqa: PT009
 
     def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
         """Every connector should have a YAML mirror under the user connectors directory."""
