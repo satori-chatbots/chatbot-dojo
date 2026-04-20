@@ -96,7 +96,7 @@ const writeStoredThreadMessages = (threadId, messages) => {
 };
 
 const formatTimestamp = (value) =>
-  new Intl.DateTimeFormat("es-ES", {
+  new Intl.DateTimeFormat(undefined, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
