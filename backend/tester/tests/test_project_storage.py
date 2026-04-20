@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.test import TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -186,12 +187,13 @@ class ProjectStorageLayoutTests(TestCase):
 
     def test_connector_creates_senpai_visible_yaml_mirror(self) -> None:
         """Every connector should have a YAML mirror under the user connectors directory."""
-        connector = ChatbotConnector.objects.create(
-            name="Webhook Connector",
-            technology="rest",
-            parameters={"url": "https://example.com/hook", "method": "POST"},
-            owner=self.user,
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            connector = ChatbotConnector.objects.create(
+                name="Webhook Connector",
+                technology="rest",
+                parameters={"url": "https://example.com/hook", "method": "POST"},
+                owner=self.user,
+            )
 
         mirror_path = (
             self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector.id}.yaml"
@@ -202,3 +204,23 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue("name: Webhook Connector" in mirror_content)  # noqa: PT009
         self.assertTrue("technology: rest" in mirror_content)  # noqa: PT009
         self.assertTrue("url: https://example.com/hook" in mirror_content)  # noqa: PT009
+
+    def test_connector_rollback_does_not_create_senpai_yaml_mirror(self) -> None:
+        """Connector export files should only be written after a successful commit."""
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            try:
+                with transaction.atomic():
+                    connector = ChatbotConnector.objects.create(
+                        name="Rolled Back Connector",
+                        technology="rest",
+                        parameters={"url": "https://example.com/rollback", "method": "POST"},
+                        owner=self.user,
+                    )
+                    connector_id = connector.id
+                    raise RuntimeError("rollback")
+            except RuntimeError:
+                pass
+
+        mirror_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / f"connector_{connector_id}.yaml"
+        self.assertEqual(callbacks, [])  # noqa: PT009
+        self.assertFalse(mirror_path.exists())  # noqa: PT009

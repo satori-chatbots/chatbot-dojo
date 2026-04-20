@@ -1058,10 +1058,16 @@ def sync_chatbot_connector_export(
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Keep a flat connector YAML export in the user's connectors directory."""
-    try:
-        sync_connector_export_file(instance)
-    except (OSError, RuntimeError):
-        logger.exception("Failed to sync connector YAML export for connector %s", instance.pk)
+    def _sync_after_commit(
+        connector: ChatbotConnector = instance,
+        connector_pk: Any = instance.pk,
+    ) -> None:
+        try:
+            sync_connector_export_file(connector)
+        except (OSError, RuntimeError):
+            logger.exception("Failed to sync connector YAML export for connector %s", connector_pk)
+
+    transaction.on_commit(_sync_after_commit)
 
 
 class ProfileExecution(models.Model):
