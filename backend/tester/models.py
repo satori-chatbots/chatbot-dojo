@@ -1061,7 +1061,7 @@ def sync_chatbot_connector_export(
 
     def _sync_after_commit(
         connector: ChatbotConnector = instance,
-        connector_pk: Any = instance.pk,
+        connector_pk: int | None = instance.pk,
     ) -> None:
         try:
             sync_connector_export_file(connector)

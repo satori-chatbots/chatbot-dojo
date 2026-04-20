@@ -162,25 +162,27 @@ class ProjectStorageLayoutTests(TestCase):
         """Bulk uploads should defer execution profile recounts until the batch is complete."""
         project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
         execution = project.create_manual_execution_folder()
-        viewset = TestFileViewSet()
-        file_data = [
+        request = self.request_factory.post(
+            "/api/testfiles/upload/",
             {
-                "file": SimpleUploadedFile("first.yaml", b"test_name: First Profile\nmessages: []\n"),
-                "test_name": "First Profile",
-                "is_valid": True,
+                "project": str(project.id),
+                "file": [
+                    SimpleUploadedFile("first.yaml", b"test_name: First Profile\nmessages: []\n"),
+                    SimpleUploadedFile("second.yaml", b"test_name: Second Profile\nmessages: []\n"),
+                ],
             },
-            {
-                "file": SimpleUploadedFile("second.yaml", b"test_name: Second Profile\nmessages: []\n"),
-                "test_name": "Second Profile",
-                "is_valid": True,
-            },
-        ]
+            format="multipart",
+        )
+        force_authenticate(request, user=self.user)
 
-        with patch.object(project, "get_or_create_current_manual_execution", return_value=execution):
-            with patch.object(execution, "save", wraps=execution.save) as execution_save_spy:
-                saved_file_ids = viewset._create_test_files_from_data(project, file_data)
+        with (
+            patch.object(Project, "get_or_create_current_manual_execution", return_value=execution),
+            patch.object(execution, "save", wraps=execution.save) as execution_save_spy,
+        ):
+            response = TestFileViewSet.as_view({"post": "upload"})(request)
 
-        self.assertEqual(len(saved_file_ids), 2)  # noqa: PT009
+        self.assertEqual(response.status_code, HTTP_CREATED)  # noqa: PT009
+        self.assertEqual(len(response.data["uploaded_file_ids"]), 2)  # noqa: PT009
         execution_save_spy.assert_called_once_with(update_fields=["generated_profiles_count"])
         execution.refresh_from_db()
         self.assertEqual(execution.generated_profiles_count, 2)  # noqa: PT009
@@ -207,6 +209,11 @@ class ProjectStorageLayoutTests(TestCase):
 
     def test_connector_rollback_does_not_create_senpai_yaml_mirror(self) -> None:
         """Connector export files should only be written after a successful commit."""
+        rollback_error_message = "rollback"
+
+        def raise_rollback() -> None:
+            raise RuntimeError(rollback_error_message)
+
         with self.captureOnCommitCallbacks(execute=False) as callbacks:
             try:
                 with transaction.atomic():
@@ -217,7 +224,7 @@ class ProjectStorageLayoutTests(TestCase):
                         owner=self.user,
                     )
                     connector_id = connector.id
-                    raise RuntimeError("rollback")
+                    raise_rollback()
             except RuntimeError:
                 pass
 
