@@ -632,10 +632,7 @@ function AppContent() {
         </main>
 
         <footer className="flex h-12 shrink-0 items-center justify-center bg-background">
-          <a
-            className="text-primary"
-            href="https://miso.es/"
-          >
+          <a className="text-primary" href="https://miso.es/">
             MISO
           </a>
         </footer>
