@@ -126,6 +126,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const endOfMessagesReference = useRef(undefined);
   const messageIdSequence = useRef(0);
+  const sendMessageLock = useRef(false);
 
   const [conversation, setConversation] = useState();
   const [apiKeys, setApiKeys] = useState([]);
@@ -250,7 +251,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const submitMessage = useCallback(
     async (messageText) => {
       const trimmedMessage = messageText.trim();
-      if (!trimmedMessage || isSending) {
+      if (!trimmedMessage || isSending || sendMessageLock.current) {
         return;
       }
 
@@ -263,6 +264,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         return;
       }
 
+      sendMessageLock.current = true;
       const userMessage = {
         id: createMessageId("user"),
         role: "user",
@@ -292,6 +294,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         );
         showToast("error", error.message || "Senpai Assistant request failed");
       } finally {
+        sendMessageLock.current = false;
         setIsSending(false);
       }
     },
