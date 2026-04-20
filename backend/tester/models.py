@@ -250,6 +250,7 @@ def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
     """Return the relative path for the flat connector YAML export."""
     return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}__senpai_export.yaml"
 
+
 def redact_sensitive_connector_data(value: Any) -> Any:  # noqa: ANN401
     """Return connector metadata with likely secret fields redacted."""
     sensitive_key_fragments = (
