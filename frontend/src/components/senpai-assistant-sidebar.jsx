@@ -39,6 +39,12 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
 const MESSAGE_ROLES = new Set(["assistant", "user"]);
+const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "short",
+});
 
 const isValidStoredThreadMessage = (message) => {
   if (!message || typeof message !== "object" || Array.isArray(message)) {
@@ -95,13 +101,7 @@ const writeStoredThreadMessages = (threadId, messages) => {
   }
 };
 
-const formatTimestamp = (value) =>
-  new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-  }).format(new Date(value));
+const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
 
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
