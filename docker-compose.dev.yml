@@ -38,13 +38,14 @@ services:
         PRELOAD_SENPAI_EMBEDDING_MODEL: "1"
     env_file:
       - ./.env.dev
+    environment:
+      SENPAI_EMBEDDING_MODEL_CACHE_ROOT: /app/filevault/senpai-embedding-model-cache
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
       - filevault_data_dev:/app/filevault
-      - senpai_embedding_model_cache_dev:/opt/senpai-embedding-model-cache
     user: "1000:1000"
     depends_on:
       db:
@@ -57,11 +58,12 @@ services:
     image: sensei-web-python-dev:latest
     env_file:
       - ./.env.dev
+    environment:
+      SENPAI_EMBEDDING_MODEL_CACHE_ROOT: /app/filevault/senpai-embedding-model-cache
     volumes:
       - ./backend:/app
       - celery_venv:/app/.venv
       - filevault_data_dev:/app/filevault
-      - senpai_embedding_model_cache_dev:/opt/senpai-embedding-model-cache
     user: "1000:1000"
     depends_on:
       db:
@@ -97,4 +99,3 @@ volumes:
   backend_venv:
   celery_venv:
   filevault_data_dev:
-  senpai_embedding_model_cache_dev:
