@@ -33,6 +33,7 @@ import {
   initializeSenpaiConversation,
   sendSenpaiMessage,
 } from "../api/senpai-api";
+import MarkdownMessage from "./markdown-message";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useSetup } from "../contexts/setup-context";
 
@@ -404,7 +405,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-divider px-3">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
             <Bot className="h-4 w-4 flex-shrink-0 text-primary" />
-            <div className="min-w-0 truncate text-sm">
+            <div className="min-w-0 flex-1 truncate text-sm">
               <span className="font-semibold">Senpai</span>
               <span className="mx-2 text-foreground/30">•</span>
               <span className={`text-xs ${statusClassName}`}>
@@ -412,7 +413,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-shrink-0 items-center gap-1">
             <Button
               isIconOnly
               variant="light"
@@ -491,10 +492,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                         return (
                           <div
                             key={message.id}
-                            className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
+                            className={`flex min-w-0 ${isAssistant ? "justify-start" : "justify-end"}`}
                           >
                             <div
-                              className={`max-w-[92%] rounded-2xl px-3 py-2.5 ${
+                              className={`min-w-0 max-w-[92%] overflow-hidden rounded-2xl px-3 py-2.5 ${
                                 isAssistant
                                   ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
                                   : "bg-primary text-primary-foreground"
@@ -509,9 +510,16 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                                 <span>{isAssistant ? "Senpai" : "You"}</span>
                                 <span>{formatTimestamp(message.timestamp)}</span>
                               </div>
-                              <p className="whitespace-pre-wrap text-sm leading-6">
-                                {message.content}
-                              </p>
+                              {isAssistant ? (
+                                <MarkdownMessage
+                                  content={message.content}
+                                  className="space-y-2"
+                                />
+                              ) : (
+                                <p className="whitespace-pre-wrap text-sm leading-6">
+                                  {message.content}
+                                </p>
+                              )}
                             </div>
                           </div>
                         );
