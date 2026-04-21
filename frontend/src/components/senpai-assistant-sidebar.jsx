@@ -164,6 +164,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const { setupData, reloadApiKeys } = useSetup();
   const endOfMessagesReference = useRef(undefined);
+  const composerReference = useRef(undefined);
   const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
@@ -310,6 +311,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   );
   const hasPendingRequest =
     isBootstrapping || isRefreshingThread || isSending || isUpdatingApiKey;
+  const isComposerDisabled =
+    isBootstrapping || isRefreshingThread || isUpdatingApiKey || !conversation;
   const isConversationLoaded = Boolean(conversation);
   const hasAssistantApiKey = Boolean(conversation?.assistant_api_key);
   const showApiKeySetup = isConversationLoaded && !hasAssistantApiKey;
@@ -325,6 +328,32 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     statusLabel = hasAssistantApiKey ? "Ready" : "No key";
     statusClassName = hasAssistantApiKey ? "text-success" : "text-warning";
   }
+
+  const focusComposer = useCallback(() => {
+    if (
+      !hasAssistantApiKey ||
+      hasPendingRequest ||
+      isSettingsOpen ||
+      !composerReference.current
+    ) {
+      return;
+    }
+
+    globalThis.requestAnimationFrame(() => {
+      const textarea = composerReference.current?.querySelector("textarea");
+      if (!textarea || textarea.disabled) {
+        return;
+      }
+
+      textarea.focus();
+      const caretPosition = textarea.value.length;
+      textarea.setSelectionRange(caretPosition, caretPosition);
+    });
+  }, [hasAssistantApiKey, hasPendingRequest, isSettingsOpen]);
+
+  useEffect(() => {
+    focusComposer();
+  }, [focusComposer, conversation?.thread_id, hasAssistantApiKey, messages.length]);
 
   const submitMessage = useCallback(
     async (messageText) => {
@@ -397,8 +426,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   );
 
   const handleComposerKeyDown = (event) => {
-    if (event.key === "Enter" && !event.shiftKey && canSubmitMessage) {
-      event.preventDefault();
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    if (canSubmitMessage) {
       void submitMessage(draft);
     }
   };
@@ -577,16 +610,20 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                   </div>
 
                   <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
-                    <div className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]">
+                    <div
+                      ref={composerReference}
+                      className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]"
+                    >
                       <Textarea
                         placeholder="Ask Senpai..."
                         minRows={3}
                         maxRows={8}
                         variant="flat"
+                        autoFocus
                         value={draft}
                         onValueChange={setDraft}
                         onKeyDown={handleComposerKeyDown}
-                        isDisabled={hasPendingRequest || !conversation}
+                        isDisabled={isComposerDisabled}
                         classNames={{
                           inputWrapper: "border-none bg-transparent shadow-none",
                         }}
