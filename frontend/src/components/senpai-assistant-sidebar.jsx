@@ -39,7 +39,12 @@ import { useSetup } from "../contexts/setup-context";
 
 const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
+const DESKTOP_WIDTH_KEY = "senpai-sidebar-width";
 const MESSAGE_ROLES = new Set(["assistant", "user"]);
+const DEFAULT_DESKTOP_WIDTH = 420;
+const MIN_DESKTOP_WIDTH = 320;
+const MAX_DESKTOP_WIDTH = 720;
+const DESKTOP_COLLAPSED_WIDTH = 56;
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
   hour: "2-digit",
@@ -115,6 +120,38 @@ const writeDesktopSidebarCollapsed = (isCollapsed) => {
     globalThis.localStorage?.setItem(
       DESKTOP_COLLAPSED_KEY,
       String(isCollapsed),
+    );
+  } catch {
+    // Ignore storage failures so the sidebar remains usable.
+  }
+};
+
+const clampDesktopSidebarWidth = (width) => {
+  const viewportWidth = globalThis.innerWidth || MAX_DESKTOP_WIDTH;
+  const maxAllowedWidth = Math.max(
+    MIN_DESKTOP_WIDTH,
+    Math.min(MAX_DESKTOP_WIDTH, viewportWidth - 160),
+  );
+
+  return Math.min(Math.max(width, MIN_DESKTOP_WIDTH), maxAllowedWidth);
+};
+
+const readDesktopSidebarWidth = () => {
+  try {
+    const storedWidth = Number(globalThis.localStorage?.getItem(DESKTOP_WIDTH_KEY));
+    return Number.isFinite(storedWidth)
+      ? clampDesktopSidebarWidth(storedWidth)
+      : DEFAULT_DESKTOP_WIDTH;
+  } catch {
+    return DEFAULT_DESKTOP_WIDTH;
+  }
+};
+
+const writeDesktopSidebarWidth = (width) => {
+  try {
+    globalThis.localStorage?.setItem(
+      DESKTOP_WIDTH_KEY,
+      String(clampDesktopSidebarWidth(width)),
     );
   } catch {
     // Ignore storage failures so the sidebar remains usable.
@@ -666,9 +703,19 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 const SenpaiAssistantSidebar = () => {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [desktopWidth, setDesktopWidth] = useState(DEFAULT_DESKTOP_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const asideReference = useRef(undefined);
+  const desktopWidthReference = useRef(DEFAULT_DESKTOP_WIDTH);
+  const pendingDesktopWidthReference = useRef(DEFAULT_DESKTOP_WIDTH);
+  const resizeFrameReference = useRef(0);
 
   useEffect(() => {
     setIsDesktopCollapsed(readDesktopSidebarCollapsed());
+    const storedWidth = readDesktopSidebarWidth();
+    setDesktopWidth(storedWidth);
+    desktopWidthReference.current = storedWidth;
+    pendingDesktopWidthReference.current = storedWidth;
   }, []);
 
   const toggleDesktopSidebar = () => {
@@ -677,12 +724,103 @@ const SenpaiAssistantSidebar = () => {
     writeDesktopSidebarCollapsed(nextValue);
   };
 
+  const updateDesktopWidth = useCallback((nextWidth) => {
+    const clampedWidth = clampDesktopSidebarWidth(nextWidth);
+    desktopWidthReference.current = clampedWidth;
+    setDesktopWidth(clampedWidth);
+    return clampedWidth;
+  }, []);
+
+  const handleResizeStart = useCallback((event) => {
+    event.preventDefault();
+    pendingDesktopWidthReference.current = desktopWidthReference.current;
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!asideReference.current || isDesktopCollapsed) {
+      return;
+    }
+
+    asideReference.current.style.width = `${desktopWidth}px`;
+  }, [desktopWidth, isDesktopCollapsed]);
+
+  useEffect(() => {
+    if (!isResizing) {
+      return undefined;
+    }
+
+    const handlePointerMove = (event) => {
+      pendingDesktopWidthReference.current = clampDesktopSidebarWidth(
+        globalThis.innerWidth - event.clientX,
+      );
+
+      if (resizeFrameReference.current) {
+        return;
+      }
+
+      resizeFrameReference.current = globalThis.requestAnimationFrame(() => {
+        resizeFrameReference.current = 0;
+        if (asideReference.current) {
+          asideReference.current.style.width = `${pendingDesktopWidthReference.current}px`;
+        }
+      });
+    };
+
+    const handlePointerUp = () => {
+      if (resizeFrameReference.current) {
+        globalThis.cancelAnimationFrame(resizeFrameReference.current);
+        resizeFrameReference.current = 0;
+      }
+
+      const clampedWidth = pendingDesktopWidthReference.current;
+      desktopWidthReference.current = clampedWidth;
+      setDesktopWidth(clampedWidth);
+      writeDesktopSidebarWidth(clampedWidth);
+      setIsResizing(false);
+    };
+
+    globalThis.addEventListener("pointermove", handlePointerMove);
+    globalThis.addEventListener("pointerup", handlePointerUp);
+    globalThis.document.body.style.userSelect = "none";
+    globalThis.document.body.style.cursor = "col-resize";
+
+    return () => {
+      if (resizeFrameReference.current) {
+        globalThis.cancelAnimationFrame(resizeFrameReference.current);
+        resizeFrameReference.current = 0;
+      }
+
+      globalThis.removeEventListener("pointermove", handlePointerMove);
+      globalThis.removeEventListener("pointerup", handlePointerUp);
+      globalThis.document.body.style.userSelect = "";
+      globalThis.document.body.style.cursor = "";
+    };
+  }, [isResizing, updateDesktopWidth]);
+
+  useEffect(() => {
+    const handleWindowResize = () => {
+      const clampedWidth = updateDesktopWidth(desktopWidthReference.current);
+      writeDesktopSidebarWidth(clampedWidth);
+    };
+
+    globalThis.addEventListener("resize", handleWindowResize);
+
+    return () => {
+      globalThis.removeEventListener("resize", handleWindowResize);
+    };
+  }, [updateDesktopWidth]);
+
   return (
     <>
       <aside
+        ref={asideReference}
         className={`absolute inset-y-0 right-0 z-30 hidden overflow-hidden border-l border-divider bg-content2 shadow-2xl transition-[width,transform,opacity] duration-200 ease-out dark:bg-[#18181b] xl:flex ${
-          isDesktopCollapsed ? "xl:w-14" : "xl:w-[420px]"
+          isResizing ? "duration-0" : ""
         }`}
+        style={{
+          width: isDesktopCollapsed ? DESKTOP_COLLAPSED_WIDTH : desktopWidth,
+        }}
       >
         {isDesktopCollapsed ? (
           <div className="flex h-full w-full flex-col">
@@ -699,9 +837,17 @@ const SenpaiAssistantSidebar = () => {
             </div>
           </div>
         ) : (
-          <div className="min-h-0 flex-1 animate-in fade-in-0 slide-in-from-right-1 duration-200">
-            <SenpaiAssistantPanel onCollapse={toggleDesktopSidebar} />
-          </div>
+          <>
+            <button
+              type="button"
+              className="absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/15"
+              onPointerDown={handleResizeStart}
+              aria-label="Resize Senpai Assistant"
+            />
+            <div className="min-h-0 flex-1 animate-in fade-in-0 slide-in-from-right-1 duration-200">
+              <SenpaiAssistantPanel onCollapse={toggleDesktopSidebar} />
+            </div>
+          </>
         )}
       </aside>
 
