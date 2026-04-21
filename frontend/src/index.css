@@ -96,4 +96,72 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* WebKit */
   }
+
+  .code-token-comment {
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .dark .code-token-comment {
+    color: #94a3b8;
+  }
+
+  .code-token-keyword {
+    color: #9f1239;
+    font-weight: 600;
+  }
+
+  .dark .code-token-keyword {
+    color: #f472b6;
+  }
+
+  .code-token-constant {
+    color: #7c3aed;
+    font-weight: 600;
+  }
+
+  .dark .code-token-constant {
+    color: #c084fc;
+  }
+
+  .code-token-string {
+    color: #0f766e;
+  }
+
+  .dark .code-token-string {
+    color: #5eead4;
+  }
+
+  .code-token-number {
+    color: #1d4ed8;
+  }
+
+  .dark .code-token-number {
+    color: #93c5fd;
+  }
+
+  .code-token-property {
+    color: #b45309;
+    font-weight: 600;
+  }
+
+  .dark .code-token-property {
+    color: #fbbf24;
+  }
+
+  .code-token-variable {
+    color: #0369a1;
+  }
+
+  .dark .code-token-variable {
+    color: #7dd3fc;
+  }
+
+  .code-token-attribute {
+    color: #4338ca;
+  }
+
+  .dark .code-token-attribute {
+    color: #a5b4fc;
+  }
 }
