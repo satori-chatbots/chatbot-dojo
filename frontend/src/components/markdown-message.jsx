@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { Check, Copy } from "lucide-react";
 
 const splitInlineMarkdown = (text) => {
   const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
@@ -74,19 +75,45 @@ const renderList = (items, ordered, key) => {
   );
 };
 
-const renderCodeBlock = (lines, language, key) => (
-  <pre
-    key={key}
-    className="max-w-full overflow-x-auto rounded-xl bg-black/10 px-3 py-2 text-xs leading-6 dark:bg-white/10"
-  >
-    <code
-      data-language={language || undefined}
-      className="block min-w-0 whitespace-pre-wrap break-words"
-    >
-      {lines.join("\n")}
-    </code>
-  </pre>
-);
+const CodeBlock = ({ lines, language }) => {
+  const [copied, setCopied] = useState(false);
+  const code = lines.join("\n");
+
+  const handleCopy = async () => {
+    try {
+      await globalThis.navigator?.clipboard?.writeText(code);
+      setCopied(true);
+      globalThis.setTimeout(() => {
+        setCopied(false);
+      }, 1500);
+    } catch (error) {
+      console.error("Failed to copy code block:", error);
+    }
+  };
+
+  return (
+    <div className="relative max-w-full">
+      <button
+        type="button"
+        onClick={() => void handleCopy()}
+        className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-black/75"
+        aria-label={copied ? "Code copied" : "Copy code"}
+        title={copied ? "Copied" : "Copy code"}
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        
+      </button>
+      <pre className="max-w-full overflow-x-auto rounded-xl bg-black/10 px-3 py-2 pr-16 text-xs leading-6 dark:bg-white/10">
+        <code
+          data-language={language || undefined}
+          className="block min-w-0 whitespace-pre-wrap break-words"
+        >
+          {code}
+        </code>
+      </pre>
+    </div>
+  );
+};
 
 const renderHeading = (level, text, key) => {
   const classNameByLevel = {
@@ -131,7 +158,11 @@ const parseMarkdown = (content) => {
       }
 
       elements.push(
-        renderCodeBlock(codeLines, fenceMatch[1], `code-${elements.length}`),
+        <CodeBlock
+          key={`code-${elements.length}`}
+          lines={codeLines}
+          language={fenceMatch[1]}
+        />,
       );
       continue;
     }
