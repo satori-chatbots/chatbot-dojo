@@ -1,11 +1,30 @@
 import React, { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
+const SAFE_LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
+
 const escapeCodeHtml = (value) =>
   value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+
+const sanitizeMarkdownLinkHref = (href) => {
+  const trimmedHref = href?.trim();
+  if (!trimmedHref) {
+    return undefined;
+  }
+
+  try {
+    const baseOrigin = globalThis.location?.origin || "http://localhost";
+    const parsedUrl = new URL(trimmedHref, baseOrigin);
+    return SAFE_LINK_PROTOCOLS.has(parsedUrl.protocol)
+      ? parsedUrl.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 const normalizeLanguage = (language) => {
   const normalized = (language || "").toLowerCase();
@@ -45,13 +64,29 @@ const applyNumberHighlighting = (source) =>
     '$1<span class="code-token-number">$2</span>',
   );
 
+const escapeRegex = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const createTokenPlaceholderPrefix = (source) => {
+  let prefix = "";
+
+  do {
+    const uniqueSuffix =
+      globalThis.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    prefix = `@@CODE_TOKEN_${uniqueSuffix}_`;
+  } while (source.includes(prefix));
+
+  return prefix;
+};
+
 const highlightWithPlaceholders = (source, definitions, transform) => {
   const tokens = [];
+  const placeholderPrefix = createTokenPlaceholderPrefix(source);
   let highlighted = source;
 
   const stash = (pattern, className) => {
     highlighted = highlighted.replaceAll(pattern, (match) => {
-      const tokenKey = `@@CODE_TOKEN_${tokens.length}@@`;
+      const tokenKey = `${placeholderPrefix}${tokens.length}@@`;
       tokens.push(`<span class="${className}">${match}</span>`);
       return tokenKey;
     });
@@ -63,7 +98,10 @@ const highlightWithPlaceholders = (source, definitions, transform) => {
 
   highlighted = transform(highlighted);
 
-  return highlighted.replaceAll(/@@CODE_TOKEN_(\d+)@@/g, (_, index) => tokens[Number(index)]);
+  return highlighted.replaceAll(
+    new RegExp(`${escapeRegex(placeholderPrefix)}(\\d+)@@`, "g"),
+    (_, index) => tokens[Number(index)],
+  );
 };
 
 const highlightJson = (code) => {
@@ -361,10 +399,15 @@ const splitInlineMarkdown = (text) => {
     const linkMatch = segment.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (linkMatch) {
       const [, label, href] = linkMatch;
+      const sanitizedHref = sanitizeMarkdownLinkHref(href);
+      if (!sanitizedHref) {
+        return <React.Fragment key={`text-${index}`}>{label}</React.Fragment>;
+      }
+
       return (
         <a
           key={`link-${index}`}
-          href={href}
+          href={sanitizedHref}
           target="_blank"
           rel="noreferrer"
           className="underline underline-offset-2"

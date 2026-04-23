@@ -44,6 +44,7 @@ const MESSAGE_ROLES = new Set(["assistant", "user"]);
 const DEFAULT_DESKTOP_WIDTH = 420;
 const MIN_DESKTOP_WIDTH = 320;
 const MAX_DESKTOP_WIDTH = 720;
+const DESKTOP_SIDEBAR_VIEWPORT_MARGIN = 160;
 const DESKTOP_COLLAPSED_WIDTH = 56;
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
@@ -130,7 +131,7 @@ const clampDesktopSidebarWidth = (width) => {
   const viewportWidth = globalThis.innerWidth || MAX_DESKTOP_WIDTH;
   const maxAllowedWidth = Math.max(
     MIN_DESKTOP_WIDTH,
-    Math.min(MAX_DESKTOP_WIDTH, viewportWidth - 160),
+    Math.min(MAX_DESKTOP_WIDTH, viewportWidth - DESKTOP_SIDEBAR_VIEWPORT_MARGIN),
   );
 
   return Math.min(Math.max(width, MIN_DESKTOP_WIDTH), maxAllowedWidth);
@@ -138,7 +139,12 @@ const clampDesktopSidebarWidth = (width) => {
 
 const readDesktopSidebarWidth = () => {
   try {
-    const storedWidth = Number(globalThis.localStorage?.getItem(DESKTOP_WIDTH_KEY));
+    const storedWidthValue = globalThis.localStorage?.getItem(DESKTOP_WIDTH_KEY);
+    if (storedWidthValue === null || storedWidthValue === "") {
+      return DEFAULT_DESKTOP_WIDTH;
+    }
+
+    const storedWidth = Number(storedWidthValue);
     return Number.isFinite(storedWidth)
       ? clampDesktopSidebarWidth(storedWidth)
       : DEFAULT_DESKTOP_WIDTH;
