@@ -174,6 +174,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
+  const shouldFocusComposerReference = useRef(false);
 
   const [conversation, setConversation] = useState();
   const [messages, setMessages] = useState([]);
@@ -223,6 +224,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         }
 
         setConversation(data.conversation);
+        shouldFocusComposerReference.current = true;
         if (forceNew) {
           setDraft("");
           setMessages([]);
@@ -292,6 +294,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       }
 
       setConversation(data.conversation);
+      shouldFocusComposerReference.current = true;
       showToast("success", "Assistant API key updated");
     } catch (error) {
       if (isMountedReference.current) {
@@ -351,6 +354,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         return;
       }
 
+      shouldFocusComposerReference.current = false;
       textarea.focus();
       const caretPosition = textarea.value.length;
       textarea.setSelectionRange(caretPosition, caretPosition);
@@ -358,8 +362,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   }, [hasAssistantApiKey, hasPendingRequest, isSettingsOpen]);
 
   useEffect(() => {
+    if (!shouldFocusComposerReference.current) {
+      return;
+    }
+
     focusComposer();
-  }, [focusComposer, conversation?.thread_id, hasAssistantApiKey, messages.length]);
+  }, [focusComposer, conversation?.thread_id, hasAssistantApiKey, hasPendingRequest]);
 
   const submitMessage = useCallback(
     async (messageText) => {
@@ -382,6 +390,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           setDraft("");
           setIsSending(true);
           setMessages((currentMessages) => [...currentMessages, userMessage]);
+          shouldFocusComposerReference.current = true;
 
           try {
             const data = await sendSenpaiMessage(trimmedMessage);
