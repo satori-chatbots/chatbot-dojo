@@ -26,6 +26,35 @@ const sanitizeMarkdownLinkHref = (href) => {
   }
 };
 
+const copyTextToClipboard = async (text) => {
+  if (typeof globalThis.navigator?.clipboard?.writeText === "function") {
+    await globalThis.navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const document = globalThis.document;
+  if (!document?.body?.appendChild) {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    return document.execCommand?.("copy") === true;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+};
+
 const normalizeLanguage = (language) => {
   const normalized = (language || "").toLowerCase();
 
@@ -113,12 +142,12 @@ const highlightYaml = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(#.*$)/gm,
-        className: "code-token-comment",
-      },
-      {
         pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(#.*$)/gm,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => {
@@ -142,12 +171,12 @@ const highlightJavaScript = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
-        className: "code-token-comment",
-      },
-      {
         pattern: /(`(?:\\[\s\S]|[^`])*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => {
@@ -171,12 +200,12 @@ const highlightPython = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(#.*$)/gm,
-        className: "code-token-comment",
-      },
-      {
         pattern: /("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(#.*$)/gm,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => {
@@ -200,12 +229,12 @@ const highlightBash = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(#.*$)/gm,
-        className: "code-token-comment",
-      },
-      {
         pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(#.*$)/gm,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => {
@@ -232,12 +261,12 @@ const highlightHtml = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(&lt;!--[\s\S]*?--&gt;)/g,
-        className: "code-token-comment",
-      },
-      {
         pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(&lt;!--[\s\S]*?--&gt;)/g,
+        className: "code-token-comment",
       },
     ],
     (highlighted) =>
@@ -255,12 +284,12 @@ const highlightSql = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(--.*$|\/\*[\s\S]*?\*\/)/gm,
-        className: "code-token-comment",
-      },
-      {
         pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(--.*$|\/\*[\s\S]*?\*\/)/gm,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => {
@@ -279,12 +308,12 @@ const highlightCss = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(\/\*[\s\S]*?\*\/)/g,
-        className: "code-token-comment",
-      },
-      {
         pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(\/\*[\s\S]*?\*\/)/g,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => {
@@ -308,12 +337,12 @@ const highlightGenericCode = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /(\/\/.*$|#.*$|\/\*[\s\S]*?\*\/)/gm,
-        className: "code-token-comment",
-      },
-      {
         pattern: /(`(?:\\[\s\S]|[^`])*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
+      },
+      {
+        pattern: /(\/\/.*$|#.*$|\/\*[\s\S]*?\*\/)/gm,
+        className: "code-token-comment",
       },
     ],
     (highlighted) => applyNumberHighlighting(highlighted),
@@ -439,7 +468,11 @@ const CodeBlock = ({ lines, language }) => {
 
   const handleCopy = async () => {
     try {
-      await globalThis.navigator?.clipboard?.writeText(code);
+      const didCopy = await copyTextToClipboard(code);
+      if (!didCopy) {
+        return;
+      }
+
       setCopied(true);
       globalThis.setTimeout(() => {
         setCopied(false);
