@@ -64,29 +64,13 @@ const applyNumberHighlighting = (source) =>
     '$1<span class="code-token-number">$2</span>',
   );
 
-const escapeRegex = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const createTokenPlaceholderPrefix = (source) => {
-  let prefix = "";
-
-  do {
-    const uniqueSuffix =
-      globalThis.crypto?.randomUUID?.() ||
-      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    prefix = `@@CODE_TOKEN_${uniqueSuffix}_`;
-  } while (source.includes(prefix));
-
-  return prefix;
-};
-
 const highlightWithPlaceholders = (source, definitions, transform) => {
   const tokens = [];
-  const placeholderPrefix = createTokenPlaceholderPrefix(source);
   let highlighted = source;
 
   const stash = (pattern, className) => {
     highlighted = highlighted.replaceAll(pattern, (match) => {
-      const tokenKey = `${placeholderPrefix}${tokens.length}@@`;
+      const tokenKey = `@@CODE_TOKEN_${tokens.length}@@`;
       tokens.push(`<span class="${className}">${match}</span>`);
       return tokenKey;
     });
@@ -98,10 +82,7 @@ const highlightWithPlaceholders = (source, definitions, transform) => {
 
   highlighted = transform(highlighted);
 
-  return highlighted.replaceAll(
-    new RegExp(`${escapeRegex(placeholderPrefix)}(\\d+)@@`, "g"),
-    (_, index) => tokens[Number(index)],
-  );
+  return highlighted.replaceAll(/@@CODE_TOKEN_(\d+)@@/g, (_, index) => tokens[Number(index)]);
 };
 
 const highlightJson = (code) => {
