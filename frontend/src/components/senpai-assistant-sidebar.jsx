@@ -46,6 +46,7 @@ const MIN_DESKTOP_WIDTH = 320;
 const MAX_DESKTOP_WIDTH = 720;
 const DESKTOP_SIDEBAR_VIEWPORT_MARGIN = 160;
 const DESKTOP_COLLAPSED_WIDTH = 56;
+const SCROLL_BOTTOM_THRESHOLD = 24;
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
   hour: "2-digit",
@@ -166,15 +167,29 @@ const writeDesktopSidebarWidth = (width) => {
 
 const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
 
+const isScrolledToBottom = (element) => {
+  if (!element) {
+    return true;
+  }
+
+  return (
+    element.scrollHeight - element.scrollTop - element.clientHeight <=
+    SCROLL_BOTTOM_THRESHOLD
+  );
+};
+
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const { setupData, reloadApiKeys } = useSetup();
+  const messagesContainerReference = useRef(undefined);
   const endOfMessagesReference = useRef(undefined);
   const composerReference = useRef(undefined);
   const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
   const shouldFocusComposerReference = useRef(false);
+  const isAtBottomReference = useRef(true);
+  const previousMessageCountReference = useRef(0);
 
   const [conversation, setConversation] = useState();
   const [messages, setMessages] = useState([]);
@@ -185,6 +200,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const [isUpdatingApiKey, setIsUpdatingApiKey] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedApiKeyKey, setSelectedApiKeyKey] = useState("none");
+  const [hasUnreadAssistantMessage, setHasUnreadAssistantMessage] =
+    useState(false);
 
   const supportedApiKeys = useMemo(
     () =>
@@ -259,6 +276,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 
   useEffect(() => {
     setMessages(readStoredThreadMessages(conversation?.thread_id));
+    setHasUnreadAssistantMessage(false);
+    previousMessageCountReference.current = 0;
+    isAtBottomReference.current = true;
   }, [conversation?.thread_id]);
 
   useEffect(() => {
@@ -267,9 +287,44 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     }
   }, [conversation?.thread_id, messages]);
 
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    endOfMessagesReference.current?.scrollIntoView({ behavior });
+    isAtBottomReference.current = true;
+    setHasUnreadAssistantMessage(false);
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    const isAtBottomNow = isScrolledToBottom(
+      messagesContainerReference.current,
+    );
+
+    isAtBottomReference.current = isAtBottomNow;
+    if (isAtBottomNow) {
+      setHasUnreadAssistantMessage(false);
+    }
+  }, []);
+
   useEffect(() => {
-    endOfMessagesReference.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isSending]);
+    const currentMessageCount = messages.length;
+    const hadNewMessage =
+      currentMessageCount > previousMessageCountReference.current;
+    const latestMessage =
+      hadNewMessage && currentMessageCount > 0
+        ? messages[currentMessageCount - 1]
+        : undefined;
+
+    if (
+      isSending ||
+      isAtBottomReference.current ||
+      latestMessage?.role === "user"
+    ) {
+      scrollToBottom(hadNewMessage ? "smooth" : "auto");
+    } else if (latestMessage?.role === "assistant") {
+      setHasUnreadAssistantMessage(true);
+    }
+
+    previousMessageCountReference.current = currentMessageCount;
+  }, [messages, isSending, scrollToBottom]);
 
   const createMessageId = useCallback((role) => {
     const uuid = globalThis.crypto?.randomUUID?.();
@@ -558,70 +613,91 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {hasAssistantApiKey ? (
                 <>
-                  <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
-                    {messages.length === 0 ? (
-                      <div className="flex h-full flex-col items-center justify-center px-5 text-center">
-                        <Bot className="mb-3 h-8 w-8 text-primary/70" />
-                        <p className="text-sm font-medium">
-                          Start a conversation
-                        </p>
-                        <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
-                          This panel stays available across the app for quick
-                          checks.
-                        </p>
-                      </div>
-                    ) : (
-                      messages.map((message) => {
-                        const isAssistant = message.role === "assistant";
+                  <div className="relative min-h-0 flex-1">
+                    <div
+                      ref={messagesContainerReference}
+                      onScroll={handleMessagesScroll}
+                      className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-3 py-3"
+                    >
+                      {messages.length === 0 ? (
+                        <div className="flex h-full flex-col items-center justify-center px-5 text-center">
+                          <Bot className="mb-3 h-8 w-8 text-primary/70" />
+                          <p className="text-sm font-medium">
+                            Start a conversation
+                          </p>
+                          <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
+                            This panel stays available across the app for quick
+                            checks.
+                          </p>
+                        </div>
+                      ) : (
+                        messages.map((message) => {
+                          const isAssistant = message.role === "assistant";
 
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex min-w-0 ${isAssistant ? "justify-start" : "justify-end"}`}
-                          >
+                          return (
                             <div
-                              className={`min-w-0 max-w-[92%] overflow-hidden rounded-2xl px-3 py-2.5 ${
-                                isAssistant
-                                  ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
-                                  : "bg-primary text-primary-foreground"
-                              }`}
+                              key={message.id}
+                              className={`flex min-w-0 ${isAssistant ? "justify-start" : "justify-end"}`}
                             >
-                              <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
+                              <div
+                                className={`min-w-0 max-w-[92%] overflow-hidden rounded-2xl px-3 py-2.5 ${
+                                  isAssistant
+                                    ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
+                                    : "bg-primary text-primary-foreground"
+                                }`}
+                              >
+                                <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
+                                  {isAssistant ? (
+                                    <Bot className="h-3 w-3" />
+                                  ) : (
+                                    <User className="h-3 w-3" />
+                                  )}
+                                  <span>{isAssistant ? "Senpai" : "You"}</span>
+                                  <span>{formatTimestamp(message.timestamp)}</span>
+                                </div>
                                 {isAssistant ? (
-                                  <Bot className="h-3 w-3" />
+                                  <MarkdownMessage
+                                    content={message.content}
+                                    className="space-y-2"
+                                  />
                                 ) : (
-                                  <User className="h-3 w-3" />
+                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                    {message.content}
+                                  </p>
                                 )}
-                                <span>{isAssistant ? "Senpai" : "You"}</span>
-                                <span>{formatTimestamp(message.timestamp)}</span>
                               </div>
-                              {isAssistant ? (
-                                <MarkdownMessage
-                                  content={message.content}
-                                  className="space-y-2"
-                                />
-                              ) : (
-                                <p className="whitespace-pre-wrap text-sm leading-6">
-                                  {message.content}
-                                </p>
-                              )}
+                            </div>
+                          );
+                        })
+                      )}
+
+                      {isSending && (
+                        <div className="flex justify-start">
+                          <div className="rounded-2xl bg-default-100 px-3 py-2.5 text-sm dark:bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <Spinner size="sm" color="primary" />
+                              Senpai is thinking...
                             </div>
                           </div>
-                        );
-                      })
-                    )}
-
-                    {isSending && (
-                      <div className="flex justify-start">
-                        <div className="rounded-2xl bg-default-100 px-3 py-2.5 text-sm dark:bg-white/5">
-                          <div className="flex items-center gap-2">
-                            <Spinner size="sm" color="primary" />
-                            Senpai is thinking...
-                          </div>
                         </div>
+                      )}
+                      <div ref={endOfMessagesReference} />
+                    </div>
+
+                    {hasUnreadAssistantMessage && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-3">
+                        <Button
+                          className="pointer-events-auto shadow-lg"
+                          color="primary"
+                          radius="full"
+                          size="sm"
+                          onPress={() => scrollToBottom()}
+                        >
+                          New message
+                          <ChevronRight className="h-4 w-4 rotate-90" />
+                        </Button>
                       </div>
                     )}
-                    <div ref={endOfMessagesReference} />
                   </div>
 
                   <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
