@@ -33,12 +33,20 @@ import {
   initializeSenpaiConversation,
   sendSenpaiMessage,
 } from "../api/senpai-api";
+import MarkdownMessage from "./markdown-message";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useSetup } from "../contexts/setup-context";
 
 const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
+const DESKTOP_WIDTH_KEY = "senpai-sidebar-width";
 const MESSAGE_ROLES = new Set(["assistant", "user"]);
+const DEFAULT_DESKTOP_WIDTH = 420;
+const MIN_DESKTOP_WIDTH = 320;
+const MAX_DESKTOP_WIDTH = 720;
+const DESKTOP_SIDEBAR_VIEWPORT_MARGIN = 160;
+const DESKTOP_COLLAPSED_WIDTH = 56;
+const SCROLL_BOTTOM_THRESHOLD = 24;
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
   hour: "2-digit",
@@ -120,15 +128,68 @@ const writeDesktopSidebarCollapsed = (isCollapsed) => {
   }
 };
 
+const clampDesktopSidebarWidth = (width) => {
+  const viewportWidth = globalThis.innerWidth || MAX_DESKTOP_WIDTH;
+  const maxAllowedWidth = Math.max(
+    MIN_DESKTOP_WIDTH,
+    Math.min(MAX_DESKTOP_WIDTH, viewportWidth - DESKTOP_SIDEBAR_VIEWPORT_MARGIN),
+  );
+
+  return Math.min(Math.max(width, MIN_DESKTOP_WIDTH), maxAllowedWidth);
+};
+
+const readDesktopSidebarWidth = () => {
+  try {
+    const storedWidthValue = globalThis.localStorage?.getItem(DESKTOP_WIDTH_KEY);
+    if (storedWidthValue === null || storedWidthValue === "") {
+      return DEFAULT_DESKTOP_WIDTH;
+    }
+
+    const storedWidth = Number(storedWidthValue);
+    return Number.isFinite(storedWidth)
+      ? clampDesktopSidebarWidth(storedWidth)
+      : DEFAULT_DESKTOP_WIDTH;
+  } catch {
+    return DEFAULT_DESKTOP_WIDTH;
+  }
+};
+
+const writeDesktopSidebarWidth = (width) => {
+  try {
+    globalThis.localStorage?.setItem(
+      DESKTOP_WIDTH_KEY,
+      String(clampDesktopSidebarWidth(width)),
+    );
+  } catch {
+    // Ignore storage failures so the sidebar remains usable.
+  }
+};
+
 const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
+
+const isScrolledToBottom = (element) => {
+  if (!element) {
+    return true;
+  }
+
+  return (
+    element.scrollHeight - element.scrollTop - element.clientHeight <=
+    SCROLL_BOTTOM_THRESHOLD
+  );
+};
 
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const { showToast } = useMyCustomToast();
   const { setupData, reloadApiKeys } = useSetup();
+  const messagesContainerReference = useRef(undefined);
   const endOfMessagesReference = useRef(undefined);
+  const composerReference = useRef(undefined);
   const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
+  const shouldFocusComposerReference = useRef(false);
+  const isAtBottomReference = useRef(true);
+  const previousMessageCountReference = useRef(0);
 
   const [conversation, setConversation] = useState();
   const [messages, setMessages] = useState([]);
@@ -139,6 +200,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const [isUpdatingApiKey, setIsUpdatingApiKey] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedApiKeyKey, setSelectedApiKeyKey] = useState("none");
+  const [hasUnreadAssistantMessage, setHasUnreadAssistantMessage] =
+    useState(false);
 
   const supportedApiKeys = useMemo(
     () =>
@@ -178,6 +241,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         }
 
         setConversation(data.conversation);
+        shouldFocusComposerReference.current = true;
         if (forceNew) {
           setDraft("");
           setMessages([]);
@@ -212,6 +276,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 
   useEffect(() => {
     setMessages(readStoredThreadMessages(conversation?.thread_id));
+    setHasUnreadAssistantMessage(false);
+    previousMessageCountReference.current = 0;
+    isAtBottomReference.current = true;
   }, [conversation?.thread_id]);
 
   useEffect(() => {
@@ -220,9 +287,44 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     }
   }, [conversation?.thread_id, messages]);
 
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    endOfMessagesReference.current?.scrollIntoView({ behavior });
+    isAtBottomReference.current = true;
+    setHasUnreadAssistantMessage(false);
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    const isAtBottomNow = isScrolledToBottom(
+      messagesContainerReference.current,
+    );
+
+    isAtBottomReference.current = isAtBottomNow;
+    if (isAtBottomNow) {
+      setHasUnreadAssistantMessage(false);
+    }
+  }, []);
+
   useEffect(() => {
-    endOfMessagesReference.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isSending]);
+    const currentMessageCount = messages.length;
+    const hadNewMessage =
+      currentMessageCount > previousMessageCountReference.current;
+    const latestMessage =
+      hadNewMessage && currentMessageCount > 0
+        ? messages[currentMessageCount - 1]
+        : undefined;
+
+    if (
+      isSending ||
+      isAtBottomReference.current ||
+      latestMessage?.role === "user"
+    ) {
+      scrollToBottom(hadNewMessage ? "smooth" : "auto");
+    } else if (latestMessage?.role === "assistant") {
+      setHasUnreadAssistantMessage(true);
+    }
+
+    previousMessageCountReference.current = currentMessageCount;
+  }, [messages, isSending, scrollToBottom]);
 
   const createMessageId = useCallback((role) => {
     const uuid = globalThis.crypto?.randomUUID?.();
@@ -247,6 +349,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       }
 
       setConversation(data.conversation);
+      shouldFocusComposerReference.current = true;
       showToast("success", "Assistant API key updated");
     } catch (error) {
       if (isMountedReference.current) {
@@ -272,6 +375,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   );
   const hasPendingRequest =
     isBootstrapping || isRefreshingThread || isSending || isUpdatingApiKey;
+  const isComposerDisabled =
+    isBootstrapping || isRefreshingThread || isUpdatingApiKey || !conversation;
   const isConversationLoaded = Boolean(conversation);
   const hasAssistantApiKey = Boolean(conversation?.assistant_api_key);
   const showApiKeySetup = isConversationLoaded && !hasAssistantApiKey;
@@ -287,6 +392,37 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     statusLabel = hasAssistantApiKey ? "Ready" : "No key";
     statusClassName = hasAssistantApiKey ? "text-success" : "text-warning";
   }
+
+  const focusComposer = useCallback(() => {
+    if (
+      !hasAssistantApiKey ||
+      hasPendingRequest ||
+      isSettingsOpen ||
+      !composerReference.current
+    ) {
+      return;
+    }
+
+    globalThis.requestAnimationFrame(() => {
+      const textarea = composerReference.current?.querySelector("textarea");
+      if (!textarea || textarea.disabled) {
+        return;
+      }
+
+      shouldFocusComposerReference.current = false;
+      textarea.focus();
+      const caretPosition = textarea.value.length;
+      textarea.setSelectionRange(caretPosition, caretPosition);
+    });
+  }, [hasAssistantApiKey, hasPendingRequest, isSettingsOpen]);
+
+  useEffect(() => {
+    if (!shouldFocusComposerReference.current) {
+      return;
+    }
+
+    focusComposer();
+  }, [focusComposer, conversation?.thread_id, hasAssistantApiKey, hasPendingRequest]);
 
   const submitMessage = useCallback(
     async (messageText) => {
@@ -309,6 +445,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           setDraft("");
           setIsSending(true);
           setMessages((currentMessages) => [...currentMessages, userMessage]);
+          shouldFocusComposerReference.current = true;
 
           try {
             const data = await sendSenpaiMessage(trimmedMessage);
@@ -359,8 +496,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   );
 
   const handleComposerKeyDown = (event) => {
-    if (event.key === "Enter" && !event.shiftKey && canSubmitMessage) {
-      event.preventDefault();
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    if (canSubmitMessage) {
       void submitMessage(draft);
     }
   };
@@ -404,7 +545,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-divider px-3">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
             <Bot className="h-4 w-4 flex-shrink-0 text-primary" />
-            <div className="min-w-0 truncate text-sm">
+            <div className="min-w-0 flex-1 truncate text-sm">
               <span className="font-semibold">Senpai</span>
               <span className="mx-2 text-foreground/30">•</span>
               <span className={`text-xs ${statusClassName}`}>
@@ -412,7 +553,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-shrink-0 items-center gap-1">
             <Button
               isIconOnly
               variant="light"
@@ -472,76 +613,108 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {hasAssistantApiKey ? (
                 <>
-                  <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
-                    {messages.length === 0 ? (
-                      <div className="flex h-full flex-col items-center justify-center px-5 text-center">
-                        <Bot className="mb-3 h-8 w-8 text-primary/70" />
-                        <p className="text-sm font-medium">
-                          Start a conversation
-                        </p>
-                        <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
-                          This panel stays available across the app for quick
-                          checks.
-                        </p>
-                      </div>
-                    ) : (
-                      messages.map((message) => {
-                        const isAssistant = message.role === "assistant";
+                  <div className="relative min-h-0 flex-1">
+                    <div
+                      ref={messagesContainerReference}
+                      onScroll={handleMessagesScroll}
+                      className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-3 py-3"
+                    >
+                      {messages.length === 0 ? (
+                        <div className="flex h-full flex-col items-center justify-center px-5 text-center">
+                          <Bot className="mb-3 h-8 w-8 text-primary/70" />
+                          <p className="text-sm font-medium">
+                            Start a conversation
+                          </p>
+                          <p className="mt-2 text-xs text-foreground/60 dark:text-foreground-dark/60">
+                            This panel stays available across the app for quick
+                            checks.
+                          </p>
+                        </div>
+                      ) : (
+                        messages.map((message) => {
+                          const isAssistant = message.role === "assistant";
 
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
-                          >
+                          return (
                             <div
-                              className={`max-w-[92%] rounded-2xl px-3 py-2.5 ${
-                                isAssistant
-                                  ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
-                                  : "bg-primary text-primary-foreground"
-                              }`}
+                              key={message.id}
+                              className={`flex min-w-0 ${isAssistant ? "justify-start" : "justify-end"}`}
                             >
-                              <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
+                              <div
+                                className={`min-w-0 max-w-[92%] overflow-hidden rounded-2xl px-3 py-2.5 ${
+                                  isAssistant
+                                    ? "bg-default-100 text-foreground dark:bg-white/5 dark:text-foreground-dark"
+                                    : "bg-primary text-primary-foreground"
+                                }`}
+                              >
+                                <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
+                                  {isAssistant ? (
+                                    <Bot className="h-3 w-3" />
+                                  ) : (
+                                    <User className="h-3 w-3" />
+                                  )}
+                                  <span>{isAssistant ? "Senpai" : "You"}</span>
+                                  <span>{formatTimestamp(message.timestamp)}</span>
+                                </div>
                                 {isAssistant ? (
-                                  <Bot className="h-3 w-3" />
+                                  <MarkdownMessage
+                                    content={message.content}
+                                    className="space-y-2"
+                                  />
                                 ) : (
-                                  <User className="h-3 w-3" />
+                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                    {message.content}
+                                  </p>
                                 )}
-                                <span>{isAssistant ? "Senpai" : "You"}</span>
-                                <span>{formatTimestamp(message.timestamp)}</span>
                               </div>
-                              <p className="whitespace-pre-wrap text-sm leading-6">
-                                {message.content}
-                              </p>
+                            </div>
+                          );
+                        })
+                      )}
+
+                      {isSending && (
+                        <div className="flex justify-start">
+                          <div className="rounded-2xl bg-default-100 px-3 py-2.5 text-sm dark:bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <Spinner size="sm" color="primary" />
+                              Senpai is thinking...
                             </div>
                           </div>
-                        );
-                      })
-                    )}
-
-                    {isSending && (
-                      <div className="flex justify-start">
-                        <div className="rounded-2xl bg-default-100 px-3 py-2.5 text-sm dark:bg-white/5">
-                          <div className="flex items-center gap-2">
-                            <Spinner size="sm" color="primary" />
-                            Senpai is thinking...
-                          </div>
                         </div>
+                      )}
+                      <div ref={endOfMessagesReference} />
+                    </div>
+
+                    {hasUnreadAssistantMessage && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-3">
+                        <Button
+                          className="pointer-events-auto shadow-lg"
+                          color="primary"
+                          radius="full"
+                          size="sm"
+                          onPress={() => scrollToBottom()}
+                        >
+                          New message
+                          <ChevronRight className="h-4 w-4 rotate-90" />
+                        </Button>
                       </div>
                     )}
-                    <div ref={endOfMessagesReference} />
                   </div>
 
                   <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
-                    <div className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]">
+                    <div
+                      ref={composerReference}
+                      className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]"
+                    >
                       <Textarea
                         placeholder="Ask Senpai..."
                         minRows={3}
                         maxRows={8}
                         variant="flat"
+                        autoFocus
                         value={draft}
                         onValueChange={setDraft}
                         onKeyDown={handleComposerKeyDown}
-                        isDisabled={hasPendingRequest || !conversation}
+                        isDisabled={isComposerDisabled}
                         classNames={{
                           inputWrapper: "border-none bg-transparent shadow-none",
                         }}
@@ -658,9 +831,19 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 const SenpaiAssistantSidebar = () => {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [desktopWidth, setDesktopWidth] = useState(DEFAULT_DESKTOP_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const asideReference = useRef(undefined);
+  const desktopWidthReference = useRef(DEFAULT_DESKTOP_WIDTH);
+  const pendingDesktopWidthReference = useRef(DEFAULT_DESKTOP_WIDTH);
+  const resizeFrameReference = useRef(0);
 
   useEffect(() => {
     setIsDesktopCollapsed(readDesktopSidebarCollapsed());
+    const storedWidth = readDesktopSidebarWidth();
+    setDesktopWidth(storedWidth);
+    desktopWidthReference.current = storedWidth;
+    pendingDesktopWidthReference.current = storedWidth;
   }, []);
 
   const toggleDesktopSidebar = () => {
@@ -669,12 +852,103 @@ const SenpaiAssistantSidebar = () => {
     writeDesktopSidebarCollapsed(nextValue);
   };
 
+  const updateDesktopWidth = useCallback((nextWidth) => {
+    const clampedWidth = clampDesktopSidebarWidth(nextWidth);
+    desktopWidthReference.current = clampedWidth;
+    setDesktopWidth(clampedWidth);
+    return clampedWidth;
+  }, []);
+
+  const handleResizeStart = useCallback((event) => {
+    event.preventDefault();
+    pendingDesktopWidthReference.current = desktopWidthReference.current;
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!asideReference.current || isDesktopCollapsed) {
+      return;
+    }
+
+    asideReference.current.style.width = `${desktopWidth}px`;
+  }, [desktopWidth, isDesktopCollapsed]);
+
+  useEffect(() => {
+    if (!isResizing) {
+      return undefined;
+    }
+
+    const handlePointerMove = (event) => {
+      pendingDesktopWidthReference.current = clampDesktopSidebarWidth(
+        globalThis.innerWidth - event.clientX,
+      );
+
+      if (resizeFrameReference.current) {
+        return;
+      }
+
+      resizeFrameReference.current = globalThis.requestAnimationFrame(() => {
+        resizeFrameReference.current = 0;
+        if (asideReference.current) {
+          asideReference.current.style.width = `${pendingDesktopWidthReference.current}px`;
+        }
+      });
+    };
+
+    const handlePointerUp = () => {
+      if (resizeFrameReference.current) {
+        globalThis.cancelAnimationFrame(resizeFrameReference.current);
+        resizeFrameReference.current = 0;
+      }
+
+      const clampedWidth = pendingDesktopWidthReference.current;
+      desktopWidthReference.current = clampedWidth;
+      setDesktopWidth(clampedWidth);
+      writeDesktopSidebarWidth(clampedWidth);
+      setIsResizing(false);
+    };
+
+    globalThis.addEventListener("pointermove", handlePointerMove);
+    globalThis.addEventListener("pointerup", handlePointerUp);
+    globalThis.document.body.style.userSelect = "none";
+    globalThis.document.body.style.cursor = "col-resize";
+
+    return () => {
+      if (resizeFrameReference.current) {
+        globalThis.cancelAnimationFrame(resizeFrameReference.current);
+        resizeFrameReference.current = 0;
+      }
+
+      globalThis.removeEventListener("pointermove", handlePointerMove);
+      globalThis.removeEventListener("pointerup", handlePointerUp);
+      globalThis.document.body.style.userSelect = "";
+      globalThis.document.body.style.cursor = "";
+    };
+  }, [isResizing, updateDesktopWidth]);
+
+  useEffect(() => {
+    const handleWindowResize = () => {
+      const clampedWidth = updateDesktopWidth(desktopWidthReference.current);
+      writeDesktopSidebarWidth(clampedWidth);
+    };
+
+    globalThis.addEventListener("resize", handleWindowResize);
+
+    return () => {
+      globalThis.removeEventListener("resize", handleWindowResize);
+    };
+  }, [updateDesktopWidth]);
+
   return (
     <>
       <aside
+        ref={asideReference}
         className={`absolute inset-y-0 right-0 z-30 hidden overflow-hidden border-l border-divider bg-content2 shadow-2xl transition-[width,transform,opacity] duration-200 ease-out dark:bg-[#18181b] xl:flex ${
-          isDesktopCollapsed ? "xl:w-14" : "xl:w-[420px]"
+          isResizing ? "duration-0" : ""
         }`}
+        style={{
+          width: isDesktopCollapsed ? DESKTOP_COLLAPSED_WIDTH : desktopWidth,
+        }}
       >
         {isDesktopCollapsed ? (
           <div className="flex h-full w-full flex-col">
@@ -691,9 +965,17 @@ const SenpaiAssistantSidebar = () => {
             </div>
           </div>
         ) : (
-          <div className="min-h-0 flex-1 animate-in fade-in-0 slide-in-from-right-1 duration-200">
-            <SenpaiAssistantPanel onCollapse={toggleDesktopSidebar} />
-          </div>
+          <>
+            <button
+              type="button"
+              className="absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/15"
+              onPointerDown={handleResizeStart}
+              aria-label="Resize Senpai Assistant"
+            />
+            <div className="min-h-0 flex-1 animate-in fade-in-0 slide-in-from-right-1 duration-200">
+              <SenpaiAssistantPanel onCollapse={toggleDesktopSidebar} />
+            </div>
+          </>
         )}
       </aside>
 
