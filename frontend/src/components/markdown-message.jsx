@@ -427,7 +427,7 @@ const splitInlineMarkdown = (text) => {
           key={`link-${index}`}
           href={sanitizedHref}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="underline underline-offset-2"
         >
           {label}
