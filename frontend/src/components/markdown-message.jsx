@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 const SAFE_LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
@@ -471,8 +471,18 @@ const renderList = (items, ordered, key) => {
 
 const CodeBlock = ({ lines, language }) => {
   const [copied, setCopied] = useState(false);
+  const copyResetTimeoutReference = useRef(0);
   const code = lines.join("\n");
   const highlightedCode = highlightCode(code, language);
+
+  useEffect(
+    () => () => {
+      if (copyResetTimeoutReference.current) {
+        globalThis.clearTimeout(copyResetTimeoutReference.current);
+      }
+    },
+    [],
+  );
 
   const handleCopy = async () => {
     try {
@@ -481,8 +491,13 @@ const CodeBlock = ({ lines, language }) => {
         return;
       }
 
+      if (copyResetTimeoutReference.current) {
+        globalThis.clearTimeout(copyResetTimeoutReference.current);
+      }
+
       setCopied(true);
-      globalThis.setTimeout(() => {
+      copyResetTimeoutReference.current = globalThis.setTimeout(() => {
+        copyResetTimeoutReference.current = 0;
         setCopied(false);
       }, 1500);
     } catch (error) {
