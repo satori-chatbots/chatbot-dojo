@@ -1,0 +1,33 @@
+info:
+  name: Create Assistant OpenAI API Key
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{host}}/api/api-keys/"
+  headers:
+    - name: Authorization
+      value: Token {{token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Senpai Assistant OpenAI",
+        "provider": "openai",
+        "api_key": "{{assistantOpenAIApiKey}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: bru.setVar("assistantApiKeyId", res.body.id);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

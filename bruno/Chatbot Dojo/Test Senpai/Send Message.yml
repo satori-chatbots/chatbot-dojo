@@ -1,0 +1,26 @@
+info:
+  name: Send Message
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{host}}/api/senpai/conversation/message/"
+  headers:
+    - name: Authorization
+      value: Token {{token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "message": "What projects do I have available?"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

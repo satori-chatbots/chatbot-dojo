@@ -30,42 +30,48 @@ services:
       retries: 5
 
   backend:
+    image: sensei-web-python-dev:latest
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     env_file:
       - ./.env.dev
+    environment:
+      SENPAI_EMBEDDING_MODEL_CACHE_ROOT: /app/filevault/senpai-embedding-model-cache
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
-      - ./filevault:/app/filevault
+      - filevault_data_dev:/app/filevault
     user: "1000:1000"
     depends_on:
       db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: /app/entrypoint.dev.sh
+    command: sh /app/entrypoint.dev.sh
 
   celery:
+    image: sensei-web-python-dev:latest
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     env_file:
       - ./.env.dev
+    environment:
+      SENPAI_EMBEDDING_MODEL_CACHE_ROOT: /app/filevault/senpai-embedding-model-cache
     volumes:
       - ./backend:/app
-      - backend_venv:/app/.venv
-      - ./filevault:/app/filevault
+      - celery_venv:/app/.venv
+      - filevault_data_dev:/app/filevault
     user: "1000:1000"
     depends_on:
       db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: /app/.venv/bin/celery -A senseiweb worker -l info
+    command: sh /app/entrypoint.celery.sh
 
   frontend:
     build:
@@ -92,4 +98,5 @@ volumes:
   postgres_data_dev:
   rabbitmq_data_dev:
   backend_venv:
+  celery_venv:
   filevault_data_dev:

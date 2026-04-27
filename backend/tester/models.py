@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any, ClassVar
@@ -23,8 +24,10 @@ logger = logging.getLogger(__name__)
 # Error messages
 FERNET_KEY_ERROR = "FERNET_SECRET_KEY is not set in the environment!"
 EMAIL_REQUIRED_ERROR = "Email is a required field"
-MEDIA_PROJECTS_ROOT_DIR = "projects"
+MEDIA_USERS_ROOT_DIR = "users"
 USER_PROJECTS_SUBDIRECTORY = "projects"
+USER_CONNECTORS_SUBDIRECTORY = "connectors"
+PATH_SEPARATOR_PATTERN = re.compile(r"[\\/]+")
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -105,24 +108,61 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS: ClassVar[list[str]] = []
 
 
+def get_user_sensei_relative_path(user_id: int) -> Path:
+    """Return the relative path to the user's SENSEI root directory."""
+    return Path(MEDIA_USERS_ROOT_DIR) / f"user_{user_id}"
+
+
 def get_user_projects_relative_path(user_id: int) -> Path:
     """Return the relative path to the user's projects directory."""
-    return Path(MEDIA_PROJECTS_ROOT_DIR) / f"user_{user_id}" / USER_PROJECTS_SUBDIRECTORY
+    return get_user_sensei_relative_path(user_id) / USER_PROJECTS_SUBDIRECTORY
+
+
+def get_user_connectors_relative_path(user_id: int) -> Path:
+    """Return the relative path to the user's connectors directory."""
+    return get_user_sensei_relative_path(user_id) / USER_CONNECTORS_SUBDIRECTORY
+
+
+def get_user_sensei_root_path(user_id: int) -> Path:
+    """Return the absolute path to the user's SENSEI root directory."""
+    return Path(settings.MEDIA_ROOT) / get_user_sensei_relative_path(user_id)
+
+
+def ensure_user_sensei_directory(user_id: int) -> Path | None:
+    """Ensure the user's SENSEI root structure exists and return its absolute path."""
+    user_root_path = get_user_sensei_root_path(user_id)
+    required_directories = (
+        user_root_path,
+        user_root_path / USER_PROJECTS_SUBDIRECTORY,
+        user_root_path / USER_CONNECTORS_SUBDIRECTORY,
+    )
+    try:
+        for directory in required_directories:
+            directory.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        logger.exception(
+            "Failed to create user SENSEI directory structure for user_id=%s at %s",
+            user_id,
+            user_root_path,
+        )
+        return None
+    return user_root_path
 
 
 def ensure_user_projects_directory(user_id: int) -> Path | None:
     """Ensure the user's projects directory exists and return its absolute path."""
-    user_projects_path = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(user_id)
-    try:
-        user_projects_path.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        logger.exception(
-            "Failed to create user projects directory for user_id=%s at %s",
-            user_id,
-            user_projects_path,
-        )
+    user_root_path = ensure_user_sensei_directory(user_id)
+    if user_root_path is None:
         return None
-    return user_projects_path
+    return user_root_path / USER_PROJECTS_SUBDIRECTORY
+
+
+def ensure_user_connectors_directory(user_id: int) -> Path | None:
+    """Ensure the user's connectors directory exists and return its absolute path."""
+    user_root_path = ensure_user_sensei_directory(user_id)
+    if user_root_path is None:
+        return None
+    return user_root_path / USER_CONNECTORS_SUBDIRECTORY
 
 
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
@@ -135,10 +175,58 @@ def get_project_relative_path_str(user_id: int, project_id: int, *parts: str) ->
     return get_project_relative_path(user_id, project_id, *parts).as_posix()
 
 
+def resolve_unique_project_relative_path(
+    user_id: int,
+    project_id: int,
+    directory: str,
+    filename: str,
+    *,
+    reserved_paths: set[Path] | None = None,
+) -> tuple[str, Path]:
+    """Return a project-relative path that does not collide with an existing file."""
+    reserved_paths = reserved_paths or set()
+    relative_path = get_project_relative_path(user_id, project_id, directory, filename)
+    full_path = Path(settings.MEDIA_ROOT) / relative_path
+    if full_path not in reserved_paths and not full_path.exists():
+        return relative_path.as_posix(), full_path
+
+    base_name = Path(filename).stem
+    suffix = Path(filename).suffix
+    counter = 1
+    while True:
+        candidate_filename = f"{base_name}_{counter}{suffix}"
+        candidate_relative_path = get_project_relative_path(user_id, project_id, directory, candidate_filename)
+        candidate_full_path = Path(settings.MEDIA_ROOT) / candidate_relative_path
+        if candidate_full_path not in reserved_paths and not candidate_full_path.exists():
+            return candidate_relative_path.as_posix(), candidate_full_path
+        counter += 1
+
+
+def sanitize_profile_name_for_filename(profile_name: Any) -> str | None:  # noqa: ANN401
+    """Return a safe profile filename stem, or None when the name attempts path traversal."""
+    raw_name = str(profile_name).replace("\x00", "").strip()
+    if not raw_name:
+        return None
+
+    path_segments = PATH_SEPARATOR_PATTERN.split(raw_name)
+    if any(segment in {".", ".."} for segment in path_segments):
+        return None
+
+    safe_name = PATH_SEPARATOR_PATTERN.sub("_", raw_name).strip(" .")
+    return safe_name or None
+
+
+def is_relative_to_path(path: Path, parent: Path) -> bool:
+    """Return whether path resolves inside parent."""
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
 def upload_to(instance: "TestFile", filename: str) -> str:
     """Returns the path where the Test Files are stored."""
-    # The test_name should have been set by the model's clean method
-    # Get the user and project id
     user_id = instance.project.owner.id
     project_id = instance.project.id
     return get_project_relative_path_str(user_id, project_id, "profiles", filename)
@@ -175,20 +263,95 @@ def upload_to_sensei_check_rules(instance: "SenseiCheckRule", filename: str) -> 
 def upload_to_custom_connectors(instance: "ChatbotConnector", filename: str) -> str:
     """Returns the path where custom connector YAML files are stored."""
     user_id = instance.owner.id
-    return f"projects/user_{user_id}/connectors/{filename}"
+    return f"users/user_{user_id}/connectors/{filename}"
 
 
 def upload_to_execution(instance: "TestFile", filename: str) -> str:
-    """Returns the path where Test Files are stored in execution folders."""
-    user_id = instance.project.owner.id
-    project_id = instance.project.id
+    """Return the canonical project profiles path for a TestFile."""
+    return upload_to(instance, filename)
 
-    # If execution is provided, use execution-based path
-    if instance.execution:
-        execution_name = instance.execution.execution_name.lower()
-        return get_project_relative_path_str(user_id, project_id, "executions", execution_name, "profiles", filename)
 
-    return get_project_relative_path_str(user_id, project_id, "profiles", filename)
+def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
+    """Return the relative path for the flat connector YAML export."""
+    return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}__senpai_export.yaml"
+
+
+def redact_sensitive_connector_data(value: Any) -> Any:  # noqa: ANN401
+    """Return connector metadata with likely secret fields redacted."""
+    sensitive_key_fragments = (
+        "token",
+        "secret",
+        "password",
+        "passwd",
+        "api_key",
+        "apikey",
+        "access_key",
+        "private_key",
+        "client_secret",
+        "authorization",
+        "auth",
+        "credential",
+        "signature",
+    )
+
+    if isinstance(value, dict):
+        redacted_dict = {}
+        for nested_key, nested_value in value.items():
+            normalized_key = str(nested_key).strip().lower()
+            if any(fragment in normalized_key for fragment in sensitive_key_fragments):
+                redacted_dict[nested_key] = "***REDACTED***"
+            else:
+                redacted_dict[nested_key] = redact_sensitive_connector_data(nested_value)
+        return redacted_dict
+
+    if isinstance(value, list):
+        return [redact_sensitive_connector_data(item) for item in value]
+
+    if isinstance(value, tuple):
+        return tuple(redact_sensitive_connector_data(item) for item in value)
+
+    return value
+
+
+def build_connector_export_content(connector: "ChatbotConnector") -> str:
+    """Render the flat connector YAML export that Senpai indexes."""
+    config_file_path = ""
+    if connector.custom_config_file and hasattr(connector.custom_config_file, "name"):
+        config_file_path = connector.custom_config_file.name
+
+    mirror_payload = {
+        "name": connector.name,
+        "technology": connector.technology,
+        "parameters": redact_sensitive_connector_data(connector.parameters or {}),
+        "custom_config_file": config_file_path,
+    }
+    return yaml.safe_dump(mirror_payload, sort_keys=False, allow_unicode=True)
+
+
+def sync_connector_export_file(connector: "ChatbotConnector") -> None:
+    """Write or refresh the flat connector YAML export."""
+    if connector.id is None:
+        msg = "Connector must be saved before its YAML export can be synchronized."
+        raise RuntimeError(msg)
+
+    connectors_dir = ensure_user_connectors_directory(connector.owner_id)
+    if connectors_dir is None:
+        msg = f"Unable to prepare connectors directory for user {connector.owner_id}."
+        raise RuntimeError(msg)
+
+    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
+    export_path.parent.mkdir(parents=True, exist_ok=True)
+    export_path.write_text(build_connector_export_content(connector), encoding="utf-8")
+
+
+def delete_connector_export_file(connector: "ChatbotConnector") -> None:
+    """Delete the flat connector YAML export if it exists."""
+    if connector.id is None:
+        return
+
+    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
+    if export_path.exists():
+        export_path.unlink()
 
 
 class TestFile(models.Model):
@@ -216,6 +379,8 @@ class TestFile(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Save the TestFile instance."""
+        update_execution_profile_count = kwargs.pop("update_execution_profile_count", True)
+
         # If no execution is assigned and this is a new file, create/assign a manual execution
         if not self.execution and not self.pk:
             self.execution = self.project.get_or_create_current_manual_execution()
@@ -235,45 +400,59 @@ class TestFile(models.Model):
 
                 # Parse the YAML content for further processing
                 data = yaml.safe_load(yaml_content)
-                test_name = data.get("test_name")
+                yaml_test_name = data.get("test_name") if isinstance(data, dict) else None
+                effective_name = self.name or yaml_test_name
 
-                if not test_name:
+                if not effective_name:
+                    self.is_valid = False
+                    TestFile.objects.filter(pk=self.pk).update(is_valid=False)
+                    return
+
+                # Keep the canonical editable profile under project/profiles for Senpai discovery.
+                user_id = self.project.owner.id
+                project_id = self.project.id
+                profile_name = sanitize_profile_name_for_filename(effective_name)
+                if not profile_name:
                     self.is_valid = False
                     TestFile.objects.filter(pk=self.pk).update(is_valid=False)
                     return
 
                 # Create new filename and change the extension to yaml
-                new_filename = f"{test_name}.yaml"
-
-                # Generate new path using execution folder structure
-                user_id = self.project.owner.id
-                project_id = self.project.id
-
-                if self.execution:
-                    execution_name = self.execution.execution_name.lower()
-                    new_path = get_project_relative_path_str(
-                        user_id, project_id, "executions", execution_name, "profiles", new_filename
-                    )
-                else:
-                    new_path = get_project_relative_path_str(user_id, project_id, "profiles", new_filename)
+                new_filename = f"{profile_name}.yaml"
+                new_path = get_project_relative_path_str(user_id, project_id, "profiles", new_filename)
 
                 # Rename the file
                 old_path = self.file.path
                 new_full_path = Path(settings.MEDIA_ROOT) / new_path
+                profiles_root = Path(settings.MEDIA_ROOT) / get_project_relative_path(user_id, project_id, "profiles")
+                if not is_relative_to_path(new_full_path, profiles_root):
+                    self.is_valid = False
+                    TestFile.objects.filter(pk=self.pk).update(is_valid=False)
+                    return
 
                 # Create parent directories if they don't exist
                 new_full_path.parent.mkdir(parents=True, exist_ok=True)
-                Path(old_path).rename(new_full_path)
+                old_full_path = Path(old_path)
+                if old_full_path != new_full_path:
+                    new_path, new_full_path = resolve_unique_project_relative_path(
+                        user_id,
+                        project_id,
+                        "profiles",
+                        new_filename,
+                        reserved_paths={old_full_path},
+                    )
+                    new_full_path.parent.mkdir(parents=True, exist_ok=True)
+                    old_full_path.rename(new_full_path)
 
                 # Update the model
                 self.file.name = new_path
-                self.name = test_name
+                self.name = Path(new_path).stem
 
                 # Set validation status - only boolean flag
                 self.is_valid = not bool(validation_errors)
 
                 # Update execution profile count
-                if self.execution:
+                if self.execution and update_execution_profile_count:
                     profile_count = self.execution.test_files.count()
                     self.execution.generated_profiles_count = profile_count
                     self.execution.save(update_fields=["generated_profiles_count"])
@@ -309,13 +488,13 @@ def set_name(sender: type[TestFile], instance: TestFile, *, created: bool, **kwa
 
 
 @receiver(post_save, sender=CustomUser)
-def create_user_projects_directory(
+def initialize_user_sensei_workspace(
     sender: type[CustomUser], instance: CustomUser, *, created: bool, **_kwargs: object
 ) -> None:
-    """Create the default projects directory for each new user."""
+    """Create the default Senpai workspace structure for each new user."""
     if created:
         user_id = instance.id
-        transaction.on_commit(lambda: ensure_user_projects_directory(user_id))
+        transaction.on_commit(lambda: ensure_user_sensei_directory(user_id))
 
 
 class Project(models.Model):
@@ -707,6 +886,26 @@ class Conversation(models.Model):
         return self.name
 
 
+class SenpaiConversation(models.Model):
+    """Single active Senpai conversation owned by a user."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="senpai_conversation")
+    thread_id = models.CharField(max_length=255, unique=True)
+    assistant_api_key = models.ForeignKey(
+        UserAPIKey,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="senpai_conversations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        """Return a readable identifier for the Senpai conversation."""
+        return f"SenpaiConversation(user={self.user_id}, thread_id={self.thread_id})"
+
+
 class TestError(models.Model):
     """Test Error is a model to store the errors in a Test Report.
 
@@ -911,12 +1110,46 @@ def delete_custom_config_file_from_media(
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Delete the custom config file from media when the ChatbotConnector is deleted."""
+    custom_config_path = getattr(instance.custom_config_file, "path", "")
+    try:
+        delete_connector_export_file(instance)
+    except (FileNotFoundError, PermissionError, OSError):
+        logger.exception("Error deleting connector export file for connector %s", instance.pk)
+
     try:
         if instance.custom_config_file and Path(instance.custom_config_file.path).exists():
             Path(instance.custom_config_file.path).unlink()
             logger.info("Deleted custom config file %s from media.", instance.custom_config_file.path)
     except (FileNotFoundError, PermissionError, OSError):
-        logger.exception("Error deleting custom config file %s", instance.custom_config_file.path)
+        logger.exception("Error deleting custom config file %s", custom_config_path)
+
+
+@receiver(post_save, sender=ChatbotConnector)
+def sync_chatbot_connector_export(
+    sender: type[ChatbotConnector],
+    instance: ChatbotConnector,
+    **_kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Keep a flat connector YAML export in the user's connectors directory."""
+
+    def _sync_after_commit(
+        connector_pk: int | None = instance.pk,
+    ) -> None:
+        if connector_pk is None:
+            return
+
+        try:
+            connector = sender.objects.get(pk=connector_pk)
+        except sender.DoesNotExist:
+            logger.info("Skipping connector YAML export sync for deleted connector %s", connector_pk)
+            return
+
+        try:
+            sync_connector_export_file(connector)
+        except (OSError, RuntimeError):
+            logger.exception("Failed to sync connector YAML export for connector %s", connector_pk)
+
+    transaction.on_commit(_sync_after_commit)
 
 
 class ProfileExecution(models.Model):

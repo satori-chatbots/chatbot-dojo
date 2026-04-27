@@ -43,6 +43,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
     serializer_class = TestFileSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[type[BasePermission]]] = [permissions.IsAuthenticated, TestFilePermission]
+    UPLOAD_SAVE_ERROR_MESSAGE: ClassVar[str] = "Failed to save files."
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all YAML files, filtering out any that are missing from disk.
@@ -164,9 +165,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         try:
             saved_file_ids = self._create_test_files_from_data(project, processed_files)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to save files during bulk upload.")
-            return Response({"error": f"Failed to save files: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": self.UPLOAD_SAVE_ERROR_MESSAGE}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"uploaded_file_ids": saved_file_ids}, status=status.HTTP_201_CREATED)
 
@@ -221,27 +222,45 @@ class TestFileViewSet(viewsets.ModelViewSet):
         return file_data, errors, reported_names
 
     def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
-        """Save processed file data to the database in a single transaction."""
-        saved_instances = []
+        """Save processed file data while keeping DB transactions short."""
+        saved_file_ids = []
+        current_instance = None
 
         # Create or get a manual execution folder for grouping these uploads
         manual_execution = project.get_or_create_current_manual_execution()
 
-        with transaction.atomic():
+        try:
             for data in file_data:
-                instance = TestFile(
+                current_instance = TestFile(
                     file=data["file"],
                     name=data["test_name"],
                     project=project,
                     is_valid=data["is_valid"],
                     execution=manual_execution,  # Assign to manual execution
                 )
-                saved_instances.append(instance)
-            TestFile.objects.bulk_create(saved_instances)
-        # We need to return the IDs, which are only available after creation.
-        # A simple way is to fetch them back by name, assuming names are now unique.
-        names = [data["test_name"] for data in file_data]
-        return list(TestFile.objects.filter(project=project, name__in=names).values_list("id", flat=True))
+                current_instance.save(update_execution_profile_count=False)
+                saved_file_ids.append(current_instance.id)
+                current_instance = None
+        except Exception:
+            cleanup_file_ids = list(saved_file_ids)
+            if (
+                current_instance is not None
+                and current_instance.pk is not None
+                and current_instance.pk not in cleanup_file_ids
+            ):
+                cleanup_file_ids.append(current_instance.pk)
+
+            if cleanup_file_ids:
+                with transaction.atomic():
+                    TestFile.objects.filter(id__in=cleanup_file_ids).delete()
+                    manual_execution.generated_profiles_count = manual_execution.test_files.count()
+                    manual_execution.save(update_fields=["generated_profiles_count"])
+            raise
+
+        with transaction.atomic():
+            manual_execution.generated_profiles_count = manual_execution.test_files.count()
+            manual_execution.save(update_fields=["generated_profiles_count"])
+        return saved_file_ids
 
     @action(detail=False, methods=["get"], url_path="template")
     def get_template(self, _request: Request) -> Response:
