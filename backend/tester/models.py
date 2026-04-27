@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any, ClassVar
@@ -26,6 +27,7 @@ EMAIL_REQUIRED_ERROR = "Email is a required field"
 MEDIA_USERS_ROOT_DIR = "users"
 USER_PROJECTS_SUBDIRECTORY = "projects"
 USER_CONNECTORS_SUBDIRECTORY = "connectors"
+PATH_SEPARATOR_PATTERN = re.compile(r"[\\/]+")
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -198,6 +200,29 @@ def resolve_unique_project_relative_path(
         if candidate_full_path not in reserved_paths and not candidate_full_path.exists():
             return candidate_relative_path.as_posix(), candidate_full_path
         counter += 1
+
+
+def sanitize_profile_name_for_filename(profile_name: Any) -> str | None:  # noqa: ANN401
+    """Return a safe profile filename stem, or None when the name attempts path traversal."""
+    raw_name = str(profile_name).replace("\x00", "").strip()
+    if not raw_name:
+        return None
+
+    path_segments = PATH_SEPARATOR_PATTERN.split(raw_name)
+    if any(segment in {".", ".."} for segment in path_segments):
+        return None
+
+    safe_name = PATH_SEPARATOR_PATTERN.sub("_", raw_name).strip(" .")
+    return safe_name or None
+
+
+def is_relative_to_path(path: Path, parent: Path) -> bool:
+    """Return whether path resolves inside parent."""
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def upload_to(instance: "TestFile", filename: str) -> str:
@@ -383,17 +408,27 @@ class TestFile(models.Model):
                     TestFile.objects.filter(pk=self.pk).update(is_valid=False)
                     return
 
-                # Create new filename and change the extension to yaml
-                new_filename = f"{effective_name}.yaml"
-
                 # Keep the canonical editable profile under project/profiles for Senpai discovery.
                 user_id = self.project.owner.id
                 project_id = self.project.id
+                profile_name = sanitize_profile_name_for_filename(effective_name)
+                if not profile_name:
+                    self.is_valid = False
+                    TestFile.objects.filter(pk=self.pk).update(is_valid=False)
+                    return
+
+                # Create new filename and change the extension to yaml
+                new_filename = f"{profile_name}.yaml"
                 new_path = get_project_relative_path_str(user_id, project_id, "profiles", new_filename)
 
                 # Rename the file
                 old_path = self.file.path
                 new_full_path = Path(settings.MEDIA_ROOT) / new_path
+                profiles_root = Path(settings.MEDIA_ROOT) / get_project_relative_path(user_id, project_id, "profiles")
+                if not is_relative_to_path(new_full_path, profiles_root):
+                    self.is_valid = False
+                    TestFile.objects.filter(pk=self.pk).update(is_valid=False)
+                    return
 
                 # Create parent directories if they don't exist
                 new_full_path.parent.mkdir(parents=True, exist_ok=True)

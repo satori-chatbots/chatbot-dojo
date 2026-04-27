@@ -117,6 +117,40 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
+    def test_test_file_save_rejects_profile_name_path_traversal(self) -> None:
+        """Profile names containing dot path segments should not escape the project profiles directory."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        profile = TestFile(project=project, name="../Escaped Profile")
+        profile.file.save(
+            "upload.yaml",
+            ContentFile("test_name: ../Escaped Profile\nmessages: []\n"),
+            save=False,
+        )
+
+        profile.save()
+
+        profile.refresh_from_db()
+        self.assertFalse(profile.is_valid)  # noqa: PT009
+        self.assertFalse(  # noqa: PT009
+            (self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"project_{project.id}" / "Escaped Profile.yaml").exists()
+        )
+
+    def test_test_file_save_normalizes_profile_name_path_separators(self) -> None:
+        """Safe profile names with separators should be flattened into a single filename."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        profile = TestFile(project=project, name="Nested/Profile")
+        profile.file.save(
+            "upload.yaml",
+            ContentFile("test_name: Nested/Profile\nmessages: []\n"),
+            save=False,
+        )
+
+        profile.save()
+
+        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Nested_Profile.yaml"
+        self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
+        self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
+
     def test_tracer_results_create_editable_profiles_in_project_profiles_directory(self) -> None:
         """TRACER-generated editable profiles should be stored where Senpai can index them."""
         project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
