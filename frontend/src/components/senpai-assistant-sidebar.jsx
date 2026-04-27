@@ -132,7 +132,10 @@ const clampDesktopSidebarWidth = (width) => {
   const viewportWidth = globalThis.innerWidth || MAX_DESKTOP_WIDTH;
   const maxAllowedWidth = Math.max(
     MIN_DESKTOP_WIDTH,
-    Math.min(MAX_DESKTOP_WIDTH, viewportWidth - DESKTOP_SIDEBAR_VIEWPORT_MARGIN),
+    Math.min(
+      MAX_DESKTOP_WIDTH,
+      viewportWidth - DESKTOP_SIDEBAR_VIEWPORT_MARGIN,
+    ),
   );
 
   return Math.min(Math.max(width, MIN_DESKTOP_WIDTH), maxAllowedWidth);
@@ -140,7 +143,8 @@ const clampDesktopSidebarWidth = (width) => {
 
 const readDesktopSidebarWidth = () => {
   try {
-    const storedWidthValue = globalThis.localStorage?.getItem(DESKTOP_WIDTH_KEY);
+    const storedWidthValue =
+      globalThis.localStorage?.getItem(DESKTOP_WIDTH_KEY);
     if (storedWidthValue === null || storedWidthValue === "") {
       return DEFAULT_DESKTOP_WIDTH;
     }
@@ -272,7 +276,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     if (isSettingsOpen || (conversation && !conversation.assistant_api_key)) {
       void reloadApiKeys();
     }
-  }, [conversation, conversation?.assistant_api_key, isSettingsOpen, reloadApiKeys]);
+  }, [
+    conversation,
+    conversation?.assistant_api_key,
+    isSettingsOpen,
+    reloadApiKeys,
+  ]);
 
   useEffect(() => {
     setMessages(readStoredThreadMessages(conversation?.thread_id));
@@ -422,7 +431,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     }
 
     focusComposer();
-  }, [focusComposer, conversation?.thread_id, hasAssistantApiKey, hasPendingRequest]);
+  }, [
+    focusComposer,
+    conversation?.thread_id,
+    hasAssistantApiKey,
+    hasPendingRequest,
+  ]);
 
   const submitMessage = useCallback(
     async (messageText) => {
@@ -653,7 +667,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                                     <User className="h-3 w-3" />
                                   )}
                                   <span>{isAssistant ? "Senpai" : "You"}</span>
-                                  <span>{formatTimestamp(message.timestamp)}</span>
+                                  <span>
+                                    {formatTimestamp(message.timestamp)}
+                                  </span>
                                 </div>
                                 {isAssistant ? (
                                   <MarkdownMessage
@@ -710,13 +726,13 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                         minRows={3}
                         maxRows={8}
                         variant="flat"
-                        autoFocus
                         value={draft}
                         onValueChange={setDraft}
                         onKeyDown={handleComposerKeyDown}
                         isDisabled={isComposerDisabled}
                         classNames={{
-                          inputWrapper: "border-none bg-transparent shadow-none",
+                          inputWrapper:
+                            "border-none bg-transparent shadow-none",
                         }}
                       />
                       <div className="mt-2 flex items-center justify-end">
@@ -784,7 +800,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                     <div className="mt-4 flex justify-end">
                       <Button
                         color="primary"
-                        onPress={() => void loadConversation({ showFullSpinner: true })}
+                        onPress={() =>
+                          void loadConversation({ showFullSpinner: true })
+                        }
                         isDisabled={hasPendingRequest}
                       >
                         Retry
@@ -875,7 +893,7 @@ const SenpaiAssistantSidebar = () => {
 
   useEffect(() => {
     if (!isResizing) {
-      return undefined;
+      return;
     }
 
     const handlePointerMove = (event) => {

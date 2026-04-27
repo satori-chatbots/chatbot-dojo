@@ -12,7 +12,7 @@ const escapeCodeHtml = (value) =>
 const sanitizeMarkdownLinkHref = (href) => {
   const trimmedHref = href?.trim();
   if (!trimmedHref) {
-    return undefined;
+    return;
   }
 
   try {
@@ -22,7 +22,7 @@ const sanitizeMarkdownLinkHref = (href) => {
       ? parsedUrl.href
       : undefined;
   } catch {
-    return undefined;
+    return;
   }
 };
 
@@ -44,21 +44,23 @@ const copyTextToClipboard = async (text) => {
   textarea.style.top = "-9999px";
   textarea.style.left = "-9999px";
 
-  document.body.appendChild(textarea);
+  document.body.append(textarea);
   textarea.focus();
   textarea.select();
 
   try {
     return document.execCommand?.("copy") === true;
   } finally {
-    document.body.removeChild(textarea);
+    textarea.remove();
   }
 };
 
 const normalizeLanguage = (language) => {
   const normalized = (language || "").toLowerCase();
 
-  if (["js", "jsx", "javascript", "ts", "tsx", "typescript"].includes(normalized)) {
+  if (
+    ["js", "jsx", "javascript", "ts", "tsx", "typescript"].includes(normalized)
+  ) {
     return "javascript";
   }
 
@@ -111,7 +113,10 @@ const highlightWithPlaceholders = (source, definitions, transform) => {
 
   highlighted = transform(highlighted);
 
-  return highlighted.replaceAll(/@@CODE_TOKEN_(\d+)@@/g, (_, index) => tokens[Number(index)]);
+  return highlighted.replaceAll(
+    /@@CODE_TOKEN_(\d+)@@/g,
+    (_, index) => tokens[Number(index)],
+  );
 };
 
 const highlightJson = (code) => {
@@ -200,7 +205,8 @@ const highlightPython = (code) =>
     escapeCodeHtml(code),
     [
       {
-        pattern: /("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
+        pattern:
+          /("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
         className: "code-token-string",
       },
       {
@@ -270,13 +276,15 @@ const highlightHtml = (code) =>
       },
     ],
     (highlighted) =>
-      highlighted.replaceAll(
-        /(&lt;\/?)([\w-]+)(.*?)(\/?&gt;)/g,
-        '$1<span class="code-token-keyword">$2</span>$3$4',
-      ).replaceAll(
-        /\b([\w:-]+)(=)/g,
-        '<span class="code-token-attribute">$1</span>$2',
-      ),
+      highlighted
+        .replaceAll(
+          /(&lt;\/?)([\w-]+)(.*?)(\/?&gt;)/g,
+          '$1<span class="code-token-keyword">$2</span>$3$4',
+        )
+        .replaceAll(
+          /\b([\w:-]+)(=)/g,
+          '<span class="code-token-attribute">$1</span>$2',
+        ),
   );
 
 const highlightSql = (code) =>
@@ -484,11 +492,11 @@ const CodeBlock = ({ lines, language }) => {
 
   return (
     <div className="relative max-w-full">
-      {language ? (
+      {language && (
         <span className="absolute left-3 top-2 z-10 rounded-md bg-black/50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/85">
           {normalizeLanguage(language)}
         </span>
-      ) : null}
+      )}
       <button
         type="button"
         onClick={() => void handleCopy()}
@@ -519,7 +527,10 @@ const renderHeading = (level, text, key) => {
 
   const HeadingTag = `h${level}`;
   return (
-    <HeadingTag key={key} className={classNameByLevel[level] || "font-semibold"}>
+    <HeadingTag
+      key={key}
+      className={classNameByLevel[level] || "font-semibold"}
+    >
       {splitInlineMarkdown(text)}
     </HeadingTag>
   );
@@ -577,7 +588,10 @@ const parseMarkdown = (content) => {
 
     if (/^(-|\*|\+)\s+/.test(line)) {
       const items = [];
-      while (lineIndex < lines.length && /^(-|\*|\+)\s+/.test(lines[lineIndex])) {
+      while (
+        lineIndex < lines.length &&
+        /^(-|\*|\+)\s+/.test(lines[lineIndex])
+      ) {
         items.push(lines[lineIndex].replace(/^(-|\*|\+)\s+/, ""));
         lineIndex += 1;
       }
@@ -603,7 +617,7 @@ const parseMarkdown = (content) => {
     while (
       lineIndex < lines.length &&
       lines[lineIndex].trim() &&
-      !/^```/.test(lines[lineIndex]) &&
+      !lines[lineIndex].startsWith("```") &&
       !/^(#{1,3})\s+/.test(lines[lineIndex]) &&
       !/^(-|\*|\+)\s+/.test(lines[lineIndex]) &&
       !/^\d+\.\s+/.test(lines[lineIndex])
@@ -613,7 +627,10 @@ const parseMarkdown = (content) => {
     }
 
     elements.push(
-      renderParagraph(paragraphLines.join("\n"), `paragraph-${elements.length}`),
+      renderParagraph(
+        paragraphLines.join("\n"),
+        `paragraph-${elements.length}`,
+      ),
     );
   }
 
