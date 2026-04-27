@@ -43,6 +43,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
     serializer_class = TestFileSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[type[BasePermission]]] = [permissions.IsAuthenticated, TestFilePermission]
+    UPLOAD_SAVE_ERROR_MESSAGE: ClassVar[str] = "Failed to save files."
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all YAML files, filtering out any that are missing from disk.
@@ -164,9 +165,9 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         try:
             saved_file_ids = self._create_test_files_from_data(project, processed_files)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to save files during bulk upload.")
-            return Response({"error": f"Failed to save files: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": self.UPLOAD_SAVE_ERROR_MESSAGE}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"uploaded_file_ids": saved_file_ids}, status=status.HTTP_201_CREATED)
 

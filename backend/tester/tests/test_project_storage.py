@@ -29,6 +29,10 @@ FAILURE_ON_SECOND_SAVE_CALL = 2
 class SimulatedUploadFailureError(RuntimeError):
     """Raised by tests to simulate a late failure during batch upload."""
 
+    def __init__(self) -> None:
+        """Initialize with a path-like detail that should never reach clients."""
+        super().__init__("/srv/private/users/1/projects/project_1/profiles/Second Profile.yaml")
+
 
 class ProjectStorageLayoutTests(TestCase):
     """Ensure project assets live under the user's lowercase projects directory."""
@@ -264,6 +268,8 @@ class ProjectStorageLayoutTests(TestCase):
             response = TestFileViewSet.as_view({"post": "upload"})(request)
 
         self.assertEqual(response.status_code, 500)  # noqa: PT009
+        self.assertEqual(response.data["error"], "Failed to save files.")  # noqa: PT009
+        self.assertNotIn("/srv/private", response.data["error"])  # noqa: PT009
         self.assertEqual(TestFile.objects.filter(project=project).count(), 0)  # noqa: PT009
         execution = project.get_or_create_current_manual_execution()
         self.assertEqual(execution.generated_profiles_count, 0)  # noqa: PT009
