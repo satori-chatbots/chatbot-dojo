@@ -22,8 +22,16 @@ uv run python manage.py collectstatic --noinput || true
 # Create superuser from environment variables
 uv run python manage.py ensure_superuser
 
-# Ensure Senpai's embedding model is downloaded before serving requests
-uv run python manage.py warmup_senpai_embedding_model
+# Ensure Senpai's embedding model is available without forcing a download on
+# every container start. Preloaded images already have this cache populated.
+SENPAI_EMBEDDING_MODEL_CACHE_ROOT="${SENPAI_EMBEDDING_MODEL_CACHE_ROOT:-/opt/senpai-embedding-model-cache}"
+if [ "${WARMUP_SENPAI_EMBEDDING_MODEL:-1}" = "0" ]; then
+  echo "INFO: Skipping Senpai embedding model warmup because WARMUP_SENPAI_EMBEDDING_MODEL=0"
+elif [ -d "$SENPAI_EMBEDDING_MODEL_CACHE_ROOT" ] && [ -n "$(find "$SENPAI_EMBEDDING_MODEL_CACHE_ROOT" -mindepth 1 -print -quit)" ]; then
+  echo "INFO: Skipping Senpai embedding model warmup because cache already exists at $SENPAI_EMBEDDING_MODEL_CACHE_ROOT"
+else
+  uv run python manage.py warmup_senpai_embedding_model || echo "WARNING: Senpai embedding model warmup failed; continuing startup"
+fi
 
 # Start the application
 uv run gunicorn senseiweb.wsgi:application --bind 0.0.0.0:8000
