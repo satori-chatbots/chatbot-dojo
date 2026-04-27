@@ -50,7 +50,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: /app/entrypoint.dev.sh
+    command: sh /app/entrypoint.dev.sh
 
   celery:
     image: sensei-web-python-dev:latest
