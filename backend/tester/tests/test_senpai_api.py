@@ -119,6 +119,29 @@ class SenpaiConversationAPITests(TestCase):
         assistant.send_message.assert_called_once_with("Hello")
         assistant.close.assert_called_once()
 
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_ignores_assistant_close_failure(self, build_assistant_mock: MagicMock) -> None:
+        """Cleanup failures should not replace a successful assistant response."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        assistant = MagicMock()
+        assistant.send_message.return_value = "Hello from Senpai"
+        assistant.close.side_effect = RuntimeError("close failed")
+        build_assistant_mock.return_value = assistant
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": "Hello"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(response.data["response"], "Hello from Senpai")  # noqa: PT009
+        assistant.close.assert_called_once()
+
     def test_send_message_requires_assistant_api_key(self) -> None:
         """The Senpai message endpoint should reject requests until an assistant API key is selected."""
         response = self.client.post(

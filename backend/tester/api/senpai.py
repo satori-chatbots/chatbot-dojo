@@ -109,7 +109,14 @@ class SenpaiConversationMessageView(APIView):
             )
         finally:
             if assistant is not None:
-                assistant.close()
+                try:
+                    assistant.close()
+                except Exception:
+                    logger.exception(
+                        "Failed to close Senpai Assistant for user_id=%s thread_id=%s",
+                        request.user.id,
+                        conversation.thread_id,
+                    )
 
         conversation.save(update_fields=["updated_at"])
 
