@@ -3474,7 +3474,7 @@ wheels = [
 
 [[package]]
 name = "senpai-assistant"
-version = "0.1.1"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain" },
@@ -3496,9 +3496,9 @@ dependencies = [
     { name = "torchvision" },
     { name = "types-pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bc/0c/d0c1284ad0cda7275b8043c41839b0c22ddd0728858dcfbd975a4b4bdc46/senpai_assistant-0.1.1.tar.gz", hash = "sha256:ee6ca0d3ab4a98bf7447a055cbda2756c85bb20509c0bf26c23ad727626abcaa", size = 110525, upload-time = "2026-04-15T14:10:46.301Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/26/249a573c8986cc181751adb8e49d061a262dd66dd1323cec9e925cfb9ebd/senpai_assistant-0.4.0.tar.gz", hash = "sha256:60d016161dd8a6b0191aa4eaa604c79345b0c51c3aa3dc05a36f7841ba57cca6", size = 118009, upload-time = "2026-04-21T11:44:36.723Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/fc/dc2d15e0f9044e4e400f802d2328a05a6e88b724a2b4aa9e24d8f1a12305/senpai_assistant-0.1.1-py3-none-any.whl", hash = "sha256:e8b8c91b07d1b5fc61ee41cece6a5c48781b88e79db23fae51d78150b1d70f98", size = 91683, upload-time = "2026-04-15T14:10:44.842Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/5e/92655c52bc118ef02e93d1371a32b3f42d09743efe225e86d079167067af/senpai_assistant-0.4.0-py3-none-any.whl", hash = "sha256:f18269a665524faa48acacc9b34256794e2c6c2305ef7c2a975ca27483d161a1", size = 98543, upload-time = "2026-04-21T11:44:37.953Z" },
 ]
 
 [[package]]
@@ -3589,7 +3589,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "selenium", specifier = ">=4.33.0" },
-    { name = "senpai-assistant", specifier = ">=0.1.1" },
+    { name = "senpai-assistant", specifier = ">=0.4.0" },
     { name = "tiktoken", specifier = ">=0.9.0" },
     { name = "user-simulator", specifier = ">=0.6.0" },
     { name = "webdriver-manager", specifier = ">=4.0.2" },
