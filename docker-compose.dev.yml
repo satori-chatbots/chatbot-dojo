@@ -54,6 +54,9 @@ services:
 
   celery:
     image: sensei-web-python-dev:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     env_file:
       - ./.env.dev
     environment:
