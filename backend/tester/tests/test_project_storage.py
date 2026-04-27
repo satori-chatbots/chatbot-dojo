@@ -132,7 +132,14 @@ class ProjectStorageLayoutTests(TestCase):
         profile.refresh_from_db()
         self.assertFalse(profile.is_valid)  # noqa: PT009
         self.assertFalse(  # noqa: PT009
-            (self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"project_{project.id}" / "Escaped Profile.yaml").exists()
+            (
+                self.media_root
+                / "users"
+                / f"user_{self.user.id}"
+                / "projects"
+                / f"project_{project.id}"
+                / "Escaped Profile.yaml"
+            ).exists()
         )
 
     def test_test_file_save_normalizes_profile_name_path_separators(self) -> None:
