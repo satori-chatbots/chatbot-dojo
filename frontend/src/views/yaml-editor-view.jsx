@@ -48,10 +48,7 @@ import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import {
-  completionsSchema,
-  getCursorContext,
-} from "../data/yaml-schema";
+import { completionsSchema, getCursorContext } from "../data/yaml-schema";
 
 function myCompletions(context) {
   const word = context.matchBefore(/\w*/);
@@ -592,9 +589,7 @@ function YamlEditor() {
                 </span>
                 <span>{lineCount} lines</span>
                 <span>{editorContent.length} characters</span>
-                {editorContent.length > 0 && (
-                  <span>{wordCount} words</span>
-                )}
+                {editorContent.length > 0 && <span>{wordCount} words</span>}
                 {hasUnsavedChanges && (
                   <span className="text-warning-600 flex items-center gap-1">
                     <div className="w-2 h-2 bg-warning-500 rounded-full" />
@@ -655,116 +650,120 @@ function YamlEditor() {
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <Tabs defaultValue="profile" className="space-y-3 -mt-1">
-              <Tab key="profile" title="User Profile Help">
-                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    User Profile Documentation
-                  </h2>
-                  <Accordion variant="light" className="px-0">
-                    {Object.entries(documentationSections).map(
-                      ([sectionTitle, section]) => (
-                        <AccordionItem
-                          key={sectionTitle}
-                          title={
-                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                              {sectionTitle}
-                            </span>
-                          }
-                        >
-                          <div className="space-y-3 pt-1 pb-2">
-                            {section.items.map((item, index) => (
-                              <div key={index} className="space-y-1.5">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.code);
-                                    showToast(
-                                      "success",
-                                      "Code copied to clipboard",
-                                    );
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
+                <Tab key="profile" title="User Profile Help">
+                  <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
+                    <h2 className="text-base font-semibold mb-2">
+                      User Profile Documentation
+                    </h2>
+                    <Accordion variant="light" className="px-0">
+                      {Object.entries(documentationSections).map(
+                        ([sectionTitle, section]) => (
+                          <AccordionItem
+                            key={sectionTitle}
+                            title={
+                              <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
+                                {sectionTitle}
+                              </span>
+                            }
+                          >
+                            <div className="space-y-3 pt-1 pb-2">
+                              {section.items.map((item, index) => (
+                                <div key={index} className="space-y-1.5">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
+                                    onClick={() => {
                                       navigator.clipboard.writeText(item.code);
                                       showToast(
                                         "success",
                                         "Code copied to clipboard",
                                       );
-                                    }
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {item.code}
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        navigator.clipboard.writeText(
+                                          item.code,
+                                        );
+                                        showToast(
+                                          "success",
+                                          "Code copied to clipboard",
+                                        );
+                                      }
+                                    }}
+                                    title="Click to copy"
+                                  >
+                                    {item.code}
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-default-foreground">
+                                    {item.description}
+                                  </p>
                                 </div>
-                                <p className="text-xs sm:text-sm text-default-foreground">
-                                  {item.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionItem>
-                      ),
-                    )}
-                  </Accordion>
-                </div>
-              </Tab>
-              <Tab key="yaml" title="YAML Help">
-                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    YAML Tutorial
-                  </h2>
-                  <Accordion variant="light" className="px-0">
-                    {Object.entries(yamlBasicsSections).map(
-                      ([sectionTitle, section]) => (
-                        <AccordionItem
-                          key={sectionTitle}
-                          title={
-                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                              {sectionTitle}
-                            </span>
-                          }
-                        >
-                          <div className="space-y-3 pt-1 pb-2">
-                            {section.items.map((item, index) => (
-                              <div key={index} className="space-y-1.5">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.code);
-                                    showToast(
-                                      "success",
-                                      "Code copied to clipboard",
-                                    );
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
+                              ))}
+                            </div>
+                          </AccordionItem>
+                        ),
+                      )}
+                    </Accordion>
+                  </div>
+                </Tab>
+                <Tab key="yaml" title="YAML Help">
+                  <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
+                    <h2 className="text-base font-semibold mb-2">
+                      YAML Tutorial
+                    </h2>
+                    <Accordion variant="light" className="px-0">
+                      {Object.entries(yamlBasicsSections).map(
+                        ([sectionTitle, section]) => (
+                          <AccordionItem
+                            key={sectionTitle}
+                            title={
+                              <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
+                                {sectionTitle}
+                              </span>
+                            }
+                          >
+                            <div className="space-y-3 pt-1 pb-2">
+                              {section.items.map((item, index) => (
+                                <div key={index} className="space-y-1.5">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
+                                    onClick={() => {
                                       navigator.clipboard.writeText(item.code);
                                       showToast(
                                         "success",
                                         "Code copied to clipboard",
                                       );
-                                    }
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {item.code}
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        navigator.clipboard.writeText(
+                                          item.code,
+                                        );
+                                        showToast(
+                                          "success",
+                                          "Code copied to clipboard",
+                                        );
+                                      }
+                                    }}
+                                    title="Click to copy"
+                                  >
+                                    {item.code}
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-default-foreground">
+                                    {item.description}
+                                  </p>
                                 </div>
-                                <p className="text-xs sm:text-sm text-default-foreground">
-                                  {item.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionItem>
-                      ),
-                    )}
-                  </Accordion>
-                </div>
-              </Tab>
+                              ))}
+                            </div>
+                          </AccordionItem>
+                        ),
+                      )}
+                    </Accordion>
+                  </div>
+                </Tab>
               </Tabs>
             </div>
           </div>

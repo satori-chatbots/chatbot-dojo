@@ -540,8 +540,7 @@ response_path: "response.text"
           editorContent,
           "connector",
         );
-        const connectorName =
-          validationResult.data?.name || "custom-connector";
+        const connectorName = validationResult.data?.name || "custom-connector";
 
         // Create the connector first
         const newConnector = await createChatbotConnector({
