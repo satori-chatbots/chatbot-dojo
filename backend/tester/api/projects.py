@@ -158,12 +158,30 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Update a project and keep its folder name in sync with the project name."""
         project = self.get_object()
         old_folder_name = project.get_project_folder_name()
+        old_project_name = project.name
 
+        with transaction.atomic():
+            updated_project = serializer.save()
+            transaction.on_commit(
+                lambda: self._sync_project_storage_after_commit(
+                    updated_project.id,
+                    old_folder_name,
+                    old_project_name,
+                )
+            )
+
+    def _sync_project_storage_after_commit(
+        self,
+        project_id: int,
+        old_folder_name: str,
+        old_project_name: str,
+    ) -> None:
+        """Synchronize project storage after the project row has committed."""
+        project = Project.objects.get(id=project_id)
         try:
-            with transaction.atomic():
-                updated_project = serializer.save()
-                rename_project_storage(updated_project, old_folder_name)
-        except OSError as exc:
+            rename_project_storage(project, old_folder_name)
+        except Exception as exc:
+            Project.objects.filter(id=project_id).update(name=old_project_name)
             logger.exception(
                 "Failed to rename project storage for project '%s' (ID: %d)",
                 project.name,

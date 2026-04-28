@@ -4,11 +4,13 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 import yaml
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.test import TestCase, override_settings
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from tester.api.projects import ProjectViewSet
@@ -106,7 +108,8 @@ class ProjectStorageLayoutTests(TestCase):
         )
         force_authenticate(request, user=self.user)
 
-        response = ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
 
         self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
         project.refresh_from_db()
@@ -119,6 +122,33 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertEqual(project.get_project_folder_name(), "Pepito")  # noqa: PT009
         self.assertIn("/projects/Pepito/profiles/Manual Profile.yaml", profile.file.name)  # noqa: PT009
         self.assertIn("/projects/Pepito/executions/manual_profiles", execution.profiles_directory)  # noqa: PT009
+
+    def test_project_rename_restores_name_and_folder_when_reference_update_fails(self) -> None:
+        """Storage rename failures should not leave the project name and folder out of sync."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        project_path = Path(project.get_project_path())
+        project_path.mkdir(parents=True, exist_ok=True)
+        (project_path / "run.yml").write_text("project_folder: Alpha\n", encoding="utf-8")
+
+        request = self.request_factory.patch(
+            f"/api/projects/{project.id}/",
+            {"name": "Pepito"},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+
+        with (
+            pytest.raises(ValidationError),
+            patch("tester.models.update_project_storage_references", side_effect=RuntimeError("sync failed")),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
+
+        project.refresh_from_db()
+        projects_root = self.media_root / "users" / f"user_{self.user.id}" / "projects"
+        self.assertEqual(project.name, "Alpha")  # noqa: PT009
+        self.assertTrue((projects_root / "Alpha").exists())  # noqa: PT009
+        self.assertFalse((projects_root / "Pepito").exists())  # noqa: PT009
 
     def test_project_rename_rejects_duplicate_name_for_user(self) -> None:
         """A user should not be able to rename a project to another project name."""

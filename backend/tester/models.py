@@ -1457,12 +1457,19 @@ def rename_project_storage(project: Project, old_folder_name: str) -> None:
     projects_root = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(project.owner_id)
     source_path = projects_root / old_folder_name
     destination_path = projects_root / new_folder_name
+    moved_directory = False
     if source_path.exists():
         if destination_path.exists():
             msg = f"Cannot rename project folder to {new_folder_name}: destination already exists."
             raise FileExistsError(msg)
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(source_path), str(destination_path))
+        moved_directory = True
 
-    update_project_storage_references(project, old_folder_name, new_folder_name)
-    project.update_run_yml()
+    try:
+        update_project_storage_references(project, old_folder_name, new_folder_name)
+        project.update_run_yml()
+    except Exception:
+        if moved_directory and destination_path.exists() and not source_path.exists():
+            shutil.move(str(destination_path), str(source_path))
+        raise
