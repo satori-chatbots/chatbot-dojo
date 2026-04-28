@@ -123,25 +123,35 @@ function YamlEditor() {
     }
   }, []);
   const [lastSaved, setLastSaved] = useState();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem("profile-editor-sidebar-collapsed");
-    return saved ? JSON.parse(saved) : false;
-  });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(
-      "profile-editor-sidebar-collapsed",
-      JSON.stringify(sidebarCollapsed),
-    );
-  }, [sidebarCollapsed]);
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      const saved = globalThis.localStorage.getItem(
+        "profile-editor-sidebar-collapsed",
+      );
+      setSidebarCollapsed(saved ? JSON.parse(saved) : false);
+    }
+  }, []);
 
   // Persist autosave setting
   useEffect(() => {
-    localStorage.setItem(
-      "yamlEditorAutosaveEnabled",
-      JSON.stringify(autosaveEnabled),
-    );
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      globalThis.localStorage.setItem(
+        "yamlEditorAutosaveEnabled",
+        JSON.stringify(autosaveEnabled),
+      );
+    }
   }, [autosaveEnabled]);
+
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      globalThis.localStorage.setItem(
+        "profile-editor-sidebar-collapsed",
+        JSON.stringify(sidebarCollapsed),
+      );
+    }
+  }, [sidebarCollapsed]);
 
   // Enhanced status bar state
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
