@@ -18,6 +18,14 @@ import { getUserApiKeys } from "../api/authentication-api";
 import { fetchLLMModels } from "../api/api-client";
 import { useNavigate } from "react-router-dom";
 
+const getProjectErrorMessage = (value) => {
+  if (Array.isArray(value)) {
+    return value.join(" ");
+  }
+
+  return String(value || "Project update failed.");
+};
+
 const EditProjectModal = ({
   isOpen,
   onOpenChange,
@@ -119,9 +127,11 @@ const EditProjectModal = ({
       return true;
     }
 
-    const existsResponse = await checkProjectName(name);
+    const existsResponse = await checkProjectName(name.trim());
     if (existsResponse.exists) {
-      setValidationErrors({ name: "Project name already exists" });
+      setValidationErrors({
+        name: "This name is already taken, choose another one.",
+      });
       setLoadingValidation(false);
       return false;
     }
@@ -156,11 +166,22 @@ const EditProjectModal = ({
       }
     } catch (error) {
       console.error("Error updating project:", error);
-      const errorData = JSON.parse(error.message);
-      const errors = Object.entries(errorData).map(
-        ([key, value]) => `${key}: ${value}`,
-      );
-      alert(`Error updating project: ${errors.join("\n")}`);
+      try {
+        const errorData = JSON.parse(error.message);
+        if (errorData.name) {
+          setValidationErrors({
+            name: getProjectErrorMessage(errorData.name),
+          });
+          return;
+        }
+
+        const errors = Object.entries(errorData).map(
+          ([key, value]) => `${key}: ${getProjectErrorMessage(value)}`,
+        );
+        alert(`Error updating project: ${errors.join("\n")}`);
+      } catch {
+        alert(`Error updating project: ${error.message}`);
+      }
     }
   };
 
@@ -178,6 +199,15 @@ const EditProjectModal = ({
 
   const handleProjectNameChange = (event) => {
     setFormData((previous) => ({ ...previous, name: event.target.value }));
+    setValidationErrors((previous) => {
+      if (!previous.name) {
+        return previous;
+      }
+
+      return Object.fromEntries(
+        Object.entries(previous).filter(([key]) => key !== "name"),
+      );
+    });
   };
 
   const handleApiKeyChange = async (event) => {
@@ -255,6 +285,8 @@ const EditProjectModal = ({
               maxLength={255}
               minLength={3}
               isDisabled={loadingValidation}
+              isInvalid={Boolean(validationErrors.name)}
+              errorMessage={validationErrors.name}
             />
             <div className="w-full">
               <div className="flex w-full justify-between mb-2">
