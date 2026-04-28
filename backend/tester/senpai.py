@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 from uuid import uuid4
 
 from django.conf import settings
@@ -47,7 +46,13 @@ DEFAULT_ASSISTANT_MODELS = {
 }
 YAML_EXTENSIONS = {".yaml", ".yml"}
 _SENPAI_TOOL_RESOLUTION_PATCHED = False
-YamlTargetResolver = Callable[[Path, str, str], tuple[Path | None, str | None]]
+
+
+class YamlTargetResolver(Protocol):
+    """Callable signature for Senpai's YAML target resolver."""
+
+    def __call__(self, project_root: Path, folder_name: str, filename: str) -> tuple[Path | None, str | None]:
+        """Resolve a project YAML target."""
 
 
 def _ensure_directory(path: Path) -> Path:
