@@ -158,7 +158,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Update a project and keep its folder name in sync with the project name."""
         project = self.get_object()
         old_folder_name = project.get_project_folder_name()
-        old_project_name = project.name
+        old_project_values = self._get_original_project_values(project, serializer.validated_data)
 
         with transaction.atomic():
             updated_project = serializer.save()
@@ -166,22 +166,30 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 lambda: self._sync_project_storage_after_commit(
                     updated_project.id,
                     old_folder_name,
-                    old_project_name,
+                    old_project_values,
                 )
             )
+
+    def _get_original_project_values(self, project: Project, validated_data: dict[str, Any]) -> dict[str, Any]:
+        """Return original DB values for fields mutated by this update."""
+        original_values = {}
+        for field_name in validated_data:
+            field = project._meta.get_field(field_name)  # noqa: SLF001
+            original_values[field.attname] = getattr(project, field.attname)
+        return original_values
 
     def _sync_project_storage_after_commit(
         self,
         project_id: int,
         old_folder_name: str,
-        old_project_name: str,
+        old_project_values: dict[str, Any],
     ) -> None:
         """Synchronize project storage after the project row has committed."""
         project = Project.objects.get(id=project_id)
         try:
             rename_project_storage(project, old_folder_name)
         except Exception as exc:
-            Project.objects.filter(id=project_id).update(name=old_project_name)
+            Project.objects.filter(id=project_id).update(**old_project_values)
             logger.exception(
                 "Failed to rename project storage for project '%s' (ID: %d)",
                 project.name,

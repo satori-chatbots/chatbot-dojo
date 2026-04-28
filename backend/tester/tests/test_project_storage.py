@@ -103,7 +103,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         request = self.request_factory.patch(
             f"/api/projects/{project.id}/",
-            {"name": "Pepito"},
+            {"name": "Pepito", "public": True},
             format="json",
         )
         force_authenticate(request, user=self.user)
@@ -147,6 +147,7 @@ class ProjectStorageLayoutTests(TestCase):
         project.refresh_from_db()
         projects_root = self.media_root / "users" / f"user_{self.user.id}" / "projects"
         self.assertEqual(project.name, "Alpha")  # noqa: PT009
+        self.assertFalse(project.public)  # noqa: PT009
         self.assertTrue((projects_root / "Alpha").exists())  # noqa: PT009
         self.assertFalse((projects_root / "Pepito").exists())  # noqa: PT009
 
@@ -164,7 +165,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         request = self.request_factory.patch(
             f"/api/projects/{project.id}/",
-            {"name": "Pepito"},
+            {"name": "Pepito", "public": True},
             format="json",
         )
         force_authenticate(request, user=self.user)
@@ -180,6 +181,7 @@ class ProjectStorageLayoutTests(TestCase):
         profile.refresh_from_db()
         projects_root = self.media_root / "users" / f"user_{self.user.id}" / "projects"
         self.assertEqual(project.name, "Alpha")  # noqa: PT009
+        self.assertFalse(project.public)  # noqa: PT009
         self.assertEqual(profile.file.name, original_profile_path)  # noqa: PT009
         self.assertTrue((projects_root / "Alpha").exists())  # noqa: PT009
         self.assertFalse((projects_root / "Pepito").exists())  # noqa: PT009
@@ -192,7 +194,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         request = self.request_factory.patch(
             f"/api/projects/{project.id}/",
-            {"name": "Pepito"},
+            {"name": "Pepito", "public": True},
             format="json",
         )
         force_authenticate(request, user=self.user)
@@ -206,6 +208,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         project.refresh_from_db()
         self.assertEqual(project.name, "Alpha")  # noqa: PT009
+        self.assertFalse(project.public)  # noqa: PT009
         update_references_mock.assert_not_called()
 
     def test_project_rename_rejects_duplicate_name_for_user(self) -> None:
