@@ -1465,6 +1465,9 @@ def rename_project_storage(project: Project, old_folder_name: str) -> None:
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(source_path), str(destination_path))
         moved_directory = True
+    elif not destination_path.exists():
+        msg = f"Cannot rename project folder: source {old_folder_name} does not exist."
+        raise FileNotFoundError(msg)
 
     try:
         update_project_storage_references(project, old_folder_name, new_folder_name)

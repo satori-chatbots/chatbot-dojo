@@ -150,6 +150,30 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue((projects_root / "Alpha").exists())  # noqa: PT009
         self.assertFalse((projects_root / "Pepito").exists())  # noqa: PT009
 
+    def test_project_rename_restores_name_when_source_folder_is_missing(self) -> None:
+        """A missing source folder should not cause project path references to be rewritten."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        project_path = Path(project.get_project_path())
+        self.assertFalse(project_path.exists())  # noqa: PT009
+
+        request = self.request_factory.patch(
+            f"/api/projects/{project.id}/",
+            {"name": "Pepito"},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+
+        with (
+            pytest.raises(ValidationError),
+            patch("tester.models.update_project_storage_references") as update_references_mock,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
+
+        project.refresh_from_db()
+        self.assertEqual(project.name, "Alpha")  # noqa: PT009
+        update_references_mock.assert_not_called()
+
     def test_project_rename_rejects_duplicate_name_for_user(self) -> None:
         """A user should not be able to rename a project to another project name."""
         Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
