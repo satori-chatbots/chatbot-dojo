@@ -565,31 +565,32 @@ response_path: "response.text"
         },
       );
 
-      if (response.ok) {
-        setOriginalContent(editorContent);
-        setLastSaved(new Date());
-        showToast({
-          title: "Success",
-          description: "Custom connector configuration saved successfully!",
-          status: "success",
-        });
+      setOriginalContent(editorContent);
+      setLastSaved(new Date());
+      showToast({
+        title: "Success",
+        description: "Custom connector configuration saved successfully!",
+        status: "success",
+      });
 
-        if (connectorId === "new") {
-          navigate(`/custom-connector-editor/${targetConnectorId}`);
-        }
-      } else {
-        const errorData = await response.json();
-        const validationMessage = errorData.errors
-          ?.map((error) => error.message)
-          .join("\n");
-        throw new Error(
-          validationMessage || errorData.error || "Failed to save configuration",
-        );
+      if (connectorId === "new") {
+        navigate(`/custom-connector-editor/${targetConnectorId}`);
       }
     } catch (error) {
+      let errorMessage = error.message;
+      try {
+        const errorData = JSON.parse(error.message);
+        errorMessage =
+          errorData.errors?.map((item) => item.message).join("\n") ||
+          errorData.error ||
+          error.message;
+      } catch {
+        // Keep the original message when apiClient did not throw JSON.
+      }
+
       showToast({
         title: "Error",
-        description: `Failed to save: ${error.message}`,
+        description: `Failed to save: ${errorMessage}`,
         status: "error",
       });
     } finally {
