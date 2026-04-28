@@ -555,7 +555,7 @@ response_path: "response.text"
       }
 
       // Save connector YAML configuration
-      const response = await apiClient(
+      await apiClient(
         `${API_BASE_URL}${ENDPOINTS.CHATBOTCONNECTOR}${targetConnectorId}/config/`,
         {
           method: "PUT",
