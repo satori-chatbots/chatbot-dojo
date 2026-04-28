@@ -244,7 +244,7 @@ def validate_yaml(request: Request) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    validation = validate_yaml_content(yaml_content, kind=cast("ValidationKind", kind))
+    validation = validate_yaml_content(yaml_content, kind=cast(ValidationKind, kind))
     return Response(validation_response_payload(validation), status=status.HTTP_200_OK)
 
 
