@@ -10,7 +10,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tester.models import Project, UserAPIKey
-from tester.senpai import build_assistant_for_conversation, get_or_create_senpai_conversation
+from tester.senpai import (
+    build_assistant_for_conversation,
+    get_or_create_senpai_conversation,
+    sync_senpai_profile_files_to_test_files,
+)
 from tester.serializers import (
     SenpaiConversationAPIKeySerializer,
     SenpaiConversationInitializeSerializer,
@@ -122,6 +126,7 @@ class SenpaiConversationMessageView(APIView):
                     active_project=active_project_name,
                 )
             pending_approvals = self._serialize_pending_approvals(assistant)
+            sync_senpai_profile_files_to_test_files(request.user)
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",

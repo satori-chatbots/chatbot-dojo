@@ -21,9 +21,12 @@ except ModuleNotFoundError:
 
 from tester.models import (
     CustomUser,
+    Project,
     SenpaiConversation,
+    TestFile,
     UserAPIKey,
     ensure_user_sensei_directory,
+    get_project_relative_path,
     get_user_sensei_root_path,
 )
 
@@ -38,6 +41,8 @@ DEFAULT_ASSISTANT_MODELS = {
     "openai": ("gpt-4o-mini", "openai"),
     "gemini": ("gemini-2.5-flash", "google_genai"),
 }
+YAML_EXTENSIONS = {".yaml", ".yml"}
+_SENPAI_TOOL_RESOLUTION_PATCHED = False
 
 
 def _ensure_directory(path: Path) -> Path:
@@ -151,6 +156,8 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assist
         msg = "No assistant API key is configured for this conversation."
         raise RuntimeError(msg)
 
+    patch_senpai_tool_resolution()
+
     if create_assistant_for_paths is None:
         msg = (
             "Senpai Assistant is not installed in this backend environment. "
@@ -184,3 +191,111 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assist
         model=model,
         require_checkpointer=False,
     )
+
+
+def patch_senpai_tool_resolution() -> None:
+    """Allow Senpai delete/read tools to resolve extensionless YAML profile names."""
+    global _SENPAI_TOOL_RESOLUTION_PATCHED  # noqa: PLW0603
+    if _SENPAI_TOOL_RESOLUTION_PATCHED:
+        return
+
+    try:
+        from senpai_assistant.assistant import tools as senpai_tools
+    except ModuleNotFoundError:
+        return
+
+    original_resolver = senpai_tools._resolve_project_yaml_target
+
+    def resolve_project_yaml_target(project_root: Path, folder_name: str, filename: str) -> tuple[Path | None, str | None]:
+        target, error = original_resolver(project_root, folder_name, filename)
+        if target is not None and target.exists():
+            return target, error
+
+        requested = Path(filename)
+        if requested.suffix or requested.name in {"", ".", ".."}:
+            return target, error
+
+        normalized = requested.as_posix()
+        if normalized.startswith("./"):
+            normalized = normalized[2:]
+
+        candidates: list[Path] = []
+        if "/" in normalized:
+            workspace_root = senpai_tools._project_workspace_root(project_root)
+            for extension in senpai_tools.YAML_EXTENSIONS:
+                candidate = (workspace_root / f"{normalized}{extension}").resolve()
+                try:
+                    candidate.relative_to(workspace_root)
+                except ValueError:
+                    continue
+                valid_folder_roots = [
+                    (root / folder_name).resolve()
+                    for root in senpai_tools._iter_project_roots(project_root)
+                    if (root / folder_name).is_dir()
+                ]
+                if any(candidate.is_relative_to(folder_root) for folder_root in valid_folder_roots):
+                    candidates.append(candidate)
+        else:
+            for root in senpai_tools._iter_project_roots(project_root):
+                folder = root / folder_name
+                if not folder.is_dir():
+                    continue
+                for extension in senpai_tools.YAML_EXTENSIONS:
+                    candidates.extend(path.resolve() for path in folder.rglob(f"{requested.name}{extension}"))
+
+        existing_candidates = [candidate for candidate in candidates if candidate.is_file()]
+        if len(existing_candidates) > 1:
+            joined = ", ".join(
+                senpai_tools._relative_workspace_path(project_root, candidate) for candidate in existing_candidates
+            )
+            return None, f"Ambiguous filename: {filename}. Use one of: {joined}"
+        if len(existing_candidates) == 1:
+            return existing_candidates[0], None
+
+        return target, error
+
+    senpai_tools._resolve_project_yaml_target = resolve_project_yaml_target
+    _SENPAI_TOOL_RESOLUTION_PATCHED = True
+
+
+def sync_senpai_profile_files_to_test_files(user: CustomUser) -> None:
+    """Register assistant-created project profile files as TestFile rows."""
+    for project in Project.objects.filter(owner=user).iterator():
+        profiles_root = Path(settings.MEDIA_ROOT) / get_project_relative_path(user.id, project.id, "profiles")
+        existing_test_files = TestFile.objects.filter(project=project)
+        if not profiles_root.is_dir():
+            for test_file in existing_test_files:
+                if not Path(test_file.file.path).exists():
+                    test_file.delete()
+            continue
+
+        manual_execution = None
+        profile_files = sorted(
+            path
+            for path in profiles_root.iterdir()
+            if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS
+        )
+        for profile_path in profile_files:
+            relative_path = profile_path.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
+            test_file = TestFile.objects.filter(project=project, file=relative_path).first()
+
+            if test_file is None:
+                if manual_execution is None:
+                    manual_execution = project.get_or_create_current_manual_execution()
+                TestFile.objects.create(
+                    file=relative_path,
+                    name=profile_path.stem,
+                    project=project,
+                    execution=manual_execution,
+                )
+                continue
+
+            test_file.save(update_execution_profile_count=False)
+
+        manual_execution = manual_execution or project.profile_executions.filter(execution_type="manual").first()
+        if manual_execution is not None:
+            for test_file in TestFile.objects.filter(project=project, execution=manual_execution):
+                if not Path(test_file.file.path).exists():
+                    test_file.delete()
+            manual_execution.generated_profiles_count = manual_execution.test_files.count()
+            manual_execution.save(update_fields=["generated_profiles_count"])

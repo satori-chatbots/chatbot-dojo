@@ -8,8 +8,17 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from tester.models import ChatbotConnector, CustomUser, Project, SenpaiConversation, UserAPIKey
-from tester.senpai import get_or_create_senpai_conversation
+from tester.models import (
+    ChatbotConnector,
+    CustomUser,
+    ProfileExecution,
+    Project,
+    SenpaiConversation,
+    TestFile,
+    UserAPIKey,
+    get_project_relative_path,
+)
+from tester.senpai import get_or_create_senpai_conversation, sync_senpai_profile_files_to_test_files
 
 HTTP_CREATED = 201
 HTTP_OK = 200
@@ -190,6 +199,85 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(response.data["pending_approvals"], [])  # noqa: PT009
         assistant.resume_pending_interrupts.assert_called_once_with([{"type": "approve"}])
         assistant.send_message.assert_not_called()
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_message_endpoint_registers_assistant_saved_profiles(self, build_assistant_mock: MagicMock) -> None:
+        """Profiles written directly by Senpai should become visible in the Test Center."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        profile_path = self.media_root / get_project_relative_path(
+            self.user.id,
+            project.id,
+            "profiles",
+            "assistant_profile.yaml",
+        )
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+        profile_path.write_text(
+            (Path(__file__).resolve().parents[1] / "templates" / "yaml" / "default.yaml").read_text(
+                encoding="utf-8",
+            ),
+            encoding="utf-8",
+        )
+        assistant = MagicMock()
+        assistant.resume_pending_interrupts.return_value = "Saved."
+        assistant.get_pending_interrupts.return_value = []
+        build_assistant_mock.return_value = assistant
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"approval_decisions": [{"type": "approve"}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        registered_file = TestFile.objects.get(project=project)
+        self.assertEqual(registered_file.name, "assistant_profile")  # noqa: PT009
+        manual_execution = ProfileExecution.objects.get(project=project, execution_type="manual")
+        self.assertEqual(manual_execution.generated_profiles_count, 1)  # noqa: PT009
+
+    def test_sync_removes_deleted_assistant_profiles(self) -> None:
+        """Profiles removed by Senpai should also disappear from Test Center data."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        profile_path = self.media_root / get_project_relative_path(
+            self.user.id,
+            project.id,
+            "profiles",
+            "assistant_profile.yaml",
+        )
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+        profile_path.write_text("test_name: assistant_profile\n", encoding="utf-8")
+
+        sync_senpai_profile_files_to_test_files(self.user)
+        self.assertEqual(TestFile.objects.filter(project=project).count(), 1)  # noqa: PT009
+
+        profile_path.unlink()
+        sync_senpai_profile_files_to_test_files(self.user)
+
+        self.assertEqual(TestFile.objects.filter(project=project).count(), 0)  # noqa: PT009
+        manual_execution = ProfileExecution.objects.get(project=project, execution_type="manual")
+        self.assertEqual(manual_execution.generated_profiles_count, 0)  # noqa: PT009
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_passes_active_project_to_assistant(self, build_assistant_mock: MagicMock) -> None:
