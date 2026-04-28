@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from django.core.exceptions import PermissionDenied
-from django.db import models
+from django.db import models, transaction
 from django.db.models.query import QuerySet
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -17,7 +17,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from user_sim.cli.init_project import init_proj
 
-from tester.models import ChatbotConnector, Project, TestFile
+from tester.models import ChatbotConnector, Project, TestFile, rename_project_storage
 from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer
 from tester.validation_script import YamlValidator
 
@@ -107,7 +107,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         name = serializer.validated_data["name"]
 
         # Check for duplicate project names
-        if Project.objects.filter(owner=self.request.user, name=name).exists():
+        if Project.objects.filter(owner=self.request.user, name__iexact=name).exists():
             msg = "Project name already exists for this user."
             raise serializers.ValidationError({"name": msg})
 
@@ -154,6 +154,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 {"non_field_errors": f"Failed to initialize project structure: {e}"}
             ) from e
 
+    def perform_update(self, serializer: serializers.ModelSerializer) -> None:
+        """Update a project and keep its folder name in sync with the project name."""
+        project = self.get_object()
+        old_folder_name = project.get_project_folder_name()
+
+        try:
+            with transaction.atomic():
+                updated_project = serializer.save()
+                rename_project_storage(updated_project, old_folder_name)
+        except OSError as exc:
+            logger.exception(
+                "Failed to rename project storage for project '%s' (ID: %d)",
+                project.name,
+                project.id,
+            )
+            raise serializers.ValidationError({"non_field_errors": f"Failed to rename project storage: {exc}"}) from exc
+
     def get_object(self) -> Project:
         """Override get_object to return 403 instead of 404 when object exists but user has no access."""
         # Get object by primary key
@@ -183,7 +200,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        exists = Project.objects.filter(owner=request.user, name=name).exists()
+        exists = Project.objects.filter(owner=request.user, name__iexact=name.strip()).exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
 

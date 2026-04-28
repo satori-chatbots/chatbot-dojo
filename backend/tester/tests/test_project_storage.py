@@ -23,6 +23,7 @@ from tester.models import (
 )
 
 HTTP_CREATED = 201
+HTTP_OK = 200
 FAILURE_ON_SECOND_SAVE_CALL = 2
 
 
@@ -80,11 +81,59 @@ class ProjectStorageLayoutTests(TestCase):
 
         project = Project.objects.get(name="Alpha")
         expected_parent = self.media_root / "users" / f"user_{self.user.id}" / "projects"
-        expected_project_dir = expected_parent / f"project_{project.id}"
+        expected_project_dir = expected_parent / f"{project.get_project_folder_name()}"
 
         init_proj_mock.assert_called_once_with(project.get_project_folder_name(), str(expected_parent))
         self.assertEqual(Path(project.get_project_path()), expected_project_dir)  # noqa: PT009
         self.assertTrue((expected_project_dir / "run.yml").exists())  # noqa: PT009
+
+    def test_project_rename_updates_folder_and_stored_paths(self) -> None:
+        """Renaming a project should move its folder and stored project-relative paths."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        profile = TestFile(project=project)
+        profile.file.save(
+            "upload.yaml",
+            ContentFile("test_name: Manual Profile\nmessages: []\n"),
+            save=False,
+        )
+        profile.save()
+        execution = profile.execution
+
+        request = self.request_factory.patch(
+            f"/api/projects/{project.id}/",
+            {"name": "Pepito"},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+
+        response = ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        project.refresh_from_db()
+        profile.refresh_from_db()
+        execution.refresh_from_db()
+
+        projects_root = self.media_root / "users" / f"user_{self.user.id}" / "projects"
+        self.assertFalse((projects_root / "Alpha").exists())  # noqa: PT009
+        self.assertTrue((projects_root / "Pepito").exists())  # noqa: PT009
+        self.assertEqual(project.get_project_folder_name(), "Pepito")  # noqa: PT009
+        self.assertIn("/projects/Pepito/profiles/Manual Profile.yaml", profile.file.name)  # noqa: PT009
+        self.assertIn("/projects/Pepito/executions/manual_profiles", execution.profiles_directory)  # noqa: PT009
+
+    def test_project_rename_rejects_duplicate_name_for_user(self) -> None:
+        """A user should not be able to rename a project to another project name."""
+        Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        project = Project.objects.create(name="Pepito", chatbot_connector=self.connector, owner=self.user)
+        request = self.request_factory.patch(
+            f"/api/projects/{project.id}/",
+            {"name": "alpha"},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+
+        response = ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
+
+        self.assertEqual(response.status_code, 400)  # noqa: PT009
 
     def test_execution_file_paths_include_projects_subdirectory(self) -> None:
         """Profiles should be stored under the project profiles directory even when tied to an execution."""
@@ -92,12 +141,12 @@ class ProjectStorageLayoutTests(TestCase):
         execution = project.create_manual_execution_folder()
 
         test_file = TestFile(project=project, execution=execution)
-        expected_path = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/profile.yaml"
+        expected_path = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/profile.yaml"
 
         self.assertEqual(upload_to_execution(test_file, "profile.yaml"), expected_path)  # noqa: PT009
         self.assertEqual(  # noqa: PT009
             execution.profiles_directory,
-            f"users/user_{self.user.id}/projects/project_{project.id}/executions/manual_profiles",
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/executions/manual_profiles",
         )
 
     def test_test_file_save_keeps_manual_profiles_in_project_profiles_directory(self) -> None:
@@ -113,7 +162,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         profile.save()
 
-        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Manual Profile.yaml"
+        expected_relative = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Manual Profile.yaml"
         self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -137,7 +186,7 @@ class ProjectStorageLayoutTests(TestCase):
                 / "users"
                 / f"user_{self.user.id}"
                 / "projects"
-                / f"project_{project.id}"
+                / f"{project.get_project_folder_name()}"
                 / "Escaped Profile.yaml"
             ).exists()
         )
@@ -154,7 +203,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         profile.save()
 
-        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Nested_Profile.yaml"
+        expected_relative = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Nested_Profile.yaml"
         self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -165,7 +214,7 @@ class ProjectStorageLayoutTests(TestCase):
             execution_name="TRACER_1",
             execution_type="tracer",
             status="SUCCESS",
-            profiles_directory=f"users/user_{self.user.id}/projects/project_{project.id}/tracer_results/tracer_1",
+            profiles_directory=f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/tracer_results/tracer_1",
         )
         output_dir = self.media_root / execution.profiles_directory
         profiles_dir = output_dir / "profiles"
@@ -175,7 +224,7 @@ class ProjectStorageLayoutTests(TestCase):
         TracerResultsProcessor().process_tracer_results_dual_storage(execution, output_dir)
 
         generated = TestFile.objects.get(project=project, execution=execution)
-        expected_relative = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Generated Profile.yaml"
+        expected_relative = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Generated Profile.yaml"
         self.assertEqual(generated.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -199,8 +248,8 @@ class ProjectStorageLayoutTests(TestCase):
         )
         second_profile.save()
 
-        expected_primary = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name.yaml"
-        expected_conflict = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name_1.yaml"
+        expected_primary = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name.yaml"
+        expected_conflict = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name_1.yaml"
 
         self.assertEqual(first_profile.name, "Shared Name")  # noqa: PT009
         self.assertEqual(second_profile.name, "Shared Name_1")  # noqa: PT009
@@ -272,7 +321,7 @@ class ProjectStorageLayoutTests(TestCase):
 
         self.assertEqual(response.status_code, HTTP_CREATED)  # noqa: PT009
         uploaded_profile = TestFile.objects.get(id=response.data["uploaded_file_ids"][0])
-        expected_conflict = f"users/user_{self.user.id}/projects/project_{project.id}/profiles/Shared Name_1.yaml"
+        expected_conflict = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name_1.yaml"
 
         self.assertEqual(uploaded_profile.name, "Shared Name_1")  # noqa: PT009
         self.assertEqual(uploaded_profile.file.name, expected_conflict)  # noqa: PT009
@@ -315,7 +364,7 @@ class ProjectStorageLayoutTests(TestCase):
         execution = project.get_or_create_current_manual_execution()
         self.assertEqual(execution.generated_profiles_count, 0)  # noqa: PT009
         profiles_dir = (
-            self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"project_{project.id}" / "profiles"
+            self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"{project.get_project_folder_name()}" / "profiles"
         )
         self.assertFalse((profiles_dir / "First Profile.yaml").exists())  # noqa: PT009
         self.assertFalse((profiles_dir / "Second Profile.yaml").exists())  # noqa: PT009

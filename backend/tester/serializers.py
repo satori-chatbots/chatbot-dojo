@@ -22,6 +22,7 @@ from .models import (
     TestFile,
     TypeFile,
     UserAPIKey,
+    get_project_folder_name_for_name,
 )
 
 # Get the latest version of the user model
@@ -220,6 +221,35 @@ class ProjectSerializer(serializers.ModelSerializer):
         if request and hasattr(request, "user"):
             return request.user == obj.owner
         return False
+
+    def validate_name(self, value: str) -> str:
+        """Validate that project names are unique and safe as folder names."""
+        name = value.strip()
+        if not name:
+            msg = "Project name cannot be empty."
+            raise serializers.ValidationError(msg)
+
+        try:
+            folder_name = get_project_folder_name_for_name(name)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+        request = self.context.get("request")
+        if request and hasattr(request, "user") and request.user.is_authenticated:
+            queryset = Project.objects.filter(owner=request.user)
+            if self.instance is not None:
+                queryset = queryset.exclude(pk=self.instance.pk)
+
+            if queryset.filter(name__iexact=name).exists():
+                msg = "Project name already exists for this user."
+                raise serializers.ValidationError(msg)
+
+            for project in queryset.only("id", "name"):
+                if project.get_project_folder_name().casefold() == folder_name.casefold():
+                    msg = "Project name would conflict with an existing project folder."
+                    raise serializers.ValidationError(msg)
+
+        return name
 
 
 class TestCaseSerializer(serializers.ModelSerializer):
