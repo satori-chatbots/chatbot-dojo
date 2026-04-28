@@ -41,6 +41,7 @@ import {
   updateSenseiCheckRule,
   createSenseiCheckRule,
   fetchSenseiCheckRuleTemplate,
+  validateYamlOnServer,
 } from "../api/file-api";
 import {
   AlertCircle,
@@ -513,9 +514,24 @@ function SenseiCheckRulesEditor() {
     ...searchKeymap,
   ]);
 
-  const validateYaml = useCallback((value) => {
+  const validateYaml = useCallback(async (value) => {
     try {
       yamlLoad(value);
+      if (value.trim()) {
+        const validationResult = await validateYamlOnServer(value, "rule");
+        if (!validationResult.valid) {
+          setIsValid(false);
+          setErrorInfo({
+            message:
+              validationResult.errors?.[0]?.message ||
+              "Rule does not match the SENSEI Check schema",
+            line: validationResult.errors?.[0]?.line,
+            column: validationResult.errors?.[0]?.column,
+            errors: validationResult.errors,
+          });
+          return false;
+        }
+      }
       setIsValid(true);
       setErrorInfo(undefined);
       return true;
@@ -559,13 +575,13 @@ function SenseiCheckRulesEditor() {
           }
           setEditorContent(content);
           setOriginalContent(content);
-          validateYaml(content);
+          await validateYaml(content);
         } else {
           const response = await fetchSenseiCheckRuleTemplate();
           if (response.template) {
             setEditorContent(response.template);
             setOriginalContent(response.template);
-            validateYaml(response.template);
+            await validateYaml(response.template);
           }
         }
       } catch (error) {
@@ -586,8 +602,8 @@ function SenseiCheckRulesEditor() {
 
   // Debounced validation effect
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      validateYaml(editorContent);
+    const timeoutId = setTimeout(async () => {
+      await validateYaml(editorContent);
     }, 300);
 
     return () => clearTimeout(timeoutId);
@@ -596,6 +612,7 @@ function SenseiCheckRulesEditor() {
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
+      const contentIsValid = await validateYaml(editorContent);
       if (ruleId) {
         const projectIdToUse = ruleProject || selectedProject?.id;
         if (!projectIdToUse) {
@@ -604,15 +621,15 @@ function SenseiCheckRulesEditor() {
         }
         // We don't need the response object here; await the update and proceed.
         await updateSenseiCheckRule(ruleId, editorContent, projectIdToUse, {
-          ignoreValidationErrors: !isValid,
+          ignoreValidationErrors: !contentIsValid,
         });
         await reloadProfiles();
         setOriginalContent(editorContent);
         setHasUnsavedChanges(false);
-        const successMessage = isValid
+        const successMessage = contentIsValid
           ? "Sensei-check rule updated successfully"
           : "Sensei-check rule saved with validation errors";
-        showToast(isValid ? "success" : "warning", successMessage);
+        showToast(contentIsValid ? "success" : "warning", successMessage);
         setLastSaved(new Date());
       } else {
         if (!selectedProject) {
@@ -623,7 +640,7 @@ function SenseiCheckRulesEditor() {
           editorContent,
           selectedProject.id,
           {
-            ignoreValidationErrors: !isValid,
+            ignoreValidationErrors: !contentIsValid,
           },
         );
         if (createResponse && createResponse.length > 0) {
@@ -631,10 +648,10 @@ function SenseiCheckRulesEditor() {
           await reloadProfiles();
           setOriginalContent(editorContent);
           setHasUnsavedChanges(false);
-          const successMessage = isValid
+          const successMessage = contentIsValid
             ? "Sensei-check rule created successfully"
             : "Sensei-check rule created with validation errors";
-          showToast(isValid ? "success" : "warning", successMessage);
+          showToast(contentIsValid ? "success" : "warning", successMessage);
           setLastSaved(new Date());
           navigate(`/sensei-check-rules/${newRuleId}`);
         } else {
@@ -668,7 +685,7 @@ function SenseiCheckRulesEditor() {
     reloadProfiles,
     selectedProject,
     showToast,
-    isValid,
+    validateYaml,
   ]);
 
   // Autosave functionality

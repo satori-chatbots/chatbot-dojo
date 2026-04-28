@@ -17,6 +17,7 @@ from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
 from tester.models import PersonalityFile, Project, ProjectConfig, RuleFile, SenseiCheckRule, TypeFile
+from tester.senpai_validation import validate_yaml_content, validation_response_payload
 from tester.serializers import (
     PersonalityFileSerializer,
     ProjectConfigSerializer,
@@ -217,6 +218,36 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
 
+    @staticmethod
+    def _ignore_validation_errors(request: Request) -> bool:
+        return str(request.data.get("ignore_validation_errors", "false")).lower() in ["true", "1"]
+
+    @staticmethod
+    def _read_uploaded_file(uploaded_file: Any) -> str:  # noqa: ANN401
+        content = uploaded_file.read()
+        uploaded_file.seek(0)
+        if isinstance(content, bytes):
+            return content.decode("utf-8")
+        return str(content)
+
+    def _validate_uploaded_rule(self, uploaded_file: Any) -> dict[str, Any] | None:  # noqa: ANN401
+        try:
+            content = self._read_uploaded_file(uploaded_file)
+        except UnicodeDecodeError as exc:
+            return {
+                "valid": False,
+                "errors": [
+                    {
+                        "path": "/",
+                        "message": f"Rule file must be valid UTF-8: {exc}",
+                        "line": None,
+                    }
+                ],
+                "warnings": [],
+            }
+
+        return validation_response_payload(validate_yaml_content(content, kind="rule"))
+
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all sensei check rules, filtered by project if specified."""
         project_id = request.query_params.get("project_id", None)
@@ -244,6 +275,7 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
         """Upload sensei check rules to a project."""
         uploaded_files = request.FILES.getlist("file")
         project_id = request.data.get("project")
+        ignore_errors = self._ignore_validation_errors(request)
 
         if not project_id:
             return Response({"error": "No project ID provided."}, status=status.HTTP_400_BAD_REQUEST)
@@ -257,6 +289,15 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        validation_errors = []
+        for uploaded_file in uploaded_files:
+            validation = self._validate_uploaded_rule(uploaded_file)
+            if validation and not validation["valid"]:
+                validation_errors.append({"file": uploaded_file.name, "errors": validation["errors"]})
+
+        if validation_errors and not ignore_errors:
+            return Response({"errors": validation_errors}, status=status.HTTP_400_BAD_REQUEST)
+
         created_files = []
         for uploaded_file in uploaded_files:
             sensei_check_rule = SenseiCheckRule.objects.create(file=uploaded_file, project=project)
@@ -264,6 +305,16 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(created_files, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:  # noqa: ANN401
+        """Validate rule content before replacing the stored rule file."""
+        uploaded_file = request.FILES.get("file")
+        if uploaded_file is not None:
+            validation = self._validate_uploaded_rule(uploaded_file)
+            if validation and not validation["valid"] and not self._ignore_validation_errors(request):
+                return Response(validation, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().update(request, *args, **kwargs)
 
     @action(
         detail=True,

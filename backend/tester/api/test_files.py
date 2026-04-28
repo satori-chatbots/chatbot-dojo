@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tester.models import Project, TestFile
+from tester.senpai_validation import validate_yaml_content, validation_response_payload
 from tester.serializers import TestFileSerializer
 
 from .base import extract_test_name_from_malformed_yaml
@@ -94,8 +95,12 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         try:
             data = yaml.safe_load(content)
-            if extracted_name := data.get("test_name"):
+            if isinstance(data, dict) and (extracted_name := data.get("test_name")):
                 new_test_name = extracted_name
+            validation = validate_yaml_content(content, kind="profile")
+            is_valid = validation.is_valid
+            if not is_valid and not ignore_validation_errors:
+                return Response(validation_response_payload(validation), status=status.HTTP_400_BAD_REQUEST)
         except yaml.YAMLError as e:
             is_valid = False
             if not ignore_validation_errors:
@@ -180,20 +185,10 @@ class TestFileViewSet(viewsets.ModelViewSet):
         upload_names = set()
 
         for f in uploaded_files:
-            is_valid, test_name = True, None
-            try:
-                content = f.read()
-                f.seek(0)
-                data = yaml.safe_load(content)
-                test_name = data.get("test_name")
-            except yaml.YAMLError as e:
-                is_valid = False
-                if not ignore_errors:
-                    errors.append({"file": f.name, "error": f"Invalid YAML: {e}"})
-                    continue
-                f.seek(0)
-                test_name = extract_test_name_from_malformed_yaml(f.read())
-                f.seek(0)
+            is_valid, test_name, validation_error = self._validate_uploaded_profile(f)
+            if validation_error and not ignore_errors:
+                errors.append({"file": f.name, "error": validation_error})
+                continue
 
             if not test_name:
                 is_valid = False
@@ -220,6 +215,24 @@ class TestFileViewSet(viewsets.ModelViewSet):
             file_data.append({"file": f, "test_name": test_name, "is_valid": is_valid})
 
         return file_data, errors, reported_names
+
+    def _validate_uploaded_profile(self, uploaded_file: Any) -> tuple[bool, str | None, str | None]:  # noqa: ANN401
+        """Return validity, extracted profile name, and an optional validation error."""
+        try:
+            content = uploaded_file.read()
+            uploaded_file.seek(0)
+            data = yaml.safe_load(content)
+            test_name = data.get("test_name") if isinstance(data, dict) else None
+            content_text = content.decode("utf-8") if isinstance(content, bytes) else str(content)
+            validation = validate_yaml_content(content_text, kind="profile")
+            error = validation.errors[0] if validation.errors else "Invalid profile"
+        except yaml.YAMLError as e:
+            uploaded_file.seek(0)
+            test_name = extract_test_name_from_malformed_yaml(uploaded_file.read())
+            uploaded_file.seek(0)
+            return False, test_name, f"Invalid YAML: {e}"
+        else:
+            return validation.is_valid, test_name, None if validation.is_valid else error
 
     def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
         """Save processed file data while keeping DB transactions short."""

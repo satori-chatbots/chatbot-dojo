@@ -370,8 +370,14 @@ class ProjectStorageLayoutTests(TestCase):
             {
                 "project": str(project.id),
                 "file": [
-                    SimpleUploadedFile("first.yaml", b"test_name: First Profile\nmessages: []\n"),
-                    SimpleUploadedFile("second.yaml", b"test_name: Second Profile\nmessages: []\n"),
+                    SimpleUploadedFile(
+                        "first.yaml",
+                        b"test_name: First Profile\nuser:\n  language: English\n  role: customer\n  goals:\n    - say hello\nchatbot: {}\nconversation:\n  number: 1\n",
+                    ),
+                    SimpleUploadedFile(
+                        "second.yaml",
+                        b"test_name: Second Profile\nuser:\n  language: English\n  role: customer\n  goals:\n    - say hello\nchatbot: {}\nconversation:\n  number: 1\n",
+                    ),
                 ],
             },
             format="multipart",
@@ -439,8 +445,14 @@ class ProjectStorageLayoutTests(TestCase):
             {
                 "project": str(project.id),
                 "file": [
-                    SimpleUploadedFile("first.yaml", b"test_name: First Profile\nmessages: []\n"),
-                    SimpleUploadedFile("second.yaml", b"test_name: Second Profile\nmessages: []\n"),
+                    SimpleUploadedFile(
+                        "first.yaml",
+                        b"test_name: First Profile\nuser:\n  language: English\n  role: customer\n  goals:\n    - say hello\nchatbot: {}\nconversation:\n  number: 1\n",
+                    ),
+                    SimpleUploadedFile(
+                        "second.yaml",
+                        b"test_name: Second Profile\nuser:\n  language: English\n  role: customer\n  goals:\n    - say hello\nchatbot: {}\nconversation:\n  number: 1\n",
+                    ),
                 ],
             },
             format="multipart",

@@ -41,6 +41,7 @@ import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
 import { createChatbotConnector } from "../api/chatbot-connector-api";
+import { validateYamlOnServer } from "../api/file-api";
 import apiClient from "../api/api-client";
 import API_BASE_URL, { ENDPOINTS } from "../api/config";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
@@ -418,17 +419,31 @@ function CustomConnectorYamlEditor() {
     ...searchKeymap,
   ]);
 
-  const validateYaml = useCallback((value) => {
+  const validateYaml = useCallback(async (value) => {
     if (!value.trim()) {
-      setIsValid(true);
+      setIsValid(false);
       setErrorInfo(undefined);
-      return;
+      return false;
     }
 
     try {
       yamlLoad(value);
+      const validationResult = await validateYamlOnServer(value, "connector");
+      if (!validationResult.valid) {
+        setIsValid(false);
+        setErrorInfo({
+          message:
+            validationResult.errors?.[0]?.message ||
+            "Connector does not match the custom connector schema",
+          line: validationResult.errors?.[0]?.line,
+          column: validationResult.errors?.[0]?.column,
+          errors: validationResult.errors,
+        });
+        return false;
+      }
       setIsValid(true);
       setErrorInfo(undefined);
+      return true;
     } catch (error) {
       setIsValid(false);
       setErrorInfo({
@@ -436,6 +451,7 @@ function CustomConnectorYamlEditor() {
         line: error.mark?.line || 0,
         column: error.mark?.column || 0,
       });
+      return false;
     }
   }, []);
 
@@ -535,18 +551,19 @@ response_path: "response.text"
 
   // Validate YAML on content change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      validateYaml(editorContent);
+    const timer = setTimeout(async () => {
+      await validateYaml(editorContent);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [editorContent, validateYaml]);
 
   const handleSave = useCallback(async () => {
-    if (!isValid) {
+    const contentIsValid = await validateYaml(editorContent);
+    if (!contentIsValid) {
       showToast({
-        title: "Invalid YAML",
-        description: "Please fix YAML syntax errors before saving.",
+        title: "Invalid connector",
+        description: "Please fix validation errors before saving.",
         status: "error",
       });
       return;
@@ -606,7 +623,12 @@ response_path: "response.text"
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save configuration");
+        const validationMessage = errorData.errors
+          ?.map((error) => error.message)
+          .join("\n");
+        throw new Error(
+          validationMessage || errorData.error || "Failed to save configuration",
+        );
       }
     } catch (error) {
       showToast({
@@ -617,7 +639,7 @@ response_path: "response.text"
     } finally {
       setIsSaving(false);
     }
-  }, [editorContent, isValid, connectorId, navigate, showToast]);
+  }, [editorContent, connectorId, navigate, showToast, validateYaml]);
 
   // Autosave functionality
   useEffect(() => {

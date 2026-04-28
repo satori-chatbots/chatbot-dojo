@@ -3,7 +3,7 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from django.core.exceptions import PermissionDenied
 from django.db import models, transaction
@@ -18,8 +18,8 @@ from rest_framework.response import Response
 from user_sim.cli.init_project import init_proj
 
 from tester.models import ChatbotConnector, Project, TestFile, rename_project_storage
+from tester.senpai_validation import ValidationKind, validate_yaml_content, validation_response_payload
 from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer
-from tester.validation_script import YamlValidator
 
 logger = logging.getLogger(__name__)
 
@@ -232,21 +232,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 @api_view(["POST"])
 def validate_yaml(request: Request) -> Response:
-    """Validate YAML content using the YamlValidator class."""
+    """Validate YAML content using the shared Senpai validators."""
     yaml_content = request.data.get("content")
     if not yaml_content:
         return Response({"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    validator = YamlValidator()
-    validation_errors = validator.validate(yaml_content)
+    kind = request.data.get("kind", "profile")
+    if kind not in ("profile", "rule", "connector"):
+        return Response(
+            {"error": "Invalid validation kind. Must be one of: profile, rule, connector"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    if validation_errors:
-        formatted_errors = [
-            {"path": error.path, "message": error.message, "line": error.line} for error in validation_errors
-        ]
-        return Response({"valid": False, "errors": formatted_errors}, status=status.HTTP_200_OK)
-
-    return Response({"valid": True}, status=status.HTTP_200_OK)
+    validation = validate_yaml_content(yaml_content, kind=cast("ValidationKind", kind))
+    return Response(validation_response_payload(validation), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
