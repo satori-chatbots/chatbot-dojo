@@ -4,11 +4,12 @@ import logging
 from typing import ClassVar
 
 from rest_framework import permissions, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from tester.models import UserAPIKey
+from tester.models import Project, UserAPIKey
 from tester.senpai import build_assistant_for_conversation, get_or_create_senpai_conversation
 from tester.serializers import (
     SenpaiConversationAPIKeySerializer,
@@ -64,17 +65,37 @@ class SenpaiConversationMessageView(APIView):
             return error_message
         return self.GENERIC_RUNTIME_ERROR_MESSAGE
 
+    def _get_active_project_name(self, request: Request, active_project_id: int | None) -> str | None:
+        """Return Senpai's workspace project name for the host-selected project."""
+        if active_project_id is None:
+            return None
+
+        project = Project.objects.filter(id=active_project_id, owner=request.user).first()
+        if project is None:
+            raise ValidationError(
+                {"active_project_id": "Active project does not exist or is not owned by the current user."},
+            )
+
+        return project.get_project_folder_name()
+
     def post(self, request: Request) -> Response:
         """Send a single message to Senpai and return the assistant response."""
         serializer = SenpaiConversationMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        active_project_name = self._get_active_project_name(
+            request,
+            serializer.validated_data.get("active_project_id"),
+        )
 
         conversation, created_new_thread = get_or_create_senpai_conversation(request.user)
         assistant = None
 
         try:
             assistant = build_assistant_for_conversation(conversation)
-            reply = assistant.send_message(serializer.validated_data["message"])
+            reply = assistant.send_message(
+                serializer.validated_data["message"],
+                active_project=active_project_name,
+            )
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",

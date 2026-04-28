@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from tester.models import CustomUser, SenpaiConversation, UserAPIKey
+from tester.models import ChatbotConnector, CustomUser, Project, SenpaiConversation, UserAPIKey
 from tester.senpai import get_or_create_senpai_conversation
 
 HTTP_CREATED = 201
@@ -116,8 +116,42 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
 
         build_assistant_mock.assert_called_once_with(conversation)
-        assistant.send_message.assert_called_once_with("Hello")
+        assistant.send_message.assert_called_once_with("Hello", active_project=None)
         assistant.close.assert_called_once()
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_passes_active_project_to_assistant(self, build_assistant_mock: MagicMock) -> None:
+        """Sending a message should pass the selected host project as run-scoped context."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        assistant = MagicMock()
+        assistant.send_message.return_value = "Hello from Senpai"
+        build_assistant_mock.return_value = assistant
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": "Hello", "active_project_id": project.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        assistant.send_message.assert_called_once_with(
+            "Hello",
+            active_project=project.get_project_folder_name(),
+        )
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_ignores_assistant_close_failure(self, build_assistant_mock: MagicMock) -> None:
