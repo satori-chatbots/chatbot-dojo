@@ -1470,8 +1470,9 @@ def rename_project_storage(project: Project, old_folder_name: str) -> None:
         raise FileNotFoundError(msg)
 
     try:
-        update_project_storage_references(project, old_folder_name, new_folder_name)
-        project.update_run_yml()
+        with transaction.atomic():
+            update_project_storage_references(project, old_folder_name, new_folder_name)
+            project.update_run_yml()
     except Exception:
         if moved_directory and destination_path.exists() and not source_path.exists():
             shutil.move(str(destination_path), str(source_path))

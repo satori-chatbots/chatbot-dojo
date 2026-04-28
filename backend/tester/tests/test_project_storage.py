@@ -150,6 +150,40 @@ class ProjectStorageLayoutTests(TestCase):
         self.assertTrue((projects_root / "Alpha").exists())  # noqa: PT009
         self.assertFalse((projects_root / "Pepito").exists())  # noqa: PT009
 
+    def test_project_rename_rolls_back_path_references_when_run_yml_update_fails(self) -> None:
+        """Path reference updates should roll back if a later storage sync step fails."""
+        project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
+        profile = TestFile(project=project)
+        profile.file.save(
+            "upload.yaml",
+            ContentFile("test_name: Manual Profile\nmessages: []\n"),
+            save=False,
+        )
+        profile.save()
+        original_profile_path = profile.file.name
+
+        request = self.request_factory.patch(
+            f"/api/projects/{project.id}/",
+            {"name": "Pepito"},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+
+        with (
+            pytest.raises(ValidationError),
+            patch.object(Project, "update_run_yml", side_effect=OSError("run.yml failed")),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            ProjectViewSet.as_view({"patch": "partial_update"})(request, pk=project.id)
+
+        project.refresh_from_db()
+        profile.refresh_from_db()
+        projects_root = self.media_root / "users" / f"user_{self.user.id}" / "projects"
+        self.assertEqual(project.name, "Alpha")  # noqa: PT009
+        self.assertEqual(profile.file.name, original_profile_path)  # noqa: PT009
+        self.assertTrue((projects_root / "Alpha").exists())  # noqa: PT009
+        self.assertFalse((projects_root / "Pepito").exists())  # noqa: PT009
+
     def test_project_rename_restores_name_when_source_folder_is_missing(self) -> None:
         """A missing source folder should not cause project path references to be rewritten."""
         project = Project.objects.create(name="Alpha", chatbot_connector=self.connector, owner=self.user)
