@@ -3,7 +3,7 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from django.core.exceptions import PermissionDenied
 from django.db import models, transaction
@@ -237,14 +237,20 @@ def validate_yaml(request: Request) -> Response:
     if not yaml_content:
         return Response({"error": "No content provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    kind = request.data.get("kind", "profile")
-    if kind not in ("profile", "rule", "connector"):
+    requested_kind = request.data.get("kind", "profile")
+    if requested_kind == "profile":
+        validation_kind: ValidationKind = "profile"
+    elif requested_kind == "rule":
+        validation_kind = "rule"
+    elif requested_kind == "connector":
+        validation_kind = "connector"
+    else:
         return Response(
             {"error": "Invalid validation kind. Must be one of: profile, rule, connector"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    validation = validate_yaml_content(yaml_content, kind=cast(ValidationKind, kind))
+    validation = validate_yaml_content(yaml_content, kind=validation_kind)
     return Response(validation_response_payload(validation), status=status.HTTP_200_OK)
 
 
