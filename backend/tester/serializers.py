@@ -127,8 +127,18 @@ class SenpaiConversationInitializeSerializer(serializers.Serializer):
 class SenpaiConversationMessageSerializer(serializers.Serializer):
     """Serializer for sending a message to the Senpai assistant."""
 
-    message = serializers.CharField()
+    message = serializers.CharField(required=False, allow_blank=False)
     active_project_id = serializers.IntegerField(required=False, allow_null=True)
+    approval_decisions = serializers.JSONField(required=False)
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Require either a chat message or HITL approval decisions."""
+        has_message = "message" in attrs
+        has_approval_decisions = "approval_decisions" in attrs
+        if has_message == has_approval_decisions:
+            msg = "Provide exactly one of message or approval_decisions."
+            raise serializers.ValidationError(msg)
+        return attrs
 
 
 class SenpaiConversationAPIKeySerializer(serializers.Serializer):

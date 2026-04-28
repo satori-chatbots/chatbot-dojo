@@ -55,6 +55,22 @@ export const sendSenpaiMessage = async (message, activeProjectId) => {
   }
 };
 
+export const resolveSenpaiApprovals = async (approvalDecisions) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATION_MESSAGE}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ approval_decisions: approvalDecisions }),
+      },
+    );
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
 export const assignSenpaiApiKey = async (assistantApiKeyId) => {
   try {
     const response = await apiClient(

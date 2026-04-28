@@ -1,7 +1,8 @@
 """Senpai Assistant API endpoints."""
 
 import logging
-from typing import ClassVar
+from collections.abc import Sequence
+from typing import ClassVar, Protocol, TypeAlias
 
 from rest_framework import permissions, status
 from rest_framework.exceptions import ValidationError
@@ -10,7 +11,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tester.models import Project, UserAPIKey
-from tester.senpai import build_assistant_for_conversation, get_or_create_senpai_conversation
+from tester.senpai import (
+    build_assistant_for_conversation,
+    get_or_create_senpai_conversation,
+    sync_senpai_profile_files_to_test_files,
+)
 from tester.serializers import (
     SenpaiConversationAPIKeySerializer,
     SenpaiConversationInitializeSerializer,
@@ -19,6 +24,15 @@ from tester.serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+JsonValue: TypeAlias = None | str | int | float | bool | list["JsonValue"] | dict[str, "JsonValue"]
+
+
+class PendingInterruptAssistant(Protocol):
+    """Assistant surface needed for serializing pending approvals."""
+
+    def get_pending_interrupts(self) -> Sequence[object]:
+        """Return pending HITL interrupt objects."""
 
 
 class SenpaiConversationInitializeView(APIView):
@@ -58,6 +72,26 @@ class SenpaiConversationMessageView(APIView):
         "The selected assistant API key is empty.",
     }
 
+    def _make_json_safe(self, value: object) -> JsonValue:
+        """Convert assistant interrupt payloads into API-safe JSON values."""
+        if value is None or isinstance(value, str | int | float | bool):
+            return value
+        if isinstance(value, list | tuple):
+            return [self._make_json_safe(item) for item in value]
+        if isinstance(value, dict):
+            return {str(key): self._make_json_safe(item) for key, item in value.items()}
+        return str(value)
+
+    def _serialize_pending_approvals(self, assistant: PendingInterruptAssistant) -> list[dict[str, JsonValue]]:
+        """Return pending HITL approvals in a frontend-friendly shape."""
+        return [
+            {
+                "id": str(getattr(interrupt, "id", "")),
+                "value": self._make_json_safe(getattr(interrupt, "value", None)),
+            }
+            for interrupt in assistant.get_pending_interrupts()
+        ]
+
     def _get_safe_runtime_error_message(self, exc: Exception) -> str:
         """Return a user-safe message for runtime and validation failures."""
         error_message = str(exc)
@@ -92,10 +126,17 @@ class SenpaiConversationMessageView(APIView):
 
         try:
             assistant = build_assistant_for_conversation(conversation)
-            reply = assistant.send_message(
-                serializer.validated_data["message"],
-                active_project=active_project_name,
-            )
+            if "approval_decisions" in serializer.validated_data:
+                reply = assistant.resume_pending_interrupts(
+                    serializer.validated_data["approval_decisions"],
+                )
+            else:
+                reply = assistant.send_message(
+                    serializer.validated_data["message"],
+                    active_project=active_project_name,
+                )
+            pending_approvals = self._serialize_pending_approvals(assistant)
+            sync_senpai_profile_files_to_test_files(request.user)
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",
@@ -146,6 +187,7 @@ class SenpaiConversationMessageView(APIView):
                 "conversation": SenpaiConversationSerializer(conversation).data,
                 "created_new_thread": created_new_thread,
                 "response": reply,
+                "pending_approvals": pending_approvals,
             },
             status=status.HTTP_200_OK,
         )

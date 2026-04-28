@@ -31,6 +31,7 @@ import {
 import {
   assignSenpaiApiKey,
   initializeSenpaiConversation,
+  resolveSenpaiApprovals,
   sendSenpaiMessage,
 } from "../api/senpai-api";
 import MarkdownMessage from "./markdown-message";
@@ -40,7 +41,7 @@ import { useSetup } from "../contexts/setup-context";
 const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
 const DESKTOP_WIDTH_KEY = "senpai-sidebar-width";
-const MESSAGE_ROLES = new Set(["assistant", "user"]);
+const MESSAGE_ROLES = new Set(["approval", "assistant", "user"]);
 const DEFAULT_DESKTOP_WIDTH = 420;
 const MIN_DESKTOP_WIDTH = 320;
 const MAX_DESKTOP_WIDTH = 720;
@@ -79,13 +80,20 @@ const isValidStoredThreadMessage = (message) => {
   if (
     typeof message.id !== "string" ||
     !MESSAGE_ROLES.has(message.role) ||
-    typeof message.content !== "string" ||
     typeof message.timestamp !== "string"
   ) {
     return false;
   }
 
-  return !Number.isNaN(Date.parse(message.timestamp));
+  if (Number.isNaN(Date.parse(message.timestamp))) {
+    return false;
+  }
+
+  if (message.role === "approval") {
+    return Boolean(message.approval && typeof message.approval === "object");
+  }
+
+  return typeof message.content === "string";
 };
 
 const readStoredThreadMessages = (threadId) => {
@@ -187,6 +195,29 @@ const writeDesktopSidebarWidth = (width) => {
 };
 
 const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
+
+const getApprovalActionRequests = (approval) => {
+  const actionRequests = approval?.value?.action_requests;
+  return Array.isArray(actionRequests) ? actionRequests : [];
+};
+
+const getApprovalTitle = (approval) => {
+  const [actionRequest] = getApprovalActionRequests(approval);
+  return actionRequest?.name || "Tool approval";
+};
+
+const getApprovalDescription = (approval) => {
+  const [actionRequest] = getApprovalActionRequests(approval);
+  if (typeof actionRequest?.description === "string") {
+    return actionRequest.description;
+  }
+
+  if (typeof approval?.value?.description === "string") {
+    return approval.value.description;
+  }
+
+  return "Review this assistant action before continuing.";
+};
 
 const isScrolledToBottom = (element) => {
   if (!element) {
@@ -399,10 +430,17 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const selectedApiKey = supportedApiKeys.find(
     (apiKey) => String(apiKey.id) === selectedApiKeyKey,
   );
+  const hasPendingApproval = messages.some(
+    (message) => message.role === "approval",
+  );
   const hasPendingRequest =
     isBootstrapping || isRefreshingThread || isSending || isUpdatingApiKey;
   const isComposerDisabled =
-    isBootstrapping || isRefreshingThread || isUpdatingApiKey || !conversation;
+    isBootstrapping ||
+    isRefreshingThread ||
+    isUpdatingApiKey ||
+    hasPendingApproval ||
+    !conversation;
   const isConversationLoaded = Boolean(conversation);
   const hasAssistantApiKey = Boolean(conversation?.assistant_api_key);
   const showApiKeySetup = isConversationLoaded && !hasAssistantApiKey;
@@ -410,6 +448,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     hasAssistantApiKey &&
     isConversationLoaded &&
     Boolean(draft.trim()) &&
+    !hasPendingApproval &&
     !hasPendingRequest;
   let statusLabel = "Unavailable";
   let statusClassName = "text-danger";
@@ -423,6 +462,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     if (
       !hasAssistantApiKey ||
       hasPendingRequest ||
+      hasPendingApproval ||
       isSettingsOpen ||
       !composerReference.current
     ) {
@@ -440,7 +480,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       const caretPosition = textarea.value.length;
       textarea.setSelectionRange(caretPosition, caretPosition);
     });
-  }, [hasAssistantApiKey, hasPendingRequest, isSettingsOpen]);
+  }, [
+    hasAssistantApiKey,
+    hasPendingApproval,
+    hasPendingRequest,
+    isSettingsOpen,
+  ]);
 
   useEffect(() => {
     if (!shouldFocusComposerReference.current) {
@@ -452,14 +497,49 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     focusComposer,
     conversation?.thread_id,
     hasAssistantApiKey,
+    hasPendingApproval,
     hasPendingRequest,
   ]);
+
+  const appendAssistantResponse = useCallback(
+    (data) => {
+      setConversation(data.conversation);
+      const nextMessages = [];
+
+      if (data.response) {
+        nextMessages.push({
+          id: createMessageId("assistant"),
+          role: "assistant",
+          content: data.response,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      for (const approval of data.pending_approvals || []) {
+        nextMessages.push({
+          id: createMessageId("approval"),
+          role: "approval",
+          approval,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (nextMessages.length > 0) {
+        setMessages((currentMessages) => [
+          ...currentMessages.filter((message) => message.role !== "approval"),
+          ...nextMessages,
+        ]);
+      }
+    },
+    [createMessageId],
+  );
 
   const submitMessage = useCallback(
     async (messageText) => {
       const trimmedMessage = messageText.trim();
       const canStartRequest =
         trimmedMessage &&
+        !hasPendingApproval &&
         !hasPendingRequest &&
         !sendMessageLock.current &&
         conversation;
@@ -487,16 +567,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
               return;
             }
 
-            setConversation(data.conversation);
-            setMessages((currentMessages) => [
-              ...currentMessages,
-              {
-                id: createMessageId("assistant"),
-                role: "assistant",
-                content: data.response,
-                timestamp: new Date().toISOString(),
-              },
-            ]);
+            appendAssistantResponse(data);
           } catch (error) {
             if (isMountedReference.current) {
               setMessages((currentMessages) =>
@@ -526,7 +597,51 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         return;
       }
     },
-    [conversation, createMessageId, hasPendingRequest, showToast],
+    [
+      appendAssistantResponse,
+      conversation,
+      createMessageId,
+      hasPendingApproval,
+      hasPendingRequest,
+      showToast,
+    ],
+  );
+
+  const resolveApproval = useCallback(
+    async (decisionType) => {
+      if (hasPendingRequest || sendMessageLock.current) {
+        return;
+      }
+
+      sendMessageLock.current = true;
+      setIsSending(true);
+      shouldFocusComposerReference.current = true;
+
+      try {
+        const data = await resolveSenpaiApprovals([{ type: decisionType }]);
+        if (!isMountedReference.current) {
+          return;
+        }
+
+        setMessages((currentMessages) =>
+          currentMessages.filter((message) => message.role !== "approval"),
+        );
+        appendAssistantResponse(data);
+      } catch (error) {
+        if (isMountedReference.current) {
+          showToast(
+            "error",
+            error.message || "Failed to resolve Senpai approval",
+          );
+        }
+      } finally {
+        sendMessageLock.current = false;
+        if (isMountedReference.current) {
+          setIsSending(false);
+        }
+      }
+    },
+    [appendAssistantResponse, hasPendingRequest, showToast],
   );
 
   const handleComposerKeyDown = (event) => {
@@ -667,6 +782,52 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                       ) : (
                         messages.map((message) => {
                           const isAssistant = message.role === "assistant";
+
+                          if (message.role === "approval") {
+                            return (
+                              <div
+                                key={message.id}
+                                className="flex min-w-0 justify-start"
+                              >
+                                <div className="min-w-0 max-w-[92%] overflow-hidden rounded-2xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-foreground dark:text-foreground-dark">
+                                  <div className="mb-1.5 flex items-center gap-2 text-[10px] opacity-80">
+                                    <Settings className="h-3 w-3" />
+                                    <span>
+                                      {getApprovalTitle(message.approval)}
+                                    </span>
+                                    <span>
+                                      {formatTimestamp(message.timestamp)}
+                                    </span>
+                                  </div>
+                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                    {getApprovalDescription(message.approval)}
+                                  </p>
+                                  <div className="mt-3 flex justify-end gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="flat"
+                                      onPress={() =>
+                                        void resolveApproval("reject")
+                                      }
+                                      isDisabled={hasPendingRequest}
+                                    >
+                                      Reject
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      color="primary"
+                                      onPress={() =>
+                                        void resolveApproval("approve")
+                                      }
+                                      isDisabled={hasPendingRequest}
+                                    >
+                                      Approve
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
 
                           return (
                             <div
