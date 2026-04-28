@@ -70,7 +70,6 @@ import {
   Tooltip,
   Link,
 } from "@heroui/react";
-import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
@@ -80,7 +79,6 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
-import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { senseiCheckDocumentationSections } from "../data/sensei-check-documentation";
 
@@ -407,32 +405,6 @@ function senseiCheckCompletions(context) {
   };
 }
 
-// Basic YAML linter for sensei-check rules
-function createSenseiCheckYamlLinter() {
-  return (view) => {
-    const diagnostics = [];
-    const doc = view.state.doc.toString();
-
-    try {
-      yamlLoad(doc);
-    } catch (error) {
-      if (error.mark) {
-        const from =
-          view.state.doc.line(error.mark.line + 1).from + error.mark.column;
-        const to = Math.min(from + 1, view.state.doc.length);
-        diagnostics.push({
-          from,
-          to,
-          severity: "error",
-          message: error.message,
-        });
-      }
-    }
-
-    return diagnostics;
-  };
-}
-
 function SenseiCheckRulesEditor() {
   const { ruleId } = useParams();
   const navigate = useNavigate();
@@ -489,8 +461,6 @@ function SenseiCheckRulesEditor() {
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
 
-  const senseiCheckYamlLinter = linter(createSenseiCheckYamlLinter());
-
   // Jump to error location functionality
   // ...existing code...
 
@@ -515,40 +485,29 @@ function SenseiCheckRulesEditor() {
   ]);
 
   const validateYaml = useCallback(async (value) => {
-    try {
-      yamlLoad(value);
-      if (value.trim()) {
-        const validationResult = await validateYamlOnServer(value, "rule");
-        if (!validationResult.valid) {
-          setIsValid(false);
-          setErrorInfo({
-            message:
-              validationResult.errors?.[0]?.message ||
-              "Rule does not match the SENSEI Check schema",
-            line: validationResult.errors?.[0]?.line,
-            column: validationResult.errors?.[0]?.column,
-            errors: validationResult.errors,
-          });
-          return false;
-        }
-      }
-      setIsValid(true);
-      setErrorInfo(undefined);
-      return true;
-    } catch (error) {
+    if (!value.trim()) {
       setIsValid(false);
-      const errorLines = error.message.split("\n");
-      const errorMessage = errorLines[0];
-      const codeContext = errorLines.slice(1).join("\n");
-      setErrorInfo({
-        message: errorMessage,
-        line: error.mark ? error.mark.line + 1 : undefined,
-        column: error.mark ? error.mark.column + 1 : undefined,
-        codeContext: codeContext,
-      });
-      console.error("Invalid YAML:", error);
+      setErrorInfo(undefined);
       return false;
     }
+
+    const validationResult = await validateYamlOnServer(value, "rule");
+    if (!validationResult.valid) {
+      setIsValid(false);
+      setErrorInfo({
+        message:
+          validationResult.errors?.[0]?.message ||
+          "Rule does not match the SENSEI Check schema",
+        line: validationResult.errors?.[0]?.line,
+        column: validationResult.errors?.[0]?.column,
+        errors: validationResult.errors,
+      });
+      return false;
+    }
+
+    setIsValid(true);
+    setErrorInfo(undefined);
+    return true;
   }, []);
 
   useEffect(() => {
@@ -927,8 +886,6 @@ function SenseiCheckRulesEditor() {
                   activateOnTyping: true,
                   maxRenderedOptions: 20,
                 }),
-                senseiCheckYamlLinter,
-                lintGutter(),
                 customKeymap,
                 highlightSelectionMatches(),
                 cursorPositionExtension,

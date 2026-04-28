@@ -13,7 +13,7 @@ from django.test import TestCase, override_settings
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from tester.api.projects import ProjectViewSet
+from tester.api.projects import ProjectViewSet, validate_yaml
 from tester.api.test_files import TestFileViewSet
 from tester.api.tracer_parser import TracerResultsProcessor
 from tester.models import (
@@ -66,6 +66,48 @@ class ProjectStorageLayoutTests(TestCase):
         expected_projects_dir = self.media_root / "users" / f"user_{user.id}" / "projects"
         self.assertTrue(expected_projects_dir.exists())  # noqa: PT009
         self.assertTrue(expected_projects_dir.is_dir())  # noqa: PT009
+
+    def test_validate_yaml_uses_senpai_rule_validator(self) -> None:
+        """The generic validation endpoint should dispatch rule YAML to senpai-validators."""
+        request = self.request_factory.post(
+            "/api/validate-yaml/",
+            {
+                "kind": "rule",
+                "content": "name: bad_rule\ndescription: Missing rule condition\nconversations: 1\n",
+            },
+            format="json",
+        )
+
+        response = validate_yaml(request)
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertFalse(response.data["valid"])  # noqa: PT009
+        self.assertIn("oracle", response.data["errors"][0]["message"])  # noqa: PT009
+
+    def test_validate_yaml_uses_senpai_connector_validator(self) -> None:
+        """The generic validation endpoint should dispatch connector YAML to senpai-validators."""
+        request = self.request_factory.post(
+            "/api/validate-yaml/",
+            {
+                "kind": "connector",
+                "content": (
+                    "name: demo\n"
+                    "base_url: https://example.com\n"
+                    "send_message:\n"
+                    "  path: /chat\n"
+                    "  payload_template:\n"
+                    "    message: hello\n"
+                    "response_path: response.text\n"
+                ),
+            },
+            format="json",
+        )
+
+        response = validate_yaml(request)
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertFalse(response.data["valid"])  # noqa: PT009
+        self.assertIn("{user_msg}", response.data["errors"][0]["message"])  # noqa: PT009
 
     def test_project_creation_initializes_under_projects_folder(self) -> None:
         """New projects should be initialized inside the lowercase projects directory."""
