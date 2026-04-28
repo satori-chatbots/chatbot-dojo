@@ -267,7 +267,9 @@ def _find_relative_extensionless_yaml_candidates(project_root: Path, folder_name
     ]
 
 
-def _find_basename_extensionless_yaml_candidates(project_root: Path, folder_name: str, filename_stem: str) -> list[Path]:
+def _find_basename_extensionless_yaml_candidates(
+    project_root: Path, folder_name: str, filename_stem: str
+) -> list[Path]:
     """Resolve extensionless basename YAML candidates across project folders."""
     if senpai_tools is None:
         return []
@@ -283,13 +285,26 @@ def _find_basename_extensionless_yaml_candidates(project_root: Path, folder_name
 
 def _ambiguous_extensionless_yaml_error(project_root: Path, filename: str, candidates: list[Path]) -> str:
     """Return a Senpai-style ambiguity message for extensionless YAML matches."""
-    if senpai_tools is None:
-        return f"Ambiguous filename: {filename}."
-
-    joined = ", ".join(
-        senpai_tools._relative_workspace_path(project_root, candidate) for candidate in candidates  # noqa: SLF001
-    )
+    joined = ", ".join(_format_project_workspace_path(project_root, candidate) for candidate in candidates)
     return f"Ambiguous filename: {filename}. Use one of: {joined}"
+
+
+def _format_project_workspace_path(project_root: Path, target: Path) -> str:
+    """Return a stable path for a file inside Senpai's project workspace."""
+    workspace_root = project_root / "projects" if (project_root / "projects").is_dir() else project_root
+    workspace_root = workspace_root.resolve()
+    target = target.resolve()
+
+    if ((workspace_root / "profiles").is_dir() or (workspace_root / "rules").is_dir()) and target.parent.name in {
+        "profiles",
+        "rules",
+    }:
+        return target.name
+
+    try:
+        return target.relative_to(workspace_root).as_posix()
+    except ValueError:
+        return target.name
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
