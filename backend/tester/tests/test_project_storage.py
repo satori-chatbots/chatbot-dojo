@@ -162,7 +162,9 @@ class ProjectStorageLayoutTests(TestCase):
 
         profile.save()
 
-        expected_relative = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Manual Profile.yaml"
+        expected_relative = (
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Manual Profile.yaml"
+        )
         self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -203,7 +205,9 @@ class ProjectStorageLayoutTests(TestCase):
 
         profile.save()
 
-        expected_relative = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Nested_Profile.yaml"
+        expected_relative = (
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Nested_Profile.yaml"
+        )
         self.assertEqual(profile.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -224,7 +228,9 @@ class ProjectStorageLayoutTests(TestCase):
         TracerResultsProcessor().process_tracer_results_dual_storage(execution, output_dir)
 
         generated = TestFile.objects.get(project=project, execution=execution)
-        expected_relative = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Generated Profile.yaml"
+        expected_relative = (
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Generated Profile.yaml"
+        )
         self.assertEqual(generated.file.name, expected_relative)  # noqa: PT009
         self.assertTrue((self.media_root / expected_relative).exists())  # noqa: PT009
 
@@ -248,8 +254,12 @@ class ProjectStorageLayoutTests(TestCase):
         )
         second_profile.save()
 
-        expected_primary = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name.yaml"
-        expected_conflict = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name_1.yaml"
+        expected_primary = (
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name.yaml"
+        )
+        expected_conflict = (
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name_1.yaml"
+        )
 
         self.assertEqual(first_profile.name, "Shared Name")  # noqa: PT009
         self.assertEqual(second_profile.name, "Shared Name_1")  # noqa: PT009
@@ -321,7 +331,9 @@ class ProjectStorageLayoutTests(TestCase):
 
         self.assertEqual(response.status_code, HTTP_CREATED)  # noqa: PT009
         uploaded_profile = TestFile.objects.get(id=response.data["uploaded_file_ids"][0])
-        expected_conflict = f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name_1.yaml"
+        expected_conflict = (
+            f"users/user_{self.user.id}/projects/{project.get_project_folder_name()}/profiles/Shared Name_1.yaml"
+        )
 
         self.assertEqual(uploaded_profile.name, "Shared Name_1")  # noqa: PT009
         self.assertEqual(uploaded_profile.file.name, expected_conflict)  # noqa: PT009
@@ -364,7 +376,12 @@ class ProjectStorageLayoutTests(TestCase):
         execution = project.get_or_create_current_manual_execution()
         self.assertEqual(execution.generated_profiles_count, 0)  # noqa: PT009
         profiles_dir = (
-            self.media_root / "users" / f"user_{self.user.id}" / "projects" / f"{project.get_project_folder_name()}" / "profiles"
+            self.media_root
+            / "users"
+            / f"user_{self.user.id}"
+            / "projects"
+            / f"{project.get_project_folder_name()}"
+            / "profiles"
         )
         self.assertFalse((profiles_dir / "First Profile.yaml").exists())  # noqa: PT009
         self.assertFalse((profiles_dir / "Second Profile.yaml").exists())  # noqa: PT009

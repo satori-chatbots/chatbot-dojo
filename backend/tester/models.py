@@ -1339,7 +1339,7 @@ def _translate_project_folder_path(path: str, user_id: int, old_folder_name: str
     if path == old_prefix:
         return new_prefix
     if path.startswith(f"{old_prefix}/"):
-        return f"{new_prefix}{path[len(old_prefix):]}"
+        return f"{new_prefix}{path[len(old_prefix) :]}"
     return path
 
 
