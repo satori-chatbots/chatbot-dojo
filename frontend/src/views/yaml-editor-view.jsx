@@ -454,7 +454,7 @@ function YamlEditor() {
                 variant={hasUnsavedChanges ? "solid" : "flat"}
                 onPress={() => handleSave()}
                 isLoading={isSaving}
-                isDisabled={!hasUnsavedChanges || !isValid || isSaving}
+                isDisabled={!hasUnsavedChanges || isSaving}
                 startContent={!isSaving && <Save className="w-4 h-4" />}
               >
                 {isSaving ? "Saving..." : "Save"}
