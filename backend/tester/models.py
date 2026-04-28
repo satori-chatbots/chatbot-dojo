@@ -28,6 +28,7 @@ MEDIA_USERS_ROOT_DIR = "users"
 USER_PROJECTS_SUBDIRECTORY = "projects"
 USER_CONNECTORS_SUBDIRECTORY = "connectors"
 PATH_SEPARATOR_PATTERN = re.compile(r"[\\/]+")
+PROJECT_FOLDER_INVALID_CHARS = {"\n", "\r", "\t", "`"}
 
 # Load FERNET SECRET KEY (it was loaded in the settings.py before)
 FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
@@ -165,9 +166,47 @@ def ensure_user_connectors_directory(user_id: int) -> Path | None:
     return user_root_path / USER_CONNECTORS_SUBDIRECTORY
 
 
+def sanitize_project_name_for_folder(project_name: Any) -> str | None:  # noqa: ANN401
+    """Return a safe project folder name, or None when the name is unsafe."""
+    raw_name = str(project_name).replace("\x00", "").strip()
+    if not raw_name or any(char in raw_name for char in PROJECT_FOLDER_INVALID_CHARS):
+        return None
+
+    path_segments = PATH_SEPARATOR_PATTERN.split(raw_name)
+    if any(segment in {".", ".."} for segment in path_segments):
+        return None
+
+    safe_name = PATH_SEPARATOR_PATTERN.sub("_", raw_name).strip(" .")
+    return safe_name or None
+
+
+def get_project_folder_name_for_name(project_name: Any, project_id: int | None = None) -> str:  # noqa: ANN401
+    """Return the on-disk project folder name for a display project name."""
+    folder_name = sanitize_project_name_for_folder(project_name)
+    if folder_name:
+        return folder_name
+    if project_id is None:
+        msg = "Project name cannot be converted into a safe folder name."
+        raise ValueError(msg)
+    return f"project_{project_id}"
+
+
 def get_project_relative_path(user_id: int, project_id: int, *parts: str) -> Path:
     """Return the relative path to a project directory or one of its descendants."""
-    return get_user_projects_relative_path(user_id) / f"project_{project_id}" / Path(*parts)
+    folder_name = f"project_{project_id}"
+    project_model = globals().get("Project")
+    if project_model is not None:
+        try:
+            project = project_model.objects.only("id", "name").get(id=project_id)
+            folder_name = project.get_project_folder_name()
+        except project_model.DoesNotExist:
+            pass
+    return get_user_projects_relative_path(user_id) / folder_name / Path(*parts)
+
+
+def get_project_relative_path_for_folder(user_id: int, folder_name: str, *parts: str) -> Path:
+    """Return a project-relative path for an already resolved project folder."""
+    return get_user_projects_relative_path(user_id) / folder_name / Path(*parts)
 
 
 def get_project_relative_path_str(user_id: int, project_id: int, *parts: str) -> str:
@@ -552,7 +591,7 @@ class Project(models.Model):
 
     def get_project_folder_name(self) -> str:
         """Return the on-disk directory name for this project."""
-        return f"project_{self.id}"
+        return get_project_folder_name_for_name(self.name, self.id)
 
     def get_relative_project_path(self, *parts: str) -> Path:
         """Return the relative path to this project's directory or descendants."""
@@ -1288,3 +1327,153 @@ class OriginalTracerProfile(models.Model):
     def __str__(self) -> str:
         """Return a string representation of the OriginalTracerProfile."""
         return f"Original {self.original_filename} - {self.execution.execution_name}"
+
+
+def _translate_project_folder_path(path: str, user_id: int, old_folder_name: str, new_folder_name: str) -> str:
+    """Translate a stored project-relative path from one folder name to another."""
+    if not path:
+        return path
+
+    old_prefix = get_project_relative_path_for_folder(user_id, old_folder_name).as_posix()
+    new_prefix = get_project_relative_path_for_folder(user_id, new_folder_name).as_posix()
+    if path == old_prefix:
+        return new_prefix
+    if path.startswith(f"{old_prefix}/"):
+        return f"{new_prefix}{path[len(old_prefix) :]}"
+    return path
+
+
+def _translate_project_folder_json(value: Any, user_id: int, old_folder_name: str, new_folder_name: str) -> Any:  # noqa: ANN401
+    """Translate project paths nested inside JSON-compatible values."""
+    if isinstance(value, str):
+        return _translate_project_folder_path(value, user_id, old_folder_name, new_folder_name)
+    if isinstance(value, list):
+        return [_translate_project_folder_json(item, user_id, old_folder_name, new_folder_name) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _translate_project_folder_json(item, user_id, old_folder_name, new_folder_name)
+            for key, item in value.items()
+        }
+    return value
+
+
+def _update_project_file_references(project: Project, old_folder_name: str, new_folder_name: str) -> None:
+    """Update project-scoped FileField paths after a project folder rename."""
+    user_id = project.owner_id
+    file_models = (TestFile, PersonalityFile, RuleFile, TypeFile, SenseiCheckRule)
+    for model in file_models:
+        for instance in model.objects.filter(project=project).exclude(file="").iterator():
+            current_path = instance.file.name
+            new_path = _translate_project_folder_path(current_path, user_id, old_folder_name, new_folder_name)
+            if new_path == current_path:
+                continue
+            instance.file.name = new_path
+            instance.save(update_fields=["file"])
+
+
+def _update_project_test_case_references(project: Project, old_folder_name: str, new_folder_name: str) -> None:
+    """Update project paths nested in TestCase JSON fields."""
+    user_id = project.owner_id
+    for test_case in TestCase.objects.filter(project=project).iterator():
+        update_fields = []
+        if test_case.copied_files:
+            copied_files = _translate_project_folder_json(
+                test_case.copied_files,
+                user_id,
+                old_folder_name,
+                new_folder_name,
+            )
+            if copied_files != test_case.copied_files:
+                test_case.copied_files = copied_files
+                update_fields.append("copied_files")
+
+        if test_case.profiles_names:
+            profiles_names = _translate_project_folder_json(
+                test_case.profiles_names,
+                user_id,
+                old_folder_name,
+                new_folder_name,
+            )
+            if profiles_names != test_case.profiles_names:
+                test_case.profiles_names = profiles_names
+                update_fields.append("profiles_names")
+
+        if update_fields:
+            test_case.save(update_fields=update_fields)
+
+
+def _update_project_execution_references(project: Project, old_folder_name: str, new_folder_name: str) -> None:
+    """Update ProfileExecution paths after a project folder rename."""
+    user_id = project.owner_id
+    for execution in ProfileExecution.objects.filter(project=project).iterator():
+        current_path = execution.profiles_directory
+        new_path = _translate_project_folder_path(current_path, user_id, old_folder_name, new_folder_name)
+        if new_path == current_path:
+            continue
+        execution.profiles_directory = new_path
+        execution.save(update_fields=["profiles_directory"])
+
+
+def _update_project_analysis_references(project: Project, old_folder_name: str, new_folder_name: str) -> None:
+    """Update TRACER analysis paths after a project folder rename."""
+    user_id = project.owner_id
+    analysis_fields = (
+        "report_file_path",
+        "workflow_graph_svg_path",
+        "workflow_graph_png_path",
+        "workflow_graph_pdf_path",
+    )
+    for analysis in TracerAnalysisResult.objects.filter(execution__project=project).iterator():
+        update_fields = []
+        for field_name in analysis_fields:
+            current_path = getattr(analysis, field_name)
+            new_path = _translate_project_folder_path(current_path, user_id, old_folder_name, new_folder_name)
+            if new_path == current_path:
+                continue
+            setattr(analysis, field_name, new_path)
+            update_fields.append(field_name)
+
+        if update_fields:
+            analysis.save(update_fields=update_fields)
+
+
+def update_project_storage_references(project: Project, old_folder_name: str, new_folder_name: str) -> None:
+    """Update database paths that include a renamed project folder."""
+    if old_folder_name == new_folder_name:
+        return
+
+    _update_project_file_references(project, old_folder_name, new_folder_name)
+    _update_project_test_case_references(project, old_folder_name, new_folder_name)
+    _update_project_execution_references(project, old_folder_name, new_folder_name)
+    _update_project_analysis_references(project, old_folder_name, new_folder_name)
+
+
+def rename_project_storage(project: Project, old_folder_name: str) -> None:
+    """Rename a project's on-disk folder and stored path references."""
+    new_folder_name = project.get_project_folder_name()
+    if old_folder_name == new_folder_name:
+        return
+
+    projects_root = Path(settings.MEDIA_ROOT) / get_user_projects_relative_path(project.owner_id)
+    source_path = projects_root / old_folder_name
+    destination_path = projects_root / new_folder_name
+    moved_directory = False
+    if source_path.exists():
+        if destination_path.exists():
+            msg = f"Cannot rename project folder to {new_folder_name}: destination already exists."
+            raise FileExistsError(msg)
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source_path), str(destination_path))
+        moved_directory = True
+    elif not destination_path.exists():
+        msg = f"Cannot rename project folder: source {old_folder_name} does not exist."
+        raise FileNotFoundError(msg)
+
+    try:
+        with transaction.atomic():
+            update_project_storage_references(project, old_folder_name, new_folder_name)
+            project.update_run_yml()
+    except Exception:
+        if moved_directory and destination_path.exists() and not source_path.exists():
+            shutil.move(str(destination_path), str(source_path))
+        raise

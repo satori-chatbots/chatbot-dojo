@@ -47,7 +47,7 @@ export const deleteProject = async (id) => {
 
 export const checkProjectName = async (name) => {
   const response = await apiClient(
-    `${API_BASE_URL}${ENDPOINTS.CHECK_PROJECT_NAME}?project_name=${name}`,
+    `${API_BASE_URL}${ENDPOINTS.CHECK_PROJECT_NAME}?project_name=${encodeURIComponent(name)}`,
   );
   return response.json();
 };
