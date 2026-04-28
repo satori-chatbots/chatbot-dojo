@@ -206,7 +206,9 @@ def patch_senpai_tool_resolution() -> None:
 
     original_resolver = senpai_tools._resolve_project_yaml_target
 
-    def resolve_project_yaml_target(project_root: Path, folder_name: str, filename: str) -> tuple[Path | None, str | None]:
+    def resolve_project_yaml_target(
+        project_root: Path, folder_name: str, filename: str
+    ) -> tuple[Path | None, str | None]:
         target, error = original_resolver(project_root, folder_name, filename)
         if target is not None and target.exists():
             return target, error
@@ -216,8 +218,7 @@ def patch_senpai_tool_resolution() -> None:
             return target, error
 
         normalized = requested.as_posix()
-        if normalized.startswith("./"):
-            normalized = normalized[2:]
+        normalized = normalized.removeprefix("./")
 
         candidates: list[Path] = []
         if "/" in normalized:
@@ -271,9 +272,7 @@ def sync_senpai_profile_files_to_test_files(user: CustomUser) -> None:
 
         manual_execution = None
         profile_files = sorted(
-            path
-            for path in profiles_root.iterdir()
-            if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS
+            path for path in profiles_root.iterdir() if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS
         )
         for profile_path in profile_files:
             relative_path = profile_path.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
