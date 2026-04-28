@@ -682,7 +682,7 @@ selenium==4.43.0
     # via
     #   sensei-web
     #   user-simulator
-senpai-assistant==0.4.0
+senpai-assistant==0.5.0
     # via sensei-web
 senpai-validators==0.2.1
     # via senpai-assistant
