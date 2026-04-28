@@ -1,7 +1,7 @@
 """Senpai Assistant API endpoints."""
 
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from rest_framework import permissions, status
 from rest_framework.exceptions import ValidationError
@@ -58,6 +58,26 @@ class SenpaiConversationMessageView(APIView):
         "The selected assistant API key is empty.",
     }
 
+    def _make_json_safe(self, value: Any) -> Any:
+        """Convert assistant interrupt payloads into API-safe JSON values."""
+        if value is None or isinstance(value, str | int | float | bool):
+            return value
+        if isinstance(value, list | tuple):
+            return [self._make_json_safe(item) for item in value]
+        if isinstance(value, dict):
+            return {str(key): self._make_json_safe(item) for key, item in value.items()}
+        return str(value)
+
+    def _serialize_pending_approvals(self, assistant: Any) -> list[dict[str, Any]]:
+        """Return pending HITL approvals in a frontend-friendly shape."""
+        return [
+            {
+                "id": str(getattr(interrupt, "id", "")),
+                "value": self._make_json_safe(getattr(interrupt, "value", None)),
+            }
+            for interrupt in assistant.get_pending_interrupts()
+        ]
+
     def _get_safe_runtime_error_message(self, exc: Exception) -> str:
         """Return a user-safe message for runtime and validation failures."""
         error_message = str(exc)
@@ -92,10 +112,16 @@ class SenpaiConversationMessageView(APIView):
 
         try:
             assistant = build_assistant_for_conversation(conversation)
-            reply = assistant.send_message(
-                serializer.validated_data["message"],
-                active_project=active_project_name,
-            )
+            if "approval_decisions" in serializer.validated_data:
+                reply = assistant.resume_pending_interrupts(
+                    serializer.validated_data["approval_decisions"],
+                )
+            else:
+                reply = assistant.send_message(
+                    serializer.validated_data["message"],
+                    active_project=active_project_name,
+                )
+            pending_approvals = self._serialize_pending_approvals(assistant)
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",
@@ -146,6 +172,7 @@ class SenpaiConversationMessageView(APIView):
                 "conversation": SenpaiConversationSerializer(conversation).data,
                 "created_new_thread": created_new_thread,
                 "response": reply,
+                "pending_approvals": pending_approvals,
             },
             status=status.HTTP_200_OK,
         )

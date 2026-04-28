@@ -147,6 +147,10 @@ def get_or_create_senpai_conversation(
 
 def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assistant:
     """Create a Senpai assistant bound to the stored conversation thread."""
+    if conversation.assistant_api_key is None:
+        msg = "No assistant API key is configured for this conversation."
+        raise RuntimeError(msg)
+
     if create_assistant_for_paths is None:
         msg = (
             "Senpai Assistant is not installed in this backend environment. "
@@ -158,9 +162,6 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assist
     runtime_root = get_senpai_runtime_root()
     embedding_model_cache_root = get_senpai_embedding_model_cache_root()
     configure_embedding_model_environment(embedding_model_cache_root)
-    if conversation.assistant_api_key is None:
-        msg = "No assistant API key is configured for this conversation."
-        raise RuntimeError(msg)
     model = build_chat_model_for_user_api_key(conversation.assistant_api_key)
 
     logger.debug(

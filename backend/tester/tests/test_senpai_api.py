@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
@@ -113,11 +114,82 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
         self.assertFalse(response.data["created_new_thread"])  # noqa: PT009
         self.assertEqual(response.data["response"], "Hello from Senpai")  # noqa: PT009
+        self.assertEqual(response.data["pending_approvals"], [])  # noqa: PT009
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
 
         build_assistant_mock.assert_called_once_with(conversation)
         assistant.send_message.assert_called_once_with("Hello", active_project=None)
         assistant.close.assert_called_once()
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_returns_pending_approvals(self, build_assistant_mock: MagicMock) -> None:
+        """HITL interrupts should be returned so the client can resolve them."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        assistant = MagicMock()
+        assistant.send_message.return_value = "Please review this change."
+        assistant.get_pending_interrupts.return_value = [
+            SimpleNamespace(
+                id="approval-1",
+                value={
+                    "action_requests": [
+                        {
+                            "name": "save_profile",
+                            "description": "Profile save request",
+                        },
+                    ],
+                    "review_configs": [
+                        {
+                            "action_name": "save_profile",
+                            "allowed_decisions": ["approve", "reject"],
+                        },
+                    ],
+                },
+            ),
+        ]
+        build_assistant_mock.return_value = assistant
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": "Create a profile"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(response.data["response"], "Please review this change.")  # noqa: PT009
+        self.assertEqual(response.data["pending_approvals"][0]["id"], "approval-1")  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            response.data["pending_approvals"][0]["value"]["action_requests"][0]["name"],
+            "save_profile",
+        )
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_message_endpoint_resumes_pending_approvals(self, build_assistant_mock: MagicMock) -> None:
+        """Approval decisions should resume the blocked assistant thread."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        assistant = MagicMock()
+        assistant.resume_pending_interrupts.return_value = "Saved."
+        assistant.get_pending_interrupts.return_value = []
+        build_assistant_mock.return_value = assistant
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"approval_decisions": [{"type": "approve"}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(response.data["response"], "Saved.")  # noqa: PT009
+        self.assertEqual(response.data["pending_approvals"], [])  # noqa: PT009
+        assistant.resume_pending_interrupts.assert_called_once_with([{"type": "approve"}])
+        assistant.send_message.assert_not_called()
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_passes_active_project_to_assistant(self, build_assistant_mock: MagicMock) -> None:
