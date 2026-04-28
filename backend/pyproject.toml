@@ -33,6 +33,7 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "selenium>=4.33.0",
     "senpai-assistant>=0.5.0",
+    "senpai-validators>=0.2.1",
     "tiktoken>=0.9.0",
     "user-simulator>=0.6.0",
     "webdriver-manager>=4.0.2",

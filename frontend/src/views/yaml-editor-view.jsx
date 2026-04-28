@@ -15,11 +15,25 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
   Save,
-  Edit,
   Loader2,
+  BookOpen,
+  Settings,
+  ChevronRight as ChevronRightIcon,
+  ExternalLink,
 } from "lucide-react";
-import { Button, Tabs, Tab, Accordion, AccordionItem } from "@heroui/react";
-import { load as yamlLoad } from "js-yaml";
+import {
+  Button,
+  Tabs,
+  Tab,
+  Accordion,
+  AccordionItem,
+  Switch,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Tooltip,
+  Link,
+} from "@heroui/react";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
@@ -33,13 +47,8 @@ import {
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
-import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import {
-  completionsSchema,
-  getCursorContext,
-  createYamlTypoLinter,
-} from "../data/yaml-schema";
+import { completionsSchema, getCursorContext } from "../data/yaml-schema";
 
 function myCompletions(context) {
   const word = context.matchBefore(/\w*/);
@@ -91,7 +100,6 @@ function YamlEditor() {
   const [selectedProject] = useSelectedProject();
   const { reloadProfiles } = useSetup();
   const { showToast } = useMyCustomToast();
-  const [serverValidationErrors, setServerValidationErrors] = useState();
 
   // New state for UI improvements
   const [isLoading, setIsLoading] = useState(false);
@@ -99,9 +107,7 @@ function YamlEditor() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
 
-  const [isValidatingYaml, setIsValidatingYaml] = useState(false);
-  const [isValidatingSchema, setIsValidatingSchema] = useState(false);
-  const [hasTypedAfterError, setHasTypedAfterError] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   // Autosave and data protection state
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
@@ -114,46 +120,40 @@ function YamlEditor() {
     }
   }, []);
   const [lastSaved, setLastSaved] = useState();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      const saved = globalThis.localStorage.getItem(
+        "profile-editor-sidebar-collapsed",
+      );
+      setSidebarCollapsed(saved ? JSON.parse(saved) : false);
+    }
+  }, []);
 
   // Persist autosave setting
   useEffect(() => {
-    localStorage.setItem(
-      "yamlEditorAutosaveEnabled",
-      JSON.stringify(autosaveEnabled),
-    );
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      globalThis.localStorage.setItem(
+        "yamlEditorAutosaveEnabled",
+        JSON.stringify(autosaveEnabled),
+      );
+    }
   }, [autosaveEnabled]);
+
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      globalThis.localStorage.setItem(
+        "profile-editor-sidebar-collapsed",
+        JSON.stringify(sidebarCollapsed),
+      );
+    }
+  }, [sidebarCollapsed]);
 
   // Enhanced status bar state
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
-  const [editorRef, setEditorRef] = useState();
-
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
-
-  const yamlTypoLinter = linter(createYamlTypoLinter());
-
-  // Jump to error location functionality
-  const jumpToError = useCallback(
-    (line) => {
-      if (editorRef && editorRef.view) {
-        try {
-          const lineNumber = Math.max(
-            1,
-            Math.min(line, editorRef.view.state.doc.lines),
-          );
-          const pos = editorRef.view.state.doc.line(lineNumber).from;
-          editorRef.view.dispatch({
-            selection: { anchor: pos },
-            scrollIntoView: true,
-          });
-          editorRef.view.focus();
-        } catch (error) {
-          console.error("Error jumping to line:", error);
-        }
-      }
-    },
-    [editorRef],
-  );
 
   // Track cursor position
   const cursorPositionExtension = EditorView.updateListener.of((update) => {
@@ -177,69 +177,34 @@ function YamlEditor() {
 
   const validateYaml = useCallback(
     async (value) => {
-      setIsValidatingYaml(true);
-
-      try {
-        // First check YAML syntax
-        yamlLoad(value);
-        setIsValid(true);
-        setErrorInfo(undefined);
-        setHasTypedAfterError(false);
-
-        // If YAML is valid, check schema on server
-        if (value.trim()) {
-          setIsValidatingSchema(true);
-          try {
-            const validationResult = await validateYamlOnServer(value);
-            if (validationResult.valid) {
-              setServerValidationErrors(undefined);
-              return { isValid: true, serverValidationErrors: undefined };
-            }
-            setServerValidationErrors(validationResult.errors);
-            return {
-              isValid: true,
-              serverValidationErrors: validationResult.errors,
-            };
-          } catch (error) {
-            console.error("Schema validation error:", error);
-            // On server-side validation error, we don't have new errors.
-            return { isValid: true, serverValidationErrors: undefined };
-          } finally {
-            setIsValidatingSchema(false);
-          }
-        } else {
-          // YAML is empty, so it's valid with no server errors.
-          setServerValidationErrors(undefined);
-          return { isValid: true, serverValidationErrors: undefined };
-        }
-      } catch (error) {
+      if (!value.trim()) {
         setIsValid(false);
-        setServerValidationErrors(undefined); // Clear server errors if YAML syntax is invalid
-        const errorLines = error.message.split("\n");
-        const errorMessage = errorLines[0];
-        const codeContext = errorLines.slice(1).join("\n");
-        setErrorInfo({
-          message: errorMessage,
-          line: error.mark ? error.mark.line + 1 : undefined,
-          column: error.mark ? error.mark.column + 1 : undefined,
-          codeContext: codeContext,
-          isSchemaError: false,
-        });
-        setHasTypedAfterError(false);
-        console.error("Invalid YAML:", error);
-        return { isValid: false, serverValidationErrors: undefined };
-      } finally {
-        setIsValidatingYaml(false);
+        setErrorInfo(undefined);
+        return false;
       }
+
+      setIsValidating(true);
+      const validationResult = await validateYamlOnServer(value, "profile");
+      setIsValidating(false);
+
+      if (!validationResult.valid) {
+        setIsValid(false);
+        setErrorInfo({
+          message:
+            validationResult.errors?.[0]?.message ||
+            "Profile does not match the profile schema",
+          line: validationResult.errors?.[0]?.line,
+          column: validationResult.errors?.[0]?.column,
+          errors: validationResult.errors,
+        });
+        return false;
+      }
+
+      setIsValid(true);
+      setErrorInfo(undefined);
+      return true;
     },
-    [
-      setHasTypedAfterError,
-      setErrorInfo,
-      setIsValid,
-      setIsValidatingSchema,
-      setIsValidatingYaml,
-      setServerValidationErrors,
-    ],
+    [setErrorInfo, setIsValid, setIsValidating],
   );
 
   useEffect(() => {
@@ -284,15 +249,10 @@ function YamlEditor() {
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
-    setHasTypedAfterError(false);
     try {
       // Re-validate before saving to ensure we have the latest validation state
-      const validationResults = await validateYaml(editorContent);
-
-      const hasValidationErrors =
-        !validationResults.isValid ||
-        (validationResults.serverValidationErrors &&
-          validationResults.serverValidationErrors.length > 0);
+      const contentIsValid = await validateYaml(editorContent);
+      const hasValidationErrors = !contentIsValid;
       const forceSave = false;
 
       if (fileId) {
@@ -416,17 +376,6 @@ function YamlEditor() {
 
   const handleEditorChange = (value) => {
     setEditorContent(value);
-
-    // If there were previous errors (client or server), mark that user is typing
-    if (!isValid || serverValidationErrors) {
-      setHasTypedAfterError(true);
-    }
-
-    // Clear server validation errors when user starts typing (they'll be re-checked by debounced validation)
-    if (serverValidationErrors) {
-      setServerValidationErrors(undefined);
-    }
-
     setHasUnsavedChanges(value !== originalContent);
   };
 
@@ -457,144 +406,142 @@ function YamlEditor() {
   );
 
   return (
-    <div className="container mx-auto p-2 sm:p-4">
-      <div className="flex items-center mb-4">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <h1 className="text-lg sm:text-2xl font-bold">
-            {fileId ? "Edit YAML File" : "Create New YAML"}
-          </h1>
-          {isLoading && (
-            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md">
-              <Loader2 className="w-3 sm:w-4 h-3 sm:h-4 animate-spin" />
-              <span className="text-xs sm:text-sm font-medium">Loading...</span>
-            </div>
-          )}
+    <div className="container mx-auto p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          <div>
+            <h1 className="text-xl font-semibold">
+              {fileId ? "Edit Profile" : "Create New Profile"}
+            </h1>
+            <p className="text-sm text-foreground-500">
+              User Profile Configuration
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="mb-3 flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-4">
-            <div className="min-h-[32px] flex items-center flex-1 w-full">
-              {isValidatingYaml ? (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span className="font-medium">Validating YAML...</span>
-                </div>
-              ) : isValidatingSchema ? (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        <div className="flex-1">
+          <div className="mb-3 flex items-start justify-between gap-4">
+            <div className="min-h-[32px] flex items-center flex-1">
+              {isValidating ? (
+                <div className="flex items-center space-x-2 text-primary-600 bg-primary-50 dark:bg-primary-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="font-medium">Validating Profile...</span>
                 </div>
-              ) : hasTypedAfterError ? (
-                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span className="font-medium">Checking...</span>
-                </div>
               ) : isValid === false ? (
-                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium">Invalid YAML</div>
-                    {errorInfo && !errorInfo.isSchemaError && (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className="text-xs opacity-75 mt-0.5 cursor-pointer hover:opacity-100 underline decoration-dotted"
-                        onClick={() =>
-                          errorInfo.line && jumpToError(errorInfo.line)
-                        }
-                        onKeyDown={(e) => {
-                          if (
-                            (e.key === "Enter" || e.key === " ") &&
-                            errorInfo.line
-                          ) {
-                            jumpToError(errorInfo.line);
-                          }
-                        }}
-                        title={
-                          errorInfo.line
-                            ? `Click to jump to line ${errorInfo.line}`
-                            : undefined
-                        }
-                      >
-                        {errorInfo.message}
-                        {errorInfo.line && ` at line ${errorInfo.line}`}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : serverValidationErrors &&
-                serverValidationErrors.length > 0 ? (
-                <div className="flex items-start gap-2 text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="font-medium">Invalid Profile</div>
-                    <div className="text-xs opacity-75 mt-0.5">
-                      {serverValidationErrors.length} validation{" "}
-                      {serverValidationErrors.length === 1 ? "error" : "errors"}
-                      {serverValidationErrors.some((error) => error.line) &&
-                        " (click to jump)"}
-                    </div>
-                  </div>
+                <div className="flex items-center space-x-2 text-danger-600 bg-danger-50 dark:bg-danger-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="font-medium">
+                    Profile Error: {errorInfo?.message || "Validation failed"}
+                  </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm w-full sm:w-auto">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span className="font-medium">Valid Profile</span>
+                <div className="flex items-center space-x-2 text-success-600 bg-success-50 dark:bg-success-900/20 px-3 py-1.5 rounded-md text-sm">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-medium">Profile is valid</span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end w-full sm:w-auto">
+            <div className="flex items-center space-x-2">
               <Button
                 size="sm"
-                color="primary"
+                color={hasUnsavedChanges ? "primary" : "default"}
                 variant={hasUnsavedChanges ? "solid" : "flat"}
                 onPress={() => handleSave()}
                 isLoading={isSaving}
-                isDisabled={isLoading}
-                className="h-8 px-3 text-sm w-full sm:w-auto"
+                isDisabled={!hasUnsavedChanges || isSaving}
+                startContent={!isSaving && <Save className="w-4 h-4" />}
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    Saving...
-                  </>
-                ) : fileId ? (
-                  <>
-                    <Edit className="mr-1.5 h-3.5 w-3.5" />
-                    {hasUnsavedChanges ? "Update*" : "Update"}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
-                    {hasUnsavedChanges ? "Save*" : "Save"}
-                  </>
-                )}
+                {isSaving ? "Saving..." : "Save"}
               </Button>
+              <Tooltip
+                content={
+                  sidebarCollapsed ? "Show Documentation" : "Hide Documentation"
+                }
+              >
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  aria-label={
+                    sidebarCollapsed
+                      ? "Show Documentation"
+                      : "Hide Documentation"
+                  }
+                >
+                  <BookOpen className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+              <Popover placement="bottom-end">
+                <PopoverTrigger>
+                  <Button
+                    variant="flat"
+                    size="sm"
+                    isIconOnly
+                    aria-label="Editor Settings"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64">
+                  <div className="px-4 py-3">
+                    <h4 className="text-medium font-semibold mb-3">
+                      Editor Settings
+                    </h4>
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium">Font Size</span>
+                      </div>
+                      <div className="flex items-center justify-center space-x-2">
+                        <Button
+                          variant="flat"
+                          size="sm"
+                          isIconOnly
+                          onPress={zoomOut}
+                          isDisabled={fontSize <= 8}
+                          aria-label="Decrease font size"
+                        >
+                          <ZoomOutIcon className="w-4 h-4" />
+                        </Button>
+                        <div className="text-sm px-3 py-1 bg-default-100 rounded min-w-[50px] text-center">
+                          {fontSize}px
+                        </div>
+                        <Button
+                          variant="flat"
+                          size="sm"
+                          isIconOnly
+                          onPress={zoomIn}
+                          isDisabled={fontSize >= 24}
+                          aria-label="Increase font size"
+                        >
+                          <ZoomInIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col flex-1">
+                        <span className="text-sm font-medium">Autosave</span>
+                        <span className="text-xs text-foreground-500 mt-1">
+                          Saves automatically every 5 seconds
+                        </span>
+                      </div>
+                      <div className="flex-shrink-0 pt-1">
+                        <Switch
+                          isSelected={autosaveEnabled}
+                          onValueChange={setAutosaveEnabled}
+                          size="sm"
+                          aria-label="Toggle autosave"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
-
-          {!isValid && errorInfo && errorInfo.isSchemaError && (
-            <div className="mb-4 p-3 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
-              <details>
-                <summary className="cursor-pointer text-red-700 dark:text-red-400 font-medium">
-                  Schema Validation Errors ({errorInfo.errors.length})
-                </summary>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                  {errorInfo.errors.map((error, index) => (
-                    <li
-                      key={index}
-                      className="text-red-600 dark:text-red-300 text-sm"
-                    >
-                      {error}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </div>
-          )}
           <div className="relative">
             {isLoading ? (
               <div className="flex items-center justify-center h-[70vh] bg-default-100 rounded-lg">
@@ -606,7 +553,7 @@ function YamlEditor() {
             ) : (
               <CodeMirror
                 value={editorContent}
-                height="60vh"
+                height="70vh"
                 width="100%"
                 extensions={[
                   yaml(),
@@ -617,8 +564,6 @@ function YamlEditor() {
                     activateOnTyping: true,
                     maxRenderedOptions: 20,
                   }),
-                  yamlTypoLinter,
-                  lintGutter(),
                   customKeymap,
                   highlightSelectionMatches(),
                   cursorPositionExtension,
@@ -634,285 +579,193 @@ function YamlEditor() {
                   autocompletion: true,
                 }}
                 style={{ fontSize: `${fontSize}px` }}
-                ref={setEditorRef}
               />
             )}
 
-            {/* Enhanced Status Bar - moved directly under editor */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-2 sm:px-4 py-2 rounded-b-lg gap-2 sm:gap-0">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex items-center gap-4">
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
                 <span>{lineCount} lines</span>
-                <span className="hidden sm:inline">
-                  {editorContent.length} characters
-                </span>
-                {editorContent.length > 0 && (
-                  <span className="hidden sm:inline">{wordCount} words</span>
-                )}
-
-                {/* Zoom controls integrated into status bar */}
-                <div className="flex items-center gap-1 sm:ml-2 sm:border-l sm:border-default-300 sm:pl-3">
-                  <Button
-                    variant="light"
-                    size="sm"
-                    onPress={zoomOut}
-                    aria-label="Zoom out"
-                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
-                  >
-                    <ZoomOutIcon className="w-3 h-3" />
-                  </Button>
-                  <span className="text-default-400 text-xs font-mono">
-                    {fontSize}px
+                <span>{editorContent.length} characters</span>
+                {editorContent.length > 0 && <span>{wordCount} words</span>}
+                {hasUnsavedChanges && (
+                  <span className="text-warning-600 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-warning-500 rounded-full" />
+                    <span>Unsaved changes</span>
                   </span>
-                  <Button
-                    variant="light"
-                    size="sm"
-                    onPress={zoomIn}
-                    aria-label="Zoom in"
-                    className="h-5 w-5 min-w-0 p-0 text-default-500 hover:text-default-700"
-                  >
-                    <ZoomInIcon className="w-3 h-3" />
-                  </Button>
-                </div>
+                )}
+                {autosaveEnabled && fileId && (
+                  <span className="text-success-600 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
+                    <span>Autosave enabled</span>
+                  </span>
+                )}
+                {lastSaved && (
+                  <span className="text-foreground-400">
+                    Last saved: {lastSaved.toLocaleTimeString()}
+                  </span>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {/* Autosave controls integrated into status bar */}
-                {fileId && (
-                  <label className="flex items-center gap-1 sm:gap-2 cursor-pointer text-default-600 hover:text-default-700">
-                    <input
-                      type="checkbox"
-                      checked={autosaveEnabled}
-                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
-                      className="w-3 h-3"
-                    />
-                    <span className="hidden sm:inline">Auto-save</span>
-                    <span className="sm:hidden">Auto</span>
-                  </label>
-                )}
-                {hasUnsavedChanges ? (
-                  autosaveEnabled && fileId ? (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                      <span className="hidden sm:inline">
-                        Auto-save pending
-                      </span>
-                      <span className="sm:hidden">Pending</span>
-                    </span>
-                  ) : (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                      <span>Unsaved</span>
-                    </span>
-                  )
-                ) : lastSaved ? (
-                  <span className="text-green-600">
-                    <span className="hidden sm:inline">
-                      Saved: {lastSaved.toLocaleTimeString()}
-                    </span>
-                    <span className="sm:hidden">Saved</span>
-                  </span>
-                ) : undefined}
+              <div className="flex items-center gap-3">
+                <span>Ctrl+S to save</span>
                 <span className="text-default-400">YAML</span>
               </div>
             </div>
           </div>
-          {serverValidationErrors && (
-            <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
-              <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 flex items-center">
-                <AlertCircle className="mr-2" />
-                Server Validation Failed
-              </h3>
-              <ul className="list-disc pl-5 mt-2 space-y-1 max-h-60 overflow-y-auto">
-                {serverValidationErrors.map((error, index) => (
-                  <li
-                    key={index}
-                    className={`text-red-600 dark:text-red-300 ${
-                      error.line ? "" : "ml-6"
-                    }`}
-                  >
-                    {error.line ? (
-                      <button
-                        type="button"
-                        className="text-left underline decoration-dotted hover:text-red-800 dark:hover:text-red-100"
-                        onClick={() => jumpToError(error.line)}
-                        title={`Click to jump to line ${error.line}`}
-                      >
-                        {error.message}
-                        <span className="font-mono"> at line {error.line}</span>
-                        {error.path && (
-                          <span className="font-mono text-red-500 dark:text-red-400">
-                            {" "}
-                            ({error.path})
-                          </span>
-                        )}
-                      </button>
-                    ) : (
-                      <>
-                        {error.message}
-                        {error.path && (
-                          <span className="font-mono text-red-500 dark:text-red-400">
-                            {" "}
-                            ({error.path})
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
-        <div className="w-full lg:w-1/3">
-          <div className="sticky top-4">
-            <Tabs defaultValue="profile" className="space-y-3 -mt-1">
-              <Tab key="profile" title="User Profile Help">
-                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    User Profile Documentation
-                  </h2>
-                  <div className="text-xs text-default-500 mb-3 space-y-1">
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+F
-                      </kbd>{" "}
-                      to search in editor
-                    </div>
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+S
-                      </kbd>{" "}
-                      to save the file
-                    </div>
-                    <div>Click any code example to copy it</div>
-                  </div>
-                  <Accordion variant="light" className="px-0">
-                    {Object.entries(documentationSections).map(
-                      ([sectionTitle, section]) => (
-                        <AccordionItem
-                          key={sectionTitle}
-                          title={
-                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                              {sectionTitle}
-                            </span>
-                          }
-                        >
-                          <div className="space-y-3 pt-1 pb-2">
-                            {section.items.map((item, index) => (
-                              <div key={index} className="space-y-1.5">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.code);
-                                    showToast(
-                                      "success",
-                                      "Code copied to clipboard",
-                                    );
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
+        <div
+          className={`${
+            sidebarCollapsed ? "hidden lg:hidden" : "w-96"
+          } transition-all duration-300`}
+        >
+          <div className="h-full flex flex-col border border-border bg-background rounded-lg">
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Documentation</h2>
+                </div>
+                <Button
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  onPress={() => setSidebarCollapsed(true)}
+                  className="lg:hidden"
+                >
+                  <ChevronRightIcon className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="mt-2">
+                <Link
+                  href="https://github.com/sensei-chat/sensei"
+                  target="_blank"
+                  className="flex items-center space-x-1 text-sm text-primary hover:text-primary-600"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>Full Documentation</span>
+                </Link>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <Tabs defaultValue="profile" className="space-y-3 -mt-1">
+                <Tab key="profile" title="User Profile Help">
+                  <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
+                    <h2 className="text-base font-semibold mb-2">
+                      User Profile Documentation
+                    </h2>
+                    <Accordion variant="light" className="px-0">
+                      {Object.entries(documentationSections).map(
+                        ([sectionTitle, section]) => (
+                          <AccordionItem
+                            key={sectionTitle}
+                            title={
+                              <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
+                                {sectionTitle}
+                              </span>
+                            }
+                          >
+                            <div className="space-y-3 pt-1 pb-2">
+                              {section.items.map((item, index) => (
+                                <div key={index} className="space-y-1.5">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
+                                    onClick={() => {
                                       navigator.clipboard.writeText(item.code);
                                       showToast(
                                         "success",
                                         "Code copied to clipboard",
                                       );
-                                    }
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {item.code}
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        navigator.clipboard.writeText(
+                                          item.code,
+                                        );
+                                        showToast(
+                                          "success",
+                                          "Code copied to clipboard",
+                                        );
+                                      }
+                                    }}
+                                    title="Click to copy"
+                                  >
+                                    {item.code}
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-default-foreground">
+                                    {item.description}
+                                  </p>
                                 </div>
-                                <p className="text-xs sm:text-sm text-default-foreground">
-                                  {item.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionItem>
-                      ),
-                    )}
-                  </Accordion>
-                </div>
-              </Tab>
-              <Tab key="yaml" title="YAML Help">
-                <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
-                  <h2 className="text-base font-semibold mb-2">
-                    YAML Tutorial
-                  </h2>
-                  <div className="text-xs text-default-500 mb-3 space-y-1">
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+F
-                      </kbd>{" "}
-                      to search in editor
-                    </div>
-                    <div>
-                      Use{" "}
-                      <kbd className="bg-default-200 px-1.5 py-0.5 rounded text-xs">
-                        Ctrl+S
-                      </kbd>{" "}
-                      to save the file
-                    </div>
-                    <div>Click any code example to copy it</div>
+                              ))}
+                            </div>
+                          </AccordionItem>
+                        ),
+                      )}
+                    </Accordion>
                   </div>
-                  <Accordion variant="light" className="px-0">
-                    {Object.entries(yamlBasicsSections).map(
-                      ([sectionTitle, section]) => (
-                        <AccordionItem
-                          key={sectionTitle}
-                          title={
-                            <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
-                              {sectionTitle}
-                            </span>
-                          }
-                        >
-                          <div className="space-y-3 pt-1 pb-2">
-                            {section.items.map((item, index) => (
-                              <div key={index} className="space-y-1.5">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.code);
-                                    showToast(
-                                      "success",
-                                      "Code copied to clipboard",
-                                    );
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
+                </Tab>
+                <Tab key="yaml" title="YAML Help">
+                  <div className="bg-default-50 p-2 sm:p-3 rounded-lg max-h-[60vh] overflow-y-auto">
+                    <h2 className="text-base font-semibold mb-2">
+                      YAML Tutorial
+                    </h2>
+                    <Accordion variant="light" className="px-0">
+                      {Object.entries(yamlBasicsSections).map(
+                        ([sectionTitle, section]) => (
+                          <AccordionItem
+                            key={sectionTitle}
+                            title={
+                              <span className="text-foreground dark:text-foreground-dark text-sm font-medium">
+                                {sectionTitle}
+                              </span>
+                            }
+                          >
+                            <div className="space-y-3 pt-1 pb-2">
+                              {section.items.map((item, index) => (
+                                <div key={index} className="space-y-1.5">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="relative rounded bg-default-200 px-[0.3rem] py-[0.2rem] font-mono text-xs sm:text-sm whitespace-pre-wrap cursor-pointer hover:bg-default-300 transition-colors overflow-x-auto"
+                                    onClick={() => {
                                       navigator.clipboard.writeText(item.code);
                                       showToast(
                                         "success",
                                         "Code copied to clipboard",
                                       );
-                                    }
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {item.code}
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        navigator.clipboard.writeText(
+                                          item.code,
+                                        );
+                                        showToast(
+                                          "success",
+                                          "Code copied to clipboard",
+                                        );
+                                      }
+                                    }}
+                                    title="Click to copy"
+                                  >
+                                    {item.code}
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-default-foreground">
+                                    {item.description}
+                                  </p>
                                 </div>
-                                <p className="text-xs sm:text-sm text-default-foreground">
-                                  {item.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionItem>
-                      ),
-                    )}
-                  </Accordion>
-                </div>
-              </Tab>
-            </Tabs>
+                              ))}
+                            </div>
+                          </AccordionItem>
+                        ),
+                      )}
+                    </Accordion>
+                  </div>
+                </Tab>
+              </Tabs>
+            </div>
           </div>
         </div>
       </div>

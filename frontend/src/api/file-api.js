@@ -287,7 +287,7 @@ oracle: conversation_length() == conversation_length('assistant') + conversation
   };
 };
 
-export const validateYamlOnServer = async (content) => {
+export const validateYamlOnServer = async (content, kind = "profile") => {
   try {
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.VALIDATE_YAML}`,
@@ -296,7 +296,7 @@ export const validateYamlOnServer = async (content) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, kind }),
       },
     );
     return await response.json();

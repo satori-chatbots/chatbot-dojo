@@ -16,7 +16,7 @@ from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from .validation_script import YamlValidator
+from .senpai_validation import validate_yaml_content
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -433,9 +433,8 @@ class TestFile(models.Model):
                 with Path(self.file.path).open() as file:
                     yaml_content = file.read()
 
-                # Validate using YamlValidator
-                validator = YamlValidator()
-                validation_errors = validator.validate(yaml_content)
+                # Validate using the same Senpai validator package used by the assistant.
+                validation = validate_yaml_content(yaml_content, kind="profile")
 
                 # Parse the YAML content for further processing
                 data = yaml.safe_load(yaml_content)
@@ -488,7 +487,7 @@ class TestFile(models.Model):
                 self.name = Path(new_path).stem
 
                 # Set validation status - only boolean flag
-                self.is_valid = not bool(validation_errors)
+                self.is_valid = validation.is_valid
 
                 # Update execution profile count
                 if self.execution and update_execution_profile_count:

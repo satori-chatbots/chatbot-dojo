@@ -36,17 +36,16 @@ import {
   PopoverContent,
   Tooltip,
 } from "@heroui/react";
-import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
 import { createChatbotConnector } from "../api/chatbot-connector-api";
+import { validateYamlOnServer } from "../api/file-api";
 import apiClient from "../api/api-client";
 import API_BASE_URL, { ENDPOINTS } from "../api/config";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
-import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap } from "@codemirror/search";
 import { customConnectorDocumentationSections } from "../data/custom-connector-documentation";
 
@@ -383,33 +382,6 @@ function CustomConnectorYamlEditor() {
     }
   });
 
-  // Basic YAML linter
-  const yamlLinter = linter((view) => {
-    const diagnostics = [];
-    const content = view.state.doc.toString();
-
-    if (!content.trim()) {
-      return diagnostics;
-    }
-
-    try {
-      yamlLoad(content);
-    } catch (error) {
-      const match = error.message.match(/at line (\d+)/);
-      const line = match ? Number.parseInt(match[1]) - 1 : 0;
-      const pos = view.state.doc.line(Math.max(1, line + 1));
-
-      diagnostics.push({
-        from: pos.from,
-        to: pos.to,
-        severity: "error",
-        message: error.message,
-      });
-    }
-
-    return diagnostics;
-  });
-
   const customKeymap = keymap.of([
     {
       key: "Enter",
@@ -418,25 +390,30 @@ function CustomConnectorYamlEditor() {
     ...searchKeymap,
   ]);
 
-  const validateYaml = useCallback((value) => {
+  const validateYaml = useCallback(async (value) => {
     if (!value.trim()) {
-      setIsValid(true);
+      setIsValid(false);
       setErrorInfo(undefined);
-      return;
+      return false;
     }
 
-    try {
-      yamlLoad(value);
-      setIsValid(true);
-      setErrorInfo(undefined);
-    } catch (error) {
+    const validationResult = await validateYamlOnServer(value, "connector");
+    if (!validationResult.valid) {
       setIsValid(false);
       setErrorInfo({
-        message: error.message,
-        line: error.mark?.line || 0,
-        column: error.mark?.column || 0,
+        message:
+          validationResult.errors?.[0]?.message ||
+          "Connector does not match the custom connector schema",
+        line: validationResult.errors?.[0]?.line,
+        column: validationResult.errors?.[0]?.column,
+        errors: validationResult.errors,
       });
+      return false;
     }
+
+    setIsValid(true);
+    setErrorInfo(undefined);
+    return true;
   }, []);
 
   // Load connector data
@@ -535,18 +512,19 @@ response_path: "response.text"
 
   // Validate YAML on content change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      validateYaml(editorContent);
+    const timer = setTimeout(async () => {
+      await validateYaml(editorContent);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [editorContent, validateYaml]);
 
   const handleSave = useCallback(async () => {
-    if (!isValid) {
+    const contentIsValid = await validateYaml(editorContent);
+    if (!contentIsValid) {
       showToast({
-        title: "Invalid YAML",
-        description: "Please fix YAML syntax errors before saving.",
+        title: "Invalid connector",
+        description: "Please fix validation errors before saving.",
         status: "error",
       });
       return;
@@ -558,17 +536,11 @@ response_path: "response.text"
 
       // If this is a new connector, create it first
       if (connectorId === "new") {
-        // Extract name from YAML content
-        let connectorName = "custom-connector";
-        try {
-          const yamlData = yamlLoad(editorContent);
-          if (yamlData && yamlData.name) {
-            connectorName = yamlData.name;
-          }
-        } catch {
-          // Use default name if YAML parsing fails
-          console.warn("Could not extract name from YAML, using default");
-        }
+        const validationResult = await validateYamlOnServer(
+          editorContent,
+          "connector",
+        );
+        const connectorName = validationResult.data?.name || "custom-connector";
 
         // Create the connector first
         const newConnector = await createChatbotConnector({
@@ -582,7 +554,7 @@ response_path: "response.text"
       }
 
       // Save connector YAML configuration
-      const response = await apiClient(
+      await apiClient(
         `${API_BASE_URL}${ENDPOINTS.CHATBOTCONNECTOR}${targetConnectorId}/config/`,
         {
           method: "PUT",
@@ -592,32 +564,38 @@ response_path: "response.text"
         },
       );
 
-      if (response.ok) {
-        setOriginalContent(editorContent);
-        setLastSaved(new Date());
-        showToast({
-          title: "Success",
-          description: "Custom connector configuration saved successfully!",
-          status: "success",
-        });
+      setOriginalContent(editorContent);
+      setLastSaved(new Date());
+      showToast({
+        title: "Success",
+        description: "Custom connector configuration saved successfully!",
+        status: "success",
+      });
 
-        if (connectorId === "new") {
-          navigate(`/custom-connector-editor/${targetConnectorId}`);
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save configuration");
+      if (connectorId === "new") {
+        navigate(`/custom-connector-editor/${targetConnectorId}`);
       }
     } catch (error) {
+      let errorMessage = error.message;
+      try {
+        const errorData = JSON.parse(error.message);
+        errorMessage =
+          errorData.errors?.map((item) => item.message).join("\n") ||
+          errorData.error ||
+          error.message;
+      } catch {
+        // Keep the original message when apiClient did not throw JSON.
+      }
+
       showToast({
         title: "Error",
-        description: `Failed to save: ${error.message}`,
+        description: `Failed to save: ${errorMessage}`,
         status: "error",
       });
     } finally {
       setIsSaving(false);
     }
-  }, [editorContent, isValid, connectorId, navigate, showToast]);
+  }, [editorContent, connectorId, navigate, showToast, validateYaml]);
 
   // Autosave functionality
   useEffect(() => {
@@ -714,12 +692,10 @@ response_path: "response.text"
           fontFamily: "inherit",
         },
       }),
-      yamlLinter,
-      lintGutter(),
       customKeymap,
       cursorPositionExtension,
     ],
-    [fontSize, yamlLinter, customKeymap, cursorPositionExtension],
+    [fontSize, customKeymap, cursorPositionExtension],
   );
 
   if (isLoading) {

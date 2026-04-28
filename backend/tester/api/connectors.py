@@ -2,7 +2,6 @@
 
 from typing import ClassVar
 
-import yaml
 from chatbot_connectors import ChatbotFactory
 from django.core.cache import cache
 from django.core.files.base import ContentFile
@@ -14,6 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from tester.models import ChatbotConnector
+from tester.senpai_validation import validate_yaml_content, validation_response_payload
 from tester.serializers import ChatbotConnectorSerializer
 
 # Cache timeout for connector information (1 hour)
@@ -184,14 +184,9 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
         """Handle PUT request for configuration."""
         content = request.data.get("content", "")
 
-        # Validate YAML syntax
-        try:
-            yaml.safe_load(content)
-        except yaml.YAMLError as e:
-            return Response(
-                {"error": f"Invalid YAML syntax: {e!s}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        validation = validate_yaml_content(content, kind="connector")
+        if not validation.is_valid:
+            return Response(validation_response_payload(validation), status=status.HTTP_400_BAD_REQUEST)
 
         # Save the configuration to a file
         try:

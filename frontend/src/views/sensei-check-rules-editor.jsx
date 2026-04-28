@@ -41,6 +41,7 @@ import {
   updateSenseiCheckRule,
   createSenseiCheckRule,
   fetchSenseiCheckRuleTemplate,
+  validateYamlOnServer,
 } from "../api/file-api";
 import {
   AlertCircle,
@@ -69,7 +70,6 @@ import {
   Tooltip,
   Link,
 } from "@heroui/react";
-import { load as yamlLoad } from "js-yaml";
 import { materialDark } from "@uiw/codemirror-theme-material";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "next-themes";
@@ -79,7 +79,6 @@ import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
-import { linter, lintGutter } from "@codemirror/lint";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { senseiCheckDocumentationSections } from "../data/sensei-check-documentation";
 
@@ -406,32 +405,6 @@ function senseiCheckCompletions(context) {
   };
 }
 
-// Basic YAML linter for sensei-check rules
-function createSenseiCheckYamlLinter() {
-  return (view) => {
-    const diagnostics = [];
-    const doc = view.state.doc.toString();
-
-    try {
-      yamlLoad(doc);
-    } catch (error) {
-      if (error.mark) {
-        const from =
-          view.state.doc.line(error.mark.line + 1).from + error.mark.column;
-        const to = Math.min(from + 1, view.state.doc.length);
-        diagnostics.push({
-          from,
-          to,
-          severity: "error",
-          message: error.message,
-        });
-      }
-    }
-
-    return diagnostics;
-  };
-}
-
 function SenseiCheckRulesEditor() {
   const { ruleId } = useParams();
   const navigate = useNavigate();
@@ -488,8 +461,6 @@ function SenseiCheckRulesEditor() {
   const zoomIn = () => setFontSize((previous) => Math.min(previous + 2, 24));
   const zoomOut = () => setFontSize((previous) => Math.max(previous - 2, 8));
 
-  const senseiCheckYamlLinter = linter(createSenseiCheckYamlLinter());
-
   // Jump to error location functionality
   // ...existing code...
 
@@ -513,26 +484,30 @@ function SenseiCheckRulesEditor() {
     ...searchKeymap,
   ]);
 
-  const validateYaml = useCallback((value) => {
-    try {
-      yamlLoad(value);
-      setIsValid(true);
-      setErrorInfo(undefined);
-      return true;
-    } catch (error) {
+  const validateYaml = useCallback(async (value) => {
+    if (!value.trim()) {
       setIsValid(false);
-      const errorLines = error.message.split("\n");
-      const errorMessage = errorLines[0];
-      const codeContext = errorLines.slice(1).join("\n");
-      setErrorInfo({
-        message: errorMessage,
-        line: error.mark ? error.mark.line + 1 : undefined,
-        column: error.mark ? error.mark.column + 1 : undefined,
-        codeContext: codeContext,
-      });
-      console.error("Invalid YAML:", error);
+      setErrorInfo(undefined);
       return false;
     }
+
+    const validationResult = await validateYamlOnServer(value, "rule");
+    if (!validationResult.valid) {
+      setIsValid(false);
+      setErrorInfo({
+        message:
+          validationResult.errors?.[0]?.message ||
+          "Rule does not match the SENSEI Check schema",
+        line: validationResult.errors?.[0]?.line,
+        column: validationResult.errors?.[0]?.column,
+        errors: validationResult.errors,
+      });
+      return false;
+    }
+
+    setIsValid(true);
+    setErrorInfo(undefined);
+    return true;
   }, []);
 
   useEffect(() => {
@@ -559,13 +534,13 @@ function SenseiCheckRulesEditor() {
           }
           setEditorContent(content);
           setOriginalContent(content);
-          validateYaml(content);
+          await validateYaml(content);
         } else {
           const response = await fetchSenseiCheckRuleTemplate();
           if (response.template) {
             setEditorContent(response.template);
             setOriginalContent(response.template);
-            validateYaml(response.template);
+            await validateYaml(response.template);
           }
         }
       } catch (error) {
@@ -586,8 +561,8 @@ function SenseiCheckRulesEditor() {
 
   // Debounced validation effect
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      validateYaml(editorContent);
+    const timeoutId = setTimeout(async () => {
+      await validateYaml(editorContent);
     }, 300);
 
     return () => clearTimeout(timeoutId);
@@ -596,6 +571,7 @@ function SenseiCheckRulesEditor() {
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
+      const contentIsValid = await validateYaml(editorContent);
       if (ruleId) {
         const projectIdToUse = ruleProject || selectedProject?.id;
         if (!projectIdToUse) {
@@ -604,15 +580,15 @@ function SenseiCheckRulesEditor() {
         }
         // We don't need the response object here; await the update and proceed.
         await updateSenseiCheckRule(ruleId, editorContent, projectIdToUse, {
-          ignoreValidationErrors: !isValid,
+          ignoreValidationErrors: !contentIsValid,
         });
         await reloadProfiles();
         setOriginalContent(editorContent);
         setHasUnsavedChanges(false);
-        const successMessage = isValid
+        const successMessage = contentIsValid
           ? "Sensei-check rule updated successfully"
           : "Sensei-check rule saved with validation errors";
-        showToast(isValid ? "success" : "warning", successMessage);
+        showToast(contentIsValid ? "success" : "warning", successMessage);
         setLastSaved(new Date());
       } else {
         if (!selectedProject) {
@@ -623,7 +599,7 @@ function SenseiCheckRulesEditor() {
           editorContent,
           selectedProject.id,
           {
-            ignoreValidationErrors: !isValid,
+            ignoreValidationErrors: !contentIsValid,
           },
         );
         if (createResponse && createResponse.length > 0) {
@@ -631,10 +607,10 @@ function SenseiCheckRulesEditor() {
           await reloadProfiles();
           setOriginalContent(editorContent);
           setHasUnsavedChanges(false);
-          const successMessage = isValid
+          const successMessage = contentIsValid
             ? "Sensei-check rule created successfully"
             : "Sensei-check rule created with validation errors";
-          showToast(isValid ? "success" : "warning", successMessage);
+          showToast(contentIsValid ? "success" : "warning", successMessage);
           setLastSaved(new Date());
           navigate(`/sensei-check-rules/${newRuleId}`);
         } else {
@@ -668,7 +644,7 @@ function SenseiCheckRulesEditor() {
     reloadProfiles,
     selectedProject,
     showToast,
-    isValid,
+    validateYaml,
   ]);
 
   // Autosave functionality
@@ -910,8 +886,6 @@ function SenseiCheckRulesEditor() {
                   activateOnTyping: true,
                   maxRenderedOptions: 20,
                 }),
-                senseiCheckYamlLinter,
-                lintGutter(),
                 customKeymap,
                 highlightSelectionMatches(),
                 cursorPositionExtension,

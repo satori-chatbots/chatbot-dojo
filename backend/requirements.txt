@@ -685,7 +685,9 @@ selenium==4.43.0
 senpai-assistant==0.5.0
     # via sensei-web
 senpai-validators==0.2.1
-    # via senpai-assistant
+    # via
+    #   senpai-assistant
+    #   sensei-web
 sentence-transformers==5.4.1
     # via senpai-assistant
 setuptools==81.0.0
