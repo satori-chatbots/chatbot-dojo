@@ -242,7 +242,6 @@ function YamlEditor() {
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
-    setHasTypedAfterError(false);
     try {
       // Re-validate before saving to ensure we have the latest validation state
       const contentIsValid = await validateYaml(editorContent);
