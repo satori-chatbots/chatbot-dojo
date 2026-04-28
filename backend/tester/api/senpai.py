@@ -1,7 +1,8 @@
 """Senpai Assistant API endpoints."""
 
 import logging
-from typing import Any, ClassVar
+from collections.abc import Sequence
+from typing import ClassVar, Protocol, TypeAlias
 
 from rest_framework import permissions, status
 from rest_framework.exceptions import ValidationError
@@ -23,6 +24,15 @@ from tester.serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+JsonValue: TypeAlias = None | str | int | float | bool | list["JsonValue"] | dict[str, "JsonValue"]
+
+
+class PendingInterruptAssistant(Protocol):
+    """Assistant surface needed for serializing pending approvals."""
+
+    def get_pending_interrupts(self) -> Sequence[object]:
+        """Return pending HITL interrupt objects."""
 
 
 class SenpaiConversationInitializeView(APIView):
@@ -62,7 +72,7 @@ class SenpaiConversationMessageView(APIView):
         "The selected assistant API key is empty.",
     }
 
-    def _make_json_safe(self, value: Any) -> Any:
+    def _make_json_safe(self, value: object) -> JsonValue:
         """Convert assistant interrupt payloads into API-safe JSON values."""
         if value is None or isinstance(value, str | int | float | bool):
             return value
@@ -72,7 +82,7 @@ class SenpaiConversationMessageView(APIView):
             return {str(key): self._make_json_safe(item) for key, item in value.items()}
         return str(value)
 
-    def _serialize_pending_approvals(self, assistant: Any) -> list[dict[str, Any]]:
+    def _serialize_pending_approvals(self, assistant: PendingInterruptAssistant) -> list[dict[str, JsonValue]]:
         """Return pending HITL approvals in a frontend-friendly shape."""
         return [
             {
