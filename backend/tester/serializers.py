@@ -127,6 +127,7 @@ class SenpaiConversationMessageSerializer(serializers.Serializer):
     """Serializer for sending a message to the Senpai assistant."""
 
     message = serializers.CharField()
+    active_project_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class SenpaiConversationAPIKeySerializer(serializers.Serializer):

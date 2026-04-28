@@ -54,6 +54,23 @@ const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   month: "short",
 });
 
+const getStoredActiveProjectId = () => {
+  try {
+    const storedProject = globalThis.localStorage.getItem("selectedProject");
+    if (!storedProject) {
+      return;
+    }
+
+    const project = JSON.parse(storedProject);
+    const projectId = Number(project?.id);
+    if (Number.isInteger(projectId) && projectId > 0) {
+      return projectId;
+    }
+  } catch {
+    return;
+  }
+};
+
 const isValidStoredThreadMessage = (message) => {
   if (!message || typeof message !== "object" || Array.isArray(message)) {
     return false;
@@ -462,7 +479,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           shouldFocusComposerReference.current = true;
 
           try {
-            const data = await sendSenpaiMessage(trimmedMessage);
+            const data = await sendSenpaiMessage(
+              trimmedMessage,
+              getStoredActiveProjectId(),
+            );
             if (!isMountedReference.current) {
               return;
             }

@@ -34,13 +34,18 @@ export const initializeSenpaiConversation = async (forceNew = false) => {
   }
 };
 
-export const sendSenpaiMessage = async (message) => {
+export const sendSenpaiMessage = async (message, activeProjectId) => {
   try {
+    const payload = { message };
+    if (activeProjectId) {
+      payload.active_project_id = activeProjectId;
+    }
+
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATION_MESSAGE}`,
       {
         method: "POST",
-        body: JSON.stringify({ message }),
+        body: JSON.stringify(payload),
       },
     );
 
