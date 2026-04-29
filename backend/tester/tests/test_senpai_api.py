@@ -1,10 +1,12 @@
 """Tests for the Senpai Assistant API."""
 
+import shutil
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -13,15 +15,24 @@ from tester.models import (
     CustomUser,
     ProfileExecution,
     Project,
+    RuleFile,
     SenpaiConversation,
+    SenseiCheckRule,
     TestFile,
     UserAPIKey,
+    get_connector_export_relative_path,
     get_project_relative_path,
 )
-from tester.senpai import get_or_create_senpai_conversation, sync_senpai_profile_files_to_test_files
+from tester.senpai import (
+    get_or_create_senpai_conversation,
+    sync_database_records_to_senpai_workspace,
+    sync_senpai_profile_files_to_test_files,
+    sync_senpai_workspace_to_database,
+)
 
 HTTP_CREATED = 201
 HTTP_OK = 200
+HTTP_NO_CONTENT = 204
 HTTP_BAD_REQUEST = 400
 
 
@@ -278,6 +289,117 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(TestFile.objects.filter(project=project).count(), 0)  # noqa: PT009
         manual_execution = ProfileExecution.objects.get(project=project, execution_type="manual")
         self.assertEqual(manual_execution.generated_profiles_count, 0)  # noqa: PT009
+
+    def test_sync_removes_deleted_assistant_project(self) -> None:
+        """Projects removed from Senpai's workspace should disappear from the dashboard."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        project_path = Path(project.get_project_path())
+        project_path.mkdir(parents=True, exist_ok=True)
+
+        sync_database_records_to_senpai_workspace(self.user)
+        shutil.rmtree(project_path)
+        sync_senpai_workspace_to_database(self.user)
+
+        self.assertFalse(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
+
+    def test_sync_removes_deleted_assistant_connector(self) -> None:
+        """Connectors removed from Senpai's workspace should disappear from connector settings."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+
+        sync_database_records_to_senpai_workspace(self.user)
+        export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id)
+        self.assertTrue(export_path.exists())  # noqa: PT009
+
+        export_path.unlink()
+        sync_senpai_workspace_to_database(self.user)
+
+        self.assertFalse(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
+
+    def test_sync_removes_rule_rows_when_assistant_deletes_rule_files(self) -> None:
+        """Rule rows should not outlive YAML files deleted by the assistant."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        Path(project.get_project_path()).mkdir(parents=True, exist_ok=True)
+        rule_file = RuleFile(project=project)
+        rule_file.file.save("rule.yaml", ContentFile("name: rule\n"), save=True)
+        sensei_rule = SenseiCheckRule(project=project)
+        sensei_rule.file.save("sensei-rule.yaml", ContentFile("name: sensei_rule\n"), save=True)
+
+        sync_database_records_to_senpai_workspace(self.user)
+        Path(rule_file.file.path).unlink()
+        Path(sensei_rule.file.path).unlink()
+        sync_senpai_workspace_to_database(self.user)
+
+        self.assertFalse(RuleFile.objects.filter(pk=rule_file.pk).exists())  # noqa: PT009
+        self.assertFalse(SenseiCheckRule.objects.filter(pk=sensei_rule.pk).exists())  # noqa: PT009
+
+    def test_project_delete_endpoint_deletes_database_row(self) -> None:
+        """The project dashboard delete endpoint should remove the project row."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        Path(project.get_project_path()).mkdir(parents=True, exist_ok=True)
+
+        response = self.client.delete(f"/api/projects/{project.id}/")
+
+        self.assertEqual(response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        self.assertFalse(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
+
+    def test_connector_delete_endpoint_deletes_database_row(self) -> None:
+        """The connector settings delete endpoint should remove the connector row."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+
+        response = self.client.delete(f"/api/chatbotconnectors/{connector.id}/")
+
+        self.assertEqual(response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        self.assertFalse(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
+
+    def test_api_key_delete_endpoint_deletes_database_row(self) -> None:
+        """The profile API-key delete endpoint should remove the API key row."""
+        api_key = UserAPIKey.objects.create(
+            user=self.user,
+            name="Secondary OpenAI Key",
+            provider="openai",
+            api_key_encrypted="",
+        )
+        api_key.set_api_key("sk-secondary")
+
+        response = self.client.delete(f"/api/api-keys/{api_key.id}/")
+
+        self.assertEqual(response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        self.assertFalse(UserAPIKey.objects.filter(pk=api_key.pk).exists())  # noqa: PT009
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_passes_active_project_to_assistant(self, build_assistant_mock: MagicMock) -> None:

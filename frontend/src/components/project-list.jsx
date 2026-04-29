@@ -162,7 +162,7 @@ const ProjectsList = ({
               size="sm"
               color="danger"
               variant="flat"
-              onPress={() => onDeleteProject(project.id)}
+              onClick={() => onDeleteProject(project)}
               isIconOnly
             >
               <Trash className="w-4 h-4" />
@@ -288,7 +288,7 @@ const ProjectsList = ({
                         size="sm"
                         color="danger"
                         variant="flat"
-                        onPress={() => onDeleteProject(project.id)}
+                        onClick={() => onDeleteProject(project)}
                         endContent={<Trash className="w-3 h-3" />}
                       >
                         Delete

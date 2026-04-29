@@ -22,15 +22,20 @@ except ModuleNotFoundError:
     get_embedding = None
 
 from tester.models import (
+    ChatbotConnector,
     CustomUser,
     ProfileExecution,
     Project,
+    RuleFile,
     SenpaiConversation,
+    SenseiCheckRule,
     TestFile,
     UserAPIKey,
     ensure_user_sensei_directory,
+    get_connector_export_relative_path,
     get_project_relative_path,
     get_user_sensei_root_path,
+    sync_connector_export_file,
 )
 
 logger = logging.getLogger(__name__)
@@ -321,6 +326,23 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
+def sync_database_records_to_senpai_workspace(user: CustomUser) -> None:
+    """Ensure DB-backed assistant-visible files exist before Senpai runs."""
+    for connector in ChatbotConnector.objects.filter(owner=user).iterator():
+        try:
+            sync_connector_export_file(connector)
+        except (OSError, RuntimeError):
+            logger.exception("Failed to prepare connector export for connector %s", connector.pk)
+
+
+def sync_senpai_workspace_to_database(user: CustomUser) -> None:
+    """Reflect assistant filesystem deletes back into database records."""
+    _delete_missing_senpai_connectors(user)
+    _delete_missing_senpai_projects(user)
+    sync_senpai_profile_files_to_test_files(user)
+    _delete_missing_senpai_rule_files(user)
+
+
 def sync_senpai_profile_files_to_test_files(user: CustomUser) -> None:
     """Register assistant-created project profile files as TestFile rows."""
     for project in Project.objects.filter(owner=user).iterator():
@@ -364,6 +386,38 @@ def _delete_missing_project_test_files(project: Project) -> None:
     for test_file in TestFile.objects.filter(project=project):
         if not Path(test_file.file.path).exists():
             test_file.delete()
+
+
+def _delete_missing_senpai_projects(user: CustomUser) -> None:
+    """Delete projects whose assistant-visible project directory was removed."""
+    for project in Project.objects.filter(owner=user).iterator():
+        if not Path(project.get_project_path()).exists():
+            logger.info("Deleting project %s because its Senpai workspace directory is missing", project.pk)
+            project.delete()
+
+
+def _delete_missing_senpai_connectors(user: CustomUser) -> None:
+    """Delete connectors whose assistant-visible connector files were removed."""
+    media_root = Path(settings.MEDIA_ROOT)
+    for connector in ChatbotConnector.objects.filter(owner=user).iterator():
+        export_path = media_root / get_connector_export_relative_path(user.id, connector.id)
+        custom_config_missing = bool(connector.custom_config_file) and not Path(
+            connector.custom_config_file.path
+        ).exists()
+        if not export_path.exists() or custom_config_missing:
+            logger.info("Deleting connector %s because its Senpai workspace file is missing", connector.pk)
+            connector.delete()
+
+
+def _delete_missing_senpai_rule_files(user: CustomUser) -> None:
+    """Delete rule DB rows whose assistant-visible YAML files were removed."""
+    projects = Project.objects.filter(owner=user)
+    for rule_file in RuleFile.objects.filter(project__in=projects):
+        if not Path(rule_file.file.path).exists():
+            rule_file.delete()
+    for sensei_rule in SenseiCheckRule.objects.filter(project__in=projects):
+        if not Path(sensei_rule.file.path).exists():
+            sensei_rule.delete()
 
 
 def _update_manual_execution_profile_count(project: Project) -> None:

@@ -14,7 +14,8 @@ from tester.models import Project, UserAPIKey
 from tester.senpai import (
     build_assistant_for_conversation,
     get_or_create_senpai_conversation,
-    sync_senpai_profile_files_to_test_files,
+    sync_database_records_to_senpai_workspace,
+    sync_senpai_workspace_to_database,
 )
 from tester.serializers import (
     SenpaiConversationAPIKeySerializer,
@@ -125,6 +126,7 @@ class SenpaiConversationMessageView(APIView):
         assistant = None
 
         try:
+            sync_database_records_to_senpai_workspace(request.user)
             assistant = build_assistant_for_conversation(conversation)
             if "approval_decisions" in serializer.validated_data:
                 reply = assistant.resume_pending_interrupts(
@@ -136,7 +138,7 @@ class SenpaiConversationMessageView(APIView):
                     active_project=active_project_name,
                 )
             pending_approvals = self._serialize_pending_approvals(assistant)
-            sync_senpai_profile_files_to_test_files(request.user)
+            sync_senpai_workspace_to_database(request.user)
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",
