@@ -674,8 +674,7 @@ class ProjectStorageLayoutTests(TestCase):
             connector_id = connector.id
             connector.delete()
 
-        mirror_path = (
-            self.media_root
-            / get_connector_export_relative_path(self.user.id, connector_id, "Delete Before Commit Connector")
+        mirror_path = self.media_root / get_connector_export_relative_path(
+            self.user.id, connector_id, "Delete Before Commit Connector"
         )
         self.assertFalse(mirror_path.exists())  # noqa: PT009
