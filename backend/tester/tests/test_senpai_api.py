@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
@@ -305,9 +306,9 @@ class SenpaiConversationAPITests(TestCase):
         project_path = Path(project.get_project_path())
         project_path.mkdir(parents=True, exist_ok=True)
 
-        sync_database_records_to_senpai_workspace(self.user)
+        snapshot = sync_database_records_to_senpai_workspace(self.user)
         shutil.rmtree(project_path)
-        sync_senpai_workspace_to_database(self.user)
+        sync_senpai_workspace_to_database(self.user, snapshot)
 
         self.assertFalse(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
 
@@ -319,12 +320,12 @@ class SenpaiConversationAPITests(TestCase):
             owner=self.user,
         )
 
-        sync_database_records_to_senpai_workspace(self.user)
+        snapshot = sync_database_records_to_senpai_workspace(self.user)
         export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id)
         self.assertTrue(export_path.exists())  # noqa: PT009
 
         export_path.unlink()
-        sync_senpai_workspace_to_database(self.user)
+        sync_senpai_workspace_to_database(self.user, snapshot)
 
         self.assertFalse(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
 
@@ -346,13 +347,48 @@ class SenpaiConversationAPITests(TestCase):
         sensei_rule = SenseiCheckRule(project=project)
         sensei_rule.file.save("sensei-rule.yaml", ContentFile("name: sensei_rule\n"), save=True)
 
-        sync_database_records_to_senpai_workspace(self.user)
+        snapshot = sync_database_records_to_senpai_workspace(self.user)
         Path(rule_file.file.path).unlink()
         Path(sensei_rule.file.path).unlink()
-        sync_senpai_workspace_to_database(self.user)
+        sync_senpai_workspace_to_database(self.user, snapshot)
 
         self.assertFalse(RuleFile.objects.filter(pk=rule_file.pk).exists())  # noqa: PT009
         self.assertFalse(SenseiCheckRule.objects.filter(pk=sensei_rule.pk).exists())  # noqa: PT009
+
+    def test_failed_connector_presync_does_not_delete_connector(self) -> None:
+        """An export write failure must not be treated as an assistant delete."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+
+        with (
+            patch("tester.senpai.sync_connector_export_file", side_effect=OSError("disk full")),
+            pytest.raises(RuntimeError),
+        ):
+            sync_database_records_to_senpai_workspace(self.user)
+
+        self.assertTrue(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
+
+    def test_missing_project_before_presync_is_not_deleted(self) -> None:
+        """A project directory missing before an assistant turn should not be inferred as an assistant delete."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        self.assertFalse(Path(project.get_project_path()).exists())  # noqa: PT009
+
+        snapshot = sync_database_records_to_senpai_workspace(self.user)
+        sync_senpai_workspace_to_database(self.user, snapshot)
+
+        self.assertTrue(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
 
     def test_project_delete_endpoint_deletes_database_row(self) -> None:
         """The project dashboard delete endpoint should remove the project row."""

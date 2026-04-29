@@ -126,7 +126,7 @@ class SenpaiConversationMessageView(APIView):
         assistant = None
 
         try:
-            sync_database_records_to_senpai_workspace(request.user)
+            workspace_snapshot = sync_database_records_to_senpai_workspace(request.user)
             assistant = build_assistant_for_conversation(conversation)
             if "approval_decisions" in serializer.validated_data:
                 reply = assistant.resume_pending_interrupts(
@@ -138,7 +138,7 @@ class SenpaiConversationMessageView(APIView):
                     active_project=active_project_name,
                 )
             pending_approvals = self._serialize_pending_approvals(assistant)
-            sync_senpai_workspace_to_database(request.user)
+            sync_senpai_workspace_to_database(request.user, workspace_snapshot)
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",
