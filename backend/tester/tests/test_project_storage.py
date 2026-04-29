@@ -21,6 +21,7 @@ from tester.models import (
     CustomUser,
     Project,
     TestFile,
+    get_connector_export_relative_path,
     upload_to_execution,
 )
 
@@ -552,14 +553,9 @@ class ProjectStorageLayoutTests(TestCase):
             )
             connector.save()
 
-        mirror_path = (
-            self.media_root
-            / "users"
-            / f"user_{self.user.id}"
-            / "connectors"
-            / f"connector_{connector.id}__senpai_export.yaml"
-        )
+        mirror_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id, connector.name)
         self.assertTrue(mirror_path.exists())  # noqa: PT009
+        self.assertEqual(mirror_path.name, "Webhook Connector.yaml")  # noqa: PT009
 
         mirror_payload = yaml.safe_load(mirror_path.read_text(encoding="utf-8"))
         self.assertEqual(mirror_payload["name"], "Webhook Connector")  # noqa: PT009
@@ -593,13 +589,7 @@ class ProjectStorageLayoutTests(TestCase):
             connector.save()
 
         custom_config_path = self.media_root / "users" / f"user_{self.user.id}" / "connectors" / same_named_config
-        export_path = (
-            self.media_root
-            / "users"
-            / f"user_{self.user.id}"
-            / "connectors"
-            / f"connector_{connector.id}__senpai_export.yaml"
-        )
+        export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id, connector.name)
 
         self.assertTrue(custom_config_path.exists())  # noqa: PT009
         self.assertTrue(export_path.exists())  # noqa: PT009
@@ -607,6 +597,35 @@ class ProjectStorageLayoutTests(TestCase):
             custom_config_path.read_text(encoding="utf-8"),
             "endpoint: https://example.com/custom\n",
         )
+
+    def test_connector_rename_moves_senpai_visible_yaml_mirror(self) -> None:
+        """Renaming a connector should move the export to the new connector filename."""
+        with self.captureOnCommitCallbacks(execute=True):
+            connector = ChatbotConnector.objects.create(
+                name="Old Connector",
+                technology="rest",
+                parameters={"url": "https://example.com/old", "method": "POST"},
+                owner=self.user,
+            )
+
+        old_export_path = self.media_root / get_connector_export_relative_path(
+            self.user.id,
+            connector.id,
+            "Old Connector",
+        )
+        self.assertTrue(old_export_path.exists())  # noqa: PT009
+
+        with self.captureOnCommitCallbacks(execute=True):
+            connector.name = "Renamed Connector"
+            connector.save(update_fields=["name"])
+
+        new_export_path = self.media_root / get_connector_export_relative_path(
+            self.user.id,
+            connector.id,
+            "Renamed Connector",
+        )
+        self.assertFalse(old_export_path.exists())  # noqa: PT009
+        self.assertTrue(new_export_path.exists())  # noqa: PT009
 
     def test_connector_rollback_does_not_create_senpai_yaml_mirror(self) -> None:
         """Connector export files should only be written after a successful commit."""
@@ -629,12 +648,10 @@ class ProjectStorageLayoutTests(TestCase):
             except RuntimeError:
                 pass
 
-        mirror_path = (
-            self.media_root
-            / "users"
-            / f"user_{self.user.id}"
-            / "connectors"
-            / f"connector_{connector_id}__senpai_export.yaml"
+        mirror_path = self.media_root / get_connector_export_relative_path(
+            self.user.id,
+            connector_id,
+            "Rolled Back Connector",
         )
         self.assertEqual(callbacks, [])  # noqa: PT009
         self.assertFalse(mirror_path.exists())  # noqa: PT009
@@ -657,11 +674,7 @@ class ProjectStorageLayoutTests(TestCase):
             connector_id = connector.id
             connector.delete()
 
-        mirror_path = (
-            self.media_root
-            / "users"
-            / f"user_{self.user.id}"
-            / "connectors"
-            / f"connector_{connector_id}__senpai_export.yaml"
+        mirror_path = self.media_root / get_connector_export_relative_path(
+            self.user.id, connector_id, "Delete Before Commit Connector"
         )
         self.assertFalse(mirror_path.exists())  # noqa: PT009
