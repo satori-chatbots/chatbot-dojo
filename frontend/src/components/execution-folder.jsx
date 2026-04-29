@@ -210,10 +210,8 @@ const ExecutionFolder = ({
           <ModalBody>
             <p>
               Are you sure you want to delete{" "}
-              <span className="font-semibold">
-                {execution.execution_name}
-              </span>
-              ? This will permanently delete all {profiles.length} profiles.
+              <span className="font-semibold">{execution.execution_name}</span>?
+              This will permanently delete all {profiles.length} profiles.
             </p>
           </ModalBody>
           <ModalFooter>
@@ -225,7 +223,11 @@ const ExecutionFolder = ({
             >
               Cancel
             </Button>
-            <Button color="danger" onPress={confirmDelete} isLoading={isDeleting}>
+            <Button
+              color="danger"
+              onPress={confirmDelete}
+              isLoading={isDeleting}
+            >
               Delete
             </Button>
           </ModalFooter>

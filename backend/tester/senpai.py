@@ -401,9 +401,9 @@ def _delete_missing_senpai_connectors(user: CustomUser) -> None:
     media_root = Path(settings.MEDIA_ROOT)
     for connector in ChatbotConnector.objects.filter(owner=user).iterator():
         export_path = media_root / get_connector_export_relative_path(user.id, connector.id)
-        custom_config_missing = bool(connector.custom_config_file) and not Path(
-            connector.custom_config_file.path
-        ).exists()
+        custom_config_missing = (
+            bool(connector.custom_config_file) and not Path(connector.custom_config_file.path).exists()
+        )
         if not export_path.exists() or custom_config_missing:
             logger.info("Deleting connector %s because its Senpai workspace file is missing", connector.pk)
             connector.delete()
