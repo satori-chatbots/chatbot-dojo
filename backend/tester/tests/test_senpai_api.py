@@ -25,6 +25,7 @@ from tester.models import (
     get_project_relative_path,
 )
 from tester.senpai import (
+    SenpaiWorkspaceSnapshot,
     get_or_create_senpai_conversation,
     sync_database_records_to_senpai_workspace,
     sync_senpai_profile_files_to_test_files,
@@ -387,6 +388,34 @@ class SenpaiConversationAPITests(TestCase):
 
         snapshot = sync_database_records_to_senpai_workspace(self.user)
         sync_senpai_workspace_to_database(self.user, snapshot)
+
+        self.assertTrue(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
+
+    def test_workspace_inspection_error_does_not_delete_project(self) -> None:
+        """Temporary workspace access failures must not be inferred as assistant deletes."""
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        snapshot = SenpaiWorkspaceSnapshot(
+            connector_ids=set(),
+            project_ids={project.id},
+            test_file_ids=set(),
+            rule_file_ids=set(),
+            sensei_check_rule_ids=set(),
+        )
+
+        with (
+            patch("tester.senpai._path_exists_for_sync", side_effect=RuntimeError("storage unavailable")),
+            pytest.raises(RuntimeError),
+        ):
+            sync_senpai_workspace_to_database(self.user, snapshot)
 
         self.assertTrue(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
 
