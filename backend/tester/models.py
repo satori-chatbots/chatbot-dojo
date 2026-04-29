@@ -1148,16 +1148,16 @@ def delete_custom_config_file_from_media(
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Delete the custom config file from media when the ChatbotConnector is deleted."""
-    custom_config_path = getattr(instance.custom_config_file, "path", "")
+    custom_config_path = instance.custom_config_file.path if instance.custom_config_file else ""
     try:
         delete_connector_export_file(instance)
     except (FileNotFoundError, PermissionError, OSError):
         logger.exception("Error deleting connector export file for connector %s", instance.pk)
 
     try:
-        if instance.custom_config_file and Path(instance.custom_config_file.path).exists():
-            Path(instance.custom_config_file.path).unlink()
-            logger.info("Deleted custom config file %s from media.", instance.custom_config_file.path)
+        if custom_config_path and Path(custom_config_path).exists():
+            Path(custom_config_path).unlink()
+            logger.info("Deleted custom config file %s from media.", custom_config_path)
     except (FileNotFoundError, PermissionError, OSError):
         logger.exception("Error deleting custom config file %s", custom_config_path)
 

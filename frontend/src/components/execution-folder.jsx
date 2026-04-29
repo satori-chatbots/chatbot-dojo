@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { Link, Button, Chip, Tooltip } from "@heroui/react";
+import {
+  Link,
+  Button,
+  Chip,
+  Tooltip,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@heroui/react";
 import {
   ChevronDown,
   ChevronRight,
@@ -23,6 +33,7 @@ const ExecutionFolder = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const navigate = useNavigate();
 
   const displayProfiles = showAll ? profiles : profiles.slice(0, 4);
@@ -105,25 +116,24 @@ const ExecutionFolder = ({
     return `${profiles.length} profiles`;
   };
 
-  const handleDelete = async (e) => {
+  const handleDeleteClick = (e) => {
     // HeroUI onPress doesn't always pass a proper event object
     if (e && e.stopPropagation) {
       e.stopPropagation(); // Prevent folder toggle if event exists
     }
+    setIsDeleteConfirmOpen(true);
+  };
 
-    // Simple confirmation
-    const confirmMessage =
-      execution.execution_type === "manual"
-        ? `Delete manual execution "${execution.execution_name}"?\n\nThis will only work if no profiles are in this execution.`
-        : `Delete TRACER execution "${execution.execution_name}"?\n\nThis will permanently delete all ${profiles.length} profiles.`;
+  const closeDeleteConfirm = () => {
+    if (isDeleting) return;
+    setIsDeleteConfirmOpen(false);
+  };
 
-    if (!globalThis.confirm(confirmMessage)) {
-      return;
-    }
-
+  const confirmDelete = async () => {
     setIsDeleting(true);
     try {
       await onDeleteExecution(execution.id);
+      setIsDeleteConfirmOpen(false);
     } catch (error) {
       console.error("Delete failed:", error);
     } finally {
@@ -180,7 +190,7 @@ const ExecutionFolder = ({
               variant="light"
               color="danger"
               className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 min-w-6"
-              onPress={handleDelete}
+              onPress={handleDeleteClick}
               isLoading={isDeleting}
               title={
                 execution.execution_type === "manual"
@@ -193,6 +203,36 @@ const ExecutionFolder = ({
           )}
         </div>
       </div>
+
+      <Modal isOpen={isDeleteConfirmOpen} onOpenChange={closeDeleteConfirm}>
+        <ModalContent>
+          <ModalHeader>Delete Execution</ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">{execution.execution_name}</span>?
+              This will permanently delete all {profiles.length} profiles.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeDeleteConfirm}
+              isDisabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmDelete}
+              isLoading={isDeleting}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       {/* Profiles List */}
       {isExpanded && (

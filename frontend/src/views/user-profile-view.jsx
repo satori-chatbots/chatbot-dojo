@@ -42,6 +42,11 @@ const UserProfileView = () => {
     provider: "openai",
   });
   const [showKey, setShowKey] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    apiKey: undefined,
+    isLoading: false,
+  });
   const { showToast } = useMyCustomToast();
 
   const [formData, setFormData] = useState({
@@ -136,17 +141,32 @@ const UserProfileView = () => {
     }
   };
 
-  const handleDeleteApiKey = async (id) => {
-    if (!globalThis.confirm("Are you sure you want to delete this API key?"))
-      return;
+  const handleDeleteApiKey = (apiKey) => {
+    setDeleteConfirm({ isOpen: true, apiKey, isLoading: false });
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleteConfirm.isLoading) return;
+    setDeleteConfirm({ isOpen: false, apiKey: undefined, isLoading: false });
+  };
+
+  const confirmDeleteApiKey = async () => {
+    if (!deleteConfirm.apiKey) return;
 
     setLoading(true);
+    setDeleteConfirm((previous) => ({ ...previous, isLoading: true }));
     try {
-      await deleteApiKey(id);
+      await deleteApiKey(deleteConfirm.apiKey.id);
       await loadApiKeys();
       await reloadApiKeys(); // Update setup progress
+      setDeleteConfirm({
+        isOpen: false,
+        apiKey: undefined,
+        isLoading: false,
+      });
       showToast("success", "API Key deleted successfully");
     } catch (error) {
+      setDeleteConfirm((previous) => ({ ...previous, isLoading: false }));
       showToast("error", error.message || "Failed to delete API Key");
     } finally {
       setLoading(false);
@@ -337,6 +357,38 @@ const UserProfileView = () => {
               </Button>
             </ModalFooter>
           </form>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={deleteConfirm.isOpen} onOpenChange={closeDeleteConfirm}>
+        <ModalContent>
+          <ModalHeader>Delete API Key</ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">
+                {deleteConfirm.apiKey?.name}
+              </span>
+              ? Projects using this key will lose that assignment.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeDeleteConfirm}
+              isDisabled={deleteConfirm.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmDeleteApiKey}
+              isLoading={deleteConfirm.isLoading}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </div>

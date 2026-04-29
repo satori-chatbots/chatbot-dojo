@@ -9,6 +9,7 @@ import {
   ModalContent,
   ModalBody,
   ModalHeader,
+  ModalFooter,
   useDisclosure,
   Form,
   Spinner,
@@ -41,6 +42,12 @@ const ChatbotConnectors = () => {
     name: "",
     technology: "",
     parameters: {},
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    connectorId: undefined,
+    connectorName: "",
+    isLoading: false,
   });
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -353,15 +360,42 @@ const ChatbotConnectors = () => {
     }
   };
 
+  const openDeleteConfirm = (connector) => {
+    setDeleteConfirm({
+      isOpen: true,
+      connectorId: connector.id,
+      connectorName: connector.name,
+      isLoading: false,
+    });
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleteConfirm.isLoading) return;
+    setDeleteConfirm({
+      isOpen: false,
+      connectorId: undefined,
+      connectorName: "",
+      isLoading: false,
+    });
+  };
+
   // Delete existing connector
-  const handleDelete = async (id) => {
-    if (!globalThis.confirm("Are you sure you want to delete this connector?"))
-      return;
+  const confirmDelete = async () => {
+    if (!deleteConfirm.connectorId) return;
+
+    setDeleteConfirm((previous) => ({ ...previous, isLoading: true }));
     try {
-      await deleteChatbotConnector(id);
+      await deleteChatbotConnector(deleteConfirm.connectorId);
       await loadConnectors();
       await reloadConnectors(); // Update setup progress
+      setDeleteConfirm({
+        isOpen: false,
+        connectorId: undefined,
+        connectorName: "",
+        isLoading: false,
+      });
     } catch (error) {
+      setDeleteConfirm((previous) => ({ ...previous, isLoading: false }));
       alert(`Error deleting chatbot connector: ${error.message}`);
     }
   };
@@ -764,7 +798,7 @@ const ChatbotConnectors = () => {
                         color="danger"
                         variant="flat"
                         startContent={<Trash className="w-3 h-3" />}
-                        onPress={() => handleDelete(connector.id)}
+                        onPress={() => openDeleteConfirm(connector)}
                         className="flex-1"
                       >
                         Delete
@@ -883,7 +917,7 @@ const ChatbotConnectors = () => {
                           color="danger"
                           variant="flat"
                           startContent={<Trash className="w-3 h-3" />}
-                          onPress={() => handleDelete(connector.id)}
+                          onPress={() => openDeleteConfirm(connector)}
                           className="text-xs"
                         >
                           Delete
@@ -1097,6 +1131,38 @@ const ChatbotConnectors = () => {
               </ModalBody>
             </>
           )}
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={deleteConfirm.isOpen} onOpenChange={closeDeleteConfirm}>
+        <ModalContent>
+          <ModalHeader>Delete Connector</ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">
+                {deleteConfirm.connectorName}
+              </span>
+              ? This action cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeDeleteConfirm}
+              isDisabled={deleteConfirm.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmDelete}
+              isLoading={deleteConfirm.isLoading}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </div>

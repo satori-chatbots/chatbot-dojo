@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@heroui/react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@heroui/react";
 import CreateProjectModal from "../components/create-project-modal";
 import useFetchProjects from "../hooks/use-fetch-projects";
 import { fetchChatbotConnectors } from "../api/chatbot-connector-api";
@@ -22,6 +29,11 @@ const ProjectsDashboard = () => {
   const [connectors, setConnectors] = useState([]);
   const [editProjectId, setEditProjectId] = useState();
   const [selectedProject, setSelectedProject] = useSelectedProject();
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    project: undefined,
+    isLoading: false,
+  });
 
   useEffect(() => {
     const loadConnectors = async () => {
@@ -43,19 +55,34 @@ const ProjectsDashboard = () => {
     setIsEditOpen(true);
   };
 
-  const handleProjectDelete = async (projectId) => {
-    if (!globalThis.confirm("Are you sure you want to delete this project?")) {
-      return;
-    }
+  const handleProjectDelete = (project) => {
+    setDeleteConfirm({ isOpen: true, project, isLoading: false });
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleteConfirm.isLoading) return;
+    setDeleteConfirm({ isOpen: false, project: undefined, isLoading: false });
+  };
+
+  const confirmProjectDelete = async () => {
+    if (!deleteConfirm.project) return;
+
+    setDeleteConfirm((previous) => ({ ...previous, isLoading: true }));
     try {
-      await deleteProject(projectId);
-      if (selectedProject && selectedProject.id === projectId) {
+      await deleteProject(deleteConfirm.project.id);
+      if (selectedProject && selectedProject.id === deleteConfirm.project.id) {
         setSelectedProject(undefined);
       }
       await reloadProjects();
       await reloadSetupProjects(); // Update setup progress
+      setDeleteConfirm({
+        isOpen: false,
+        project: undefined,
+        isLoading: false,
+      });
     } catch (error) {
       console.error("Error deleting project:", error);
+      setDeleteConfirm((previous) => ({ ...previous, isLoading: false }));
       alert(`Error deleting project: ${error.message}`);
     }
   };
@@ -154,6 +181,38 @@ const ProjectsDashboard = () => {
         connectors={connectors}
         onProjectUpdated={handleProjectUpdated}
       />
+
+      <Modal isOpen={deleteConfirm.isOpen} onOpenChange={closeDeleteConfirm}>
+        <ModalContent>
+          <ModalHeader>Delete Project</ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">
+                {deleteConfirm.project?.name}
+              </span>
+              ? This action cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeDeleteConfirm}
+              isDisabled={deleteConfirm.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmProjectDelete}
+              isLoading={deleteConfirm.isLoading}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

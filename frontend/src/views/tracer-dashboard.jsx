@@ -7,6 +7,9 @@ import {
   SelectItem,
   Modal,
   ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   useDisclosure,
   Spinner,
   Chip,
@@ -62,6 +65,11 @@ const TracerDashboard = () => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [uniqueProjects, setUniqueProjects] = useState([]);
   const [viewingContent, setViewingContent] = useState();
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    execution: undefined,
+    isLoading: false,
+  });
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { showToast } = useMyCustomToast();
   const { user } = useAuth();
@@ -277,37 +285,50 @@ const TracerDashboard = () => {
 
   // Handler for deleting a TRACER execution (only for authenticated users)
   const handleDeleteExecution = useCallback(
-    async (execution) => {
+    (execution) => {
       if (!user || !execution?.id) return;
-
-      if (
-        !globalThis.confirm(
-          "Delete TRACER execution? This action cannot be undone.",
-        )
-      ) {
-        return;
-      }
-
-      try {
-        const response = await deleteProfileExecution(execution.id);
-        showToast("success", response.message || "Execution deleted");
-        await loadTracerExecutions();
-      } catch (error) {
-        console.error("Error deleting TRACER execution:", error);
-        let errorMessage = "Error deleting TRACER execution";
-        try {
-          const errorData = JSON.parse(error.message);
-          if (errorData.error) {
-            errorMessage = errorData.error;
-          }
-        } catch {
-          // ignore JSON parse failure
-        }
-        showToast("error", errorMessage);
-      }
+      setDeleteConfirm({ isOpen: true, execution, isLoading: false });
     },
-    [showToast, loadTracerExecutions, user],
+    [user],
   );
+
+  const closeDeleteConfirm = () => {
+    if (deleteConfirm.isLoading) return;
+    setDeleteConfirm({
+      isOpen: false,
+      execution: undefined,
+      isLoading: false,
+    });
+  };
+
+  const confirmDeleteExecution = useCallback(async () => {
+    if (!deleteConfirm.execution?.id) return;
+
+    setDeleteConfirm((previous) => ({ ...previous, isLoading: true }));
+    try {
+      const response = await deleteProfileExecution(deleteConfirm.execution.id);
+      showToast("success", response.message || "Execution deleted");
+      await loadTracerExecutions();
+      setDeleteConfirm({
+        isOpen: false,
+        execution: undefined,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("Error deleting TRACER execution:", error);
+      let errorMessage = "Error deleting TRACER execution";
+      try {
+        const errorData = JSON.parse(error.message);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // ignore JSON parse failure
+      }
+      setDeleteConfirm((previous) => ({ ...previous, isLoading: false }));
+      showToast("error", errorMessage);
+    }
+  }, [deleteConfirm.execution, showToast, loadTracerExecutions]);
 
   const renderModalContent = () => {
     if (!viewingContent) return;
@@ -600,6 +621,39 @@ const TracerDashboard = () => {
           <ModalContent>{renderModalContent()}</ModalContent>
         </Modal>
       )}
+
+      <Modal isOpen={deleteConfirm.isOpen} onOpenChange={closeDeleteConfirm}>
+        <ModalContent>
+          <ModalHeader>Delete TRACER Execution</ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">
+                {deleteConfirm.execution?.execution_name ||
+                  "this TRACER execution"}
+              </span>
+              ? This action cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeDeleteConfirm}
+              isDisabled={deleteConfirm.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmDeleteExecution}
+              isLoading={deleteConfirm.isLoading}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

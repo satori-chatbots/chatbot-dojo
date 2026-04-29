@@ -24,9 +24,7 @@ function useFetchProjects(showType = "all") {
     loadProjects();
   }, [loadProjects]);
 
-  const reloadProjects = () => {
-    loadProjects();
-  };
+  const reloadProjects = useCallback(() => loadProjects(), [loadProjects]);
 
   return { projects, loading, error, reloadProjects };
 }
