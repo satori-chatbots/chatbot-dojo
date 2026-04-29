@@ -13,7 +13,7 @@ from django.conf import settings
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from .senpai_validation import validate_yaml_content
@@ -310,9 +310,38 @@ def upload_to_execution(instance: "TestFile", filename: str) -> str:
     return upload_to(instance, filename)
 
 
-def get_connector_export_relative_path(user_id: int, connector_id: int) -> Path:
+def get_connector_export_relative_path(user_id: int, connector_id: int, connector_name: Any | None = None) -> Path:  # noqa: ANN401
     """Return the relative path for the flat connector YAML export."""
-    return get_user_connectors_relative_path(user_id) / f"connector_{connector_id}__senpai_export.yaml"
+    safe_name = sanitize_profile_name_for_filename(connector_name) if connector_name is not None else None
+    filename = f"{safe_name}.yaml" if safe_name else f"connector_{connector_id}__senpai_export.yaml"
+    return get_user_connectors_relative_path(user_id) / filename
+
+
+def get_legacy_connector_export_relative_paths(user_id: int, connector_id: int) -> list[Path]:
+    """Return historical connector export paths that should no longer be used."""
+    connectors_root = get_user_connectors_relative_path(user_id)
+    return [
+        connectors_root / f"connector_{connector_id}__senpai_export.yaml",
+        connectors_root / f"connector_{connector_id}.yaml",
+    ]
+
+
+def remove_stale_connector_export_files(connector: "ChatbotConnector", current_export_path: Path) -> None:
+    """Remove old export filenames for a connector without deleting its custom config."""
+    stale_relative_paths = {
+        *get_legacy_connector_export_relative_paths(connector.owner_id, connector.id),
+    }
+    previous_export_path = getattr(connector, "_previous_connector_export_relative_path", None)
+    if previous_export_path:
+        stale_relative_paths.add(Path(previous_export_path))
+
+    custom_config_path = Path(connector.custom_config_file.name) if connector.custom_config_file else None
+    for stale_relative_path in stale_relative_paths:
+        if stale_relative_path in {current_export_path, custom_config_path}:
+            continue
+        stale_path = Path(settings.MEDIA_ROOT) / stale_relative_path
+        if stale_path.exists():
+            stale_path.unlink()
 
 
 def redact_sensitive_connector_data(value: Any) -> Any:  # noqa: ANN401
@@ -378,9 +407,11 @@ def sync_connector_export_file(connector: "ChatbotConnector") -> None:
         msg = f"Unable to prepare connectors directory for user {connector.owner_id}."
         raise RuntimeError(msg)
 
-    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
+    export_relative_path = get_connector_export_relative_path(connector.owner_id, connector.id, connector.name)
+    export_path = Path(settings.MEDIA_ROOT) / export_relative_path
     export_path.parent.mkdir(parents=True, exist_ok=True)
     export_path.write_text(build_connector_export_content(connector), encoding="utf-8")
+    remove_stale_connector_export_files(connector, export_relative_path)
 
 
 def delete_connector_export_file(connector: "ChatbotConnector") -> None:
@@ -388,9 +419,21 @@ def delete_connector_export_file(connector: "ChatbotConnector") -> None:
     if connector.id is None:
         return
 
-    export_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(connector.owner_id, connector.id)
-    if export_path.exists():
-        export_path.unlink()
+    export_relative_paths = {
+        get_connector_export_relative_path(connector.owner_id, connector.id, connector.name),
+        *get_legacy_connector_export_relative_paths(connector.owner_id, connector.id),
+    }
+    previous_export_path = getattr(connector, "_previous_connector_export_relative_path", None)
+    if previous_export_path:
+        export_relative_paths.add(Path(previous_export_path))
+
+    custom_config_path = Path(connector.custom_config_file.name) if connector.custom_config_file else None
+    for export_relative_path in export_relative_paths:
+        if export_relative_path == custom_config_path:
+            continue
+        export_path = Path(settings.MEDIA_ROOT) / export_relative_path
+        if export_path.exists():
+            export_path.unlink()
 
 
 class TestFile(models.Model):
@@ -1162,6 +1205,28 @@ def delete_custom_config_file_from_media(
         logger.exception("Error deleting custom config file %s", custom_config_path)
 
 
+@receiver(pre_save, sender=ChatbotConnector)
+def remember_previous_chatbot_connector_export_path(
+    sender: type[ChatbotConnector],
+    instance: ChatbotConnector,
+    **_kwargs: Any,  # noqa: ANN401
+) -> None:
+    """Remember the old export filename so connector renames do not leave stale YAML."""
+    if instance.pk is None:
+        return
+
+    try:
+        previous_connector = sender.objects.only("id", "name", "owner_id").get(pk=instance.pk)
+    except sender.DoesNotExist:
+        return
+
+    instance._previous_connector_export_relative_path = get_connector_export_relative_path(  # noqa: SLF001
+        previous_connector.owner_id,
+        previous_connector.id,
+        previous_connector.name,
+    )
+
+
 @receiver(post_save, sender=ChatbotConnector)
 def sync_chatbot_connector_export(
     sender: type[ChatbotConnector],
@@ -1169,6 +1234,7 @@ def sync_chatbot_connector_export(
     **_kwargs: Any,  # noqa: ANN401
 ) -> None:
     """Keep a flat connector YAML export in the user's connectors directory."""
+    previous_export_path = getattr(instance, "_previous_connector_export_relative_path", None)
 
     def _sync_after_commit(
         connector_pk: int | None = instance.pk,
@@ -1181,6 +1247,9 @@ def sync_chatbot_connector_export(
         except sender.DoesNotExist:
             logger.info("Skipping connector YAML export sync for deleted connector %s", connector_pk)
             return
+
+        if previous_export_path is not None:
+            connector._previous_connector_export_relative_path = previous_export_path  # noqa: SLF001
 
         try:
             sync_connector_export_file(connector)

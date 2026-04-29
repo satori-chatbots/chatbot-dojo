@@ -361,7 +361,7 @@ def sync_database_records_to_senpai_workspace(user: CustomUser) -> SenpaiWorkspa
             logger.exception("Failed to prepare connector export for connector %s", connector.pk)
             msg = "Unable to prepare connector workspace files for Senpai."
             raise RuntimeError(msg) from exc
-        export_path = media_root / get_connector_export_relative_path(user.id, connector.id)
+        export_path = media_root / get_connector_export_relative_path(user.id, connector.id, connector.name)
         if _path_exists_for_sync(export_path):
             connector_ids.add(connector.id)
 
@@ -456,7 +456,7 @@ def _delete_missing_senpai_connectors(user: CustomUser, snapshot: SenpaiWorkspac
     """Delete connectors only when authoritative assets are missing."""
     media_root = Path(settings.MEDIA_ROOT)
     for connector in ChatbotConnector.objects.filter(owner=user, id__in=snapshot.connector_ids).iterator():
-        export_path = media_root / get_connector_export_relative_path(user.id, connector.id)
+        export_path = media_root / get_connector_export_relative_path(user.id, connector.id, connector.name)
         custom_config_missing = bool(connector.custom_config_file) and not _path_exists_for_sync(
             Path(connector.custom_config_file.path)
         )

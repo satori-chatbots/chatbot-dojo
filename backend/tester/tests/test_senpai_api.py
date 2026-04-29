@@ -322,7 +322,7 @@ class SenpaiConversationAPITests(TestCase):
         )
 
         snapshot = sync_database_records_to_senpai_workspace(self.user)
-        export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id)
+        export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id, connector.name)
         self.assertTrue(export_path.exists())  # noqa: PT009
 
         export_path.unlink()
