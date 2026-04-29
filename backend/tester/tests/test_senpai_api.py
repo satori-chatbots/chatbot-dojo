@@ -313,8 +313,8 @@ class SenpaiConversationAPITests(TestCase):
 
         self.assertFalse(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
 
-    def test_sync_removes_deleted_assistant_connector(self) -> None:
-        """Connectors removed from Senpai's workspace should disappear from connector settings."""
+    def test_sync_regenerates_deleted_connector_export(self) -> None:
+        """Missing connector exports should be regenerated instead of deleting DB rows."""
         connector = ChatbotConnector.objects.create(
             name="Primary Connector",
             technology="taskyto",
@@ -326,6 +326,26 @@ class SenpaiConversationAPITests(TestCase):
         self.assertTrue(export_path.exists())  # noqa: PT009
 
         export_path.unlink()
+        sync_senpai_workspace_to_database(self.user, snapshot)
+
+        self.assertTrue(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
+        self.assertTrue(export_path.exists())  # noqa: PT009
+
+    def test_sync_removes_connector_when_custom_config_is_deleted(self) -> None:
+        """A deleted custom config file is authoritative enough to remove the connector row."""
+        connector = ChatbotConnector(
+            name="Custom Connector",
+            technology="custom",
+            owner=self.user,
+        )
+        connector.custom_config_file.save(
+            "custom-connector.yaml",
+            ContentFile("endpoint: https://example.com/custom\n"),
+            save=True,
+        )
+
+        snapshot = sync_database_records_to_senpai_workspace(self.user)
+        Path(connector.custom_config_file.path).unlink()
         sync_senpai_workspace_to_database(self.user, snapshot)
 
         self.assertFalse(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009

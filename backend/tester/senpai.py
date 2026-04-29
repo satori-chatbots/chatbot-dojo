@@ -453,7 +453,7 @@ def _delete_missing_senpai_projects(user: CustomUser, snapshot: SenpaiWorkspaceS
 
 
 def _delete_missing_senpai_connectors(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot) -> None:
-    """Delete connectors whose assistant-visible connector files were removed."""
+    """Delete connectors only when authoritative assets are missing."""
     media_root = Path(settings.MEDIA_ROOT)
     for connector in ChatbotConnector.objects.filter(owner=user, id__in=snapshot.connector_ids).iterator():
         export_path = media_root / get_connector_export_relative_path(user.id, connector.id)
@@ -461,9 +461,16 @@ def _delete_missing_senpai_connectors(user: CustomUser, snapshot: SenpaiWorkspac
             bool(connector.custom_config_file)
             and not _path_exists_for_sync(Path(connector.custom_config_file.path))
         )
-        if not _path_exists_for_sync(export_path) or custom_config_missing:
-            logger.info("Deleting connector %s because its Senpai workspace file is missing", connector.pk)
+        if custom_config_missing:
+            logger.info("Deleting connector %s because its custom config file is missing", connector.pk)
             connector.delete()
+            continue
+        if not _path_exists_for_sync(export_path):
+            logger.warning(
+                "Connector %s export YAML is missing; regenerating from database state instead of deleting",
+                connector.pk,
+            )
+            sync_connector_export_file(connector)
 
 
 def _delete_missing_senpai_rule_files(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot) -> None:
