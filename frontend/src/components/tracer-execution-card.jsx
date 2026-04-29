@@ -262,7 +262,7 @@ const TracerExecutionCard = ({
                         size="sm"
                         variant="light"
                         color="danger"
-                        onClick={() => onDelete(execution)}
+                        onPress={() => onDelete(execution)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -407,7 +407,7 @@ const TracerExecutionCard = ({
                       size="sm"
                       variant="light"
                       color="danger"
-                      onClick={() => onDelete(execution)}
+                      onPress={() => onDelete(execution)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

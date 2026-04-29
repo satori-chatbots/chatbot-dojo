@@ -190,7 +190,7 @@ const ExecutionFolder = ({
               variant="light"
               color="danger"
               className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 min-w-6"
-              onClick={handleDeleteClick}
+              onPress={handleDeleteClick}
               isLoading={isDeleting}
               title={
                 execution.execution_type === "manual"

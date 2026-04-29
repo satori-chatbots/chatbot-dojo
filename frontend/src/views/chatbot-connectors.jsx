@@ -798,7 +798,7 @@ const ChatbotConnectors = () => {
                         color="danger"
                         variant="flat"
                         startContent={<Trash className="w-3 h-3" />}
-                        onClick={() => openDeleteConfirm(connector)}
+                        onPress={() => openDeleteConfirm(connector)}
                         className="flex-1"
                       >
                         Delete
@@ -917,7 +917,7 @@ const ChatbotConnectors = () => {
                           color="danger"
                           variant="flat"
                           startContent={<Trash className="w-3 h-3" />}
-                          onClick={() => openDeleteConfirm(connector)}
+                          onPress={() => openDeleteConfirm(connector)}
                           className="text-xs"
                         >
                           Delete

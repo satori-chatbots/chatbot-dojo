@@ -97,7 +97,7 @@ export function ApiKeyItem({ apiKey, onUpdate, onDelete }) {
               isIconOnly
               color="danger"
               variant="light"
-              onClick={() => onDelete(apiKey)}
+              onPress={() => onDelete(apiKey)}
               aria-label="Delete"
             >
               <Trash2 size={18} />
