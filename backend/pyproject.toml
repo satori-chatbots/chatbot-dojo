@@ -102,6 +102,11 @@ convention = "google"
 quote-style = "double"
 indent-style = "space"
 
+[tool.mypy]
+files = ["tester/senpai.py", "tester/api/connectors.py"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
 [dependency-groups]
 dev = [
     "ruff>=0.5.5",

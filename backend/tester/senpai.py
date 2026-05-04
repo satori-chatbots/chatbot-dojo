@@ -6,7 +6,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 from uuid import uuid4
 
 import yaml
@@ -18,10 +18,10 @@ try:
     from senpai_assistant.assistant import tools as senpai_tools
     from senpai_assistant.embeddings.get_embedding import MODEL_NAME, get_embedding
 except ModuleNotFoundError:
-    create_assistant_for_paths = None
-    senpai_tools = None
-    MODEL_NAME = None
-    get_embedding = None
+    create_assistant_for_paths = None  # type: ignore[assignment]
+    senpai_tools = None  # type: ignore[assignment]
+    MODEL_NAME = None  # type: ignore[assignment]
+    get_embedding = None  # type: ignore[assignment]
 
 from tester.models import (
     ChatbotConnector,
@@ -521,10 +521,10 @@ def _database_connector_export_payload(raw_payload: dict[object, object]) -> dic
         return None
 
     return {
-        "name": name.strip(),
-        "technology": technology.strip(),
+        "name": cast("str", name).strip(),
+        "technology": cast("str", technology).strip(),
         "parameters": parameters,
-        "custom_config_file": custom_config_file.strip(),
+        "custom_config_file": cast("str", custom_config_file).strip(),
     }
 
 
