@@ -194,7 +194,9 @@ def _normalise_gemini_model_id(model_name: str) -> str:
 
 def _supports_gemini_generate_content(model: Any) -> bool:  # noqa: ANN401
     """Return whether a Gemini model supports text generation."""
-    supported_actions = getattr(model, "supported_actions", None) or getattr(model, "supported_generation_methods", None)
+    supported_actions = getattr(model, "supported_actions", None) or getattr(
+        model, "supported_generation_methods", None
+    )
     return supported_actions is None or "generateContent" in supported_actions
 
 
