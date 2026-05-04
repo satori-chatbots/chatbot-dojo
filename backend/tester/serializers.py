@@ -114,7 +114,14 @@ class SenpaiConversationSerializer(serializers.ModelSerializer):
         """Meta class for SenpaiConversationSerializer."""
 
         model = SenpaiConversation
-        fields: ClassVar[list[str]] = ["id", "thread_id", "assistant_api_key", "created_at", "updated_at"]
+        fields: ClassVar[list[str]] = [
+            "id",
+            "thread_id",
+            "assistant_api_key",
+            "assistant_model",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields: ClassVar[list[str]] = fields
 
 
@@ -145,6 +152,7 @@ class SenpaiConversationAPIKeySerializer(serializers.Serializer):
     """Serializer for assigning a stored user API key to Senpai."""
 
     assistant_api_key_id = serializers.IntegerField(required=False, allow_null=True)
+    assistant_model = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
 
 
 class ProfileReportSerializer(serializers.ModelSerializer):

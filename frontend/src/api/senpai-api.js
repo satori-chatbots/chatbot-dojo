@@ -71,17 +71,35 @@ export const resolveSenpaiApprovals = async (approvalDecisions) => {
   }
 };
 
-export const assignSenpaiApiKey = async (assistantApiKeyId) => {
+export const assignSenpaiApiKey = async (assistantApiKeyId, assistantModel) => {
   try {
+    const payload = {
+      // eslint-disable-next-line unicorn/no-null
+      assistant_api_key_id: assistantApiKeyId ?? null,
+    };
+    if (assistantModel !== undefined) {
+      // eslint-disable-next-line unicorn/no-null
+      payload.assistant_model = assistantModel ?? null;
+    }
+
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATION_API_KEY}`,
       {
         method: "PATCH",
-        body: JSON.stringify({
-          // eslint-disable-next-line unicorn/no-null
-          assistant_api_key_id: assistantApiKeyId ?? null,
-        }),
+        body: JSON.stringify(payload),
       },
+    );
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+export const fetchSenpaiAssistantModels = async (assistantApiKeyId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENPAI_ASSISTANT_MODELS}?api_key_id=${assistantApiKeyId}`,
     );
 
     return await response.json();

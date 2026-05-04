@@ -48,6 +48,7 @@ export const ENDPOINTS = {
   SENPAI_CONVERSATION_INITIALIZE: `${API_PATH}/senpai/conversation/initialize/`,
   SENPAI_CONVERSATION_MESSAGE: `${API_PATH}/senpai/conversation/message/`,
   SENPAI_CONVERSATION_API_KEY: `${API_PATH}/senpai/conversation/api-key/`,
+  SENPAI_ASSISTANT_MODELS: `${API_PATH}/senpai/assistant-models/`,
 };
 
 export default API_BASE_URL;
