@@ -13,6 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from tester.models import ChatbotConnector
+from tester.senpai import sync_senpai_connector_files_to_database
 from tester.senpai_validation import validate_yaml_content, validation_response_payload
 from tester.serializers import ChatbotConnectorSerializer
 
@@ -127,6 +128,11 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[ChatbotConnector]:
         """Return connectors only for the current authenticated user."""
         return ChatbotConnector.objects.filter(owner=self.request.user)
+
+    def list(self, request: Request, *args: object, **kwargs: object) -> Response:
+        """Synchronize connector files before rendering the connector dashboard list."""
+        sync_senpai_connector_files_to_database(request.user)
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer: ChatbotConnectorSerializer) -> None:
         """Set the owner to the current user when creating a connector."""

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 from uuid import uuid4
 
+import yaml
 from django.conf import settings
 from langchain.chat_models import init_chat_model
 
@@ -35,6 +36,7 @@ from tester.models import (
     ensure_user_sensei_directory,
     get_connector_export_relative_path,
     get_project_relative_path,
+    get_user_connectors_relative_path,
     get_user_sensei_root_path,
     sync_connector_export_file,
 )
@@ -389,10 +391,168 @@ def sync_database_records_to_senpai_workspace(user: CustomUser) -> SenpaiWorkspa
 
 def sync_senpai_workspace_to_database(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot) -> None:
     """Reflect assistant filesystem deletes back into database records."""
-    _delete_missing_senpai_connectors(user, snapshot)
+    sync_senpai_connector_files_to_database(user, snapshot=snapshot)
     _delete_missing_senpai_projects(user, snapshot)
     sync_senpai_profile_files_to_test_files(user, snapshot=snapshot)
     _delete_missing_senpai_rule_files(user, snapshot)
+
+
+def sync_senpai_connector_files_to_database(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot | None = None) -> None:
+    """Register assistant-created connector YAML files and remove DB rows for deleted exports."""
+    connectors_root = Path(settings.MEDIA_ROOT) / get_user_connectors_relative_path(user.id)
+    if connectors_root.is_dir():
+        _register_existing_senpai_connector_files(user, connectors_root)
+    _delete_missing_senpai_connectors(user, snapshot=snapshot)
+
+
+def _register_existing_senpai_connector_files(user: CustomUser, connectors_root: Path) -> None:
+    """Create ChatbotConnector rows for connector export YAML files that exist only on disk."""
+    for connector_path in _iter_connector_yaml_files(connectors_root):
+        relative_path = connector_path.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
+        if _is_known_connector_file(user, relative_path):
+            continue
+
+        connector_data = _load_connector_export_payload(connector_path)
+        if connector_data is None:
+            continue
+
+        if connector_data["technology"] == "custom" and not connector_data["custom_config_file"]:
+            connector_data["custom_config_file"] = relative_path
+
+        connector, _created = ChatbotConnector.objects.update_or_create(
+            owner=user,
+            name=connector_data["name"],
+            defaults={
+                "technology": connector_data["technology"],
+                "parameters": connector_data["parameters"],
+                "custom_config_file": connector_data["custom_config_file"],
+            },
+        )
+        source_connector_path = _move_custom_config_if_it_collides_with_export(user, connector, connector_path)
+        sync_connector_export_file(connector)
+        canonical_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(user.id, connector.id, connector.name)
+        if (
+            connector_data["technology"] != "custom"
+            and source_connector_path != canonical_path
+            and source_connector_path.exists()
+        ):
+            source_connector_path.unlink()
+
+
+def _iter_connector_yaml_files(connectors_root: Path) -> list[Path]:
+    """Return sorted connector YAML files directly under the user's connector directory."""
+    return sorted(path for path in connectors_root.iterdir() if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS)
+
+
+def _is_known_connector_file(user: CustomUser, relative_path: str) -> bool:
+    """Return whether a connector path already belongs to an existing connector row."""
+    path = Path(relative_path)
+    for connector in ChatbotConnector.objects.filter(owner=user).only(
+        "id",
+        "name",
+        "owner_id",
+        "custom_config_file",
+    ):
+        if path == get_connector_export_relative_path(user.id, connector.id, connector.name):
+            return True
+        if connector.custom_config_file and path == Path(connector.custom_config_file.name):
+            return True
+    return False
+
+
+def _load_connector_export_payload(connector_path: Path) -> dict[str, object] | None:
+    """Parse a Senpai connector YAML as a DB export or an assistant-created custom connector."""
+    try:
+        raw_payload = yaml.safe_load(connector_path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        logger.exception("Skipping unreadable connector YAML file %s", connector_path)
+        return None
+
+    if not isinstance(raw_payload, dict):
+        return None
+
+    custom_connector_payload = _custom_connector_payload(raw_payload, connector_path)
+    if custom_connector_payload is not None:
+        return custom_connector_payload
+
+    return _database_connector_export_payload(raw_payload)
+
+
+def _custom_connector_payload(raw_payload: dict[object, object], connector_path: Path) -> dict[str, object] | None:
+    """Return DB values for a custom connector config created through Senpai."""
+    send_message = raw_payload.get("send_message")
+    has_custom_shape = (
+        isinstance(raw_payload.get("base_url"), str)
+        and isinstance(send_message, dict)
+        and isinstance(raw_payload.get("response_path"), str)
+    )
+    if not has_custom_shape:
+        return None
+
+    name = raw_payload.get("name")
+    connector_name = name.strip() if isinstance(name, str) and name.strip() else connector_path.stem
+    return {
+        "name": connector_name,
+        "technology": "custom",
+        "parameters": {},
+        "custom_config_file": "",
+    }
+
+
+def _database_connector_export_payload(raw_payload: dict[object, object]) -> dict[str, object] | None:
+    """Return DB values from the flat connector export format."""
+    name = raw_payload.get("name")
+    technology = raw_payload.get("technology")
+    parameters = raw_payload.get("parameters", {})
+    custom_config_file = raw_payload.get("custom_config_file", "")
+    has_valid_payload = (
+        isinstance(name, str)
+        and bool(name.strip())
+        and isinstance(technology, str)
+        and bool(technology.strip())
+        and isinstance(parameters, dict)
+        and isinstance(custom_config_file, str)
+    )
+    if not has_valid_payload:
+        return None
+
+    return {
+        "name": name.strip(),
+        "technology": technology.strip(),
+        "parameters": parameters,
+        "custom_config_file": custom_config_file.strip(),
+    }
+
+
+def _move_custom_config_if_it_collides_with_export(
+    user: CustomUser, connector: ChatbotConnector, connector_path: Path
+) -> Path:
+    """Keep assistant-created custom config files separate from generated connector exports."""
+    if connector.technology != "custom" or not connector.custom_config_file:
+        return connector_path
+
+    media_root = Path(settings.MEDIA_ROOT)
+    export_path = media_root / get_connector_export_relative_path(user.id, connector.id, connector.name)
+    custom_config_path = Path(connector.custom_config_file.path)
+    if custom_config_path != export_path:
+        return connector_path
+
+    moved_path = _unique_connector_config_path(custom_config_path)
+    custom_config_path.replace(moved_path)
+    connector.custom_config_file = moved_path.relative_to(media_root).as_posix()
+    connector.save(update_fields=["custom_config_file"])
+    return moved_path
+
+
+def _unique_connector_config_path(custom_config_path: Path) -> Path:
+    """Return a non-existing sibling path for a custom config file."""
+    suffix = custom_config_path.suffix or ".yaml"
+    candidate = custom_config_path.with_name(f"{custom_config_path.stem}_config{suffix}")
+    counter = 2
+    while candidate.exists():
+        candidate = custom_config_path.with_name(f"{custom_config_path.stem}_config_{counter}{suffix}")
+        counter += 1
+    return candidate
 
 
 def sync_senpai_profile_files_to_test_files(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot | None = None) -> None:
@@ -452,10 +612,14 @@ def _delete_missing_senpai_projects(user: CustomUser, snapshot: SenpaiWorkspaceS
             project.delete()
 
 
-def _delete_missing_senpai_connectors(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot) -> None:
-    """Delete connectors only when authoritative assets are missing."""
+def _delete_missing_senpai_connectors(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot | None = None) -> None:
+    """Delete connector rows whose assistant-visible YAML files no longer exist."""
     media_root = Path(settings.MEDIA_ROOT)
-    for connector in ChatbotConnector.objects.filter(owner=user, id__in=snapshot.connector_ids).iterator():
+    connectors = ChatbotConnector.objects.filter(owner=user)
+    if snapshot is not None:
+        connectors = connectors.filter(id__in=snapshot.connector_ids)
+
+    for connector in connectors.iterator():
         export_path = media_root / get_connector_export_relative_path(user.id, connector.id, connector.name)
         custom_config_missing = bool(connector.custom_config_file) and not _path_exists_for_sync(
             Path(connector.custom_config_file.path)
@@ -465,11 +629,8 @@ def _delete_missing_senpai_connectors(user: CustomUser, snapshot: SenpaiWorkspac
             connector.delete()
             continue
         if not _path_exists_for_sync(export_path):
-            logger.warning(
-                "Connector %s export YAML is missing; regenerating from database state instead of deleting",
-                connector.pk,
-            )
-            sync_connector_export_file(connector)
+            logger.info("Deleting connector %s because its Senpai export YAML is missing", connector.pk)
+            connector.delete()
 
 
 def _delete_missing_senpai_rule_files(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot) -> None:
