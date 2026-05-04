@@ -430,7 +430,9 @@ def _register_existing_senpai_connector_files(user: CustomUser, connectors_root:
         )
         source_connector_path = _move_custom_config_if_it_collides_with_export(user, connector, connector_path)
         sync_connector_export_file(connector)
-        canonical_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(user.id, connector.id, connector.name)
+        canonical_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(
+            user.id, connector.id, connector.name
+        )
         if (
             connector_data["technology"] != "custom"
             and source_connector_path != canonical_path
@@ -441,7 +443,9 @@ def _register_existing_senpai_connector_files(user: CustomUser, connectors_root:
 
 def _iter_connector_yaml_files(connectors_root: Path) -> list[Path]:
     """Return sorted connector YAML files directly under the user's connector directory."""
-    return sorted(path for path in connectors_root.iterdir() if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS)
+    return sorted(
+        path for path in connectors_root.iterdir() if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS
+    )
 
 
 def _is_known_connector_file(user: CustomUser, relative_path: str) -> bool:
