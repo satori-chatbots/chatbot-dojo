@@ -526,10 +526,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     } catch (error) {
       if (isMountedReference.current) {
         setSelectedModelKey(conversation?.assistant_model || "");
-        showToast(
-          "error",
-          error.message || "Failed to update assistant model",
-        );
+        showToast("error", error.message || "Failed to update assistant model");
       }
     } finally {
       if (isMountedReference.current) {
