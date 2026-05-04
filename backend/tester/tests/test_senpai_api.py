@@ -28,6 +28,7 @@ from tester.senpai import (
     SenpaiWorkspaceSnapshot,
     get_or_create_senpai_conversation,
     sync_database_records_to_senpai_workspace,
+    sync_senpai_connector_files_to_database,
     sync_senpai_profile_files_to_test_files,
     sync_senpai_workspace_to_database,
 )
@@ -313,8 +314,8 @@ class SenpaiConversationAPITests(TestCase):
 
         self.assertFalse(Project.objects.filter(pk=project.pk).exists())  # noqa: PT009
 
-    def test_sync_regenerates_deleted_connector_export(self) -> None:
-        """Missing connector exports should be regenerated instead of deleting DB rows."""
+    def test_sync_removes_deleted_connector_export(self) -> None:
+        """Missing connector exports should remove the matching connector row."""
         connector = ChatbotConnector.objects.create(
             name="Primary Connector",
             technology="taskyto",
@@ -328,8 +329,81 @@ class SenpaiConversationAPITests(TestCase):
         export_path.unlink()
         sync_senpai_workspace_to_database(self.user, snapshot)
 
-        self.assertTrue(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
+        self.assertFalse(ChatbotConnector.objects.filter(pk=connector.pk).exists())  # noqa: PT009
+        self.assertFalse(export_path.exists())  # noqa: PT009
+
+    def test_sync_registers_assistant_created_connector_export(self) -> None:
+        """Connector YAML files created by the assistant should appear in the database."""
+        connectors_root = self.media_root / "users" / f"user_{self.user.id}" / "connectors"
+        connectors_root.mkdir(parents=True, exist_ok=True)
+        connector_path = connectors_root / "assistant-connector.yaml"
+        connector_path.write_text(
+            "name: Assistant Connector\ntechnology: taskyto\nparameters:\n  endpoint: http://localhost:8080\n",
+            encoding="utf-8",
+        )
+
+        sync_senpai_connector_files_to_database(self.user)
+
+        connector = ChatbotConnector.objects.get(owner=self.user, name="Assistant Connector")
+        self.assertEqual(connector.technology, "taskyto")  # noqa: PT009
+        self.assertEqual(connector.parameters, {"endpoint": "http://localhost:8080"})  # noqa: PT009
+
+    def test_sync_registers_assistant_created_custom_connector_config(self) -> None:
+        """Custom connector configs saved by Senpai should appear in the connector dashboard."""
+        connectors_root = self.media_root / "users" / f"user_{self.user.id}" / "connectors"
+        connectors_root.mkdir(parents=True, exist_ok=True)
+        connector_path = connectors_root / "echo-bot.yaml"
+        connector_path.write_text(
+            (
+                'name: "Echo Bot"\n'
+                'base_url: "https://postman-echo.com"\n'
+                "send_message:\n"
+                '  path: "/post"\n'
+                '  method: "POST"\n'
+                "  payload_template:\n"
+                '    message: "{user_msg}"\n'
+                'response_path: "json.message"\n'
+            ),
+            encoding="utf-8",
+        )
+
+        sync_senpai_connector_files_to_database(self.user)
+
+        connector = ChatbotConnector.objects.get(owner=self.user, name="Echo Bot")
+        export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id, connector.name)
+        self.assertEqual(connector.technology, "custom")  # noqa: PT009
+        self.assertEqual(connector.parameters, {})  # noqa: PT009
+        self.assertEqual(connector.custom_config_file.name, f"users/user_{self.user.id}/connectors/echo-bot.yaml")  # noqa: PT009
         self.assertTrue(export_path.exists())  # noqa: PT009
+
+    def test_sync_moves_custom_connector_config_when_filename_matches_export(self) -> None:
+        """A custom config must not be overwritten when its filename matches the generated export."""
+        connectors_root = self.media_root / "users" / f"user_{self.user.id}" / "connectors"
+        connectors_root.mkdir(parents=True, exist_ok=True)
+        connector_path = connectors_root / "Echo_Bot.yaml"
+        connector_path.write_text(
+            (
+                'name: "Echo Bot"\n'
+                'base_url: "https://postman-echo.com"\n'
+                "send_message:\n"
+                '  path: "/post"\n'
+                "  payload_template:\n"
+                '    message: "{user_msg}"\n'
+                'response_path: "json.message"\n'
+            ),
+            encoding="utf-8",
+        )
+
+        sync_senpai_connector_files_to_database(self.user)
+
+        connector = ChatbotConnector.objects.get(owner=self.user, name="Echo Bot")
+        export_path = self.media_root / get_connector_export_relative_path(self.user.id, connector.id, connector.name)
+        custom_config_path = Path(connector.custom_config_file.path)
+        self.assertNotEqual(custom_config_path, export_path)  # noqa: PT009
+        self.assertTrue(custom_config_path.exists())  # noqa: PT009
+        self.assertTrue(export_path.exists())  # noqa: PT009
+        self.assertIn("base_url", custom_config_path.read_text(encoding="utf-8"))  # noqa: PT009
+        self.assertIn("technology: custom", export_path.read_text(encoding="utf-8"))  # noqa: PT009
 
     def test_sync_removes_connector_when_custom_config_is_deleted(self) -> None:
         """A deleted custom config file is authoritative enough to remove the connector row."""
