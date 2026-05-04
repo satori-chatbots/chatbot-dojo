@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import {
   assignSenpaiApiKey,
+  fetchSenpaiAssistantModels,
   initializeSenpaiConversation,
   resolveSenpaiApprovals,
   sendSenpaiMessage,
@@ -250,8 +251,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const [isSending, setIsSending] = useState(false);
   const [isRefreshingThread, setIsRefreshingThread] = useState(false);
   const [isUpdatingApiKey, setIsUpdatingApiKey] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedApiKeyKey, setSelectedApiKeyKey] = useState("none");
+  const [selectedModelKey, setSelectedModelKey] = useState("");
+  const [assistantModels, setAssistantModels] = useState([]);
+  const [modelSource, setModelSource] = useState("");
   const [hasUnreadAssistantMessage, setHasUnreadAssistantMessage] =
     useState(false);
 
@@ -278,6 +283,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         : "none",
     );
   }, [conversation?.assistant_api_key?.id]);
+
+  useEffect(() => {
+    setSelectedModelKey(conversation?.assistant_model || "");
+  }, [conversation?.assistant_model]);
 
   const loadConversation = useCallback(
     async ({ forceNew = false, showFullSpinner = false } = {}) => {
@@ -427,6 +436,108 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     }
   };
 
+  useEffect(() => {
+    if (selectedApiKeyKey === "none") {
+      setAssistantModels([]);
+      setModelSource("");
+      setSelectedModelKey("");
+      return;
+    }
+
+    let ignoreResult = false;
+    setIsLoadingModels(true);
+
+    const loadModels = async () => {
+      try {
+        const data = await fetchSenpaiAssistantModels(selectedApiKeyKey);
+        if (ignoreResult || !isMountedReference.current) {
+          return;
+        }
+
+        const models = Array.isArray(data.models) ? data.models : [];
+        setAssistantModels(models);
+        setModelSource(data.source || "");
+
+        const currentModel = conversation?.assistant_model || "";
+        const hasCurrentModel = models.some(
+          (model) => model.id === currentModel,
+        );
+        if (currentModel && hasCurrentModel) {
+          setSelectedModelKey(currentModel);
+          return;
+        }
+
+        const providerDefaultModel = data.default_model || "";
+        const defaultModel = models.some(
+          (model) => model.id === providerDefaultModel,
+        )
+          ? providerDefaultModel
+          : models[0]?.id || providerDefaultModel;
+        setSelectedModelKey(defaultModel);
+        if (defaultModel && defaultModel !== currentModel) {
+          const update = await assignSenpaiApiKey(
+            Number(selectedApiKeyKey),
+            defaultModel,
+          );
+          if (!ignoreResult && isMountedReference.current) {
+            setConversation(update.conversation);
+          }
+        }
+      } catch (error) {
+        if (!ignoreResult && isMountedReference.current) {
+          setAssistantModels([]);
+          setModelSource("");
+          showToast(
+            "error",
+            error.message || "Failed to load assistant models",
+          );
+        }
+      } finally {
+        if (!ignoreResult && isMountedReference.current) {
+          setIsLoadingModels(false);
+        }
+      }
+    };
+
+    void loadModels();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, [conversation?.assistant_model, selectedApiKeyKey, showToast]);
+
+  const handleModelChange = async (keys) => {
+    const nextModel = [...keys][0] || "";
+    if (!selectedApiKey || !nextModel) {
+      return;
+    }
+
+    setSelectedModelKey(nextModel);
+    setIsUpdatingApiKey(true);
+    try {
+      const data = await assignSenpaiApiKey(selectedApiKey.id, nextModel);
+      if (!isMountedReference.current) {
+        return;
+      }
+
+      setConversation(data.conversation);
+      shouldFocusComposerReference.current = true;
+      showToast("success", "Assistant model updated");
+    } catch (error) {
+      if (isMountedReference.current) {
+        setSelectedModelKey(conversation?.assistant_model || "");
+        showToast(
+          "error",
+          error.message || "Failed to update assistant model",
+        );
+      }
+    } finally {
+      if (isMountedReference.current) {
+        setIsUpdatingApiKey(false);
+      }
+    }
+  };
+
   const selectedApiKey = supportedApiKeys.find(
     (apiKey) => String(apiKey.id) === selectedApiKeyKey,
   );
@@ -434,7 +545,11 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     (message) => message.role === "approval",
   );
   const hasPendingRequest =
-    isBootstrapping || isRefreshingThread || isSending || isUpdatingApiKey;
+    isBootstrapping ||
+    isRefreshingThread ||
+    isSending ||
+    isUpdatingApiKey ||
+    isLoadingModels;
   const isComposerDisabled =
     isBootstrapping ||
     isRefreshingThread ||
@@ -687,6 +802,37 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       ))}
     </Select>
   );
+
+  const modelSelector = selectedApiKey ? (
+    <Select
+      label="Assistant model"
+      selectedKeys={selectedModelKey ? new Set([selectedModelKey]) : new Set()}
+      selectionMode="single"
+      onSelectionChange={handleModelChange}
+      isDisabled={
+        isUpdatingApiKey || isLoadingModels || assistantModels.length === 0
+      }
+      isLoading={isLoadingModels}
+      variant="bordered"
+      description={
+        modelSource === "fallback"
+          ? "Using curated defaults because provider model lookup was unavailable."
+          : "Choose one of the models available for this key."
+      }
+      renderValue={() => {
+        const selectedModel = assistantModels.find(
+          (model) => model.id === selectedModelKey,
+        );
+        return selectedModel ? selectedModel.name : selectedModelKey;
+      }}
+    >
+      {assistantModels.map((model) => (
+        <SelectItem key={model.id} value={model.id}>
+          {model.name}
+        </SelectItem>
+      ))}
+    </Select>
+  ) : undefined;
 
   return (
     <>
@@ -950,7 +1096,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                       </div>
                     </div>
 
-                    <div className="mt-5">{apiKeySelector}</div>
+                    <div className="mt-5 space-y-4">
+                      {apiKeySelector}
+                      {modelSelector}
+                    </div>
 
                     {supportedApiKeys.length === 0 && (
                       <p className="mt-3 text-sm text-warning">
@@ -1007,7 +1156,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             <>
               <ModalHeader>Senpai Settings</ModalHeader>
               <ModalBody>
-                {apiKeySelector}
+                <div className="space-y-4">
+                  {apiKeySelector}
+                  {modelSelector}
+                </div>
                 {supportedApiKeys.length === 0 && (
                   <p className="text-sm text-warning">
                     No compatible API keys found. Add one in your profile first.

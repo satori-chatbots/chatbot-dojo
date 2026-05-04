@@ -6,12 +6,18 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 from uuid import uuid4
 
 import yaml
 from django.conf import settings
 from langchain.chat_models import init_chat_model
+from openai import OpenAI
+
+try:
+    from google import genai
+except ModuleNotFoundError:
+    genai = None  # type: ignore[assignment]
 
 try:
     from senpai_assistant import create_assistant_for_paths
@@ -51,6 +57,19 @@ if TYPE_CHECKING:
 DEFAULT_ASSISTANT_MODELS = {
     "openai": ("gpt-4o-mini", "openai"),
     "gemini": ("gemini-2.5-flash", "google_genai"),
+}
+FALLBACK_ASSISTANT_MODELS = {
+    "openai": [
+        {"id": "gpt-4o", "name": "GPT-4o"},
+        {"id": "gpt-4o-mini", "name": "GPT-4o Mini"},
+        {"id": "gpt-4.1", "name": "GPT-4.1"},
+        {"id": "gpt-4.1-mini", "name": "GPT-4.1 Mini"},
+        {"id": "gpt-4.1-nano", "name": "GPT-4.1 Nano"},
+    ],
+    "gemini": [
+        {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash"},
+        {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash"},
+    ],
 }
 YAML_EXTENSIONS = {".yaml", ".yml"}
 _SENPAI_TOOL_RESOLUTION_PATCHED = False
@@ -121,7 +140,128 @@ def warmup_senpai_embedding_model() -> None:
     get_embedding("warmup")
 
 
-def build_chat_model_for_user_api_key(api_key: UserAPIKey) -> BaseChatModel:
+def get_default_assistant_model(provider: str) -> str:
+    """Return the default Senpai assistant model for a supported provider."""
+    provider_config = DEFAULT_ASSISTANT_MODELS.get(provider)
+    return provider_config[0] if provider_config is not None else ""
+
+
+def get_fallback_assistant_models(provider: str) -> list[dict[str, str]]:
+    """Return curated chat-capable model options for a provider."""
+    return FALLBACK_ASSISTANT_MODELS.get(provider, [])
+
+
+def _format_model_name(model_id: str) -> str:
+    """Build a readable label from a provider model id."""
+    return model_id.replace("-", " ").replace("_", " ").title()
+
+
+def _deduplicate_models(models: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Remove duplicate model IDs while preserving order."""
+    seen_model_ids: set[str] = set()
+    unique_models = []
+    for model in models:
+        model_id = model["id"]
+        if model_id in seen_model_ids:
+            continue
+        seen_model_ids.add(model_id)
+        unique_models.append(model)
+    return unique_models
+
+
+def _is_openai_chat_model(model_id: str) -> bool:
+    """Return whether an OpenAI model id looks usable for chat responses."""
+    prefixes = ("gpt-", "chatgpt-", "o")
+    excluded_fragments = ("audio", "embedding", "image", "moderation", "realtime", "search", "tts", "transcribe")
+    return model_id.startswith(prefixes) and not any(fragment in model_id for fragment in excluded_fragments)
+
+
+def _list_openai_assistant_models(api_key: str) -> list[dict[str, str]]:
+    """List chat-oriented OpenAI models visible to an API key."""
+    client = OpenAI(api_key=api_key)
+    models = [
+        {"id": model.id, "name": _format_model_name(model.id)}
+        for model in client.models.list()
+        if isinstance(model.id, str) and _is_openai_chat_model(model.id)
+    ]
+    return sorted(_deduplicate_models(models), key=lambda model: model["id"])
+
+
+def _normalise_gemini_model_id(model_name: str) -> str:
+    """Convert Gemini API model names into LangChain-compatible ids."""
+    return model_name.removeprefix("models/")
+
+
+def _supports_gemini_generate_content(model: Any) -> bool:  # noqa: ANN401
+    """Return whether a Gemini model supports text generation."""
+    supported_actions = getattr(model, "supported_actions", None) or getattr(model, "supported_generation_methods", None)
+    return supported_actions is None or "generateContent" in supported_actions
+
+
+def _list_gemini_assistant_models(api_key: str) -> list[dict[str, str]]:
+    """List Gemini models visible to an API key."""
+    if genai is None:
+        return []
+
+    client = genai.Client(api_key=api_key)
+    models = []
+    for model in client.models.list():
+        raw_name = getattr(model, "name", "")
+        if not isinstance(raw_name, str) or not raw_name:
+            continue
+        model_id = _normalise_gemini_model_id(raw_name)
+        if model_id.startswith("gemini-") and _supports_gemini_generate_content(model):
+            display_name = getattr(model, "display_name", "") or _format_model_name(model_id)
+            models.append({"id": model_id, "name": str(display_name)})
+    return sorted(_deduplicate_models(models), key=lambda model: model["id"])
+
+
+def _is_provider_auth_error(exc: Exception) -> bool:
+    """Return whether a provider error looks like an invalid or unauthorized key."""
+    status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    if status_code in {401, 403}:
+        return True
+
+    error_text = str(exc).casefold()
+    return any(
+        marker in error_text
+        for marker in (
+            "api key not valid",
+            "authentication",
+            "invalid api key",
+            "permission denied",
+            "unauthorized",
+        )
+    )
+
+
+def list_available_assistant_models_for_user_api_key(api_key: UserAPIKey) -> tuple[list[dict[str, str]], str]:
+    """Return provider models visible to a stored API key, falling back to curated options."""
+    decrypted_api_key = api_key.get_api_key()
+    if not decrypted_api_key:
+        msg = "The selected assistant API key is empty."
+        raise RuntimeError(msg)
+
+    try:
+        if api_key.provider == "openai":
+            models = _list_openai_assistant_models(decrypted_api_key)
+        elif api_key.provider == "gemini":
+            models = _list_gemini_assistant_models(decrypted_api_key)
+        else:
+            models = []
+    except Exception as exc:
+        logger.exception("Failed to fetch assistant models for api_key_id=%s provider=%s", api_key.pk, api_key.provider)
+        if _is_provider_auth_error(exc):
+            msg = "Unable to list models for this API key. Check that the key is valid and has model-list permissions."
+            raise RuntimeError(msg) from exc
+        models = []
+
+    if models:
+        return models, "provider"
+    return get_fallback_assistant_models(api_key.provider), "fallback"
+
+
+def build_chat_model_for_user_api_key(api_key: UserAPIKey, model_name: str | None = None) -> BaseChatModel:
     """Build the assistant chat model using the selected stored API key."""
     provider_config = DEFAULT_ASSISTANT_MODELS.get(api_key.provider)
     if provider_config is None:
@@ -133,9 +273,9 @@ def build_chat_model_for_user_api_key(api_key: UserAPIKey) -> BaseChatModel:
         msg = "The selected assistant API key is empty."
         raise RuntimeError(msg)
 
-    model_name, model_provider = provider_config
+    default_model_name, model_provider = provider_config
     return init_chat_model(
-        model_name,
+        model_name or default_model_name,
         model_provider=model_provider,
         api_key=decrypted_api_key,
         temperature=0.3,
@@ -198,7 +338,7 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assist
     runtime_root = get_senpai_runtime_root()
     embedding_model_cache_root = get_senpai_embedding_model_cache_root()
     configure_embedding_model_environment(embedding_model_cache_root)
-    model = build_chat_model_for_user_api_key(conversation.assistant_api_key)
+    model = build_chat_model_for_user_api_key(conversation.assistant_api_key, conversation.assistant_model)
 
     logger.debug(
         (

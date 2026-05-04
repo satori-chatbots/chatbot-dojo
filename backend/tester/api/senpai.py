@@ -13,7 +13,9 @@ from rest_framework.views import APIView
 from tester.models import Project, UserAPIKey
 from tester.senpai import (
     build_assistant_for_conversation,
+    get_default_assistant_model,
     get_or_create_senpai_conversation,
+    list_available_assistant_models_for_user_api_key,
     sync_database_records_to_senpai_workspace,
     sync_senpai_workspace_to_database,
 )
@@ -208,9 +210,11 @@ class SenpaiConversationAPIKeyView(APIView):
         conversation, _created_new_thread = get_or_create_senpai_conversation(request.user)
         if "assistant_api_key_id" in serializer.validated_data:
             assistant_api_key_id = serializer.validated_data["assistant_api_key_id"]
+            previous_api_key_id = conversation.assistant_api_key_id
 
             if assistant_api_key_id is None:
                 conversation.assistant_api_key = None
+                conversation.assistant_model = ""
             else:
                 try:
                     conversation.assistant_api_key = UserAPIKey.objects.get(
@@ -222,9 +226,54 @@ class SenpaiConversationAPIKeyView(APIView):
                         {"error": "The selected API key does not belong to the authenticated user."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
+                if previous_api_key_id != conversation.assistant_api_key_id or not conversation.assistant_model:
+                    conversation.assistant_model = get_default_assistant_model(conversation.assistant_api_key.provider)
 
-            conversation.save(update_fields=["assistant_api_key", "updated_at"])
+        if "assistant_model" in serializer.validated_data:
+            assistant_model = serializer.validated_data["assistant_model"]
+            conversation.assistant_model = (assistant_model or "").strip()
+
+        conversation.save(update_fields=["assistant_api_key", "assistant_model", "updated_at"])
         return Response(
             {"conversation": SenpaiConversationSerializer(conversation).data},
+            status=status.HTTP_200_OK,
+        )
+
+
+class SenpaiAssistantModelsView(APIView):
+    """List model choices available to a stored assistant API key."""
+
+    permission_classes: ClassVar = [permissions.IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        """Return available assistant models for an authenticated user's API key."""
+        raw_api_key_id = request.query_params.get("api_key_id")
+        if not raw_api_key_id:
+            return Response({"error": "api_key_id parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            api_key_id = int(raw_api_key_id)
+        except ValueError:
+            return Response({"error": "api_key_id must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            api_key = UserAPIKey.objects.get(id=api_key_id, user=request.user)
+        except UserAPIKey.DoesNotExist:
+            return Response(
+                {"error": "The selected API key does not belong to the authenticated user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            models, source = list_available_assistant_models_for_user_api_key(api_key)
+        except RuntimeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "models": models,
+                "source": source,
+                "default_model": get_default_assistant_model(api_key.provider),
+            },
             status=status.HTTP_200_OK,
         )

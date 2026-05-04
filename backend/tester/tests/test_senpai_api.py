@@ -701,6 +701,78 @@ class SenpaiConversationAPITests(TestCase):
             response.data["conversation"]["assistant_api_key"]["id"],
             self.api_key.id,
         )
+        self.assertEqual(response.data["conversation"]["assistant_model"], "gpt-4o-mini")  # noqa: PT009
+
+    def test_api_key_endpoint_assigns_selected_assistant_model(self) -> None:
+        """Users should be able to store the model Senpai should use."""
+        response = self.client.patch(
+            "/api/senpai/conversation/api-key/",
+            {
+                "assistant_api_key_id": self.api_key.id,
+                "assistant_model": "gpt-4.1-mini",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        conversation = SenpaiConversation.objects.get(user=self.user)
+        self.assertEqual(conversation.assistant_api_key, self.api_key)  # noqa: PT009
+        self.assertEqual(conversation.assistant_model, "gpt-4.1-mini")  # noqa: PT009
+        self.assertEqual(response.data["conversation"]["assistant_model"], "gpt-4.1-mini")  # noqa: PT009
+
+    def test_api_key_endpoint_resets_model_when_provider_key_changes(self) -> None:
+        """Changing to a different provider key should reset the selected model."""
+        gemini_key = UserAPIKey.objects.create(
+            user=self.user,
+            name="Gemini Key",
+            provider="gemini",
+            api_key_encrypted="",
+        )
+        gemini_key.set_api_key("gemini-test")
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+            assistant_model="gpt-4.1-mini",
+        )
+
+        response = self.client.patch(
+            "/api/senpai/conversation/api-key/",
+            {"assistant_api_key_id": gemini_key.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        conversation = SenpaiConversation.objects.get(user=self.user)
+        self.assertEqual(conversation.assistant_api_key, gemini_key)  # noqa: PT009
+        self.assertEqual(conversation.assistant_model, "gemini-2.5-flash")  # noqa: PT009
+
+    def test_api_key_endpoint_keeps_thread_when_provider_changes(self) -> None:
+        """Provider changes should preserve the current assistant thread context."""
+        gemini_key = UserAPIKey.objects.create(
+            user=self.user,
+            name="Gemini Key",
+            provider="gemini",
+            api_key_encrypted="",
+        )
+        gemini_key.set_api_key("gemini-test")
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-openai",
+            assistant_api_key=self.api_key,
+            assistant_model="gpt-4.1-mini",
+        )
+
+        response = self.client.patch(
+            "/api/senpai/conversation/api-key/",
+            {"assistant_api_key_id": gemini_key.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        conversation = SenpaiConversation.objects.get(user=self.user)
+        self.assertEqual(conversation.thread_id, "thread-openai")  # noqa: PT009
+        self.assertEqual(conversation.assistant_api_key, gemini_key)  # noqa: PT009
 
     def test_api_key_endpoint_omitted_field_keeps_existing_assignment(self) -> None:
         """Omitting assistant_api_key_id should not clear the current assignment."""
@@ -741,4 +813,33 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
         conversation = SenpaiConversation.objects.get(user=self.user)
         self.assertIsNone(conversation.assistant_api_key)  # noqa: PT009
+        self.assertEqual(conversation.assistant_model, "")  # noqa: PT009
         self.assertIsNone(response.data["conversation"]["assistant_api_key"])  # noqa: PT009
+
+    @patch("tester.api.senpai.list_available_assistant_models_for_user_api_key")
+    def test_assistant_models_endpoint_returns_models_for_owned_api_key(self, list_models_mock: MagicMock) -> None:
+        """The model selector should receive models for the selected stored key."""
+        list_models_mock.return_value = ([{"id": "gpt-4o-mini", "name": "GPT-4o Mini"}], "provider")
+
+        response = self.client.get(f"/api/senpai/assistant-models/?api_key_id={self.api_key.id}")
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(response.data["models"], [{"id": "gpt-4o-mini", "name": "GPT-4o Mini"}])  # noqa: PT009
+        self.assertEqual(response.data["source"], "provider")  # noqa: PT009
+        self.assertEqual(response.data["default_model"], "gpt-4o-mini")  # noqa: PT009
+        list_models_mock.assert_called_once_with(self.api_key)
+
+    def test_assistant_models_endpoint_rejects_other_users_api_key(self) -> None:
+        """Users should not be able to inspect models for another user's stored key."""
+        other_user = CustomUser.objects.create_user(email="other@example.com")
+        other_key = UserAPIKey.objects.create(
+            user=other_user,
+            name="Other Key",
+            provider="openai",
+            api_key_encrypted="",
+        )
+        other_key.set_api_key("sk-other")
+
+        response = self.client.get(f"/api/senpai/assistant-models/?api_key_id={other_key.id}")
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
