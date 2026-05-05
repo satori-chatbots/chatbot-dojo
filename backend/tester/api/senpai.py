@@ -65,7 +65,9 @@ class SenpaiConversationInitializeView(APIView):
         force_new = serializer.validated_data["force_new"]
         conversation_id = serializer.validated_data.get("conversation_id")
         if conversation_id is not None and force_new:
-            raise ValidationError({"conversation_id": "Cannot select an existing conversation while forcing a new one."})
+            raise ValidationError(
+                {"conversation_id": "Cannot select an existing conversation while forcing a new one."}
+            )
 
         if conversation_id is not None:
             try:

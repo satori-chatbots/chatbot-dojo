@@ -530,7 +530,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 
   const handleConversationHistoryAction = useCallback(
     (conversationId) => {
-      if (!Number.isInteger(conversationId) || conversationId === conversation?.id) {
+      if (
+        !Number.isInteger(conversationId) ||
+        conversationId === conversation?.id
+      ) {
         return;
       }
 
@@ -857,7 +860,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                   isIconOnly
                   variant="light"
                   size="sm"
-                  isDisabled={hasPendingRequest || conversationHistory.length === 0}
+                  isDisabled={
+                    hasPendingRequest || conversationHistory.length === 0
+                  }
                   aria-label="Conversation history"
                 >
                   <History className="h-4 w-4" />
@@ -867,9 +872,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                 <div className="w-full py-2">
                   <div
                     className={`space-y-1 px-2 ${
-                      isHistoryExpanded
-                        ? "max-h-80 overflow-y-auto pr-1"
-                        : ""
+                      isHistoryExpanded ? "max-h-80 overflow-y-auto pr-1" : ""
                     }`}
                   >
                     {visibleConversationHistory.map((historyItem) => {
