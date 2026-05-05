@@ -35,6 +35,7 @@ export const ENDPOINTS = {
   LLM_PROVIDERS: `${API_PATH}/llm-providers/`,
   SENSEI_EXECUTION_STATUS: `${API_PATH}/sensei-execution-status/`,
   GENERATE_PROFILES: `${API_PATH}/generate-profiles/`,
+  CANCEL_TRACER_GENERATION: `${API_PATH}/tracer-generation-cancel/`,
   VALIDATE_TOKEN: `${API_PATH}/validate-token/`,
   TRACER_GENERATION_STATUS: `${API_PATH}/tracer-generation-status/`,
   ONGOING_GENERATION: `${API_PATH}/ongoing-generation/`,

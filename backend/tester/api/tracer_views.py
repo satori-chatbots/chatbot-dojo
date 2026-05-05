@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import psutil
+from celery import current_app
 from celery.result import AsyncResult
 from cryptography.fernet import InvalidToken
 from django.conf import settings
@@ -145,7 +147,7 @@ def generate_profiles(request: Request) -> Response:
 
 
 @api_view(["GET"])
-def check_tracer_generation_status(request: Request, celery_task_id: str) -> Response:
+def check_tracer_generation_status(request: Request, celery_task_id: str) -> Response:  # noqa: C901, PLR0911, PLR0912
     """Check the status of a TRACER generation task using Celery task ID and synchronize database status."""
     try:
         # Get the Celery task result
@@ -157,6 +159,25 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
             generation_task = ProfileGenerationTask.objects.get(celery_task_id=celery_task_id)
         except ProfileGenerationTask.DoesNotExist:
             logger.warning(f"No ProfileGenerationTask found for Celery task ID {celery_task_id}")
+
+        if generation_task and generation_task.status == "CANCELLED":
+            return Response(
+                {
+                    "status": "CANCELLED",
+                    "stage": "Execution cancelled by user",
+                    "progress": generation_task.progress_percentage,
+                    "generation_task_status": generation_task.status,
+                }
+            )
+        if generation_task and generation_task.status == "CANCELLING":
+            return Response(
+                {
+                    "status": "CANCELLING",
+                    "stage": "Cancelling execution",
+                    "progress": generation_task.progress_percentage,
+                    "generation_task_status": generation_task.status,
+                }
+            )
 
         if task_result.state == "PENDING":
             return Response(
@@ -225,6 +246,25 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
                     "generation_task_status": generation_task.status if generation_task else None,
                 }
             )
+        if task_result.state == "REVOKED":
+            if generation_task and generation_task.status in {"RUNNING", "CANCELLING"}:
+                generation_task.status = "CANCELLED"
+                generation_task.stage = "CANCELLED"
+                generation_task.error_message = "TRACER execution cancelled by user."
+                generation_task.save()
+                if generation_task.execution:
+                    generation_task.execution.status = "CANCELLED"
+                    generation_task.execution.process_id = None
+                    generation_task.execution.save(update_fields=["status", "process_id"])
+
+            return Response(
+                {
+                    "status": "CANCELLED",
+                    "stage": "Execution cancelled by user",
+                    "progress": generation_task.progress_percentage if generation_task else 0,
+                    "generation_task_status": generation_task.status if generation_task else None,
+                }
+            )
         return Response(
             {
                 "status": task_result.state,
@@ -237,6 +277,89 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
     except (ValueError, AttributeError, KeyError) as e:
         logger.error(f"Error checking TRACER generation status for Celery task {celery_task_id}: {e}")
         return Response({"error": "Error checking task status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["POST"])
+def cancel_tracer_generation(request: Request) -> Response:  # noqa: C901
+    """Cancel an ongoing TRACER generation without deleting its partial logs."""
+    execution_id = request.data.get("execution_id")
+
+    if not execution_id:
+        return Response({"error": "No execution ID provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        execution = ProfileExecution.objects.get(id=execution_id, execution_type="tracer")
+    except ProfileExecution.DoesNotExist:
+        return Response({"error": "TRACER execution not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if not request.user.is_authenticated or execution.project.owner != request.user:
+        return Response({"error": "You do not own this TRACER execution."}, status=status.HTTP_403_FORBIDDEN)
+
+    generation_task = execution.generation_tasks.order_by("-created_at").first()
+    if execution.status not in {"PENDING", "RUNNING", "CANCELLING"}:
+        return Response(
+            {"message": f"TRACER execution is not running (status: {execution.status})"},
+            status=status.HTTP_200_OK,
+        )
+
+    if generation_task:
+        generation_task.status = "CANCELLING"
+        generation_task.stage = "CANCELLED"
+        generation_task.error_message = "TRACER execution cancelled by user."
+        generation_task.save(update_fields=["status", "stage", "error_message", "updated_at"])
+
+        if generation_task.celery_task_id:
+            try:
+                current_app.control.revoke(generation_task.celery_task_id, terminate=False)
+            except (ValueError, AttributeError, KeyError) as e:
+                logger.warning(f"Could not revoke TRACER Celery task {generation_task.celery_task_id}: {e}")
+
+    execution.status = "CANCELLING"
+    execution.save(update_fields=["status"])
+
+    if execution.process_id:
+        _terminate_tracer_process(execution)
+
+    execution.refresh_from_db()
+    if execution.process_id is None or generation_task is None:
+        execution.status = "CANCELLED"
+        execution.save(update_fields=["status"])
+        if generation_task:
+            generation_task.status = "CANCELLED"
+            generation_task.save(update_fields=["status", "updated_at"])
+
+    return Response({"message": "TRACER execution cancellation requested"}, status=status.HTTP_200_OK)
+
+
+def _terminate_tracer_process(execution: ProfileExecution) -> None:
+    """Terminate the TRACER subprocess tree for an execution."""
+    try:
+        process = psutil.Process(execution.process_id)
+    except psutil.NoSuchProcess:
+        execution.process_id = None
+        execution.save(update_fields=["process_id"])
+        return
+    except psutil.Error as e:
+        logger.warning(f"Could not access TRACER process {execution.process_id}: {e}")
+        return
+
+    try:
+        children = process.children(recursive=True)
+        for child in children:
+            child.terminate()
+        process.terminate()
+
+        _, alive = psutil.wait_procs([*children, process], timeout=5)
+        for alive_process in alive:
+            alive_process.kill()
+        if alive:
+            psutil.wait_procs(alive, timeout=5)
+    except psutil.Error as e:
+        logger.warning(f"Could not terminate TRACER process {execution.process_id}: {e}")
+        return
+
+    execution.process_id = None
+    execution.save(update_fields=["process_id"])
 
 
 @api_view(["GET"])

@@ -37,6 +37,7 @@ import {
   fetchProfileExecutions,
   fetchTracerExecutions,
   deleteProfileExecution,
+  cancelTracerGeneration,
   fetchFiles,
   fetchSenseiCheckRules,
 } from "../api/file-api";
@@ -325,6 +326,42 @@ function Home() {
     [executions, reloadExecutions, reloadProfiles, showToast],
   );
 
+  const handleCancelExecution = useCallback(
+    async (executionId) => {
+      try {
+        const response = await cancelTracerGeneration(executionId);
+        showToast(
+          "success",
+          response.message || "TRACER cancellation requested",
+        );
+
+        setExecutions((previousExecutions) =>
+          previousExecutions.map((execution) =>
+            execution.id === executionId
+              ? { ...execution, status: "CANCELLING" }
+              : execution,
+          ),
+        );
+
+        await reloadExecutions();
+      } catch (error) {
+        console.error("Error cancelling TRACER execution:", error);
+        let errorMessage = "Error cancelling TRACER execution";
+        try {
+          const errorData = JSON.parse(error.message);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // Use default message if parsing fails
+        }
+        showToast("error", errorMessage);
+        throw error;
+      }
+    },
+    [reloadExecutions, showToast],
+  );
+
   // Loading state for the serverside validation of the execution name
   const [loadingValidation, setLoadingValidation] = useState(false);
 
@@ -375,32 +412,48 @@ function Home() {
         try {
           const status = await checkTracerGenerationStatus(celeryTaskId);
 
-          if (status.status === "SUCCESS") {
-            clearInterval(statusIntervalReference.current);
-            statusIntervalReference.current = undefined;
-            // Explicitly reload executions when generation completes
-            await reloadExecutions();
-            await reloadProfiles(); // Update setup progress
-            setIsGenerating(false);
-            showToast(
-              "success",
-              `Successfully generated ${status.generated_files || 0} profiles!`,
-            );
-          } else if (status.status === "FAILURE") {
-            clearInterval(statusIntervalReference.current);
-            statusIntervalReference.current = undefined;
-            // Reload executions to update the status in the UI
-            await reloadExecutions();
-            setIsGenerating(false);
-            const errorMessage =
-              status.error_message ||
-              "An error occurred during profile generation";
-            showToast("error", errorMessage);
-          } else {
-            // Update the stage information in the UI
-            setGenerationStage(status.stage || "Processing");
-            setGenerationProgress(status.progress || 0);
-            // Don't reload executions during progress updates to avoid page jumping
+          switch (status.status) {
+            case "SUCCESS": {
+              clearInterval(statusIntervalReference.current);
+              statusIntervalReference.current = undefined;
+              // Explicitly reload executions when generation completes
+              await reloadExecutions();
+              await reloadProfiles(); // Update setup progress
+              setIsGenerating(false);
+              showToast(
+                "success",
+                `Successfully generated ${status.generated_files || 0} profiles!`,
+              );
+              break;
+            }
+            case "FAILURE": {
+              clearInterval(statusIntervalReference.current);
+              statusIntervalReference.current = undefined;
+              // Reload executions to update the status in the UI
+              await reloadExecutions();
+              setIsGenerating(false);
+              const errorMessage =
+                status.error_message ||
+                "An error occurred during profile generation";
+              showToast("error", errorMessage);
+              break;
+            }
+            case "CANCELLED": {
+              clearInterval(statusIntervalReference.current);
+              statusIntervalReference.current = undefined;
+              await reloadExecutions();
+              setIsGenerating(false);
+              setGenerationStage("");
+              setGenerationProgress(0);
+              showToast("success", "TRACER execution cancelled");
+              break;
+            }
+            default: {
+              // Update the stage information in the UI
+              setGenerationStage(status.stage || "Processing");
+              setGenerationProgress(status.progress || 0);
+              // Don't reload executions during progress updates to avoid page jumping
+            }
           }
         } catch {
           clearInterval(statusIntervalReference.current);
@@ -1198,6 +1251,7 @@ function Home() {
                             onProfileSelect={selectFile}
                             showAll={expandedExecutions.has(execution.id)}
                             onToggleShowAll={toggleShowAllProfiles}
+                            onCancelExecution={handleCancelExecution}
                             onDeleteExecution={handleDeleteExecution}
                           />
                         ))}

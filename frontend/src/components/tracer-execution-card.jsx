@@ -12,6 +12,7 @@ import {
   ChevronUp,
   Trash2,
   Terminal,
+  Square,
 } from "lucide-react";
 import { getErrorTypeDisplay } from "../utils/error-types";
 import { getStatusLabel } from "../utils/status-labels";
@@ -45,6 +46,7 @@ const TracerExecutionCard = ({
   onViewGraph,
   onViewProfiles,
   onViewLogs,
+  onCancel,
   onDelete,
   getStatusIcon,
   getStatusColor,
@@ -55,6 +57,8 @@ const TracerExecutionCard = ({
 
   const isCompleted = execution.status === "SUCCESS";
   const isRunning = execution.status === "RUNNING";
+  const isCancelling = execution.status === "CANCELLING";
+  const isActive = isRunning || isCancelling;
   const hasAnalysis = execution.has_analysis && execution.analysis;
   const hasActions =
     (isCompleted && hasAnalysis) ||
@@ -125,7 +129,7 @@ const TracerExecutionCard = ({
                   )}
 
                   {/* Running Progress - Inline on small screens */}
-                  {isRunning && (
+                  {isActive && (
                     <div className="flex items-center gap-2 ml-2">
                       <Zap className="w-4 h-4 text-primary animate-pulse" />
                       <div className="flex flex-col gap-1 min-w-0">
@@ -234,6 +238,20 @@ const TracerExecutionCard = ({
                         onPress={() => onViewLogs(execution)}
                       >
                         <Terminal className="w-4 h-4" />
+                      </Button>
+                    </Tooltip>
+                  )}
+
+                  {isRunning && onCancel && (
+                    <Tooltip content="Cancel TRACER Execution">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => onCancel(execution)}
+                      >
+                        <Square className="w-4 h-4 fill-current" />
                       </Button>
                     </Tooltip>
                   )}
@@ -376,6 +394,20 @@ const TracerExecutionCard = ({
                       onPress={() => onViewLogs(execution)}
                     >
                       <Terminal className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+                )}
+
+                {isRunning && onCancel && (
+                  <Tooltip content="Cancel TRACER Execution">
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      color="danger"
+                      onPress={() => onCancel(execution)}
+                    >
+                      <Square className="w-4 h-4 fill-current" />
                     </Button>
                   </Tooltip>
                 )}
@@ -590,11 +622,25 @@ const TracerExecutionCard = ({
                 )}
               </div>
             )}
+
+            {isRunning && onCancel && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  color="danger"
+                  variant="flat"
+                  startContent={<Square className="w-4 h-4 fill-current" />}
+                  onPress={() => onCancel(execution)}
+                >
+                  Cancel Execution
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Status Messages for Non-completed */}
-        {!isCompleted && !isRunning && (
+        {!isCompleted && !isActive && (
           <div className="mt-2 text-xs text-default-500 italic">
             {execution.status === "FAILURE"
               ? "Execution failed"

@@ -20,12 +20,14 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
+  CircleX,
   Loader,
 } from "lucide-react";
 import {
   fetchTracerExecutions,
   deleteProfileExecution,
   checkTracerGenerationStatus,
+  cancelTracerGeneration,
 } from "../api/file-api";
 import TracerExecutionCard from "../components/tracer-execution-card";
 import InlineReportViewer from "../components/inline-report-viewer";
@@ -51,6 +53,12 @@ const getStatusColor = (status) => {
     case "PENDING": {
       return "warning";
     }
+    case "CANCELLING": {
+      return "warning";
+    }
+    case "CANCELLED": {
+      return "danger";
+    }
     default: {
       return "default";
     }
@@ -66,6 +74,11 @@ const TracerDashboard = () => {
   const [uniqueProjects, setUniqueProjects] = useState([]);
   const [viewingContent, setViewingContent] = useState();
   const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    execution: undefined,
+    isLoading: false,
+  });
+  const [cancelConfirm, setCancelConfirm] = useState({
     isOpen: false,
     execution: undefined,
     isLoading: false,
@@ -90,7 +103,7 @@ const TracerDashboard = () => {
   // Cleanup polling intervals on unmount
   useEffect(() => {
     return () => {
-      for (const intervalId of pollingIntervals) {
+      for (const intervalId of pollingIntervals.values()) {
         clearInterval(intervalId);
       }
     };
@@ -100,7 +113,12 @@ const TracerDashboard = () => {
   const startPollingExecution = useCallback(
     async (execution) => {
       // Only poll if authenticated and execution is running
-      if (!user || !execution.id || execution.status !== "RUNNING") return;
+      if (
+        !user ||
+        !execution.id ||
+        !["RUNNING", "CANCELLING"].includes(execution.status)
+      )
+        return;
 
       // Check if we're already polling this execution
       if (pollingIntervals.has(execution.id)) return;
@@ -132,7 +150,11 @@ const TracerDashboard = () => {
           );
 
           // Stop polling if completed or failed
-          if (status.status === "SUCCESS" || status.status === "FAILURE") {
+          if (
+            status.status === "SUCCESS" ||
+            status.status === "FAILURE" ||
+            status.status === "CANCELLED"
+          ) {
             clearInterval(intervalId);
             setPollingIntervals((prev) => {
               const newMap = new Map(prev);
@@ -140,13 +162,22 @@ const TracerDashboard = () => {
               return newMap;
             });
 
-            if (status.status === "SUCCESS") {
-              showToast("success", "TRACER execution succeeded!");
-            } else if (status.status === "FAILURE") {
-              const errorMessage =
-                status.error_message ||
-                "Unknown error occurred during execution";
-              showToast("error", "TRACER execution failed: " + errorMessage);
+            switch (status.status) {
+              case "SUCCESS": {
+                showToast("success", "TRACER execution succeeded!");
+                break;
+              }
+              case "FAILURE": {
+                const errorMessage =
+                  status.error_message ||
+                  "Unknown error occurred during execution";
+                showToast("error", "TRACER execution failed: " + errorMessage);
+                break;
+              }
+              case "CANCELLED": {
+                showToast("success", "TRACER execution cancelled");
+                break;
+              }
             }
           }
         } catch (error) {
@@ -194,7 +225,7 @@ const TracerDashboard = () => {
       // Start polling for any running executions (only for authenticated users)
       if (user && data.executions) {
         for (const execution of data.executions) {
-          if (execution.status === "RUNNING") {
+          if (["RUNNING", "CANCELLING"].includes(execution.status)) {
             startPollingExecution(execution);
           }
         }
@@ -277,6 +308,12 @@ const TracerDashboard = () => {
       case "PENDING": {
         return <Clock className="w-4 h-4 text-warning" />;
       }
+      case "CANCELLING": {
+        return <Clock className="w-4 h-4 text-warning" />;
+      }
+      case "CANCELLED": {
+        return <CircleX className="w-4 h-4 text-danger" />;
+      }
       default: {
         return <Clock className="w-4 h-4 text-default-400" />;
       }
@@ -291,6 +328,63 @@ const TracerDashboard = () => {
     },
     [user],
   );
+
+  const handleCancelExecution = useCallback(
+    (execution) => {
+      if (!user || !execution?.id || execution.status !== "RUNNING") return;
+      setCancelConfirm({ isOpen: true, execution, isLoading: false });
+    },
+    [user],
+  );
+
+  const closeCancelConfirm = () => {
+    if (cancelConfirm.isLoading) return;
+    setCancelConfirm({
+      isOpen: false,
+      execution: undefined,
+      isLoading: false,
+    });
+  };
+
+  const confirmCancelExecution = useCallback(async () => {
+    if (!cancelConfirm.execution?.id) return;
+
+    setCancelConfirm((previous) => ({ ...previous, isLoading: true }));
+    try {
+      const response = await cancelTracerGeneration(cancelConfirm.execution.id);
+      showToast("success", response.message || "Cancellation requested");
+      setExecutions((prevExecutions) =>
+        prevExecutions.map((execution) =>
+          execution.id === cancelConfirm.execution.id
+            ? {
+                ...execution,
+                status: "CANCELLING",
+                progress_stage: "Cancelling execution",
+              }
+            : execution,
+        ),
+      );
+      await loadTracerExecutions();
+      setCancelConfirm({
+        isOpen: false,
+        execution: undefined,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("Error cancelling TRACER execution:", error);
+      let errorMessage = "Error cancelling TRACER execution";
+      try {
+        const errorData = JSON.parse(error.message);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // ignore JSON parse failure
+      }
+      setCancelConfirm((previous) => ({ ...previous, isLoading: false }));
+      showToast("error", errorMessage);
+    }
+  }, [cancelConfirm.execution, showToast, loadTracerExecutions]);
 
   const closeDeleteConfirm = () => {
     if (deleteConfirm.isLoading) return;
@@ -384,6 +478,7 @@ const TracerDashboard = () => {
           onViewGraph={handleViewGraph}
           onViewProfiles={handleViewProfiles}
           onViewLogs={handleViewLogs}
+          onCancel={publicView ? undefined : handleCancelExecution}
           onDelete={publicView ? undefined : handleDeleteExecution} // Hide delete in public view
           getStatusIcon={getStatusIcon}
           getStatusColor={getStatusColor}
@@ -492,6 +587,8 @@ const TracerDashboard = () => {
                     RUNNING: "primary",
                     FAILURE: "danger",
                     PENDING: "warning",
+                    CANCELLING: "warning",
+                    CANCELLED: "danger",
                   };
                   return (
                     <div className="flex items-center gap-2">
@@ -540,6 +637,13 @@ const TracerDashboard = () => {
                   <div className="flex items-center gap-2">
                     <Chip color="warning" size="sm" variant="flat">
                       Pending
+                    </Chip>
+                  </div>
+                </SelectItem>
+                <SelectItem key="CANCELLED" value="CANCELLED">
+                  <div className="flex items-center gap-2">
+                    <Chip color="danger" size="sm" variant="flat">
+                      Cancelled
                     </Chip>
                   </div>
                 </SelectItem>
@@ -599,6 +703,7 @@ const TracerDashboard = () => {
               onViewGraph={handleViewGraph}
               onViewProfiles={handleViewProfiles}
               onViewLogs={handleViewLogs}
+              onCancel={publicView ? undefined : handleCancelExecution}
               onDelete={publicView ? undefined : handleDeleteExecution} // Hide delete in public view
               getStatusIcon={getStatusIcon}
               getStatusColor={getStatusColor}
@@ -650,6 +755,39 @@ const TracerDashboard = () => {
               isLoading={deleteConfirm.isLoading}
             >
               Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={cancelConfirm.isOpen} onOpenChange={closeCancelConfirm}>
+        <ModalContent>
+          <ModalHeader>Cancel TRACER Execution</ModalHeader>
+          <ModalBody>
+            <p>
+              Stop{" "}
+              <span className="font-semibold">
+                {cancelConfirm.execution?.execution_name ||
+                  "this TRACER execution"}
+              </span>
+              ? Partial logs will be kept for review.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeCancelConfirm}
+              isDisabled={cancelConfirm.isLoading}
+            >
+              Keep Running
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmCancelExecution}
+              isLoading={cancelConfirm.isLoading}
+            >
+              Cancel Execution
             </Button>
           </ModalFooter>
         </ModalContent>
