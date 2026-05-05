@@ -18,6 +18,7 @@ from tester.models import (
     Project,
     RuleFile,
     SenpaiConversation,
+    SenpaiMessage,
     SenseiCheckRule,
     TestFile,
     UserAPIKey,
@@ -67,8 +68,8 @@ class SenpaiConversationAPITests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-    def test_initialize_creates_single_conversation_and_user_directories(self) -> None:
-        """Initialization should create one reusable conversation plus Senpai folders."""
+    def test_initialize_creates_active_conversation_and_user_directories(self) -> None:
+        """Initialization should create one reusable active conversation plus Senpai folders."""
         first_response = self.client.post("/api/senpai/conversation/initialize/", {}, format="json")
         second_response = self.client.post("/api/senpai/conversation/initialize/", {}, format="json")
 
@@ -86,8 +87,8 @@ class SenpaiConversationAPITests(TestCase):
         self.assertTrue((user_root / "projects").is_dir())  # noqa: PT009
         self.assertTrue((user_root / "connectors").is_dir())  # noqa: PT009
 
-    def test_initialize_with_force_new_replaces_existing_thread(self) -> None:
-        """Force-new initialization should rotate the stored thread without creating another row."""
+    def test_initialize_with_force_new_preserves_previous_conversation(self) -> None:
+        """Force-new initialization should create a new active row and preserve history."""
         first_response = self.client.post("/api/senpai/conversation/initialize/", {}, format="json")
         second_response = self.client.post(
             "/api/senpai/conversation/initialize/",
@@ -100,10 +101,11 @@ class SenpaiConversationAPITests(TestCase):
             first_response.data["conversation"]["thread_id"],
             second_response.data["conversation"]["thread_id"],
         )
-        self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
+        self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 2)  # noqa: PT009
+        self.assertEqual(SenpaiConversation.objects.filter(user=self.user, is_active=True).count(), 1)  # noqa: PT009
 
-    def test_get_or_create_senpai_conversation_returns_existing_row_without_creating_duplicate(self) -> None:
-        """The helper should reuse the user's OneToOne conversation row when it already exists."""
+    def test_get_or_create_senpai_conversation_returns_active_row_without_creating_duplicate(self) -> None:
+        """The helper should reuse the user's active conversation row when it already exists."""
         existing = SenpaiConversation.objects.create(
             user=self.user,
             thread_id="thread-existing",
@@ -116,9 +118,61 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(conversation.thread_id, existing.thread_id)  # noqa: PT009
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
 
+    def test_conversation_history_is_scoped_to_authenticated_user(self) -> None:
+        """The history endpoint must never expose another user's Senpai conversations."""
+        other_user = CustomUser.objects.create_user(email="other-history@example.com")
+        own_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-own",
+            title="Own history",
+        )
+        SenpaiMessage.objects.create(
+            conversation=own_conversation,
+            role="user",
+            content="Own message",
+        )
+        SenpaiConversation.objects.create(
+            user=other_user,
+            thread_id="thread-other",
+            title="Other history",
+        )
+
+        response = self.client.get("/api/senpai/conversations/")
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(len(response.data["conversations"]), 1)  # noqa: PT009
+        self.assertEqual(response.data["conversations"][0]["title"], "Own history")  # noqa: PT009
+        self.assertEqual(response.data["conversations"][0]["message_count"], 1)  # noqa: PT009
+
+    def test_initialize_can_select_owned_past_conversation_with_messages(self) -> None:
+        """Users should be able to reopen one of their past Senpai conversations."""
+        old_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-old",
+            title="Old history",
+            is_active=False,
+        )
+        SenpaiMessage.objects.create(
+            conversation=old_conversation,
+            role="assistant",
+            content="Previous answer",
+        )
+
+        response = self.client.post(
+            "/api/senpai/conversation/initialize/",
+            {"conversation_id": old_conversation.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(response.data["conversation"]["id"], old_conversation.id)  # noqa: PT009
+        self.assertEqual(response.data["messages"][0]["content"], "Previous answer")  # noqa: PT009
+        old_conversation.refresh_from_db()
+        self.assertTrue(old_conversation.is_active)  # noqa: PT009
+
     @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_uses_single_conversation(self, build_assistant_mock: MagicMock) -> None:
-        """Sending a message should reuse or auto-create the user's only Senpai conversation."""
+        """Sending a message should reuse the user's active Senpai conversation."""
         conversation = SenpaiConversation.objects.create(
             user=self.user,
             thread_id="thread-1",
@@ -139,6 +193,11 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(response.data["response"], "Hello from Senpai")  # noqa: PT009
         self.assertEqual(response.data["pending_approvals"], [])  # noqa: PT009
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
+        self.assertEqual(conversation.messages.filter(role="user", content="Hello").count(), 1)  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            conversation.messages.filter(role="assistant", content="Hello from Senpai").count(),
+            1,
+        )
 
         build_assistant_mock.assert_called_once_with(conversation)
         assistant.send_message.assert_called_once_with("Hello", active_project=None)
@@ -188,6 +247,7 @@ class SenpaiConversationAPITests(TestCase):
             response.data["pending_approvals"][0]["value"]["action_requests"][0]["name"],
             "save_profile",
         )
+        self.assertTrue(SenpaiMessage.objects.filter(role="approval", conversation__user=self.user).exists())  # noqa: PT009
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_message_endpoint_resumes_pending_approvals(self, build_assistant_mock: MagicMock) -> None:

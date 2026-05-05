@@ -305,20 +305,32 @@ def get_or_create_senpai_conversation(
     *,
     force_new: bool = False,
 ) -> tuple[SenpaiConversation, bool]:
-    """Return the user's active Senpai conversation, optionally replacing it."""
+    """Return the user's active Senpai conversation, optionally creating a new active one."""
     get_user_senpai_path(user)
 
-    conversation, created = SenpaiConversation.objects.get_or_create(
-        user=user,
-        defaults={"thread_id": uuid4().hex},
-    )
-
     if force_new:
-        conversation.thread_id = uuid4().hex
-        conversation.save(update_fields=["thread_id", "updated_at"])
+        current = SenpaiConversation.objects.filter(user=user, is_active=True).order_by("-updated_at").first()
+        SenpaiConversation.objects.filter(user=user, is_active=True).update(is_active=False)
+        conversation = SenpaiConversation.objects.create(
+            user=user,
+            thread_id=uuid4().hex,
+            assistant_api_key=current.assistant_api_key if current else None,
+            assistant_model=current.assistant_model if current else "",
+            is_active=True,
+        )
         return conversation, True
 
-    return conversation, created
+    conversation = SenpaiConversation.objects.filter(user=user, is_active=True).order_by("-updated_at").first()
+    if conversation is not None:
+        return conversation, False
+
+    conversation = SenpaiConversation.objects.filter(user=user).order_by("-updated_at", "-created_at").first()
+    if conversation is not None:
+        conversation.is_active = True
+        conversation.save(update_fields=["is_active", "updated_at"])
+        return conversation, False
+
+    return SenpaiConversation.objects.create(user=user, thread_id=uuid4().hex, is_active=True), True
 
 
 def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assistant:

@@ -4,13 +4,15 @@ import logging
 from collections.abc import Sequence
 from typing import ClassVar, Protocol, TypeAlias
 
+from django.db import transaction
+from django.db.models import Count
 from rest_framework import permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from tester.models import Project, UserAPIKey
+from tester.models import Project, SenpaiConversation, SenpaiMessage, UserAPIKey
 from tester.senpai import (
     build_assistant_for_conversation,
     get_default_assistant_model,
@@ -24,11 +26,13 @@ from tester.serializers import (
     SenpaiConversationInitializeSerializer,
     SenpaiConversationMessageSerializer,
     SenpaiConversationSerializer,
+    SenpaiMessageSerializer,
 )
 
 logger = logging.getLogger(__name__)
 
 JsonValue: TypeAlias = None | str | int | float | bool | list["JsonValue"] | dict[str, "JsonValue"]
+CONVERSATION_TITLE_MAX_LENGTH = 80
 
 
 class PendingInterruptAssistant(Protocol):
@@ -39,9 +43,19 @@ class PendingInterruptAssistant(Protocol):
 
 
 class SenpaiConversationInitializeView(APIView):
-    """Create or return the authenticated user's single Senpai conversation."""
+    """Create, select, or return the authenticated user's active Senpai conversation."""
 
     permission_classes: ClassVar = [permissions.IsAuthenticated]
+
+    def _serialize_conversation_payload(self, conversation: SenpaiConversation) -> dict[str, object]:
+        """Return a conversation plus its persisted messages."""
+        return {
+            "conversation": SenpaiConversationSerializer(
+                conversation,
+                context={"request": self.request},
+            ).data,
+            "messages": SenpaiMessageSerializer(conversation.messages.all(), many=True).data,
+        }
 
     def post(self, request: Request) -> Response:
         """Initialize the active Senpai conversation for the authenticated user."""
@@ -49,18 +63,52 @@ class SenpaiConversationInitializeView(APIView):
         serializer.is_valid(raise_exception=True)
 
         force_new = serializer.validated_data["force_new"]
-        conversation, created_new_thread = get_or_create_senpai_conversation(
-            request.user,
-            force_new=force_new,
-        )
+        conversation_id = serializer.validated_data.get("conversation_id")
+        if conversation_id is not None and force_new:
+            raise ValidationError(
+                {"conversation_id": "Cannot select an existing conversation while forcing a new one."}
+            )
+
+        if conversation_id is not None:
+            try:
+                conversation = SenpaiConversation.objects.get(id=conversation_id, user=request.user)
+            except SenpaiConversation.DoesNotExist as exc:
+                raise ValidationError({"conversation_id": "Conversation does not exist for the current user."}) from exc
+
+            SenpaiConversation.objects.filter(user=request.user, is_active=True).exclude(id=conversation.id).update(
+                is_active=False,
+            )
+            if not conversation.is_active:
+                conversation.is_active = True
+                conversation.save(update_fields=["is_active", "updated_at"])
+            created_new_thread = False
+        else:
+            conversation, created_new_thread = get_or_create_senpai_conversation(
+                request.user,
+                force_new=force_new,
+            )
 
         response_status = status.HTTP_201_CREATED if created_new_thread else status.HTTP_200_OK
+        payload = self._serialize_conversation_payload(conversation)
+        payload["created_new_thread"] = created_new_thread
+        return Response(payload, status=response_status)
+
+
+class SenpaiConversationListView(APIView):
+    """List the authenticated user's Senpai conversation history."""
+
+    permission_classes: ClassVar = [permissions.IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        """Return only conversations owned by the authenticated user."""
+        conversations = (
+            SenpaiConversation.objects.filter(user=request.user)
+            .annotate(message_count=Count("messages"))
+            .order_by("-is_active", "-updated_at", "-created_at")
+        )
         return Response(
-            {
-                "conversation": SenpaiConversationSerializer(conversation).data,
-                "created_new_thread": created_new_thread,
-            },
-            status=response_status,
+            {"conversations": SenpaiConversationSerializer(conversations, many=True).data},
+            status=status.HTTP_200_OK,
         )
 
 
@@ -94,6 +142,55 @@ class SenpaiConversationMessageView(APIView):
             }
             for interrupt in assistant.get_pending_interrupts()
         ]
+
+    def _update_conversation_title(self, conversation: SenpaiConversation, message: str) -> None:
+        """Set a stable title from the first user message."""
+        if conversation.title:
+            return
+
+        title = " ".join(message.split())
+        if len(title) > CONVERSATION_TITLE_MAX_LENGTH:
+            title = f"{title[: CONVERSATION_TITLE_MAX_LENGTH - 3]}..."
+        conversation.title = title or "New conversation"
+
+    def _persist_exchange(
+        self,
+        conversation: SenpaiConversation,
+        serializer: SenpaiConversationMessageSerializer,
+        reply: str,
+        pending_approvals: list[dict[str, JsonValue]],
+    ) -> None:
+        """Store successful turns so history is durable and user-scoped."""
+        with transaction.atomic():
+            update_fields = ["updated_at"]
+            if "message" in serializer.validated_data:
+                user_message = serializer.validated_data["message"]
+                self._update_conversation_title(conversation, user_message)
+                if "title" not in update_fields:
+                    update_fields.append("title")
+                SenpaiMessage.objects.create(
+                    conversation=conversation,
+                    role="user",
+                    content=user_message,
+                )
+            else:
+                conversation.messages.filter(role="approval").delete()
+
+            if reply:
+                SenpaiMessage.objects.create(
+                    conversation=conversation,
+                    role="assistant",
+                    content=reply,
+                )
+
+            for approval in pending_approvals:
+                SenpaiMessage.objects.create(
+                    conversation=conversation,
+                    role="approval",
+                    approval=approval,
+                )
+
+            conversation.save(update_fields=update_fields)
 
     def _get_safe_runtime_error_message(self, exc: Exception) -> str:
         """Return a user-safe message for runtime and validation failures."""
@@ -184,7 +281,7 @@ class SenpaiConversationMessageView(APIView):
                         conversation.thread_id,
                     )
 
-        conversation.save(update_fields=["updated_at"])
+        self._persist_exchange(conversation, serializer, reply, pending_approvals)
 
         return Response(
             {

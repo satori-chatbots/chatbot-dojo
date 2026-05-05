@@ -18,14 +18,34 @@ const extractErrorMessage = (error) => {
   return "Unexpected Senpai Assistant error.";
 };
 
-export const initializeSenpaiConversation = async (forceNew = false) => {
+export const initializeSenpaiConversation = async (
+  forceNew = false,
+  conversationId,
+) => {
   try {
+    const payload = { force_new: forceNew };
+    if (conversationId) {
+      payload.conversation_id = conversationId;
+    }
+
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATION_INITIALIZE}`,
       {
         method: "POST",
-        body: JSON.stringify({ force_new: forceNew }),
+        body: JSON.stringify(payload),
       },
+    );
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+export const fetchSenpaiConversations = async () => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATIONS}`,
     );
 
     return await response.json();

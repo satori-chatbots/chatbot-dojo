@@ -33,6 +33,11 @@ urlpatterns = [
         name="senpai-conversation-initialize",
     ),
     path(
+        "senpai/conversations/",
+        api.SenpaiConversationListView.as_view(),
+        name="senpai-conversations",
+    ),
+    path(
         "senpai/conversation/message/",
         api.SenpaiConversationMessageView.as_view(),
         name="senpai-conversation-message",

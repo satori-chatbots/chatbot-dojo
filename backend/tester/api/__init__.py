@@ -33,6 +33,7 @@ from .senpai import (
     SenpaiAssistantModelsView,
     SenpaiConversationAPIKeyView,
     SenpaiConversationInitializeView,
+    SenpaiConversationListView,
     SenpaiConversationMessageView,
 )
 from .sensei_execution_views import (
@@ -71,6 +72,7 @@ __all__ = [
     "SenpaiAssistantModelsView",
     "SenpaiConversationAPIKeyView",
     "SenpaiConversationInitializeView",
+    "SenpaiConversationListView",
     "SenpaiConversationMessageView",
     "SenseiCheckRuleViewSet",
     "TestCaseViewSet",
