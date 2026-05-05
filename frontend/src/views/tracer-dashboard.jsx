@@ -351,9 +351,7 @@ const TracerDashboard = () => {
 
     setCancelConfirm((previous) => ({ ...previous, isLoading: true }));
     try {
-      const response = await cancelTracerGeneration(
-        cancelConfirm.execution.id,
-      );
+      const response = await cancelTracerGeneration(cancelConfirm.execution.id);
       showToast("success", response.message || "Cancellation requested");
       setExecutions((prevExecutions) =>
         prevExecutions.map((execution) =>

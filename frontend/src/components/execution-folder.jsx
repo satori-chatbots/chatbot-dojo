@@ -262,8 +262,8 @@ const ExecutionFolder = ({
           <ModalBody>
             <p>
               Stop{" "}
-              <span className="font-semibold">{execution.execution_name}</span>
-              ? Partial logs will be kept for review.
+              <span className="font-semibold">{execution.execution_name}</span>?
+              Partial logs will be kept for review.
             </p>
           </ModalBody>
           <ModalFooter>
