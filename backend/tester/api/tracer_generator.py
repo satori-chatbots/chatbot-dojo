@@ -61,6 +61,10 @@ TRACER_EXCEPTION_MAPPING = {
 }
 
 
+class TracerGenerationCancelledError(Exception):
+    """Raised when a TRACER generation task is cancelled before starting."""
+
+
 @dataclass
 class ProfileGenerationParams:
     """Parameter object for TRACER profile generation configuration."""
@@ -119,6 +123,8 @@ class TracerGenerator:
         except ProfileGenerationTask.DoesNotExist:
             logger.error(f"ProfileGenerationTask with ID {task_id} not found")
             # Task doesn't exist, can't update it - this IS a Django app error
+        except TracerGenerationCancelledError:
+            logger.info(f"TRACER profile generation cancelled before start for task {task_id}")
         except (DatabaseError, IntegrityError, OSError) as e:
             # This is likely a Django application error, not a user execution error
             logger.error(f"Unexpected Django error in TRACER profile generation for task {task_id}: {e!s}")
@@ -148,6 +154,21 @@ class TracerGenerator:
     def _initialize_task(self, task_id: int, celery_task: "Task | None" = None) -> ProfileGenerationTask:
         """Initialize and update task status."""
         task = ProfileGenerationTask.objects.get(id=task_id)
+        if task.status in {"CANCELLING", "CANCELLED"}:
+            task.status = "CANCELLED"
+            task.stage = "CANCELLED"
+            task.error_message = "TRACER execution cancelled by user."
+            task.save(update_fields=["status", "stage", "error_message"])
+            if celery_task:
+                celery_task.update_state(
+                    state="REVOKED",
+                    meta={
+                        "stage": "Execution cancelled by user",
+                        "progress": task.progress_percentage,
+                    },
+                )
+            raise TracerGenerationCancelledError
+
         task.status = "RUNNING"
         task.stage = "INITIALIZING"
         task.save()
@@ -199,11 +220,36 @@ class TracerGenerator:
         celery_task: "Task | None" = None,
     ) -> None:
         """Finalize task and execution status based on success."""
+        task.refresh_from_db()
+        execution.refresh_from_db()
+
+        if task.status in {"CANCELLING", "CANCELLED"} or execution.status in {"CANCELLING", "CANCELLED"}:
+            task.status = "CANCELLED"
+            task.stage = "CANCELLED"
+            task.error_message = "TRACER execution cancelled by user."
+            execution.status = "CANCELLED"
+            execution.process_id = None
+
+            if celery_task:
+                celery_task.update_state(
+                    state="REVOKED",
+                    meta={
+                        "stage": "Execution cancelled by user",
+                        "progress": task.progress_percentage,
+                    },
+                )
+
+            task.save()
+            execution.save(update_fields=["status", "process_id"])
+            logger.info(f"TRACER profile generation cancelled for task {task.id}")
+            return
+
         if success:
             task.status = "SUCCESS"
             task.progress_percentage = 100
             task.stage = "COMPLETED"
             execution.status = "SUCCESS"
+            execution.process_id = None
 
             # Update Celery task state if available
             if celery_task:
@@ -222,6 +268,7 @@ class TracerGenerator:
             if not task.error_message or task.error_message.strip() == "":
                 task.error_message = "TRACER execution failed - check logs for details"
             execution.status = "FAILURE"
+            execution.process_id = None
 
             # Update Celery task state if available
             if celery_task:
@@ -428,7 +475,7 @@ class TracerGenerator:
 
         return env
 
-    def _execute_subprocess(
+    def _execute_subprocess(  # noqa: PLR0915
         self,
         task: ProfileGenerationTask,
         execution: ProfileExecution,
@@ -448,6 +495,8 @@ class TracerGenerator:
                 bufsize=1,
                 universal_newlines=True,
             )
+            execution.process_id = process.pid
+            execution.save(update_fields=["process_id"])
 
             full_stdout = self._handle_process_output(task, process, celery_task)
             process.wait()
@@ -461,7 +510,18 @@ class TracerGenerator:
             # Store TRACER output for debugging
             execution.tracer_stdout = "".join(full_stdout)
             execution.tracer_stderr = full_stderr
-            update_fields = ["tracer_stdout", "tracer_stderr"]
+            execution.process_id = None
+            update_fields = ["tracer_stdout", "tracer_stderr", "process_id"]
+
+            if self._is_cancellation_requested(task, execution):
+                task.status = "CANCELLED"
+                task.stage = "CANCELLED"
+                task.error_message = "TRACER execution cancelled by user."
+                task.save(update_fields=["status", "stage", "error_message"])
+                execution.status = "CANCELLED"
+                execution.save(update_fields=[*update_fields, "status"])
+                logger.info(f"TRACER execution cancelled for task {task.id}")
+                return False
 
             if process.returncode != 0:
                 # Parse the specific error type from stderr
@@ -512,6 +572,12 @@ class TracerGenerator:
             return False
         else:
             return True
+
+    def _is_cancellation_requested(self, task: ProfileGenerationTask, execution: ProfileExecution) -> bool:
+        """Return true when the user has requested cancellation for this run."""
+        task.refresh_from_db(fields=["status"])
+        execution.refresh_from_db(fields=["status"])
+        return task.status in {"CANCELLING", "CANCELLED"} or execution.status in {"CANCELLING", "CANCELLED"}
 
     def _parse_tracer_error(self, stderr: str) -> str:
         """Parse TRACER stderr to identify specific exception types.

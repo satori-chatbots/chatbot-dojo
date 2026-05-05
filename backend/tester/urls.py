@@ -108,6 +108,11 @@ urlpatterns = [
         name="check-tracer-generation-status",
     ),
     path(
+        "tracer-generation-cancel/",
+        api.cancel_tracer_generation,
+        name="cancel-tracer-generation",
+    ),
+    path(
         "sensei-execution-status/<str:task_id>/",
         api.check_sensei_execution_status,
         name="check-sensei-execution-status",

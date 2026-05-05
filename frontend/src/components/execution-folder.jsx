@@ -17,6 +17,7 @@ import {
   Users,
   Settings,
   Trash2,
+  Square,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getErrorTypeDisplay } from "../utils/error-types";
@@ -29,11 +30,14 @@ const ExecutionFolder = ({
   onProfileSelect,
   showAll = false,
   onToggleShowAll,
+  onCancelExecution,
   onDeleteExecution,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const navigate = useNavigate();
 
   const displayProfiles = showAll ? profiles : profiles.slice(0, 4);
@@ -72,6 +76,8 @@ const ExecutionFolder = ({
       RUNNING: { color: "warning", label: getStatusLabel("RUNNING") },
       FAILURE: { color: "danger", label: getStatusLabel("FAILURE") },
       PENDING: { color: "default", label: getStatusLabel("PENDING") },
+      CANCELLING: { color: "warning", label: getStatusLabel("CANCELLING") },
+      CANCELLED: { color: "warning", label: getStatusLabel("CANCELLED") },
     };
 
     // For error status, show specific error type if available
@@ -124,6 +130,13 @@ const ExecutionFolder = ({
     setIsDeleteConfirmOpen(true);
   };
 
+  const handleCancelClick = (e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    setIsCancelConfirmOpen(true);
+  };
+
   const closeDeleteConfirm = () => {
     if (isDeleting) return;
     setIsDeleteConfirmOpen(false);
@@ -142,7 +155,28 @@ const ExecutionFolder = ({
   };
 
   const canDelete = execution.execution_type === "tracer";
+  const canCancel =
+    execution.execution_type === "tracer" &&
+    execution.status === "RUNNING" &&
+    onCancelExecution;
   // Manual executions are permanent and should not be deleted
+
+  const closeCancelConfirm = () => {
+    if (isCancelling) return;
+    setIsCancelConfirmOpen(false);
+  };
+
+  const confirmCancel = async () => {
+    setIsCancelling(true);
+    try {
+      await onCancelExecution(execution.id);
+      setIsCancelConfirmOpen(false);
+    } catch (error) {
+      console.error("Cancel failed:", error);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
     <div className="group">
@@ -182,6 +216,24 @@ const ExecutionFolder = ({
           <span>{getDetailsText()}</span>
           <span>{profiles.length} files</span>
 
+          {/* Cancel Button - Only show for running TRACER executions */}
+          {canCancel && (
+            <Tooltip content="Cancel TRACER execution">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                color="danger"
+                className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 min-w-6"
+                onPress={handleCancelClick}
+                isLoading={isCancelling}
+                title="Cancel TRACER execution"
+              >
+                <Square className="w-3 h-3 fill-current" />
+              </Button>
+            </Tooltip>
+          )}
+
           {/* Delete Button - Only show if deletable */}
           {canDelete && (
             <Button
@@ -203,6 +255,36 @@ const ExecutionFolder = ({
           )}
         </div>
       </div>
+
+      <Modal isOpen={isCancelConfirmOpen} onOpenChange={closeCancelConfirm}>
+        <ModalContent>
+          <ModalHeader>Cancel TRACER Execution</ModalHeader>
+          <ModalBody>
+            <p>
+              Stop{" "}
+              <span className="font-semibold">{execution.execution_name}</span>
+              ? Partial logs will be kept for review.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              variant="light"
+              onPress={closeCancelConfirm}
+              isDisabled={isCancelling}
+            >
+              Keep Running
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmCancel}
+              isLoading={isCancelling}
+            >
+              Cancel Execution
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={isDeleteConfirmOpen} onOpenChange={closeDeleteConfirm}>
         <ModalContent>

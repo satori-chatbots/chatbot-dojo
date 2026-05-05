@@ -7,6 +7,7 @@ const STATUS_LABEL_MAP = {
   FAILURE: "Failure",
   RUNNING: "Running",
   PENDING: "Pending",
+  CANCELLING: "Cancelling",
   STOPPED: "Stopped",
   CANCELLED: "Cancelled",
   ERROR: "Error", // Legacy support

@@ -47,6 +47,7 @@ from .sensei_execution_views import (
 from .test_cases import TestCaseViewSet
 from .test_files import TestFileViewSet
 from .tracer_views import (
+    cancel_tracer_generation,
     check_ongoing_generation,
     check_tracer_generation_status,
     generate_profiles,
@@ -61,6 +62,7 @@ __all__ = [
     "ChatbotConnectorViewSet",
     "ConversationViewSet",
     "ExecuteSelectedProfilesAPIView",
+    "cancel_tracer_generation",
     "GlobalReportViewSet",
     "LoginViewSet",
     "PersonalityFileViewSet",

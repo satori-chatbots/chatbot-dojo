@@ -1067,6 +1067,8 @@ class ProfileGenerationTask(models.Model):
         ("RUNNING", "Running"),
         ("SUCCESS", "Success"),
         ("FAILURE", "Failure"),
+        ("CANCELLING", "Cancelling"),
+        ("CANCELLED", "Cancelled"),
     )
 
     STAGE_CHOICES = (
@@ -1074,6 +1076,7 @@ class ProfileGenerationTask(models.Model):
         ("GENERATING_CONVERSATIONS", "Generating conversations"),
         ("CREATING_PROFILES", "Creating profiles"),
         ("SAVING_FILES", "Saving generated files"),
+        ("CANCELLED", "Cancelled"),
     )
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -1311,6 +1314,8 @@ class ProfileExecution(models.Model):
         ("RUNNING", "Running"),
         ("SUCCESS", "Success"),
         ("FAILURE", "Failure"),
+        ("CANCELLING", "Cancelling"),
+        ("CANCELLED", "Cancelled"),
     ]
 
     VERBOSITY_CHOICES: ClassVar[list[tuple[str, str]]] = [
@@ -1357,6 +1362,7 @@ class ProfileExecution(models.Model):
     # TRACER process output for debugging
     tracer_stdout = models.TextField(blank=True)
     tracer_stderr = models.TextField(blank=True)
+    process_id = models.IntegerField(blank=True, null=True)
     error_type = models.CharField(
         max_length=50,
         choices=ERROR_TYPE_CHOICES,

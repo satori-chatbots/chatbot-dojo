@@ -357,6 +357,22 @@ export const checkTracerGenerationStatus = async (celeryTaskId) => {
   }
 };
 
+export const cancelTracerGeneration = async (executionId) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.CANCEL_TRACER_GENERATION}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ execution_id: executionId }),
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error cancelling TRACER generation:", error);
+    throw error;
+  }
+};
+
 export const fetchProfileExecutions = async (projectId) => {
   if (!projectId) {
     return { executions: [] };
