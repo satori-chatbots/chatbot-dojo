@@ -968,10 +968,12 @@ class Conversation(models.Model):
 
 
 class SenpaiConversation(models.Model):
-    """Single active Senpai conversation owned by a user."""
+    """A Senpai conversation owned by a user."""
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="senpai_conversation")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="senpai_conversations")
     thread_id = models.CharField(max_length=255, unique=True)
+    title = models.CharField(max_length=255, blank=True, default="")
+    is_active = models.BooleanField(default=True)
     assistant_api_key = models.ForeignKey(
         UserAPIKey,
         on_delete=models.SET_NULL,
@@ -983,9 +985,45 @@ class SenpaiConversation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        """Meta options for Senpai conversations."""
+
+        constraints: ClassVar[list[models.UniqueConstraint]] = [
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(is_active=True),
+                name="unique_active_senpai_conversation_per_user",
+            ),
+        ]
+
     def __str__(self) -> str:
         """Return a readable identifier for the Senpai conversation."""
         return f"SenpaiConversation(user={self.user_id}, thread_id={self.thread_id})"
+
+
+class SenpaiMessage(models.Model):
+    """Persisted message in a user-owned Senpai conversation."""
+
+    ROLE_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("user", "User"),
+        ("assistant", "Assistant"),
+        ("approval", "Approval"),
+    ]
+
+    conversation = models.ForeignKey(SenpaiConversation, on_delete=models.CASCADE, related_name="messages")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField(blank=True, default="")
+    approval = models.JSONField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        """Meta options for Senpai messages."""
+
+        ordering: ClassVar[list[str]] = ["created_at", "id"]
+
+    def __str__(self) -> str:
+        """Return a readable message identifier."""
+        return f"SenpaiMessage(conversation={self.conversation_id}, role={self.role})"
 
 
 class TestError(models.Model):

@@ -7,6 +7,10 @@ import React, {
 } from "react";
 import {
   Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
   Modal,
   ModalBody,
   ModalContent,
@@ -21,6 +25,7 @@ import {
   Bot,
   ChevronLeft,
   ChevronRight,
+  History,
   PanelRightOpen,
   Plus,
   Send,
@@ -31,6 +36,7 @@ import {
 import {
   assignSenpaiApiKey,
   fetchSenpaiAssistantModels,
+  fetchSenpaiConversations,
   initializeSenpaiConversation,
   resolveSenpaiApprovals,
   sendSenpaiMessage,
@@ -39,10 +45,8 @@ import MarkdownMessage from "./markdown-message";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useSetup } from "../contexts/setup-context";
 
-const buildThreadStorageKey = (threadId) => `senpai-thread-history:${threadId}`;
 const DESKTOP_COLLAPSED_KEY = "senpai-sidebar-collapsed";
 const DESKTOP_WIDTH_KEY = "senpai-sidebar-width";
-const MESSAGE_ROLES = new Set(["approval", "assistant", "user"]);
 const DEFAULT_DESKTOP_WIDTH = 420;
 const MIN_DESKTOP_WIDTH = 320;
 const MAX_DESKTOP_WIDTH = 720;
@@ -70,68 +74,6 @@ const getStoredActiveProjectId = () => {
     }
   } catch {
     return;
-  }
-};
-
-const isValidStoredThreadMessage = (message) => {
-  if (!message || typeof message !== "object" || Array.isArray(message)) {
-    return false;
-  }
-
-  if (
-    typeof message.id !== "string" ||
-    !MESSAGE_ROLES.has(message.role) ||
-    typeof message.timestamp !== "string"
-  ) {
-    return false;
-  }
-
-  if (Number.isNaN(Date.parse(message.timestamp))) {
-    return false;
-  }
-
-  if (message.role === "approval") {
-    return Boolean(message.approval && typeof message.approval === "object");
-  }
-
-  return typeof message.content === "string";
-};
-
-const readStoredThreadMessages = (threadId) => {
-  if (!threadId) {
-    return [];
-  }
-
-  try {
-    const stored = globalThis.sessionStorage.getItem(
-      buildThreadStorageKey(threadId),
-    );
-    if (!stored) {
-      return [];
-    }
-
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) &&
-      parsed.every((message) => isValidStoredThreadMessage(message))
-      ? parsed
-      : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeStoredThreadMessages = (threadId, messages) => {
-  if (!threadId) {
-    return;
-  }
-
-  try {
-    globalThis.sessionStorage.setItem(
-      buildThreadStorageKey(threadId),
-      JSON.stringify(messages),
-    );
-  } catch {
-    // Ignore storage failures so message updates do not crash the sidebar.
   }
 };
 
@@ -197,6 +139,20 @@ const writeDesktopSidebarWidth = (width) => {
 
 const formatTimestamp = (value) => TIMESTAMP_FORMATTER.format(new Date(value));
 
+const getConversationTitle = (conversation) => {
+  const title = conversation?.title?.trim();
+  return title || "New conversation";
+};
+
+const mapApiMessages = (apiMessages = []) =>
+  apiMessages.map((message) => ({
+    id: `${message.role}-${message.id}`,
+    role: message.role,
+    content: message.content || "",
+    approval: message.approval,
+    timestamp: message.timestamp,
+  }));
+
 const getApprovalActionRequests = (approval) => {
   const actionRequests = approval?.value?.action_requests;
   return Array.isArray(actionRequests) ? actionRequests : [];
@@ -245,6 +201,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const previousMessageCountReference = useRef(0);
 
   const [conversation, setConversation] = useState();
+  const [conversationHistory, setConversationHistory] = useState([]);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -289,23 +246,35 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   }, [conversation?.assistant_model]);
 
   const loadConversation = useCallback(
-    async ({ forceNew = false, showFullSpinner = false } = {}) => {
+    async ({
+      forceNew = false,
+      showFullSpinner = false,
+      conversationId,
+    } = {}) => {
       const setLoadingState = showFullSpinner
         ? setIsBootstrapping
         : setIsRefreshingThread;
 
       setLoadingState(true);
       try {
-        const data = await initializeSenpaiConversation(forceNew);
+        const data = await initializeSenpaiConversation(
+          forceNew,
+          conversationId,
+        );
+        const historyData = await fetchSenpaiConversations();
         if (!isMountedReference.current) {
           return;
         }
 
         setConversation(data.conversation);
+        setConversationHistory(historyData.conversations || []);
+        setMessages(mapApiMessages(data.messages || []));
+        setHasUnreadAssistantMessage(false);
+        previousMessageCountReference.current = 0;
+        isAtBottomReference.current = true;
         shouldFocusComposerReference.current = true;
         if (forceNew) {
           setDraft("");
-          setMessages([]);
           showToast("success", "New Senpai conversation started");
         }
       } catch (error) {
@@ -339,19 +308,6 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     isSettingsOpen,
     reloadApiKeys,
   ]);
-
-  useEffect(() => {
-    setMessages(readStoredThreadMessages(conversation?.thread_id));
-    setHasUnreadAssistantMessage(false);
-    previousMessageCountReference.current = 0;
-    isAtBottomReference.current = true;
-  }, [conversation?.thread_id]);
-
-  useEffect(() => {
-    if (conversation?.thread_id) {
-      writeStoredThreadMessages(conversation.thread_id, messages);
-    }
-  }, [conversation?.thread_id, messages]);
 
   const scrollToBottom = useCallback((behavior = "smooth") => {
     endOfMessagesReference.current?.scrollIntoView({ behavior });
@@ -570,6 +526,18 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     statusClassName = hasAssistantApiKey ? "text-success" : "text-warning";
   }
 
+  const handleConversationHistoryAction = useCallback(
+    (key) => {
+      const conversationId = Number(key);
+      if (!Number.isInteger(conversationId) || conversationId === conversation?.id) {
+        return;
+      }
+
+      void loadConversation({ conversationId });
+    },
+    [conversation?.id, loadConversation],
+  );
+
   const focusComposer = useCallback(() => {
     if (
       !hasAssistantApiKey ||
@@ -613,9 +581,26 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     hasPendingRequest,
   ]);
 
+  const upsertConversationHistory = useCallback((updatedConversation) => {
+    if (!updatedConversation) {
+      return;
+    }
+
+    setConversationHistory((currentHistory) => {
+      const withoutUpdated = currentHistory.filter(
+        (historyItem) => historyItem.id !== updatedConversation.id,
+      );
+      return [updatedConversation, ...withoutUpdated].map((historyItem) => ({
+        ...historyItem,
+        is_active: historyItem.id === updatedConversation.id,
+      }));
+    });
+  }, []);
+
   const appendAssistantResponse = useCallback(
     (data) => {
       setConversation(data.conversation);
+      upsertConversationHistory(data.conversation);
       const nextMessages = [];
 
       if (data.response) {
@@ -643,7 +628,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         ]);
       }
     },
-    [createMessageId],
+    [createMessageId, upsertConversationHistory],
   );
 
   const submitMessage = useCallback(
@@ -846,6 +831,40 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-1">
+            <Dropdown placement="bottom-end">
+              <DropdownTrigger>
+                <Button
+                  isIconOnly
+                  variant="light"
+                  size="sm"
+                  isDisabled={hasPendingRequest || conversationHistory.length === 0}
+                  aria-label="Conversation history"
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Senpai conversation history"
+                selectionMode="single"
+                selectedKeys={
+                  conversation?.id ? new Set([String(conversation.id)]) : new Set()
+                }
+                onAction={handleConversationHistoryAction}
+                emptyContent="No previous conversations"
+              >
+                {conversationHistory.map((historyItem) => (
+                  <DropdownItem
+                    key={String(historyItem.id)}
+                    description={`${historyItem.message_count || 0} messages - ${formatTimestamp(historyItem.updated_at)}`}
+                    textValue={getConversationTitle(historyItem)}
+                  >
+                    <span className="block max-w-64 truncate">
+                      {getConversationTitle(historyItem)}
+                    </span>
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
             <Button
               isIconOnly
               variant="light"

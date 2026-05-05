@@ -16,6 +16,7 @@ from .models import (
     ProjectConfig,
     RuleFile,
     SenpaiConversation,
+    SenpaiMessage,
     SenseiCheckRule,
     TestCase,
     TestError,
@@ -109,6 +110,7 @@ class SenpaiConversationSerializer(serializers.ModelSerializer):
     """Serializer for the active Senpai conversation."""
 
     assistant_api_key = UserAPIKeySummarySerializer(read_only=True)
+    message_count = serializers.SerializerMethodField()
 
     class Meta:
         """Meta class for SenpaiConversationSerializer."""
@@ -117,10 +119,39 @@ class SenpaiConversationSerializer(serializers.ModelSerializer):
         fields: ClassVar[list[str]] = [
             "id",
             "thread_id",
+            "title",
+            "is_active",
             "assistant_api_key",
             "assistant_model",
+            "message_count",
             "created_at",
             "updated_at",
+        ]
+        read_only_fields: ClassVar[list[str]] = fields
+
+    def get_message_count(self, obj: SenpaiConversation) -> int:
+        """Return the number of persisted messages for this conversation."""
+        annotated_count = getattr(obj, "message_count", None)
+        if isinstance(annotated_count, int):
+            return annotated_count
+        return obj.messages.count()
+
+
+class SenpaiMessageSerializer(serializers.ModelSerializer):
+    """Serializer for persisted Senpai messages."""
+
+    timestamp = serializers.DateTimeField(source="created_at", read_only=True)
+
+    class Meta:
+        """Meta class for SenpaiMessageSerializer."""
+
+        model = SenpaiMessage
+        fields: ClassVar[list[str]] = [
+            "id",
+            "role",
+            "content",
+            "approval",
+            "timestamp",
         ]
         read_only_fields: ClassVar[list[str]] = fields
 
@@ -129,6 +160,7 @@ class SenpaiConversationInitializeSerializer(serializers.Serializer):
     """Serializer for initializing or resetting a Senpai conversation."""
 
     force_new = serializers.BooleanField(required=False, default=False)
+    conversation_id = serializers.IntegerField(required=False)
 
 
 class SenpaiConversationMessageSerializer(serializers.Serializer):

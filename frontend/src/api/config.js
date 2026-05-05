@@ -46,6 +46,7 @@ export const ENDPOINTS = {
   TRACER_ORIGINAL_PROFILES: `${API_PATH}/tracer-original-profiles/`,
   TRACER_EXECUTION_LOGS: `${API_PATH}/tracer-execution-logs/`,
   SENPAI_CONVERSATION_INITIALIZE: `${API_PATH}/senpai/conversation/initialize/`,
+  SENPAI_CONVERSATIONS: `${API_PATH}/senpai/conversations/`,
   SENPAI_CONVERSATION_MESSAGE: `${API_PATH}/senpai/conversation/message/`,
   SENPAI_CONVERSATION_API_KEY: `${API_PATH}/senpai/conversation/api-key/`,
   SENPAI_ASSISTANT_MODELS: `${API_PATH}/senpai/assistant-models/`,
