@@ -7,15 +7,14 @@ import React, {
 } from "react";
 import {
   Button,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Select,
   SelectItem,
   Spinner,
@@ -53,6 +52,7 @@ const MAX_DESKTOP_WIDTH = 720;
 const DESKTOP_SIDEBAR_VIEWPORT_MARGIN = 160;
 const DESKTOP_COLLAPSED_WIDTH = 56;
 const SCROLL_BOTTOM_THRESHOLD = 24;
+const HISTORY_PREVIEW_LIMIT = 4;
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
   hour: "2-digit",
@@ -216,6 +216,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const [modelSource, setModelSource] = useState("");
   const [hasUnreadAssistantMessage, setHasUnreadAssistantMessage] =
     useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
   const supportedApiKeys = useMemo(
     () =>
@@ -527,16 +529,30 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   }
 
   const handleConversationHistoryAction = useCallback(
-    (key) => {
-      const conversationId = Number(key);
+    (conversationId) => {
       if (!Number.isInteger(conversationId) || conversationId === conversation?.id) {
         return;
       }
 
+      setIsHistoryOpen(false);
+      setIsHistoryExpanded(false);
       void loadConversation({ conversationId });
     },
     [conversation?.id, loadConversation],
   );
+
+  const handleHistoryOpenChange = useCallback((isOpen) => {
+    setIsHistoryOpen(isOpen);
+    if (!isOpen) {
+      setIsHistoryExpanded(false);
+    }
+  }, []);
+
+  const visibleConversationHistory = isHistoryExpanded
+    ? conversationHistory
+    : conversationHistory.slice(0, HISTORY_PREVIEW_LIMIT);
+  const hasMoreConversationHistory =
+    conversationHistory.length > HISTORY_PREVIEW_LIMIT;
 
   const focusComposer = useCallback(() => {
     if (
@@ -831,8 +847,12 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-1">
-            <Dropdown placement="bottom-end">
-              <DropdownTrigger>
+            <Popover
+              placement="bottom-end"
+              isOpen={isHistoryOpen}
+              onOpenChange={handleHistoryOpenChange}
+            >
+              <PopoverTrigger>
                 <Button
                   isIconOnly
                   variant="light"
@@ -842,29 +862,58 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                 >
                   <History className="h-4 w-4" />
                 </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="Senpai conversation history"
-                selectionMode="single"
-                selectedKeys={
-                  conversation?.id ? new Set([String(conversation.id)]) : new Set()
-                }
-                onAction={handleConversationHistoryAction}
-                emptyContent="No previous conversations"
-              >
-                {conversationHistory.map((historyItem) => (
-                  <DropdownItem
-                    key={String(historyItem.id)}
-                    description={`${historyItem.message_count || 0} messages - ${formatTimestamp(historyItem.updated_at)}`}
-                    textValue={getConversationTitle(historyItem)}
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0">
+                <div className="w-full py-2">
+                  <div
+                    className={`space-y-1 px-2 ${
+                      isHistoryExpanded
+                        ? "max-h-80 overflow-y-auto pr-1"
+                        : ""
+                    }`}
                   >
-                    <span className="block max-w-64 truncate">
-                      {getConversationTitle(historyItem)}
-                    </span>
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
+                    {visibleConversationHistory.map((historyItem) => {
+                      const isSelected = historyItem.id === conversation?.id;
+
+                      return (
+                        <button
+                          key={historyItem.id}
+                          type="button"
+                          className={`flex w-full min-w-0 flex-col rounded-lg px-3 py-2 text-left transition-colors ${
+                            isSelected
+                              ? "bg-primary/10 text-primary"
+                              : "text-foreground hover:bg-default-100 dark:text-foreground-dark dark:hover:bg-white/10"
+                          }`}
+                          onClick={() =>
+                            handleConversationHistoryAction(historyItem.id)
+                          }
+                        >
+                          <span className="w-full truncate text-sm font-medium">
+                            {getConversationTitle(historyItem)}
+                          </span>
+                          <span className="mt-0.5 text-xs text-foreground/50 dark:text-foreground-dark/50">
+                            {historyItem.message_count || 0} messages -{" "}
+                            {formatTimestamp(historyItem.updated_at)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {hasMoreConversationHistory && !isHistoryExpanded && (
+                    <div className="mt-1 border-t border-divider px-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="light"
+                        className="w-full"
+                        onPress={() => setIsHistoryExpanded(true)}
+                      >
+                        Show more
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button
               isIconOnly
               variant="light"
