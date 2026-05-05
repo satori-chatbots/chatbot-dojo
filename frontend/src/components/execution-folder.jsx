@@ -77,7 +77,7 @@ const ExecutionFolder = ({
       FAILURE: { color: "danger", label: getStatusLabel("FAILURE") },
       PENDING: { color: "default", label: getStatusLabel("PENDING") },
       CANCELLING: { color: "warning", label: getStatusLabel("CANCELLING") },
-      CANCELLED: { color: "warning", label: getStatusLabel("CANCELLED") },
+      CANCELLED: { color: "danger", label: getStatusLabel("CANCELLED") },
     };
 
     // For error status, show specific error type if available

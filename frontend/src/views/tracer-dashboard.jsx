@@ -20,6 +20,7 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
+  CircleX,
   Loader,
 } from "lucide-react";
 import {
@@ -52,9 +53,11 @@ const getStatusColor = (status) => {
     case "PENDING": {
       return "warning";
     }
-    case "CANCELLING":
-    case "CANCELLED": {
+    case "CANCELLING": {
       return "warning";
+    }
+    case "CANCELLED": {
+      return "danger";
     }
     default: {
       return "default";
@@ -305,9 +308,11 @@ const TracerDashboard = () => {
       case "PENDING": {
         return <Clock className="w-4 h-4 text-warning" />;
       }
-      case "CANCELLING":
-      case "CANCELLED": {
+      case "CANCELLING": {
         return <Clock className="w-4 h-4 text-warning" />;
+      }
+      case "CANCELLED": {
+        return <CircleX className="w-4 h-4 text-danger" />;
       }
       default: {
         return <Clock className="w-4 h-4 text-default-400" />;
@@ -585,7 +590,7 @@ const TracerDashboard = () => {
                     FAILURE: "danger",
                     PENDING: "warning",
                     CANCELLING: "warning",
-                    CANCELLED: "warning",
+                    CANCELLED: "danger",
                   };
                   return (
                     <div className="flex items-center gap-2">
@@ -639,7 +644,7 @@ const TracerDashboard = () => {
                 </SelectItem>
                 <SelectItem key="CANCELLED" value="CANCELLED">
                   <div className="flex items-center gap-2">
-                    <Chip color="warning" size="sm" variant="flat">
+                    <Chip color="danger" size="sm" variant="flat">
                       Cancelled
                     </Chip>
                   </div>
