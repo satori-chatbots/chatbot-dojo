@@ -301,7 +301,7 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
 
 
 @api_view(["POST"])
-def cancel_tracer_generation(request: Request) -> Response:  # noqa: C901
+def cancel_tracer_generation(request: Request) -> Response:
     """Cancel an ongoing TRACER generation without deleting its partial logs."""
     execution_id = request.data.get("execution_id")
 

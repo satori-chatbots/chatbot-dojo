@@ -657,6 +657,27 @@ class TracerGenerator:
     ) -> list[str]:
         """Handle process output and update progress."""
         full_stdout = []
+        output_queue, reader_thread = self._start_stdout_reader(process)
+
+        while True:
+            try:
+                line = output_queue.get(timeout=0.5)
+            except queue.Empty:
+                if self._should_stop_waiting_for_output(task, execution, process, reader_thread):
+                    break
+                continue
+
+            if line is None:
+                break
+
+            full_stdout.append(line)
+            if self._process_tracer_output_line(task, execution, process, line, celery_task):
+                break
+
+        return full_stdout
+
+    def _start_stdout_reader(self, process: subprocess.Popen) -> tuple[queue.Queue[str | None], threading.Thread]:
+        """Start a background reader for TRACER stdout."""
         output_queue: queue.Queue[str | None] = queue.Queue()
 
         def read_stdout() -> None:
@@ -667,30 +688,38 @@ class TracerGenerator:
 
         reader_thread = threading.Thread(target=read_stdout, daemon=True)
         reader_thread.start()
+        return output_queue, reader_thread
 
-        while True:
-            try:
-                line = output_queue.get(timeout=0.5)
-            except queue.Empty:
-                if self._is_cancellation_requested(task, execution):
-                    self._terminate_tracer_subprocess(process)
-                    break
-                if process.poll() is not None and not reader_thread.is_alive():
-                    break
-                continue
+    def _should_stop_waiting_for_output(
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        process: subprocess.Popen,
+        reader_thread: threading.Thread,
+    ) -> bool:
+        """Return true when output handling should stop while waiting for stdout."""
+        if self._is_cancellation_requested(task, execution):
+            self._terminate_tracer_subprocess(process)
+            return True
+        return process.poll() is not None and not reader_thread.is_alive()
 
-            if line is None:
-                break
+    def _process_tracer_output_line(
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        process: subprocess.Popen,
+        line: str,
+        celery_task: "Task | None" = None,
+    ) -> bool:
+        """Process one TRACER stdout line, returning true if processing should stop."""
+        if line.strip():
+            logger.info(f"TRACER (task {task.id}): {line.strip()}")
+            self._update_progress_from_tracer_output(task, line, celery_task)
 
-            full_stdout.append(line)
-            if line.strip():
-                logger.info(f"TRACER (task {task.id}): {line.strip()}")
-                self._update_progress_from_tracer_output(task, line, celery_task)
-            if self._is_cancellation_requested(task, execution):
-                self._terminate_tracer_subprocess(process)
-                break
-
-        return full_stdout
+        if self._is_cancellation_requested(task, execution):
+            self._terminate_tracer_subprocess(process)
+            return True
+        return False
 
     def _terminate_tracer_subprocess(self, process: subprocess.Popen) -> None:
         """Terminate the TRACER subprocess from the Celery worker that owns it."""
