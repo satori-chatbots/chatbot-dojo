@@ -333,7 +333,9 @@ function Home() {
     async (executionId) => {
       if (cancellingExecutionIds.has(executionId)) return;
 
-      setCancellingExecutionIds((previous) => new Set(previous).add(executionId));
+      setCancellingExecutionIds((previous) =>
+        new Set(previous).add(executionId),
+      );
       try {
         const response = await cancelTracerGeneration(executionId);
         showToast(
