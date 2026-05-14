@@ -294,7 +294,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         if (forceNew) {
           setDraft("");
           setAttachedYamlFiles([]);
-          showToast("success", "New Senpai conversation started");
+          if (data.created_new_thread) {
+            showToast("success", "New Senpai conversation started");
+          }
         }
       } catch (error) {
         if (isMountedReference.current) {
@@ -641,11 +643,16 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       }
 
       setDeleteConversation(undefined);
-      setConversationHistory((currentHistory) =>
-        currentHistory.filter(
+      setConversationHistory((currentHistory) => {
+        const nextHistory = currentHistory.filter(
           (historyItem) => historyItem.id !== deletedConversationId,
-        ),
-      );
+        );
+        if (nextHistory.length === 0) {
+          setIsHistoryOpen(false);
+          setIsHistoryExpanded(false);
+        }
+        return nextHistory;
+      });
       showToast("success", "Conversation deleted");
       if (conversation?.id === deletedConversationId) {
         void loadConversation({ showFullSpinner: true });
@@ -1192,7 +1199,17 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
               isIconOnly
               variant="light"
               size="sm"
-              onPress={() => void loadConversation({ forceNew: true })}
+              onPress={() => {
+                if (messages.length === 0) {
+                  setDraft("");
+                  setAttachedYamlFiles([]);
+                  shouldFocusComposerReference.current = true;
+                  focusComposer();
+                  return;
+                }
+
+                void loadConversation({ forceNew: true });
+              }}
               isDisabled={hasPendingRequest}
               aria-label="New conversation"
             >

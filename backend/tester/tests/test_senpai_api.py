@@ -87,9 +87,30 @@ class SenpaiConversationAPITests(TestCase):
         self.assertTrue((user_root / "projects").is_dir())  # noqa: PT009
         self.assertTrue((user_root / "connectors").is_dir())  # noqa: PT009
 
-    def test_initialize_with_force_new_preserves_previous_conversation(self) -> None:
-        """Force-new initialization should create a new active row and preserve history."""
+    def test_initialize_with_force_new_reuses_empty_active_conversation(self) -> None:
+        """Force-new initialization should not create duplicate empty history rows."""
         first_response = self.client.post("/api/senpai/conversation/initialize/", {}, format="json")
+        second_response = self.client.post(
+            "/api/senpai/conversation/initialize/",
+            {"force_new": True},
+            format="json",
+        )
+
+        self.assertEqual(second_response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            first_response.data["conversation"]["thread_id"],
+            second_response.data["conversation"]["thread_id"],
+        )
+        self.assertFalse(second_response.data["created_new_thread"])  # noqa: PT009
+        self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 1)  # noqa: PT009
+        self.assertEqual(SenpaiConversation.objects.filter(user=self.user, is_active=True).count(), 1)  # noqa: PT009
+
+    def test_initialize_with_force_new_preserves_non_empty_conversation(self) -> None:
+        """Force-new initialization should create a new active row after the current conversation has messages."""
+        first_response = self.client.post("/api/senpai/conversation/initialize/", {}, format="json")
+        conversation = SenpaiConversation.objects.get(user=self.user)
+        SenpaiMessage.objects.create(conversation=conversation, role="user", content="Keep this conversation")
+
         second_response = self.client.post(
             "/api/senpai/conversation/initialize/",
             {"force_new": True},
@@ -101,6 +122,7 @@ class SenpaiConversationAPITests(TestCase):
             first_response.data["conversation"]["thread_id"],
             second_response.data["conversation"]["thread_id"],
         )
+        self.assertTrue(second_response.data["created_new_thread"])  # noqa: PT009
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user).count(), 2)  # noqa: PT009
         self.assertEqual(SenpaiConversation.objects.filter(user=self.user, is_active=True).count(), 1)  # noqa: PT009
 
@@ -143,6 +165,33 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(len(response.data["conversations"]), 1)  # noqa: PT009
         self.assertEqual(response.data["conversations"][0]["title"], "Own history")  # noqa: PT009
         self.assertEqual(response.data["conversations"][0]["message_count"], 1)  # noqa: PT009
+
+    def test_conversation_history_excludes_empty_conversations(self) -> None:
+        """Empty initialized conversations should not clutter the history list."""
+        empty_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-empty",
+            title="Empty",
+            is_active=True,
+        )
+        populated_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-populated",
+            title="Populated",
+            is_active=False,
+        )
+        SenpaiMessage.objects.create(
+            conversation=populated_conversation,
+            role="user",
+            content="Visible message",
+        )
+
+        response = self.client.get("/api/senpai/conversations/")
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertEqual(len(response.data["conversations"]), 1)  # noqa: PT009
+        self.assertEqual(response.data["conversations"][0]["id"], populated_conversation.id)  # noqa: PT009
+        self.assertNotEqual(response.data["conversations"][0]["id"], empty_conversation.id)  # noqa: PT009
 
     def test_rename_conversation_updates_owned_title(self) -> None:
         """Users should be able to rename one of their own Senpai conversations."""
@@ -201,8 +250,8 @@ class SenpaiConversationAPITests(TestCase):
         self.assertFalse(SenpaiConversation.objects.filter(id=conversation.id).exists())  # noqa: PT009
         self.assertFalse(SenpaiMessage.objects.filter(conversation_id=conversation.id).exists())  # noqa: PT009
 
-    def test_delete_active_conversation_selects_next_history_item(self) -> None:
-        """Deleting the active conversation should activate the next available owned conversation."""
+    def test_delete_active_conversation_creates_empty_replacement(self) -> None:
+        """Deleting the active conversation should open a fresh empty conversation with the same settings."""
         old_conversation = SenpaiConversation.objects.create(
             user=self.user,
             thread_id="thread-old-delete",
@@ -213,14 +262,63 @@ class SenpaiConversationAPITests(TestCase):
             user=self.user,
             thread_id="thread-active-delete",
             title="Active",
+            assistant_api_key=self.api_key,
+            assistant_model="gpt-4o-mini",
             is_active=True,
         )
 
         response = self.client.delete(f"/api/senpai/conversations/{active_conversation.id}/")
 
         self.assertEqual(response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        self.assertFalse(SenpaiConversation.objects.filter(id=active_conversation.id).exists())  # noqa: PT009
         old_conversation.refresh_from_db()
-        self.assertTrue(old_conversation.is_active)  # noqa: PT009
+        self.assertFalse(old_conversation.is_active)  # noqa: PT009
+        replacement = SenpaiConversation.objects.get(user=self.user, is_active=True)
+        self.assertNotEqual(replacement.id, old_conversation.id)  # noqa: PT009
+        self.assertNotEqual(replacement.thread_id, active_conversation.thread_id)  # noqa: PT009
+        self.assertEqual(replacement.assistant_api_key, self.api_key)  # noqa: PT009
+        self.assertEqual(replacement.assistant_model, "gpt-4o-mini")  # noqa: PT009
+        self.assertEqual(replacement.messages.count(), 0)  # noqa: PT009
+
+    def test_initialize_after_deleting_active_returns_empty_replacement(self) -> None:
+        """The UI should reload the fresh replacement instead of selecting previous history."""
+        old_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-old-after-delete",
+            title="Old",
+            is_active=False,
+        )
+        SenpaiMessage.objects.create(
+            conversation=old_conversation,
+            role="user",
+            content="Previous history",
+        )
+        active_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-active-after-delete",
+            title="Active",
+            assistant_api_key=self.api_key,
+            assistant_model="gpt-4o-mini",
+            is_active=True,
+        )
+
+        delete_response = self.client.delete(f"/api/senpai/conversations/{active_conversation.id}/")
+        initialize_response = self.client.post(
+            "/api/senpai/conversation/initialize/",
+            {},
+            format="json",
+        )
+
+        self.assertEqual(delete_response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        self.assertEqual(initialize_response.status_code, HTTP_OK)  # noqa: PT009
+        self.assertFalse(initialize_response.data["created_new_thread"])  # noqa: PT009
+        self.assertNotEqual(initialize_response.data["conversation"]["id"], old_conversation.id)  # noqa: PT009
+        self.assertNotEqual(initialize_response.data["conversation"]["id"], active_conversation.id)  # noqa: PT009
+        self.assertEqual(initialize_response.data["conversation"]["assistant_api_key"]["id"], self.api_key.id)  # noqa: PT009
+        self.assertEqual(initialize_response.data["conversation"]["assistant_model"], "gpt-4o-mini")  # noqa: PT009
+        self.assertEqual(initialize_response.data["messages"], [])  # noqa: PT009
+        old_conversation.refresh_from_db()
+        self.assertFalse(old_conversation.is_active)  # noqa: PT009
 
     def test_delete_conversation_rejects_other_users_conversation(self) -> None:
         """Users must not be able to delete another user's Senpai conversation."""

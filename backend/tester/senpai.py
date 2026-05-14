@@ -310,6 +310,9 @@ def get_or_create_senpai_conversation(
 
     if force_new:
         current = SenpaiConversation.objects.filter(user=user, is_active=True).order_by("-updated_at").first()
+        if current is not None and not current.messages.exists():
+            return current, False
+
         SenpaiConversation.objects.filter(user=user, is_active=True).update(is_active=False)
         conversation = SenpaiConversation.objects.create(
             user=user,
