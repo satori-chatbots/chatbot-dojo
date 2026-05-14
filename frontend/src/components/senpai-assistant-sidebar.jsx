@@ -25,8 +25,10 @@ import {
   Bot,
   ChevronLeft,
   ChevronRight,
+  FileText,
   History,
   PanelRightOpen,
+  Paperclip,
   Pencil,
   Plus,
   Send,
@@ -58,6 +60,7 @@ const DESKTOP_SIDEBAR_VIEWPORT_MARGIN = 160;
 const DESKTOP_COLLAPSED_WIDTH = 56;
 const SCROLL_BOTTOM_THRESHOLD = 24;
 const HISTORY_PREVIEW_LIMIT = 4;
+const YAML_FILE_EXTENSION_PATTERN = /\.(ya?ml)$/i;
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
   hour: "2-digit",
@@ -198,6 +201,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const messagesContainerReference = useRef(undefined);
   const endOfMessagesReference = useRef(undefined);
   const composerReference = useRef(undefined);
+  const fileInputReference = useRef(undefined);
   const isMountedReference = useRef(false);
   const messageIdSequence = useRef(0);
   const sendMessageLock = useRef(false);
@@ -209,6 +213,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const [conversationHistory, setConversationHistory] = useState([]);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
+  const [attachedYamlFiles, setAttachedYamlFiles] = useState([]);
+  const [isDraggingYamlFile, setIsDraggingYamlFile] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isRefreshingThread, setIsRefreshingThread] = useState(false);
@@ -287,6 +293,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         shouldFocusComposerReference.current = true;
         if (forceNew) {
           setDraft("");
+          setAttachedYamlFiles([]);
           showToast("success", "New Senpai conversation started");
         }
       } catch (error) {
@@ -527,7 +534,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const canSubmitMessage =
     hasAssistantApiKey &&
     isConversationLoaded &&
-    Boolean(draft.trim()) &&
+    (Boolean(draft.trim()) || attachedYamlFiles.length > 0) &&
     !hasPendingApproval &&
     !hasPendingRequest;
   let statusLabel = "Unavailable";
@@ -710,6 +717,124 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     hasPendingRequest,
   ]);
 
+  const composeMessageWithAttachments = useCallback(
+    (messageText, attachments) => {
+      const trimmedMessage = messageText.trim();
+      if (attachments.length === 0) {
+        return trimmedMessage;
+      }
+
+      const attachmentBlocks = attachments
+        .map((attachment) =>
+          [
+            `Archivo YAML adjunto: ${attachment.name}`,
+            "```yaml",
+            attachment.content,
+            "```",
+          ].join("\n"),
+        )
+        .join("\n\n");
+
+      return [trimmedMessage, attachmentBlocks].filter(Boolean).join("\n\n");
+    },
+    [],
+  );
+
+  const removeAttachedYamlFile = useCallback((attachmentId) => {
+    setAttachedYamlFiles((currentAttachments) =>
+      currentAttachments.filter((attachment) => attachment.id !== attachmentId),
+    );
+  }, []);
+
+  const attachYamlFiles = useCallback(
+    async (selectedFiles) => {
+      if (selectedFiles.length === 0) {
+        return;
+      }
+
+      const yamlFiles = selectedFiles.filter((file) =>
+        YAML_FILE_EXTENSION_PATTERN.test(file.name),
+      );
+      const rejectedFiles = selectedFiles.length - yamlFiles.length;
+
+      if (rejectedFiles > 0) {
+        showToast("error", "Only .yaml and .yml files can be attached");
+      }
+
+      if (yamlFiles.length === 0) {
+        return;
+      }
+
+      try {
+        const nextAttachments = await Promise.all(
+          yamlFiles.map(async (file) => ({
+            id: `${file.name}-${file.lastModified}-${file.size}-${
+              globalThis.crypto?.randomUUID?.() || Date.now()
+            }`,
+            name: file.name,
+            content: await file.text(),
+          })),
+        );
+
+        if (!isMountedReference.current) {
+          return;
+        }
+
+        setAttachedYamlFiles((currentAttachments) => [
+          ...currentAttachments,
+          ...nextAttachments,
+        ]);
+        shouldFocusComposerReference.current = true;
+      } catch {
+        if (isMountedReference.current) {
+          showToast("error", "Failed to read the selected YAML file");
+        }
+      }
+    },
+    [showToast],
+  );
+
+  const handleAttachYamlFiles = useCallback(
+    async (event) => {
+      const selectedFiles = [...(event.target.files || [])];
+      event.target.value = "";
+      await attachYamlFiles(selectedFiles);
+    },
+    [attachYamlFiles],
+  );
+
+  const handleComposerDragOver = useCallback(
+    (event) => {
+      if (isComposerDisabled || hasPendingRequest) {
+        return;
+      }
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      setIsDraggingYamlFile(true);
+    },
+    [hasPendingRequest, isComposerDisabled],
+  );
+
+  const handleComposerDragLeave = useCallback((event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setIsDraggingYamlFile(false);
+    }
+  }, []);
+
+  const handleComposerDrop = useCallback(
+    async (event) => {
+      if (isComposerDisabled || hasPendingRequest) {
+        return;
+      }
+
+      event.preventDefault();
+      setIsDraggingYamlFile(false);
+      await attachYamlFiles([...event.dataTransfer.files]);
+    },
+    [attachYamlFiles, hasPendingRequest, isComposerDisabled],
+  );
+
   const upsertConversationHistory = useCallback((updatedConversation) => {
     if (!updatedConversation) {
       return;
@@ -762,9 +887,13 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
 
   const submitMessage = useCallback(
     async (messageText) => {
-      const trimmedMessage = messageText.trim();
+      const attachments = attachedYamlFiles;
+      const composedMessage = composeMessageWithAttachments(
+        messageText,
+        attachments,
+      );
       const canStartRequest =
-        trimmedMessage &&
+        composedMessage &&
         !hasPendingApproval &&
         !hasPendingRequest &&
         !sendMessageLock.current &&
@@ -775,18 +904,19 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           const userMessage = {
             id: createMessageId("user"),
             role: "user",
-            content: trimmedMessage,
+            content: composedMessage,
             timestamp: new Date().toISOString(),
           };
 
           setDraft("");
+          setAttachedYamlFiles([]);
           setIsSending(true);
           setMessages((currentMessages) => [...currentMessages, userMessage]);
           shouldFocusComposerReference.current = true;
 
           try {
             const data = await sendSenpaiMessage(
-              trimmedMessage,
+              composedMessage,
               getStoredActiveProjectId(),
             );
             if (!isMountedReference.current) {
@@ -801,6 +931,8 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                   (message) => message.id !== userMessage.id,
                 ),
               );
+              setDraft(messageText);
+              setAttachedYamlFiles(attachments);
               showToast(
                 "error",
                 error.message || "Senpai Assistant request failed",
@@ -825,7 +957,9 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     },
     [
       appendAssistantResponse,
+      attachedYamlFiles,
       conversation,
+      composeMessageWithAttachments,
       createMessageId,
       hasPendingApproval,
       hasPendingRequest,
@@ -1251,8 +1385,23 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                   <div className="flex-shrink-0 border-t border-divider bg-content1/60 px-3 py-3 dark:bg-black/10">
                     <div
                       ref={composerReference}
-                      className="rounded-2xl border border-default-200 bg-content2 p-2 shadow-none dark:border-white/10 dark:bg-[#202024]"
+                      className={`rounded-2xl border bg-content2 p-2 shadow-none transition-colors dark:bg-[#202024] ${
+                        isDraggingYamlFile
+                          ? "border-primary bg-primary/5 dark:border-primary dark:bg-primary/10"
+                          : "border-default-200 dark:border-white/10"
+                      }`}
+                      onDragOver={handleComposerDragOver}
+                      onDragLeave={handleComposerDragLeave}
+                      onDrop={(event) => void handleComposerDrop(event)}
                     >
+                      <input
+                        ref={fileInputReference}
+                        type="file"
+                        accept=".yaml,.yml"
+                        multiple
+                        className="hidden"
+                        onChange={(event) => void handleAttachYamlFiles(event)}
+                      />
                       <Textarea
                         placeholder="Ask Senpai..."
                         minRows={3}
@@ -1267,7 +1416,46 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                             "border-none bg-transparent shadow-none",
                         }}
                       />
-                      <div className="mt-2 flex items-center justify-end">
+                      {attachedYamlFiles.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2 px-1">
+                          {attachedYamlFiles.map((attachment) => (
+                            <div
+                              key={attachment.id}
+                              className="flex max-w-full items-center gap-1.5 rounded-full border border-default-200 bg-content1 px-2 py-1 text-xs text-foreground/80 dark:border-white/10 dark:bg-white/5 dark:text-foreground-dark/80"
+                            >
+                              <FileText className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                              <span className="min-w-0 truncate">
+                                {attachment.name}
+                              </span>
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                radius="full"
+                                variant="light"
+                                className="h-5 w-5 min-w-5"
+                                onPress={() =>
+                                  removeAttachedYamlFile(attachment.id)
+                                }
+                                isDisabled={hasPendingRequest}
+                                aria-label={`Remove ${attachment.name}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <Button
+                          isIconOnly
+                          radius="full"
+                          variant="light"
+                          onPress={() => fileInputReference.current?.click()}
+                          isDisabled={isComposerDisabled || hasPendingRequest}
+                          aria-label="Attach YAML files"
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
                         <Button
                           isIconOnly
                           color="primary"
