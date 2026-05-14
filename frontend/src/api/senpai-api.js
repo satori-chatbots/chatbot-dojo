@@ -54,6 +54,35 @@ export const fetchSenpaiConversations = async () => {
   }
 };
 
+export const renameSenpaiConversation = async (conversationId, title) => {
+  try {
+    const response = await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATIONS}${conversationId}/`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ title }),
+      },
+    );
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
+export const deleteSenpaiConversation = async (conversationId) => {
+  try {
+    await apiClient(
+      `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATIONS}${conversationId}/`,
+      {
+        method: "DELETE",
+      },
+    );
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+};
+
 export const sendSenpaiMessage = async (message, activeProjectId) => {
   try {
     const payload = { message };

@@ -32,6 +32,7 @@ from .reports import GlobalReportViewSet, ProfileReportViewSet
 from .senpai import (
     SenpaiAssistantModelsView,
     SenpaiConversationAPIKeyView,
+    SenpaiConversationDetailView,
     SenpaiConversationInitializeView,
     SenpaiConversationListView,
     SenpaiConversationMessageView,
@@ -72,6 +73,7 @@ __all__ = [
     "RuleFileViewSet",
     "SenpaiAssistantModelsView",
     "SenpaiConversationAPIKeyView",
+    "SenpaiConversationDetailView",
     "SenpaiConversationInitializeView",
     "SenpaiConversationListView",
     "SenpaiConversationMessageView",

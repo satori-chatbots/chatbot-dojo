@@ -163,6 +163,12 @@ class SenpaiConversationInitializeSerializer(serializers.Serializer):
     conversation_id = serializers.IntegerField(required=False)
 
 
+class SenpaiConversationUpdateSerializer(serializers.Serializer):
+    """Serializer for updating user-editable Senpai conversation fields."""
+
+    title = serializers.CharField(allow_blank=False, max_length=255, trim_whitespace=True)
+
+
 class SenpaiConversationMessageSerializer(serializers.Serializer):
     """Serializer for sending a message to the Senpai assistant."""
 

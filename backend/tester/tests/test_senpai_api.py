@@ -144,6 +144,98 @@ class SenpaiConversationAPITests(TestCase):
         self.assertEqual(response.data["conversations"][0]["title"], "Own history")  # noqa: PT009
         self.assertEqual(response.data["conversations"][0]["message_count"], 1)  # noqa: PT009
 
+    def test_rename_conversation_updates_owned_title(self) -> None:
+        """Users should be able to rename one of their own Senpai conversations."""
+        conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-rename",
+            title="Old title",
+        )
+
+        response = self.client.patch(
+            f"/api/senpai/conversations/{conversation.id}/",
+            {"title": "Renamed thread"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.title, "Renamed thread")  # noqa: PT009
+        self.assertEqual(response.data["conversation"]["title"], "Renamed thread")  # noqa: PT009
+
+    def test_rename_conversation_rejects_other_users_conversation(self) -> None:
+        """Users must not be able to rename another user's Senpai conversation."""
+        other_user = CustomUser.objects.create_user(email="other-rename@example.com")
+        conversation = SenpaiConversation.objects.create(
+            user=other_user,
+            thread_id="thread-other-rename",
+            title="Other title",
+        )
+
+        response = self.client.patch(
+            f"/api/senpai/conversations/{conversation.id}/",
+            {"title": "Changed title"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.title, "Other title")  # noqa: PT009
+
+    def test_delete_conversation_removes_owned_history(self) -> None:
+        """Users should be able to delete one of their own Senpai conversations."""
+        conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-delete",
+            title="Delete me",
+        )
+        SenpaiMessage.objects.create(
+            conversation=conversation,
+            role="user",
+            content="Remove this too",
+        )
+
+        response = self.client.delete(f"/api/senpai/conversations/{conversation.id}/")
+
+        self.assertEqual(response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        self.assertFalse(SenpaiConversation.objects.filter(id=conversation.id).exists())  # noqa: PT009
+        self.assertFalse(SenpaiMessage.objects.filter(conversation_id=conversation.id).exists())  # noqa: PT009
+
+    def test_delete_active_conversation_selects_next_history_item(self) -> None:
+        """Deleting the active conversation should activate the next available owned conversation."""
+        old_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-old-delete",
+            title="Old",
+            is_active=False,
+        )
+        active_conversation = SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-active-delete",
+            title="Active",
+            is_active=True,
+        )
+
+        response = self.client.delete(f"/api/senpai/conversations/{active_conversation.id}/")
+
+        self.assertEqual(response.status_code, HTTP_NO_CONTENT)  # noqa: PT009
+        old_conversation.refresh_from_db()
+        self.assertTrue(old_conversation.is_active)  # noqa: PT009
+
+    def test_delete_conversation_rejects_other_users_conversation(self) -> None:
+        """Users must not be able to delete another user's Senpai conversation."""
+        other_user = CustomUser.objects.create_user(email="other-delete@example.com")
+        conversation = SenpaiConversation.objects.create(
+            user=other_user,
+            thread_id="thread-other-delete",
+            title="Other delete",
+        )
+
+        response = self.client.delete(f"/api/senpai/conversations/{conversation.id}/")
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
+        self.assertTrue(SenpaiConversation.objects.filter(id=conversation.id).exists())  # noqa: PT009
+
     def test_initialize_can_select_owned_past_conversation_with_messages(self) -> None:
         """Users should be able to reopen one of their past Senpai conversations."""
         old_conversation = SenpaiConversation.objects.create(
