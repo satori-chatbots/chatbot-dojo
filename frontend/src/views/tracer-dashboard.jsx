@@ -83,6 +83,9 @@ const TracerDashboard = () => {
     execution: undefined,
     isLoading: false,
   });
+  const [cancellingExecutionIds, setCancellingExecutionIds] = useState(
+    () => new Set(),
+  );
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { showToast } = useMyCustomToast();
   const { user } = useAuth();
@@ -331,10 +334,17 @@ const TracerDashboard = () => {
 
   const handleCancelExecution = useCallback(
     (execution) => {
-      if (!user || !execution?.id || execution.status !== "RUNNING") return;
+      if (
+        !user ||
+        !execution?.id ||
+        execution.status !== "RUNNING" ||
+        cancellingExecutionIds.has(execution.id)
+      ) {
+        return;
+      }
       setCancelConfirm({ isOpen: true, execution, isLoading: false });
     },
-    [user],
+    [cancellingExecutionIds, user],
   );
 
   const closeCancelConfirm = () => {
@@ -347,15 +357,17 @@ const TracerDashboard = () => {
   };
 
   const confirmCancelExecution = useCallback(async () => {
-    if (!cancelConfirm.execution?.id) return;
+    const executionId = cancelConfirm.execution?.id;
+    if (!executionId || cancellingExecutionIds.has(executionId)) return;
 
+    setCancellingExecutionIds((previous) => new Set(previous).add(executionId));
     setCancelConfirm((previous) => ({ ...previous, isLoading: true }));
     try {
-      const response = await cancelTracerGeneration(cancelConfirm.execution.id);
+      const response = await cancelTracerGeneration(executionId);
       showToast("success", response.message || "Cancellation requested");
       setExecutions((prevExecutions) =>
         prevExecutions.map((execution) =>
-          execution.id === cancelConfirm.execution.id
+          execution.id === executionId
             ? {
                 ...execution,
                 status: "CANCELLING",
@@ -382,9 +394,19 @@ const TracerDashboard = () => {
         // ignore JSON parse failure
       }
       setCancelConfirm((previous) => ({ ...previous, isLoading: false }));
+      setCancellingExecutionIds((previous) => {
+        const next = new Set(previous);
+        next.delete(executionId);
+        return next;
+      });
       showToast("error", errorMessage);
     }
-  }, [cancelConfirm.execution, showToast, loadTracerExecutions]);
+  }, [
+    cancelConfirm.execution,
+    cancellingExecutionIds,
+    showToast,
+    loadTracerExecutions,
+  ]);
 
   const closeDeleteConfirm = () => {
     if (deleteConfirm.isLoading) return;

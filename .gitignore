@@ -16,6 +16,7 @@ uploads/
 filevault/
 test-results/
 test_files/
+tmp*/
 
 
 # Byte-compiled / optimized / DLL files

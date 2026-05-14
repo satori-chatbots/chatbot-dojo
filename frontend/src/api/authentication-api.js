@@ -1,5 +1,13 @@
 import API_BASE_URL, { ENDPOINTS } from "./config";
-import apiClient from "./api-client";
+import apiClient, { readResponsePayload } from "./api-client";
+
+const formatErrorPayload = (errorData) =>
+  Object.entries(errorData)
+    .map(
+      ([field, errors]) =>
+        `${field}: ${Array.isArray(errors) ? errors.join(", ") : errors}`,
+    )
+    .join("\n");
 
 export const submitSignUp = async (data) => {
   try {
@@ -10,15 +18,7 @@ export const submitSignUp = async (data) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      // Format error messages from Django response
-      const errorMessage = Object.entries(errorData)
-        .map(
-          ([field, errors]) =>
-            `${field}: ${Array.isArray(errors) ? errors.join(", ") : errors}`,
-        )
-        .join("\n");
-      throw new Error(errorMessage);
+      throw new Error(formatErrorPayload(await readResponsePayload(response)));
     }
 
     const responseData = await response.json();
@@ -40,14 +40,7 @@ export const submitLogin = async (data) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = Object.entries(errorData)
-        .map(
-          ([field, errors]) =>
-            `${field}: ${Array.isArray(errors) ? errors.join(", ") : errors}`,
-        )
-        .join("\n");
-      throw new Error(errorMessage);
+      throw new Error(formatErrorPayload(await readResponsePayload(response)));
     }
 
     const responseData = await response.json();

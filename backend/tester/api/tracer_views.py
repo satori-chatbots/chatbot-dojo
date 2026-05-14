@@ -1,8 +1,8 @@
 """API views for TRACER profile generation and analysis endpoints."""
 
+from datetime import UTC, datetime
 from pathlib import Path
 
-import psutil
 from celery import current_app
 from celery.result import AsyncResult
 from cryptography.fernet import InvalidToken
@@ -116,12 +116,28 @@ def generate_profiles(request: Request) -> Response:
     # Setup API key
     api_key = TracerApiKeyManager.setup_api_key(project)
 
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    execution_name = f"TRACER_{timestamp}"
+    profiles_dir = project.get_relative_project_path("tracer_results", execution_name.lower()).as_posix()
+
+    execution = ProfileExecution.objects.create(
+        project=project,
+        execution_name=execution_name,
+        execution_type="tracer",
+        sessions=sessions,
+        turns_per_session=turns_per_session,
+        verbosity=verbosity,
+        status="RUNNING",
+        profiles_directory=profiles_dir,
+    )
+
     # Create generation task
     task = ProfileGenerationTask.objects.create(
         project=project,
         status="PENDING",
         conversations=sessions,  # Store sessions in conversations field for compatibility
         turns=turns_per_session,
+        execution=execution,
     )
 
     params = ProfileGenerationParams(
@@ -141,7 +157,12 @@ def generate_profiles(request: Request) -> Response:
     task.save()
 
     return Response(
-        {"message": "Profile generation started", "task_id": task.id, "celery_task_id": celery_task.id},
+        {
+            "message": "Profile generation started",
+            "task_id": task.id,
+            "execution_id": execution.id,
+            "celery_task_id": celery_task.id,
+        },
         status=status.HTTP_202_ACCEPTED,
     )
 
@@ -280,7 +301,7 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
 
 
 @api_view(["POST"])
-def cancel_tracer_generation(request: Request) -> Response:  # noqa: C901
+def cancel_tracer_generation(request: Request) -> Response:
     """Cancel an ongoing TRACER generation without deleting its partial logs."""
     execution_id = request.data.get("execution_id")
 
@@ -317,49 +338,11 @@ def cancel_tracer_generation(request: Request) -> Response:  # noqa: C901
     execution.status = "CANCELLING"
     execution.save(update_fields=["status"])
 
-    if execution.process_id:
-        _terminate_tracer_process(execution)
-
-    execution.refresh_from_db()
-    if execution.process_id is None or generation_task is None:
+    if generation_task is None:
         execution.status = "CANCELLED"
         execution.save(update_fields=["status"])
-        if generation_task:
-            generation_task.status = "CANCELLED"
-            generation_task.save(update_fields=["status", "updated_at"])
 
     return Response({"message": "TRACER execution cancellation requested"}, status=status.HTTP_200_OK)
-
-
-def _terminate_tracer_process(execution: ProfileExecution) -> None:
-    """Terminate the TRACER subprocess tree for an execution."""
-    try:
-        process = psutil.Process(execution.process_id)
-    except psutil.NoSuchProcess:
-        execution.process_id = None
-        execution.save(update_fields=["process_id"])
-        return
-    except psutil.Error as e:
-        logger.warning(f"Could not access TRACER process {execution.process_id}: {e}")
-        return
-
-    try:
-        children = process.children(recursive=True)
-        for child in children:
-            child.terminate()
-        process.terminate()
-
-        _, alive = psutil.wait_procs([*children, process], timeout=5)
-        for alive_process in alive:
-            alive_process.kill()
-        if alive:
-            psutil.wait_procs(alive, timeout=5)
-    except psutil.Error as e:
-        logger.warning(f"Could not terminate TRACER process {execution.process_id}: {e}")
-        return
-
-    execution.process_id = None
-    execution.save(update_fields=["process_id"])
 
 
 @api_view(["GET"])
