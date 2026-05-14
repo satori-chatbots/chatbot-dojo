@@ -130,7 +130,7 @@ function AppContent() {
       className={theme}
     >
       <div
-        className={`relative flex min-h-screen flex-col overflow-hidden ${theme}`}
+        className={`relative flex h-dvh min-h-0 flex-col overflow-hidden ${theme}`}
       >
         <Navbar
           onMenuOpenChange={setIsMenuOpen}
