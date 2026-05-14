@@ -26,6 +26,7 @@ from tester.serializers import (
     SenpaiConversationInitializeSerializer,
     SenpaiConversationMessageSerializer,
     SenpaiConversationSerializer,
+    SenpaiConversationUpdateSerializer,
     SenpaiMessageSerializer,
 )
 
@@ -110,6 +111,49 @@ class SenpaiConversationListView(APIView):
             {"conversations": SenpaiConversationSerializer(conversations, many=True).data},
             status=status.HTTP_200_OK,
         )
+
+
+class SenpaiConversationDetailView(APIView):
+    """Update or delete one authenticated user's Senpai conversation."""
+
+    permission_classes: ClassVar = [permissions.IsAuthenticated]
+
+    def _get_conversation(self, request: Request, conversation_id: int) -> SenpaiConversation:
+        """Return an owned conversation or raise a validation error."""
+        try:
+            return SenpaiConversation.objects.get(id=conversation_id, user=request.user)
+        except SenpaiConversation.DoesNotExist as exc:
+            raise ValidationError({"conversation_id": "Conversation does not exist for the current user."}) from exc
+
+    def patch(self, request: Request, conversation_id: int) -> Response:
+        """Rename an owned Senpai conversation."""
+        serializer = SenpaiConversationUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        conversation = self._get_conversation(request, conversation_id)
+        conversation.title = serializer.validated_data["title"]
+        conversation.save(update_fields=["title", "updated_at"])
+
+        return Response(
+            {"conversation": SenpaiConversationSerializer(conversation).data},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request: Request, conversation_id: int) -> Response:
+        """Delete an owned Senpai conversation."""
+        conversation = self._get_conversation(request, conversation_id)
+        was_active = conversation.is_active
+        conversation.delete()
+
+        if was_active:
+            next_conversation = (
+                SenpaiConversation.objects.filter(user=request.user).order_by("-updated_at", "-created_at").first()
+            )
+            if next_conversation is not None:
+                next_conversation.is_active = True
+                next_conversation.save(update_fields=["is_active", "updated_at"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SenpaiConversationMessageView(APIView):

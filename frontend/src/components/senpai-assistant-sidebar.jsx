@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   Button,
+  Input,
   Modal,
   ModalBody,
   ModalContent,
@@ -26,17 +27,21 @@ import {
   ChevronRight,
   History,
   PanelRightOpen,
+  Pencil,
   Plus,
   Send,
   Settings,
+  Trash2,
   User,
   X,
 } from "lucide-react";
 import {
   assignSenpaiApiKey,
+  deleteSenpaiConversation,
   fetchSenpaiAssistantModels,
   fetchSenpaiConversations,
   initializeSenpaiConversation,
+  renameSenpaiConversation,
   resolveSenpaiApprovals,
   sendSenpaiMessage,
 } from "../api/senpai-api";
@@ -214,6 +219,11 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
   const [selectedModelKey, setSelectedModelKey] = useState("");
   const [assistantModels, setAssistantModels] = useState([]);
   const [modelSource, setModelSource] = useState("");
+  const [renameConversation, setRenameConversation] = useState();
+  const [renameTitle, setRenameTitle] = useState("");
+  const [isRenamingConversation, setIsRenamingConversation] = useState(false);
+  const [deleteConversation, setDeleteConversation] = useState();
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
   const [hasUnreadAssistantMessage, setHasUnreadAssistantMessage] =
     useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -543,6 +553,106 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
     },
     [conversation?.id, loadConversation],
   );
+
+  const openRenameConversation = useCallback((historyItem) => {
+    setRenameConversation(historyItem);
+    setRenameTitle(getConversationTitle(historyItem));
+  }, []);
+
+  const closeRenameConversation = useCallback(() => {
+    if (isRenamingConversation) {
+      return;
+    }
+
+    setRenameConversation(undefined);
+    setRenameTitle("");
+  }, [isRenamingConversation]);
+
+  const submitRenameConversation = useCallback(async () => {
+    const trimmedTitle = renameTitle.trim();
+    if (!renameConversation || !trimmedTitle) {
+      return;
+    }
+
+    setIsRenamingConversation(true);
+    try {
+      const data = await renameSenpaiConversation(
+        renameConversation.id,
+        trimmedTitle,
+      );
+      if (!isMountedReference.current) {
+        return;
+      }
+
+      setConversationHistory((currentHistory) =>
+        currentHistory.map((historyItem) =>
+          historyItem.id === data.conversation.id
+            ? data.conversation
+            : historyItem,
+        ),
+      );
+      if (conversation?.id === data.conversation.id) {
+        setConversation(data.conversation);
+      }
+      setRenameConversation(undefined);
+      setRenameTitle("");
+      showToast("success", "Conversation renamed");
+    } catch (error) {
+      if (isMountedReference.current) {
+        showToast("error", error.message || "Failed to rename conversation");
+      }
+    } finally {
+      if (isMountedReference.current) {
+        setIsRenamingConversation(false);
+      }
+    }
+  }, [conversation?.id, renameConversation, renameTitle, showToast]);
+
+  const openDeleteConversation = useCallback((historyItem) => {
+    setDeleteConversation(historyItem);
+  }, []);
+
+  const closeDeleteConversation = useCallback(() => {
+    if (isDeletingConversation) {
+      return;
+    }
+
+    setDeleteConversation(undefined);
+  }, [isDeletingConversation]);
+
+  const confirmDeleteConversation = useCallback(async () => {
+    if (!deleteConversation) {
+      return;
+    }
+
+    const deletedConversationId = deleteConversation.id;
+    setIsDeletingConversation(true);
+    try {
+      await deleteSenpaiConversation(deletedConversationId);
+      if (!isMountedReference.current) {
+        return;
+      }
+
+      setDeleteConversation(undefined);
+      setConversationHistory((currentHistory) =>
+        currentHistory.filter(
+          (historyItem) => historyItem.id !== deletedConversationId,
+        ),
+      );
+      showToast("success", "Conversation deleted");
+      if (conversation?.id === deletedConversationId) {
+        void loadConversation({ showFullSpinner: true });
+      }
+    } catch (error) {
+      if (isMountedReference.current) {
+        showToast("error", error.message || "Failed to delete conversation");
+      }
+    } finally {
+      if (isMountedReference.current) {
+        setIsDeletingConversation(false);
+      }
+    }
+  }, [conversation?.id, deleteConversation, loadConversation, showToast]);
 
   const handleHistoryOpenChange = useCallback((isOpen) => {
     setIsHistoryOpen(isOpen);
@@ -879,26 +989,53 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                       const isSelected = historyItem.id === conversation?.id;
 
                       return (
-                        <button
+                        <div
                           key={historyItem.id}
-                          type="button"
-                          className={`flex w-full min-w-0 flex-col rounded-lg px-3 py-2 text-left transition-colors ${
+                          className={`group flex w-full min-w-0 items-center gap-1 rounded-lg px-2 py-1.5 transition-colors ${
                             isSelected
                               ? "bg-primary/10 text-primary"
                               : "text-foreground hover:bg-default-100 dark:text-foreground-dark dark:hover:bg-white/10"
                           }`}
-                          onClick={() =>
-                            handleConversationHistoryAction(historyItem.id)
-                          }
                         >
-                          <span className="w-full truncate text-sm font-medium">
-                            {getConversationTitle(historyItem)}
-                          </span>
-                          <span className="mt-0.5 text-xs text-foreground/50 dark:text-foreground-dark/50">
-                            {historyItem.message_count || 0} messages -{" "}
-                            {formatTimestamp(historyItem.updated_at)}
-                          </span>
-                        </button>
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 px-1 text-left"
+                            onClick={() =>
+                              handleConversationHistoryAction(historyItem.id)
+                            }
+                          >
+                            <span className="block w-full truncate text-sm font-medium">
+                              {getConversationTitle(historyItem)}
+                            </span>
+                            <span className="mt-0.5 block truncate text-xs text-foreground/50 dark:text-foreground-dark/50">
+                              {historyItem.message_count || 0} messages -{" "}
+                              {formatTimestamp(historyItem.updated_at)}
+                            </span>
+                          </button>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            className="h-7 w-7 min-w-7 flex-shrink-0 opacity-70 group-hover:opacity-100"
+                            onPress={() => openRenameConversation(historyItem)}
+                            isDisabled={hasPendingRequest}
+                            aria-label="Rename conversation"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            className="h-7 w-7 min-w-7 flex-shrink-0 opacity-70 group-hover:opacity-100"
+                            onPress={() => openDeleteConversation(historyItem)}
+                            isDisabled={hasPendingRequest}
+                            aria-label="Delete conversation"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1213,6 +1350,91 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
           </>
         )}
       </div>
+
+      <Modal
+        isOpen={Boolean(renameConversation)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            closeRenameConversation();
+          }
+        }}
+        placement="center"
+      >
+        <ModalContent>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitRenameConversation();
+            }}
+          >
+            <ModalHeader>Rename Conversation</ModalHeader>
+            <ModalBody>
+              <Input
+                label="Title"
+                value={renameTitle}
+                onValueChange={setRenameTitle}
+                maxLength={255}
+                isDisabled={isRenamingConversation}
+              />
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={closeRenameConversation}
+                isDisabled={isRenamingConversation}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="primary"
+                type="submit"
+                isLoading={isRenamingConversation}
+                isDisabled={!renameTitle.trim()}
+              >
+                Rename
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(deleteConversation)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            closeDeleteConversation();
+          }
+        }}
+        placement="center"
+      >
+        <ModalContent>
+          <ModalHeader>Delete Conversation</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-foreground/70 dark:text-foreground-dark/70">
+              Delete this conversation from your Senpai history?
+            </p>
+            <p className="truncate text-sm font-medium">
+              {getConversationTitle(deleteConversation)}
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="light"
+              onPress={closeDeleteConversation}
+              isDisabled={isDeletingConversation}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={() => void confirmDeleteConversation()}
+              isLoading={isDeletingConversation}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal
         isOpen={isSettingsOpen}

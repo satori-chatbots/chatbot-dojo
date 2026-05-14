@@ -38,6 +38,11 @@ urlpatterns = [
         name="senpai-conversations",
     ),
     path(
+        "senpai/conversations/<int:conversation_id>/",
+        api.SenpaiConversationDetailView.as_view(),
+        name="senpai-conversation-detail",
+    ),
+    path(
         "senpai/conversation/message/",
         api.SenpaiConversationMessageView.as_view(),
         name="senpai-conversation-message",
