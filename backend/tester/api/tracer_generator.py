@@ -2,9 +2,12 @@
 
 import json
 import os
+import queue
 import re
 import shlex
+import signal
 import subprocess
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -159,6 +162,10 @@ class TracerGenerator:
             task.stage = "CANCELLED"
             task.error_message = "TRACER execution cancelled by user."
             task.save(update_fields=["status", "stage", "error_message"])
+            if task.execution_id:
+                task.execution.status = "CANCELLED"
+                task.execution.process_id = None
+                task.execution.save(update_fields=["status", "process_id"])
             if celery_task:
                 celery_task.update_state(
                     state="REVOKED",
@@ -190,6 +197,15 @@ class TracerGenerator:
         self, task: ProfileGenerationTask, conversations: int, turns: int, verbosity: str
     ) -> ProfileExecution:
         """Create execution record for the task."""
+        if task.execution_id:
+            execution = task.execution
+            execution.status = "RUNNING"
+            execution.sessions = conversations
+            execution.turns_per_session = turns
+            execution.verbosity = verbosity
+            execution.save(update_fields=["status", "sessions", "turns_per_session", "verbosity"])
+            return execution
+
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         execution_name = f"TRACER_{timestamp}"
 
@@ -498,7 +514,7 @@ class TracerGenerator:
             execution.process_id = process.pid
             execution.save(update_fields=["process_id"])
 
-            full_stdout = self._handle_process_output(task, process, celery_task)
+            full_stdout = self._handle_process_output(task, execution, process, celery_task)
             process.wait()
 
             full_stderr_lines = []
@@ -633,19 +649,61 @@ class TracerGenerator:
         return "OTHER"
 
     def _handle_process_output(
-        self, task: ProfileGenerationTask, process: subprocess.Popen, celery_task: "Task | None" = None
+        self,
+        task: ProfileGenerationTask,
+        execution: ProfileExecution,
+        process: subprocess.Popen,
+        celery_task: "Task | None" = None,
     ) -> list[str]:
         """Handle process output and update progress."""
         full_stdout = []
+        output_queue: queue.Queue[str | None] = queue.Queue()
 
-        if process.stdout:
-            for line in iter(process.stdout.readline, ""):
-                full_stdout.append(line)
-                if line.strip():
-                    logger.info(f"TRACER (task {task.id}): {line.strip()}")
-                    self._update_progress_from_tracer_output(task, line, celery_task)
+        def read_stdout() -> None:
+            if process.stdout:
+                for stdout_line in iter(process.stdout.readline, ""):
+                    output_queue.put(stdout_line)
+            output_queue.put(None)
+
+        reader_thread = threading.Thread(target=read_stdout, daemon=True)
+        reader_thread.start()
+
+        while True:
+            try:
+                line = output_queue.get(timeout=0.5)
+            except queue.Empty:
+                if self._is_cancellation_requested(task, execution):
+                    self._terminate_tracer_subprocess(process)
+                    break
+                if process.poll() is not None and not reader_thread.is_alive():
+                    break
+                continue
+
+            if line is None:
+                break
+
+            full_stdout.append(line)
+            if line.strip():
+                logger.info(f"TRACER (task {task.id}): {line.strip()}")
+                self._update_progress_from_tracer_output(task, line, celery_task)
+            if self._is_cancellation_requested(task, execution):
+                self._terminate_tracer_subprocess(process)
+                break
 
         return full_stdout
+
+    def _terminate_tracer_subprocess(self, process: subprocess.Popen) -> None:
+        """Terminate the TRACER subprocess from the Celery worker that owns it."""
+        if process.poll() is not None:
+            return
+
+        try:
+            process.send_signal(signal.SIGTERM)
+            process.wait(timeout=5)
+        except (subprocess.SubprocessError, OSError, TimeoutError):
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
 
     def _post_process_results(
         self,

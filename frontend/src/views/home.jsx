@@ -109,6 +109,9 @@ function Home() {
   const [executions, setExecutions] = useState([]);
   const [allProfiles, setAllProfiles] = useState([]);
   const [loadingExecutions, setLoadingExecutions] = useState(false);
+  const [cancellingExecutionIds, setCancellingExecutionIds] = useState(
+    () => new Set(),
+  );
 
   // List of sensei check rules in the selected project
   const [senseiCheckRules, setSenseiCheckRules] = useState([]);
@@ -328,6 +331,9 @@ function Home() {
 
   const handleCancelExecution = useCallback(
     async (executionId) => {
+      if (cancellingExecutionIds.has(executionId)) return;
+
+      setCancellingExecutionIds((previous) => new Set(previous).add(executionId));
       try {
         const response = await cancelTracerGeneration(executionId);
         showToast(
@@ -356,10 +362,15 @@ function Home() {
           // Use default message if parsing fails
         }
         showToast("error", errorMessage);
+        setCancellingExecutionIds((previous) => {
+          const next = new Set(previous);
+          next.delete(executionId);
+          return next;
+        });
         throw error;
       }
     },
-    [reloadExecutions, showToast],
+    [cancellingExecutionIds, reloadExecutions, showToast],
   );
 
   // Loading state for the serverside validation of the execution name

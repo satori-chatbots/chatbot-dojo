@@ -1,5 +1,20 @@
 import API_BASE_URL, { ENDPOINTS } from "./config";
 
+export const readResponsePayload = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    error:
+      text && !text.trim().startsWith("<")
+        ? text
+        : `Server returned ${response.status} ${response.statusText || "error"}`,
+  };
+};
+
 const apiClient = async (url, options = {}) => {
   const token = localStorage.getItem("token");
   const defaultHeaders = {
@@ -37,7 +52,7 @@ const apiClient = async (url, options = {}) => {
   }
 
   if (!response.ok) {
-    const errorData = await response.json();
+    const errorData = await readResponsePayload(response);
     throw new Error(JSON.stringify(errorData));
   }
 
