@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Sequence
 from typing import ClassVar, Protocol, TypeAlias
+from uuid import uuid4
 
 from django.db import transaction
 from django.db.models import Count
@@ -105,6 +106,7 @@ class SenpaiConversationListView(APIView):
         conversations = (
             SenpaiConversation.objects.filter(user=request.user)
             .annotate(message_count=Count("messages"))
+            .filter(message_count__gt=0)
             .order_by("-is_active", "-updated_at", "-created_at")
         )
         return Response(
@@ -143,15 +145,18 @@ class SenpaiConversationDetailView(APIView):
         """Delete an owned Senpai conversation."""
         conversation = self._get_conversation(request, conversation_id)
         was_active = conversation.is_active
+        assistant_api_key = conversation.assistant_api_key
+        assistant_model = conversation.assistant_model
         conversation.delete()
 
         if was_active:
-            next_conversation = (
-                SenpaiConversation.objects.filter(user=request.user).order_by("-updated_at", "-created_at").first()
+            SenpaiConversation.objects.create(
+                user=request.user,
+                thread_id=uuid4().hex,
+                assistant_api_key=assistant_api_key,
+                assistant_model=assistant_model,
+                is_active=True,
             )
-            if next_conversation is not None:
-                next_conversation.is_active = True
-                next_conversation.save(update_fields=["is_active", "updated_at"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
