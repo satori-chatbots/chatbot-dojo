@@ -37,6 +37,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import {
   assignSenpaiApiKey,
   deleteSenpaiConversation,
@@ -68,7 +69,7 @@ const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   month: "short",
 });
 
-const getStoredActiveProjectId = () => {
+const getStoredActiveProject = () => {
   try {
     const storedProject = globalThis.localStorage.getItem("selectedProject");
     if (!storedProject) {
@@ -78,11 +79,91 @@ const getStoredActiveProjectId = () => {
     const project = JSON.parse(storedProject);
     const projectId = Number(project?.id);
     if (Number.isInteger(projectId) && projectId > 0) {
-      return projectId;
+      return {
+        id: projectId,
+        name: typeof project?.name === "string" ? project.name : undefined,
+      };
     }
   } catch {
     return;
   }
+};
+
+const getStoredActiveProjectId = () => getStoredActiveProject()?.id;
+
+const getTestCenterSelectedTab = (projectId) => {
+  if (!projectId) {
+    return;
+  }
+  try {
+    return globalThis.localStorage.getItem(`sensei-selected-tab-${projectId}`);
+  } catch {
+    return;
+  }
+};
+
+const getScreenIdFromPathname = (pathname) => {
+  if (pathname === "/") return "test_center";
+  if (pathname === "/setup") return "setup_guide";
+  if (pathname === "/chatbot-connectors") return "chatbot_connectors";
+  if (pathname === "/projects") return "projects";
+  if (pathname === "/dashboard" || pathname === "/sensei-dashboard") {
+    return "sensei_dashboard";
+  }
+  if (pathname === "/tracer-dashboard") return "tracer_dashboard";
+  if (pathname === "/sensei-check-results") return "sensei_check_dashboard";
+  if (pathname.startsWith("/sensei-check-rules")) return "sensei_check_rules";
+  if (pathname.startsWith("/test-case/")) return "test_case";
+  if (pathname.startsWith("/yaml-editor")) return "yaml_editor";
+  if (pathname.startsWith("/custom-connector-editor")) {
+    return "custom_connector_editor";
+  }
+  if (pathname === "/profile") return "profile_settings";
+  return "unknown";
+};
+
+const SCREEN_LABELS = {
+  chatbot_connectors: "Chatbot Connectors",
+  custom_connector_editor: "Custom Connector Editor",
+  profile_settings: "Profile Settings",
+  projects: "Projects",
+  sensei_check_dashboard: "Sensei-check Dashboard",
+  sensei_check_rules: "Sensei-check Rules",
+  sensei_dashboard: "Sensei Dashboard",
+  setup_guide: "Setup Guide",
+  test_case: "Test Case Detail",
+  test_center: "Test Center",
+  tracer_dashboard: "TRACER Dashboard",
+  unknown: "Unknown Chatbot Dojo screen",
+  yaml_editor: "YAML Editor",
+};
+
+const buildSenpaiScreenContext = (location) => {
+  const activeProject = getStoredActiveProject();
+  const screenId = getScreenIdFromPathname(location.pathname);
+  const context = {
+    context_type: "current_chatbot_dojo_screen",
+    screen_id: screenId,
+    screen_name: SCREEN_LABELS[screenId] || SCREEN_LABELS.unknown,
+    route: `${location.pathname}${location.search || ""}`,
+    pathname: location.pathname,
+    has_active_project: Boolean(activeProject?.id),
+  };
+
+  if (activeProject?.id) {
+    context.active_project_id = activeProject.id;
+  }
+  if (activeProject?.name) {
+    context.active_project_name = activeProject.name;
+  }
+  if (screenId === "test_center") {
+    const selectedTab = getTestCenterSelectedTab(activeProject?.id);
+    if (selectedTab) {
+      context.active_tab = selectedTab;
+    }
+  }
+
+  return context;
 };
 
 const readDesktopSidebarCollapsed = () => {
@@ -196,6 +277,7 @@ const isScrolledToBottom = (element) => {
 };
 
 const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
+  const location = useLocation();
   const { showToast } = useMyCustomToast();
   const { setupData, reloadApiKeys } = useSetup();
   const messagesContainerReference = useRef(undefined);
@@ -925,6 +1007,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
             const data = await sendSenpaiMessage(
               composedMessage,
               getStoredActiveProjectId(),
+              buildSenpaiScreenContext(location),
             );
             if (!isMountedReference.current) {
               return;
@@ -970,6 +1053,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       createMessageId,
       hasPendingApproval,
       hasPendingRequest,
+      location,
       showToast,
     ],
   );
@@ -985,7 +1069,10 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
       shouldFocusComposerReference.current = true;
 
       try {
-        const data = await resolveSenpaiApprovals([{ type: decisionType }]);
+        const data = await resolveSenpaiApprovals(
+          [{ type: decisionType }],
+          buildSenpaiScreenContext(location),
+        );
         if (!isMountedReference.current) {
           return;
         }
@@ -1008,7 +1095,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
         }
       }
     },
-    [appendAssistantResponse, hasPendingRequest, showToast],
+    [appendAssistantResponse, hasPendingRequest, location, showToast],
   );
 
   const handleComposerKeyDown = (event) => {

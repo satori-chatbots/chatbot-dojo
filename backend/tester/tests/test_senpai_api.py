@@ -845,6 +845,75 @@ class SenpaiConversationAPITests(TestCase):
         )
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_passes_screen_context_to_assistant(self, build_assistant_mock: MagicMock) -> None:
+        """Sending a message should pass current Chatbot Dojo screen context to Senpai."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+        )
+        assistant = MagicMock()
+        assistant.send_message.return_value = "Hello from Senpai"
+        build_assistant_mock.return_value = assistant
+
+        screen_context = {
+            "route": "/dashboard",
+            "selected_run_id": "run_123",
+            "visible_error": "Timeout while waiting for chatbot response",
+        }
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {
+                "message": "What does this error mean?",
+                "active_project_id": project.id,
+                "screen_id": "sensei_dashboard",
+                "screen_context": screen_context,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        assistant.send_message.assert_called_once_with(
+            "What does this error mean?",
+            active_project=project.get_project_folder_name(),
+            screen_id="sensei_dashboard",
+            screen_context=screen_context,
+        )
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_rejects_non_object_screen_context(self, build_assistant_mock: MagicMock) -> None:
+        """screen_context must be a JSON object, not an arbitrary payload."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {
+                "message": "Hello",
+                "screen_id": "test_center",
+                "screen_context": ["not", "an", "object"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_BAD_REQUEST)  # noqa: PT009
+        self.assertIn("screen_context", response.data)  # noqa: PT009
+        build_assistant_mock.assert_not_called()
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_ignores_assistant_close_failure(self, build_assistant_mock: MagicMock) -> None:
         """Cleanup failures should not replace a successful assistant response."""
         SenpaiConversation.objects.create(

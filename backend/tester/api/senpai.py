@@ -281,9 +281,15 @@ class SenpaiConversationMessageView(APIView):
                     serializer.validated_data["approval_decisions"],
                 )
             else:
+                send_kwargs: dict[str, object] = {"active_project": active_project_name}
+                screen_id = serializer.validated_data.get("screen_id")
+                if isinstance(screen_id, str) and screen_id:
+                    send_kwargs["screen_id"] = screen_id
+                if "screen_context" in serializer.validated_data:
+                    send_kwargs["screen_context"] = serializer.validated_data["screen_context"]
                 reply = assistant.send_message(
                     serializer.validated_data["message"],
-                    active_project=active_project_name,
+                    **send_kwargs,
                 )
             pending_approvals = self._serialize_pending_approvals(assistant)
             sync_senpai_workspace_to_database(request.user, workspace_snapshot)
