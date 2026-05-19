@@ -46,6 +46,7 @@ from tester.models import (
     get_user_sensei_root_path,
     sync_connector_export_file,
 )
+from tester.senpai_host_tools import build_chatbot_dojo_host_tools
 
 logger = logging.getLogger(__name__)
 
@@ -376,6 +377,7 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assist
         runtime_root=runtime_root,
         model=model,
         require_checkpointer=False,
+        host_tools=build_chatbot_dojo_host_tools(conversation.user),
     )
 
 

@@ -5,9 +5,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 
+from tester.models import CustomUser, SenpaiConversation, UserAPIKey
 from tester.senpai import (
+    build_assistant_for_conversation,
     build_chat_model_for_user_api_key,
     configure_embedding_model_environment,
     get_senpai_embedding_model_cache_root,
@@ -93,4 +95,55 @@ class SenpaiRuntimeTests(SimpleTestCase):
             model_provider="google_genai",
             api_key="test-gemini-key",
             temperature=0.3,
+        )
+
+
+class SenpaiAssistantBuilderTests(TestCase):
+    """Verify Chatbot Dojo wires Senpai Assistant construction options."""
+
+    @patch("tester.senpai.build_chat_model_for_user_api_key")
+    @patch("tester.senpai.create_assistant_for_paths")
+    def test_build_assistant_for_conversation_passes_host_tools(
+        self,
+        create_assistant_mock: MagicMock,
+        build_model_mock: MagicMock,
+    ) -> None:
+        """Chatbot Dojo runtime tools should be injected into Senpai Assistant."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            media_root = Path(temp_dir) / "filevault"
+            runtime_root = Path(temp_dir) / "senpai-runtime"
+            embedding_root = Path(temp_dir) / "embedding-cache"
+            with override_settings(
+                MEDIA_ROOT=media_root,
+                SENPAI_ASSISTANT_RUNTIME_ROOT=runtime_root,
+                SENPAI_EMBEDDING_MODEL_CACHE_ROOT=embedding_root,
+            ):
+                user = CustomUser.objects.create_user(email="owner@example.com")
+                api_key = UserAPIKey.objects.create(
+                    user=user,
+                    name="Assistant key",
+                    provider="openai",
+                    api_key_encrypted="",
+                )
+                conversation = SenpaiConversation.objects.create(
+                    user=user,
+                    thread_id="thread-1",
+                    assistant_api_key=api_key,
+                )
+                model = object()
+                assistant = object()
+                build_model_mock.return_value = model
+                create_assistant_mock.return_value = assistant
+
+                result = build_assistant_for_conversation(conversation)
+
+        self.assertIs(result, assistant)  # noqa: PT009
+        create_assistant_mock.assert_called_once()
+        kwargs = create_assistant_mock.call_args.kwargs
+        self.assertEqual(kwargs["thread_id"], "thread-1")  # noqa: PT009
+        self.assertEqual(kwargs["model"], model)  # noqa: PT009
+        self.assertFalse(kwargs["require_checkpointer"])  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            {tool.name for tool in kwargs["host_tools"]},
+            {"get_tracer_execution_summary", "list_tracer_executions"},
         )

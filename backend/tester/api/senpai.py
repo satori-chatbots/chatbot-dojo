@@ -22,6 +22,7 @@ from tester.senpai import (
     sync_database_records_to_senpai_workspace,
     sync_senpai_workspace_to_database,
 )
+from tester.senpai_screen_context import enrich_senpai_screen_context
 from tester.serializers import (
     SenpaiConversationAPIKeySerializer,
     SenpaiConversationInitializeSerializer,
@@ -286,7 +287,11 @@ class SenpaiConversationMessageView(APIView):
                 if isinstance(screen_id, str) and screen_id:
                     send_kwargs["screen_id"] = screen_id
                 if "screen_context" in serializer.validated_data:
-                    send_kwargs["screen_context"] = serializer.validated_data["screen_context"]
+                    send_kwargs["screen_context"] = enrich_senpai_screen_context(
+                        user=request.user,
+                        screen_context=serializer.validated_data["screen_context"],
+                        active_project_id=serializer.validated_data.get("active_project_id"),
+                    )
                 reply = assistant.send_message(
                     serializer.validated_data["message"],
                     **send_kwargs,

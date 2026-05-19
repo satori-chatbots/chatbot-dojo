@@ -883,11 +883,77 @@ class SenpaiConversationAPITests(TestCase):
         )
 
         self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        enriched_screen_context = {
+            **screen_context,
+            "active_project_exists": True,
+            "active_project_has_connector": True,
+            "active_project_has_api_key": False,
+            "active_project_connector_technology": "taskyto",
+        }
         assistant.send_message.assert_called_once_with(
             "What does this error mean?",
             active_project=project.get_project_folder_name(),
             screen_id="sensei_dashboard",
-            screen_context=screen_context,
+            screen_context=enriched_screen_context,
+        )
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_keeps_tracer_dashboard_screen_context_light(self, build_assistant_mock: MagicMock) -> None:
+        """TRACER dashboard screen context should keep runtime metrics out of the prompt context."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        connector = ChatbotConnector.objects.create(
+            name="Primary Connector",
+            technology="taskyto",
+            owner=self.user,
+        )
+        project = Project.objects.create(
+            name="Checkout QA",
+            chatbot_connector=connector,
+            owner=self.user,
+            api_key=self.api_key,
+        )
+        assistant = MagicMock()
+        assistant.send_message.return_value = "Tracer summary"
+        build_assistant_mock.return_value = assistant
+
+        screen_context = {
+            "context_type": "current_chatbot_dojo_screen",
+            "screen_id": "tracer_dashboard",
+            "screen_name": "TRACER Dashboard",
+            "route": "/tracer-dashboard",
+            "pathname": "/tracer-dashboard",
+            "has_active_project": True,
+            "active_project_id": project.id,
+            "active_project_name": project.name,
+        }
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {
+                "message": "Cuantos tracer se han cancelado?",
+                "active_project_id": project.id,
+                "screen_id": "tracer_dashboard",
+                "screen_context": screen_context,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        enriched_screen_context = {
+            **screen_context,
+            "active_project_exists": True,
+            "active_project_has_connector": True,
+            "active_project_has_api_key": True,
+            "active_project_connector_technology": "taskyto",
+        }
+        assistant.send_message.assert_called_once_with(
+            "Cuantos tracer se han cancelado?",
+            active_project=project.get_project_folder_name(),
+            screen_id="tracer_dashboard",
+            screen_context=enriched_screen_context,
         )
 
     @patch("tester.api.senpai.build_assistant_for_conversation")

@@ -112,7 +112,10 @@ export const sendSenpaiMessage = async (
   }
 };
 
-export const resolveSenpaiApprovals = async (approvalDecisions, screenContext) => {
+export const resolveSenpaiApprovals = async (
+  approvalDecisions,
+  screenContext,
+) => {
   try {
     const payload = { approval_decisions: approvalDecisions };
     if (screenContext?.screen_id) {
