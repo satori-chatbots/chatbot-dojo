@@ -174,6 +174,8 @@ class SenpaiConversationMessageSerializer(serializers.Serializer):
 
     message = serializers.CharField(required=False, allow_blank=False)
     active_project_id = serializers.IntegerField(required=False, allow_null=True)
+    screen_id = serializers.CharField(required=False, allow_blank=True, max_length=64, trim_whitespace=True)
+    screen_context = serializers.JSONField(required=False)
     approval_decisions = serializers.JSONField(required=False)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -183,6 +185,8 @@ class SenpaiConversationMessageSerializer(serializers.Serializer):
         if has_message == has_approval_decisions:
             msg = "Provide exactly one of message or approval_decisions."
             raise serializers.ValidationError(msg)
+        if "screen_context" in attrs and not isinstance(attrs["screen_context"], dict):
+            raise serializers.ValidationError({"screen_context": "Expected an object with current screen details."})
         return attrs
 
 

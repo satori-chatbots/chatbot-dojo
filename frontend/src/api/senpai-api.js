@@ -83,11 +83,19 @@ export const deleteSenpaiConversation = async (conversationId) => {
   }
 };
 
-export const sendSenpaiMessage = async (message, activeProjectId) => {
+export const sendSenpaiMessage = async (
+  message,
+  activeProjectId,
+  screenContext,
+) => {
   try {
     const payload = { message };
     if (activeProjectId) {
       payload.active_project_id = activeProjectId;
+    }
+    if (screenContext?.screen_id) {
+      payload.screen_id = screenContext.screen_id;
+      payload.screen_context = screenContext;
     }
 
     const response = await apiClient(
@@ -104,13 +112,22 @@ export const sendSenpaiMessage = async (message, activeProjectId) => {
   }
 };
 
-export const resolveSenpaiApprovals = async (approvalDecisions) => {
+export const resolveSenpaiApprovals = async (
+  approvalDecisions,
+  screenContext,
+) => {
   try {
+    const payload = { approval_decisions: approvalDecisions };
+    if (screenContext?.screen_id) {
+      payload.screen_id = screenContext.screen_id;
+      payload.screen_context = screenContext;
+    }
+
     const response = await apiClient(
       `${API_BASE_URL}${ENDPOINTS.SENPAI_CONVERSATION_MESSAGE}`,
       {
         method: "POST",
-        body: JSON.stringify({ approval_decisions: approvalDecisions }),
+        body: JSON.stringify(payload),
       },
     );
 
