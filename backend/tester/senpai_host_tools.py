@@ -4,14 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, QuerySet
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
-from tester.models import ProfileExecution, Project
-
-User = get_user_model()
+from tester.models import CustomUser, ProfileExecution, Project
 
 TRACER_ACTIVE_STATUSES = {"PENDING", "RUNNING", "CANCELLING"}
 TRACER_STATUSES = {"PENDING", "RUNNING", "SUCCESS", "FAILURE", "CANCELLING", "CANCELLED"}
@@ -49,7 +46,7 @@ class ListTracerExecutionsInput(BaseModel):
     )
 
 
-def build_chatbot_dojo_host_tools(user: User) -> list[BaseTool]:
+def build_chatbot_dojo_host_tools(user: CustomUser) -> list[BaseTool]:
     """Return host-owned tools for Senpai Assistant, scoped to one authenticated user."""
 
     @tool(args_schema=TracerExecutionSummaryInput)
@@ -117,7 +114,7 @@ def build_chatbot_dojo_host_tools(user: User) -> list[BaseTool]:
 
 
 def _get_visible_tracer_executions_for_tool(
-    user: User,
+    user: CustomUser,
     project: str | None,
 ) -> tuple[QuerySet[ProfileExecution], dict[str, Any]] | tuple[dict[str, str], dict[str, Any]]:
     executions = _get_visible_tracer_executions(user)
@@ -140,14 +137,14 @@ def _get_visible_tracer_executions_for_tool(
     return executions.filter(project=resolved_project), scope
 
 
-def _get_visible_tracer_executions(user: User) -> QuerySet[ProfileExecution]:
+def _get_visible_tracer_executions(user: CustomUser) -> QuerySet[ProfileExecution]:
     return ProfileExecution.objects.filter(
         Q(project__public=True) | Q(project__owner=user),
         execution_type="tracer",
     ).select_related("project")
 
 
-def _resolve_visible_project(user: User, project: str) -> Project | None:
+def _resolve_visible_project(user: CustomUser, project: str) -> Project | None:
     normalized = project.strip()
     visible_projects = Project.objects.filter(Q(public=True) | Q(owner=user)).select_related("chatbot_connector")
     for candidate in visible_projects:

@@ -4,11 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.contrib.auth import get_user_model
-
-from tester.models import Project
-
-User = get_user_model()
+from tester.models import CustomUser, Project
 
 SENPAI_SCREEN_CONTEXT_FIELD_LIMIT = 24
 LOW_VALUE_CONTEXT_KEYS = (
@@ -20,7 +16,7 @@ LOW_VALUE_CONTEXT_KEYS = (
 
 def enrich_senpai_screen_context(
     *,
-    user: User,
+    user: CustomUser,
     screen_context: dict[str, Any] | None,
     active_project_id: int | None,
 ) -> dict[str, Any] | None:
@@ -35,7 +31,7 @@ def enrich_senpai_screen_context(
     return _fit_senpai_context_field_limit(enriched)
 
 
-def _get_owned_project(user: User, active_project_id: int | None) -> Project | None:
+def _get_owned_project(user: CustomUser, active_project_id: int | None) -> Project | None:
     if active_project_id is None:
         return None
     return (
