@@ -124,9 +124,11 @@ class ExecutionUtils:
             ],
         }
 
-        # If there are connector parameters in the project, use them
-        if params.project.chatbot_connector and params.project.chatbot_connector.parameters:
-            config_data["connector_parameters"] = params.project.chatbot_connector.parameters
+        connector = params.project.chatbot_connector
+        if connector and connector.technology == "custom" and connector.custom_config_file:
+            config_data["connector_parameters"] = {"config_path": connector.custom_config_file.path}
+        elif connector and connector.parameters:
+            config_data["connector_parameters"] = connector.parameters
 
         return config_data
 
