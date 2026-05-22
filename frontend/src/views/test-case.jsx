@@ -66,6 +66,15 @@ function TestCase() {
         setReportsLoading(true);
         console.log("Fetching reports data for successful test case");
         const fetchedGlobalReport = await fetchGlobalReportsByTestCase(id);
+        if (!fetchedGlobalReport?.id) {
+          setGlobalReport({});
+          setGlobalErrors([]);
+          setProfileReports([]);
+          const fetchedProject = await fetchProject(testCaseData.project);
+          setProjectName(fetchedProject.name);
+          return;
+        }
+
         setGlobalReport(fetchedGlobalReport);
 
         const fetchedGlobalErrors = await fetchTestErrorByGlobalReport(

@@ -60,7 +60,7 @@ const formatExecutionTime = (seconds, status) => {
   if (status === "STOPPED") {
     return "Stopped";
   }
-  if (seconds === null) {
+  if (status === "RUNNING" && seconds === null) {
     return "Running";
   }
   return sharedFormatExecutionTime(seconds);

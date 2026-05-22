@@ -35,6 +35,24 @@ import { Plus, RotateCcw, Edit, Trash, Save, FileText } from "lucide-react";
 import SetupProgress from "../components/setup-progress";
 import { useSetup } from "../contexts/setup-context";
 
+const SENSITIVE_PARAMETER_PATTERN = /(api[_-]?key|token|secret|password)/i;
+
+const isSensitiveParameter = (name) => SENSITIVE_PARAMETER_PATTERN.test(name);
+
+const displayParameterValue = (name, value) => {
+  if (isSensitiveParameter(name) && value) {
+    return "********";
+  }
+  return value;
+};
+
+const getParameterInputType = (param) => {
+  if (isSensitiveParameter(param.name)) {
+    return "password";
+  }
+  return param.type === "integer" ? "number" : "text";
+};
+
 const ChatbotConnectors = () => {
   const navigate = useNavigate();
   const { reloadConnectors } = useSetup();
@@ -636,7 +654,7 @@ const ChatbotConnectors = () => {
                           }));
                         }}
                         fullWidth
-                        type={param.type === "integer" ? "number" : "text"}
+                        type={getParameterInputType(param)}
                       />
                     ))
                   )}
@@ -766,7 +784,9 @@ const ChatbotConnectors = () => {
                             .map(([key, value]) => (
                               <div key={key}>
                                 <span className="font-medium">{key}:</span>{" "}
-                                <span className="break-all">{value}</span>
+                                <span className="break-all">
+                                  {displayParameterValue(key, value)}
+                                </span>
                               </div>
                             ))}
                           {Object.keys(connector.parameters).length > 2 && (
@@ -883,7 +903,7 @@ const ChatbotConnectors = () => {
                                   {key}:
                                 </span>{" "}
                                 <span className="text-gray-600 dark:text-gray-400 break-all">
-                                  {value}
+                                  {displayParameterValue(key, value)}
                                 </span>
                               </div>
                             ))}
@@ -1098,7 +1118,7 @@ const ChatbotConnectors = () => {
                           }));
                         }}
                         fullWidth
-                        type={param.type === "integer" ? "number" : "text"}
+                        type={getParameterInputType(param)}
                       />
                     ))
                   )}

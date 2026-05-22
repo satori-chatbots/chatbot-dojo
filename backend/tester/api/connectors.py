@@ -20,6 +20,42 @@ from tester.serializers import ChatbotConnectorSerializer
 # Cache timeout for connector information (1 hour)
 CACHE_TIMEOUT_SECONDS = 3600
 
+MILLIONBOT_COMPAT_PARAMETERS = [
+    {
+        "name": "api_key",
+        "type": "string",
+        "required": False,
+        "description": "The public API key for the MillionBot widget.",
+        "default": "60a3bee2e3987316fed3218f",
+    },
+    {
+        "name": "site_url",
+        "type": "string",
+        "required": False,
+        "description": "The website URL where the MillionBot widget is embedded.",
+        "default": "https://www.uam.es/uam/tecnologias-informacion/servicios-ti/acceso-remoto-red",
+    },
+    {
+        "name": "chat_session_token",
+        "type": "string",
+        "required": False,
+        "description": "Optional x-chat-session-token captured from the widget when the bot requires it.",
+        "default": "",
+    },
+]
+
+
+def _with_compat_connector_parameters(technology: str, parameters: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Return connector parameters plus local compatibility fields for pending connector releases."""
+    if technology != "millionbot":
+        return parameters
+
+    existing_parameter_names = {parameter["name"] for parameter in parameters}
+    missing_parameters = [
+        parameter for parameter in MILLIONBOT_COMPAT_PARAMETERS if parameter["name"] not in existing_parameter_names
+    ]
+    return [*parameters, *missing_parameters]
+
 
 @api_view(["GET"])
 def get_available_connectors(_request: Request) -> Response:
@@ -67,7 +103,7 @@ def get_connector_parameters(request: Request) -> Response:
             {"error": "Technology parameter is required"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    cache_key = f"connector_parameters_{technology}"
+    cache_key = f"connector_parameters_{technology}_v2"
     cached_parameters = cache.get(cache_key)
 
     if cached_parameters:
@@ -91,6 +127,7 @@ def get_connector_parameters(request: Request) -> Response:
             if param.default is not None:
                 param_dict["default"] = param.default
             parameters.append(param_dict)
+        parameters = _with_compat_connector_parameters(technology, parameters)
 
         cache.set(cache_key, parameters, timeout=CACHE_TIMEOUT_SECONDS)  # Cache for 1 hour
         return Response({"technology": technology, "parameters": parameters}, status=status.HTTP_200_OK)

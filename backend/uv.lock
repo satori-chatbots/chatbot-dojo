@@ -419,20 +419,20 @@ wheels = [
 
 [[package]]
 name = "chatbot-connectors"
-version = "0.6.0"
+version = "0.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/e9/af11ee667a5123558d5eecba31e1c843934a52dc9b803d4401be5788de54/chatbot_connectors-0.6.0.tar.gz", hash = "sha256:7fd8c7a21af5f5e6511b26967eea158aaabb847723fa3baa7ae466ae9d5bf15e", size = 42729, upload-time = "2025-10-24T11:00:35.27Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/29/13e85c56813fd9c935dc0bf7d375239119d5371f04f3c114f626b02deb53/chatbot_connectors-0.7.2.tar.gz", hash = "sha256:01194b16867af06b52761af01824209ff772de8bccf5f570b92ba6e7c1427b5b", size = 47515, upload-time = "2026-05-21T15:35:55.244Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/62/0b2924662809ebe3fa2744e3b0e5a509ba74b0d4dd14413b6da70ee00718/chatbot_connectors-0.6.0-py3-none-any.whl", hash = "sha256:a2d09c2e7eb0d8451dac6cf05df2b92c36b94a1824ce95092b1c1e834cd976dd", size = 28548, upload-time = "2025-10-24T11:00:34.285Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/c5/5076183858a4c3ae42f05eaf2d4f75464f9a674aad2fa35822357b0abfe3/chatbot_connectors-0.7.2-py3-none-any.whl", hash = "sha256:f17a4cc5f42e674b7c8fae9f87b6c1affaa149e49247dfea1cc47dfdeb43d0c8", size = 29587, upload-time = "2026-05-21T15:35:54.294Z" },
 ]
 
 [[package]]
 name = "chatbot-tracer"
-version = "0.8.2"
+version = "0.8.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bs4" },
@@ -446,9 +446,9 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langgraph" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/47/82aae0e750818e756d4893dd6c22450ba1e73464be4aa2c986f4640f16e3/chatbot_tracer-0.8.2.tar.gz", hash = "sha256:10a9d1509ca115e9bcba68279a9740712bdced3da17fc3d5591d81835b56882a", size = 163275, upload-time = "2025-10-28T11:56:28.777Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/65/62/e7c82dc67f3b7184e23c5a738139a07b6bbd5fe3db68cc50548e56db8f7b/chatbot_tracer-0.8.4.tar.gz", hash = "sha256:dc72d6cd6060f6fc98532d261e397286c7747cc79d5884fbfdafcd455d009944", size = 163325, upload-time = "2026-05-22T08:43:01.333Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/e3/d239fa08b141c3fb94ba98b9ed3cd101693aa710104f022927c40d3b39e6/chatbot_tracer-0.8.2-py3-none-any.whl", hash = "sha256:34b984aaeb95845377e130fd049504ff1d35a5ca79b3b949800f75000b3abec9", size = 195588, upload-time = "2025-10-28T11:56:26.429Z" },
+    { url = "https://files.pythonhosted.org/packages/29/68/58a815ca6d836983bf6839b9efe0ae25d677ed4e07511e1f3da3bd18de63/chatbot_tracer-0.8.4-py3-none-any.whl", hash = "sha256:d89290ca00d04fca3ca8e4a62fda9b31aba306e324bda453f96816241b32ad43", size = 195590, upload-time = "2026-05-22T08:43:00.078Z" },
 ]
 
 [[package]]
@@ -3649,7 +3649,7 @@ requires-dist = [
     { name = "allpairspy", specifier = ">=2.5.1" },
     { name = "boto3", specifier = ">=1.38.30" },
     { name = "celery", specifier = ">=5.5.3" },
-    { name = "chatbot-tracer", specifier = "==0.8.2" },
+    { name = "chatbot-tracer", specifier = "==0.8.4" },
     { name = "cryptography", specifier = ">=45.0.3" },
     { name = "dj-database-url", specifier = ">=3.0.1" },
     { name = "django", specifier = ">=5.2.2" },
@@ -3676,7 +3676,7 @@ requires-dist = [
     { name = "senpai-assistant", specifier = "==0.8.0" },
     { name = "senpai-validators", specifier = ">=0.2.1" },
     { name = "tiktoken", specifier = ">=0.9.0" },
-    { name = "user-simulator", specifier = ">=0.6.0" },
+    { name = "user-simulator", specifier = "==0.6.2" },
     { name = "webdriver-manager", specifier = ">=4.0.2" },
 ]
 
@@ -4256,7 +4256,7 @@ socks = [
 
 [[package]]
 name = "user-simulator"
-version = "0.6.0"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "allpairspy" },
@@ -4283,9 +4283,9 @@ dependencies = [
     { name = "webdriver-manager" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7b/f4/f89a507a0f982e222d59311c1b36ba25b301afe17c3daa3591032ed58cc5/user_simulator-0.6.0.tar.gz", hash = "sha256:e8695fa222c6109947158d778c53edff08f774b224a30b54e4649329faa72531", size = 1044131, upload-time = "2026-04-16T09:51:58.946Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/47/cd7e33bb9b66f1fcec2e31de444a29fff96ac1b245717f2fe6361ce84ae0/user_simulator-0.6.2.tar.gz", hash = "sha256:cf6ffd5d2fb08825f2078ab2e19739197d6e55eb2e724c140aff705c246e5028", size = 1044156, upload-time = "2026-05-22T08:57:50.604Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/27/9a4958561d640f9d88e7ea54e2adf93fdbf812bb67d15635cd1ccbd26874/user_simulator-0.6.0-py3-none-any.whl", hash = "sha256:e59dfd870f44c299cfcb7579f9ab78fc297efd18ccca6b944bb0ae5f0e42240c", size = 1054758, upload-time = "2026-04-16T09:51:53.824Z" },
+    { url = "https://files.pythonhosted.org/packages/42/0a/faa3868333e1a6fe5c5264cef81a7ade95ad3188a1ef837759fb856e1727/user_simulator-0.6.2-py3-none-any.whl", hash = "sha256:135c51300b2c19e7c63017cfaa7149b35439e239d0cf3e44d6a45358f78ad745", size = 1054759, upload-time = "2026-05-22T08:57:45.27Z" },
 ]
 
 [[package]]
