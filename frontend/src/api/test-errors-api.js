@@ -1,6 +1,7 @@
 import API_BASE_URL, { ENDPOINTS } from "./config";
 
-const isValidId = (value) => value !== undefined && value !== null && value !== "";
+const isValidId = (value) =>
+  value !== undefined && value !== null && value !== "";
 
 const cleanIds = (ids) => ids.filter((id) => isValidId(id));
 
