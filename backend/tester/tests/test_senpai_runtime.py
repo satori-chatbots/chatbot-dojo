@@ -145,5 +145,17 @@ class SenpaiAssistantBuilderTests(TestCase):
         self.assertFalse(kwargs["require_checkpointer"])  # noqa: PT009
         self.assertEqual(  # noqa: PT009
             {tool.name for tool in kwargs["host_tools"]},
-            {"get_tracer_execution_summary", "list_tracer_executions"},
+            {
+                "analyze_dashboard_execution_results",
+                "get_active_backend_executions",
+                "get_sensei_chat_execution_summary",
+                "get_sensei_check_execution_summary",
+                "get_tracer_execution_summary",
+                "list_sensei_chat_executions",
+                "list_sensei_check_executions",
+                "list_tracer_executions",
+                "start_sensei_chat_execution",
+                "start_sensei_check_execution",
+                "start_tracer_generation",
+            },
         )
