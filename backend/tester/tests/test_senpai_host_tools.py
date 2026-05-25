@@ -1,9 +1,10 @@
 """Tests for Chatbot Dojo tools exposed to Senpai Assistant."""
 
+import tempfile
 from pathlib import Path
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from langchain_core.tools import BaseTool
 
 from tester.models import ChatbotConnector, CustomUser, ProfileExecution, Project
@@ -16,6 +17,10 @@ class SenpaiHostToolsTests(TestCase):
 
     def setUp(self) -> None:
         """Create visible and non-visible TRACER executions."""
+        self.media_root = tempfile.TemporaryDirectory(dir=settings.BASE_DIR)
+        self.settings_override = override_settings(MEDIA_ROOT=self.media_root.name)
+        self.settings_override.enable()
+
         self.user = CustomUser.objects.create_user(email="owner@example.com")
         self.other_user = CustomUser.objects.create_user(email="other@example.com")
         self.connector = ChatbotConnector.objects.create(
@@ -67,6 +72,9 @@ class SenpaiHostToolsTests(TestCase):
             execution_type="tracer",
             status=status,
             profiles_directory=name.lower(),
+            tracer_stdout=f"{name} stdout line 1\n{name} stdout line 2",
+            tracer_stderr=f"{name} stderr line 1\n{name} stderr line 2" if status == "FAILURE" else "",
+            error_type="TRACER_ERROR" if status == "FAILURE" else "",
         )
 
     def _create_sensei_chat_execution(self, project: Project, name: str, status: str) -> SenseiTestCase:
@@ -190,6 +198,50 @@ class SenpaiHostToolsTests(TestCase):
         self.assertEqual(result["sensei_chat"]["executions"][0]["name"], "Checkout Running")  # noqa: PT009
         self.assertEqual(result["sensei_check"]["count"], 0)  # noqa: PT009
 
+    def test_analyze_dashboard_execution_results_returns_tracer_context(self) -> None:
+        """Analysis tool should expose bounded TRACER execution artifacts."""
+        execution = ProfileExecution.objects.get(execution_name="TRACER_PUBLIC_FAILURE")
+
+        result = self._tool("analyze_dashboard_execution_results").invoke(
+            {"dashboard": "tracer", "execution_id": execution.id, "log_tail_lines": 1}
+        )
+
+        self.assertEqual(result["dashboard"], "tracer")  # noqa: PT009
+        self.assertEqual(result["execution"]["name"], "TRACER_PUBLIC_FAILURE")  # noqa: PT009
+        self.assertEqual(result["error"]["error_type"], "TRACER_ERROR")  # noqa: PT009
+        self.assertEqual(result["logs"]["stdout_tail"], "TRACER_PUBLIC_FAILURE stdout line 2")  # noqa: PT009
+        self.assertEqual(result["logs"]["stderr_tail"], "TRACER_PUBLIC_FAILURE stderr line 2")  # noqa: PT009
+
+    def test_analyze_dashboard_execution_results_returns_sensei_chat_context(self) -> None:
+        """Analysis tool should expose sensei-chat progress and logs."""
+        result = self._tool("analyze_dashboard_execution_results").invoke(
+            {"dashboard": "sensei chat", "execution_name": "Public Failed Run"}
+        )
+
+        self.assertEqual(result["dashboard"], "sensei-chat")  # noqa: PT009
+        self.assertEqual(result["execution"]["name"], "Public Failed Run")  # noqa: PT009
+        self.assertEqual(result["progress"]["completion_percentage"], 100.0)  # noqa: PT009
+        self.assertEqual(result["logs"]["stderr_tail"], "failed")  # noqa: PT009
+
+    def test_analyze_dashboard_execution_results_returns_sensei_check_context(self) -> None:
+        """Analysis tool should read persisted sensei-check CSV and log artifacts."""
+        result = self._tool("analyze_dashboard_execution_results").invoke(
+            {"dashboard": "sensei-check", "execution_name": "execution_20260520_101500"}
+        )
+
+        self.assertNotIn("error", result, result)  # noqa: PT009
+        self.assertEqual(result["dashboard"], "sensei-check")  # noqa: PT009
+        self.assertEqual(result["execution"]["name"], "execution_20260520_101500")  # noqa: PT009
+        self.assertEqual(result["results"]["total_rows"], 1)  # noqa: PT009
+        self.assertEqual(result["results"]["status_counts"], {"pass": 1})  # noqa: PT009
+        self.assertIn("Exit Code: 0", result["logs"]["execution_log_tail"])  # noqa: PT009
+
+    def test_analyze_dashboard_execution_results_rejects_invalid_dashboard(self) -> None:
+        """Unknown dashboards should return a tool-readable error."""
+        result = self._tool("analyze_dashboard_execution_results").invoke({"dashboard": "unknown"})
+
+        self.assertEqual(result, {"error": "Invalid dashboard execution type: unknown"})  # noqa: PT009
+
     def tearDown(self) -> None:
         """Remove project folders created by sensei-check fixture data."""
         users_root = Path(settings.MEDIA_ROOT) / "users" / f"user_{self.user.id}"
@@ -200,3 +252,5 @@ class SenpaiHostToolsTests(TestCase):
                     execution_log.unlink(missing_ok=True)
                 for results_csv in root.glob("**/sensei_check_results/**/results.csv"):
                     results_csv.unlink(missing_ok=True)
+        self.settings_override.disable()
+        self.media_root.cleanup()

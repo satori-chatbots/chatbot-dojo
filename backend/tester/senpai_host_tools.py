@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import csv
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
+from django.conf import settings
 from django.db.models import Count, Q, QuerySet
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
@@ -19,6 +21,11 @@ TRACER_LIST_LIMIT_MAX = 20
 SENSEI_CHAT_LIST_LIMIT_MAX = 20
 SENSEI_CHECK_LIST_LIMIT_MAX = 20
 SENSEI_CHECK_TIMESTAMP_LENGTH = 15
+DASHBOARD_ANALYSIS_LOG_TAIL_LINES_MAX = 200
+DASHBOARD_ANALYSIS_TEXT_CHARS_MAX = 12000
+DASHBOARD_ANALYSIS_CSV_ROWS_MAX = 50
+
+DashboardExecutionType = Literal["tracer", "sensei-chat", "sensei-check"]
 
 
 class TracerExecutionSummaryInput(BaseModel):
@@ -119,6 +126,48 @@ class ActiveExecutionsInput(BaseModel):
             "Optional project display name or workspace folder name. If omitted, check all visible projects. "
             "This includes active TRACER and sensei-chat executions."
         ),
+    )
+
+
+class AnalyzeDashboardExecutionResultsInput(BaseModel):
+    """Input for collecting execution artifacts that Senpai can analyze."""
+
+    dashboard: str = Field(
+        description=(
+            "Dashboard/tool to inspect: tracer, sensei-chat, or sensei-check. Accepts common variants like "
+            "'sensei check' and 'sensei_chat'."
+        ),
+    )
+    project: str | None = Field(
+        default=None,
+        description=(
+            "Optional project display name or workspace folder name. Use it when the user asks about the active "
+            "project or a specific project."
+        ),
+    )
+    execution_id: int | None = Field(
+        default=None,
+        description=(
+            "Optional database execution id. Supported for tracer and sensei-chat executions. For sensei-check, "
+            "use execution_name because runs are stored as folders."
+        ),
+    )
+    execution_name: str | None = Field(
+        default=None,
+        description=(
+            "Optional execution name. For sensei-check this is the execution folder name, for example "
+            "execution_20260520_101500. If omitted, the latest visible execution is used."
+        ),
+    )
+    include_logs: bool = Field(
+        default=True,
+        description="Whether to include bounded stdout/stderr/log excerpts for the execution.",
+    )
+    log_tail_lines: int = Field(
+        default=80,
+        ge=1,
+        le=DASHBOARD_ANALYSIS_LOG_TAIL_LINES_MAX,
+        description="Maximum tail lines to include from each log-like field.",
     )
 
 
@@ -332,6 +381,54 @@ def build_chatbot_dojo_host_tools(user: CustomUser) -> list[BaseTool]:  # noqa: 
             "scope": tracer_scope if tracer_scope == sensei_scope else {"tracer": tracer_scope, "sensei": sensei_scope},
         }
 
+    @tool(args_schema=AnalyzeDashboardExecutionResultsInput)
+    def analyze_dashboard_execution_results(  # noqa: PLR0913
+        dashboard: str,
+        project: str | None = None,
+        execution_id: int | None = None,
+        execution_name: str | None = None,
+        *,
+        include_logs: bool = True,
+        log_tail_lines: int = 80,
+    ) -> dict[str, Any]:
+        """Return bounded execution artifacts for Senpai to analyze dashboard results.
+
+        Use this when the user asks Senpai to analyze, explain, diagnose, review, or summarize the actual results
+        of a TRACER, sensei-chat, or sensei-check dashboard execution. Prefer passing the active project when the
+        request is scoped to the current dashboard/project. If the user does not identify an execution, this tool
+        inspects the latest visible execution of the requested dashboard.
+        """
+        normalized_dashboard = _normalize_dashboard_execution_type(dashboard)
+        if isinstance(normalized_dashboard, dict):
+            return normalized_dashboard
+
+        bounded_log_tail_lines = min(max(log_tail_lines, 1), DASHBOARD_ANALYSIS_LOG_TAIL_LINES_MAX)
+        if normalized_dashboard == "tracer":
+            return _build_tracer_execution_analysis_context(
+                user,
+                project,
+                execution_id,
+                execution_name,
+                include_logs=include_logs,
+                log_tail_lines=bounded_log_tail_lines,
+            )
+        if normalized_dashboard == "sensei-chat":
+            return _build_sensei_chat_execution_analysis_context(
+                user,
+                project,
+                execution_id,
+                execution_name,
+                include_logs=include_logs,
+                log_tail_lines=bounded_log_tail_lines,
+            )
+        return _build_sensei_check_execution_analysis_context(
+            user,
+            project,
+            execution_name,
+            include_logs=include_logs,
+            log_tail_lines=bounded_log_tail_lines,
+        )
+
     return [
         get_tracer_execution_summary,
         list_tracer_executions,
@@ -340,6 +437,7 @@ def build_chatbot_dojo_host_tools(user: CustomUser) -> list[BaseTool]:  # noqa: 
         get_sensei_check_execution_summary,
         list_sensei_check_executions,
         get_active_backend_executions,
+        analyze_dashboard_execution_results,
     ]
 
 
@@ -478,6 +576,24 @@ def _normalize_sensei_chat_status(status: str | None) -> str | dict[str, str] | 
     return normalized
 
 
+def _normalize_dashboard_execution_type(dashboard: str) -> DashboardExecutionType | dict[str, str]:
+    normalized = dashboard.strip().lower().replace("_", "-")
+    normalized = "-".join(normalized.split())
+    aliases: dict[str, DashboardExecutionType] = {
+        "tracer": "tracer",
+        "sensei": "sensei-chat",
+        "sensei-chat": "sensei-chat",
+        "sensei-dashboard": "sensei-chat",
+        "chat": "sensei-chat",
+        "sensei-check": "sensei-check",
+        "sensei-check-dashboard": "sensei-check",
+        "check": "sensei-check",
+    }
+    if normalized not in aliases:
+        return {"error": f"Invalid dashboard execution type: {dashboard}"}
+    return aliases[normalized]
+
+
 def _serialize_tracer_execution_summary(execution: ProfileExecution | None) -> dict[str, Any] | None:
     if execution is None:
         return None
@@ -539,6 +655,269 @@ def _serialize_sensei_chat_execution_list_item(execution: TestCase) -> dict[str,
         "error_message": execution.error_message,
         "celery_task_id": execution.celery_task_id or None,
     }
+
+
+def _build_tracer_execution_analysis_context(  # noqa: PLR0913
+    user: CustomUser,
+    project: str | None,
+    execution_id: int | None,
+    execution_name: str | None,
+    *,
+    include_logs: bool,
+    log_tail_lines: int,
+) -> dict[str, Any]:
+    executions, scope = _get_visible_tracer_executions_for_tool(user, project)
+    if isinstance(executions, dict):
+        return executions
+
+    execution = _resolve_queryset_execution(
+        executions.order_by("-created_at", "-id"),
+        execution_id=execution_id,
+        execution_name=execution_name,
+        name_field="execution_name",
+    )
+    if isinstance(execution, dict):
+        return execution
+
+    context: dict[str, Any] = {
+        "dashboard": "tracer",
+        "scope": scope,
+        "selection": _build_execution_selection(execution_id, execution_name),
+        "execution": _serialize_tracer_execution_list_item(execution),
+        "analysis": None,
+        "artifacts": {
+            "has_report": False,
+            "has_graph": False,
+            "original_profiles_count": execution.original_profiles.count(),
+            "original_profile_names": list(
+                execution.original_profiles.order_by("original_filename").values_list("original_filename", flat=True)[
+                    :10
+                ]
+            ),
+        },
+    }
+
+    if hasattr(execution, "analysis_result"):
+        analysis = execution.analysis_result
+        context["analysis"] = {
+            "total_interactions": analysis.total_interactions,
+            "coverage_percentage": analysis.coverage_percentage,
+            "unique_paths_discovered": analysis.unique_paths_discovered,
+            "categories_count": analysis.categories_count,
+            "estimated_cost_usd": analysis.estimated_cost_usd,
+            "available_graph_formats": analysis.get_available_formats(),
+        }
+        context["artifacts"].update(
+            {
+                "has_report": bool(analysis.report_file_path),
+                "has_graph": analysis.has_any_graph,
+                "report_excerpt": _read_media_text_excerpt(analysis.report_file_path)
+                if analysis.report_file_path
+                else None,
+            }
+        )
+
+    task = execution.generation_tasks.first() if execution.generation_tasks.exists() else None
+    context["error"] = {
+        "error_type": execution.error_type,
+        "error_message": task.error_message if task and task.error_message else None,
+    }
+    if include_logs:
+        context["logs"] = {
+            "stdout_tail": _tail_text(execution.tracer_stdout, log_tail_lines),
+            "stderr_tail": _tail_text(execution.tracer_stderr, log_tail_lines),
+        }
+    return context
+
+
+def _build_sensei_chat_execution_analysis_context(  # noqa: PLR0913
+    user: CustomUser,
+    project: str | None,
+    execution_id: int | None,
+    execution_name: str | None,
+    *,
+    include_logs: bool,
+    log_tail_lines: int,
+) -> dict[str, Any]:
+    executions, scope = _get_visible_sensei_chat_executions_for_tool(user, project)
+    if isinstance(executions, dict):
+        return executions
+
+    execution = _resolve_queryset_execution(
+        executions.order_by("-executed_at", "-id"),
+        execution_id=execution_id,
+        execution_name=execution_name,
+        name_field="name",
+    )
+    if isinstance(execution, dict):
+        return execution
+
+    executed = execution.executed_conversations or 0
+    total = execution.total_conversations or 0
+    context: dict[str, Any] = {
+        "dashboard": "sensei-chat",
+        "scope": scope,
+        "selection": _build_execution_selection(execution_id, execution_name),
+        "execution": _serialize_sensei_chat_execution_list_item(execution),
+        "progress": {
+            "executed_conversations": executed,
+            "total_conversations": total,
+            "completion_percentage": round((executed / total) * 100, 2) if total else None,
+        },
+        "error": {"error_message": execution.error_message or None},
+        "copied_files": execution.copied_files or [],
+        "profiles_names": execution.profiles_names or [],
+    }
+    if include_logs:
+        context["logs"] = {
+            "stdout_tail": _tail_text(execution.stdout, log_tail_lines),
+            "stderr_tail": _tail_text(execution.stderr, log_tail_lines),
+            "result_tail": _tail_text(execution.result, log_tail_lines),
+        }
+    return context
+
+
+def _build_sensei_check_execution_analysis_context(
+    user: CustomUser,
+    project: str | None,
+    execution_name: str | None,
+    *,
+    include_logs: bool,
+    log_tail_lines: int,
+) -> dict[str, Any]:
+    projects, scope = _get_visible_projects_for_tool(user, project)
+    if isinstance(projects, dict):
+        return projects
+
+    executions = _get_sensei_check_executions_for_projects(projects)
+    execution = _resolve_sensei_check_execution(executions, execution_name)
+    if "error" in execution:
+        return execution
+
+    results_file = execution.get("results_file")
+    csv_summary = _read_sensei_check_csv_summary(Path(results_file)) if results_file else None
+    context: dict[str, Any] = {
+        "dashboard": "sensei-check",
+        "scope": scope,
+        "selection": {"execution_name": execution_name or "latest_visible"},
+        "execution": execution,
+        "results": csv_summary,
+    }
+    if include_logs:
+        log_file = execution.get("log_file")
+        context["logs"] = {"execution_log_tail": _read_text_tail(Path(log_file), log_tail_lines) if log_file else ""}
+    return context
+
+
+def _resolve_queryset_execution(
+    executions: QuerySet,
+    *,
+    execution_id: int | None,
+    execution_name: str | None,
+    name_field: str,
+) -> Any:  # noqa: ANN401
+    if execution_id is not None:
+        execution = executions.filter(id=execution_id).first()
+        if execution is None:
+            return {"error": f"Execution not found or not visible: {execution_id}"}
+        return execution
+
+    if execution_name is not None and execution_name.strip():
+        execution = executions.filter(**{name_field: execution_name.strip()}).first()
+        if execution is None:
+            return {"error": f"Execution not found or not visible: {execution_name}"}
+        return execution
+
+    execution = executions.first()
+    if execution is None:
+        return {"error": "No visible executions found for this dashboard."}
+    return execution
+
+
+def _resolve_sensei_check_execution(
+    executions: list[dict[str, Any]],
+    execution_name: str | None,
+) -> dict[str, Any]:
+    if execution_name is not None and execution_name.strip():
+        normalized_name = execution_name.strip()
+        for execution in executions:
+            if execution["name"] == normalized_name:
+                return execution
+        return {"error": f"Execution not found or not visible: {execution_name}"}
+
+    if not executions:
+        return {"error": "No visible executions found for this dashboard."}
+    return executions[0]
+
+
+def _build_execution_selection(execution_id: int | None, execution_name: str | None) -> dict[str, Any]:
+    if execution_id is not None:
+        return {"execution_id": execution_id}
+    if execution_name is not None and execution_name.strip():
+        return {"execution_name": execution_name.strip()}
+    return {"execution_name": "latest_visible"}
+
+
+def _tail_text(text: str | None, lines: int) -> str:
+    if not text:
+        return ""
+    tail = "\n".join(text.splitlines()[-lines:])
+    return _truncate_text(tail, DASHBOARD_ANALYSIS_TEXT_CHARS_MAX)
+
+
+def _read_text_tail(path: Path, lines: int) -> str:
+    try:
+        return _tail_text(path.read_text(encoding="utf-8", errors="replace"), lines)
+    except OSError:
+        return ""
+
+
+def _read_media_text_excerpt(relative_path: str) -> str:
+    return _read_text_excerpt(Path(settings.MEDIA_ROOT) / relative_path)
+
+
+def _read_text_excerpt(path: Path) -> str:
+    try:
+        return _truncate_text(path.read_text(encoding="utf-8", errors="replace"), DASHBOARD_ANALYSIS_TEXT_CHARS_MAX)
+    except OSError:
+        return ""
+
+
+def _truncate_text(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars]}\n...[truncated]"
+
+
+def _read_sensei_check_csv_summary(path: Path) -> dict[str, Any]:
+    try:
+        with path.open(newline="", encoding="utf-8", errors="replace") as csv_file:
+            reader = csv.DictReader(csv_file)
+            rows = list(reader)
+    except (OSError, csv.Error):
+        return {"error": "Unable to read results.csv"}
+
+    fieldnames = reader.fieldnames or []
+    sampled_rows = rows[:DASHBOARD_ANALYSIS_CSV_ROWS_MAX]
+    return {
+        "fieldnames": fieldnames,
+        "total_rows": len(rows),
+        "sampled_rows": sampled_rows,
+        "sample_limit": DASHBOARD_ANALYSIS_CSV_ROWS_MAX,
+        "status_counts": _count_likely_result_values(rows),
+    }
+
+
+def _count_likely_result_values(rows: list[dict[str, str]]) -> dict[str, int]:
+    result_keys = ("result", "status", "passed", "success", "outcome")
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = next((candidate for candidate in result_keys if candidate in row), None)
+        if key is None:
+            continue
+        value = (row.get(key) or "").strip() or "blank"
+        counts[value] = counts.get(value, 0) + 1
+    return counts
 
 
 def _get_sensei_check_executions_for_projects(projects: list[Project]) -> list[dict[str, Any]]:
