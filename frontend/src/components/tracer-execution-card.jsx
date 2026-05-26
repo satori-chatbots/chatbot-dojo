@@ -57,8 +57,10 @@ const TracerExecutionCard = ({
 
   const isCompleted = execution.status === "SUCCESS";
   const isRunning = execution.status === "RUNNING";
+  const isPending = execution.status === "PENDING";
   const isCancelling = execution.status === "CANCELLING";
-  const isActive = isRunning || isCancelling;
+  const isActive = isPending || isRunning || isCancelling;
+  const canCancel = (isPending || isRunning) && onCancel;
   const hasAnalysis = execution.has_analysis && execution.analysis;
   const hasActions =
     (isCompleted && hasAnalysis) ||
@@ -242,7 +244,7 @@ const TracerExecutionCard = ({
                     </Tooltip>
                   )}
 
-                  {isRunning && onCancel && (
+                  {canCancel && (
                     <Tooltip content="Cancel TRACER Execution">
                       <Button
                         isIconOnly
@@ -398,7 +400,7 @@ const TracerExecutionCard = ({
                   </Tooltip>
                 )}
 
-                {isRunning && onCancel && (
+                {canCancel && (
                   <Tooltip content="Cancel TRACER Execution">
                     <Button
                       isIconOnly
@@ -623,7 +625,7 @@ const TracerExecutionCard = ({
               </div>
             )}
 
-            {isRunning && onCancel && (
+            {canCancel && (
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"

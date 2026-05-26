@@ -71,6 +71,8 @@ const getApiKeyName = (apiKeyId, apiKeys) => {
 
 // Helper function to get tab storage key
 const getTabStorageKey = (projectId) => `sensei-selected-tab-${projectId}`;
+const CANCELLING_TRACER_STATUS = "CANCELLING";
+const TEST_CENTER_REFRESH_MS = 5000;
 
 function Home() {
   const { showToast } = useMyCustomToast();
@@ -148,14 +150,16 @@ function Home() {
   );
 
   // Function to reload executions and profiles
-  const reloadExecutions = useCallback(async () => {
+  const reloadExecutions = useCallback(async ({ silent = false } = {}) => {
     if (!selectedProject) {
       setExecutions([]);
       setAllProfiles([]);
       return;
     }
 
-    setLoadingExecutions(true);
+    if (!silent) {
+      setLoadingExecutions(true);
+    }
     try {
       // Fetch both profile executions (for manual) and tracer executions (for tracer)
       const [profileData, tracerData] = await Promise.all([
@@ -263,7 +267,9 @@ function Home() {
       setExecutions([]);
       setAllProfiles([]);
     } finally {
-      setLoadingExecutions(false);
+      if (!silent) {
+        setLoadingExecutions(false);
+      }
     }
   }, [selectedProject, showToast]);
 
@@ -346,7 +352,7 @@ function Home() {
         setExecutions((previousExecutions) =>
           previousExecutions.map((execution) =>
             execution.id === executionId
-              ? { ...execution, status: "CANCELLING" }
+              ? { ...execution, status: CANCELLING_TRACER_STATUS }
               : execution,
           ),
         );
@@ -374,6 +380,16 @@ function Home() {
     },
     [cancellingExecutionIds, reloadExecutions, showToast],
   );
+
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    const intervalId = setInterval(() => {
+      reloadExecutions({ silent: true });
+    }, TEST_CENTER_REFRESH_MS);
+
+    return () => clearInterval(intervalId);
+  }, [reloadExecutions, selectedProject]);
 
   // Loading state for the serverside validation of the execution name
   const [loadingValidation, setLoadingValidation] = useState(false);

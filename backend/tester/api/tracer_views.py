@@ -123,24 +123,10 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
         except ProfileGenerationTask.DoesNotExist:
             logger.warning(f"No ProfileGenerationTask found for Celery task ID {celery_task_id}")
 
-        if generation_task and generation_task.status == "CANCELLED":
-            return Response(
-                {
-                    "status": "CANCELLED",
-                    "stage": "Execution cancelled by user",
-                    "progress": generation_task.progress_percentage,
-                    "generation_task_status": generation_task.status,
-                }
-            )
-        if generation_task and generation_task.status == "CANCELLING":
-            return Response(
-                {
-                    "status": "CANCELLING",
-                    "stage": "Cancelling execution",
-                    "progress": generation_task.progress_percentage,
-                    "generation_task_status": generation_task.status,
-                }
-            )
+        if generation_task is not None:
+            database_status_response = _build_tracer_database_status_response(generation_task, task_result)
+            if database_status_response is not None:
+                return database_status_response
 
         if task_result.state == "PENDING":
             return Response(
@@ -240,6 +226,63 @@ def check_tracer_generation_status(request: Request, celery_task_id: str) -> Res
     except (ValueError, AttributeError, KeyError) as e:
         logger.error(f"Error checking TRACER generation status for Celery task {celery_task_id}: {e}")
         return Response({"error": "Error checking task status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def _build_tracer_database_status_response(
+    generation_task: ProfileGenerationTask,
+    task_result: AsyncResult,
+) -> Response | None:
+    """Return a DB-backed status response when Celery state is stale or transient."""
+    if generation_task.status == "CANCELLED":
+        return Response(
+            {
+                "status": "CANCELLED",
+                "stage": "Execution cancelled by user",
+                "progress": generation_task.progress_percentage,
+                "generation_task_status": generation_task.status,
+            }
+        )
+    if generation_task.status == "CANCELLING":
+        return Response(
+            {
+                "status": "CANCELLING",
+                "stage": "Cancelling execution",
+                "progress": generation_task.progress_percentage,
+                "generation_task_status": generation_task.status,
+            }
+        )
+    if generation_task.status == "SUCCESS":
+        return Response(
+            {
+                "status": "SUCCESS",
+                "stage": "Generation completed successfully",
+                "progress": 100,
+                "generated_files": generation_task.execution.generated_profiles_count
+                if generation_task.execution_id
+                else 0,
+                "generation_task_status": generation_task.status,
+            }
+        )
+    if generation_task.status == "FAILURE":
+        return Response(
+            {
+                "status": "FAILURE",
+                "stage": "Generation failed",
+                "progress": generation_task.progress_percentage,
+                "error_message": generation_task.error_message,
+                "generation_task_status": generation_task.status,
+            }
+        )
+    if generation_task.status == "RUNNING" and task_result.state != "PROGRESS":
+        return Response(
+            {
+                "status": "RUNNING",
+                "stage": generation_task.stage or "Processing",
+                "progress": generation_task.progress_percentage,
+                "generation_task_status": generation_task.status,
+            }
+        )
+    return None
 
 
 @api_view(["POST"])
@@ -354,10 +397,14 @@ def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
     # Get error message and celery task ID from associated task if available
     error_message = ""
     celery_task_id = None
+    progress_stage = ""
+    progress_percentage = 0
     if execution.generation_tasks.exists():
         task = execution.generation_tasks.first()
         error_message = task.error_message if task.error_message else ""
         celery_task_id = task.celery_task_id
+        progress_stage = task.stage or ""
+        progress_percentage = task.progress_percentage
 
     execution_info = {
         "id": execution.id,
@@ -379,6 +426,8 @@ def _build_tracer_execution_info(execution: ProfileExecution) -> dict:
         "error_message": error_message,
         "has_profiles": execution.original_profiles.exists(),
         "celery_task_id": celery_task_id,
+        "progress_stage": progress_stage,
+        "progress_percentage": progress_percentage,
     }
 
     # Add analysis data if available
