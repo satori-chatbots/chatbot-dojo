@@ -551,23 +551,36 @@ def sync_database_records_to_senpai_workspace(user: CustomUser) -> SenpaiWorkspa
     )
 
 
-def sync_senpai_workspace_to_database(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot) -> None:
+def sync_senpai_workspace_to_database(
+    user: CustomUser,
+    snapshot: SenpaiWorkspaceSnapshot,
+    conversation: SenpaiConversation | None = None,
+) -> None:
     """Reflect assistant filesystem deletes back into database records."""
-    sync_senpai_connector_files_to_database(user, snapshot=snapshot)
+    sync_senpai_connector_files_to_database(user, snapshot=snapshot, conversation=conversation)
     _delete_missing_senpai_projects(user, snapshot)
-    sync_senpai_profile_files_to_test_files(user, snapshot=snapshot)
+    sync_senpai_profile_files_to_test_files(user, snapshot=snapshot, conversation=conversation)
+    sync_senpai_rule_files_to_database(user, conversation=conversation)
     _delete_missing_senpai_rule_files(user, snapshot)
 
 
-def sync_senpai_connector_files_to_database(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot | None = None) -> None:
+def sync_senpai_connector_files_to_database(
+    user: CustomUser,
+    snapshot: SenpaiWorkspaceSnapshot | None = None,
+    conversation: SenpaiConversation | None = None,
+) -> None:
     """Register assistant-created connector YAML files and remove DB rows for deleted exports."""
     connectors_root = Path(settings.MEDIA_ROOT) / get_user_connectors_relative_path(user.id)
     if connectors_root.is_dir():
-        _register_existing_senpai_connector_files(user, connectors_root)
+        _register_existing_senpai_connector_files(user, connectors_root, conversation=conversation)
     _delete_missing_senpai_connectors(user, snapshot=snapshot)
 
 
-def _register_existing_senpai_connector_files(user: CustomUser, connectors_root: Path) -> None:
+def _register_existing_senpai_connector_files(
+    user: CustomUser,
+    connectors_root: Path,
+    conversation: SenpaiConversation | None = None,
+) -> None:
     """Create ChatbotConnector rows for connector export YAML files that exist only on disk."""
     for connector_path in _iter_connector_yaml_files(connectors_root):
         relative_path = connector_path.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
@@ -588,8 +601,22 @@ def _register_existing_senpai_connector_files(user: CustomUser, connectors_root:
                 "technology": connector_data["technology"],
                 "parameters": connector_data["parameters"],
                 "custom_config_file": connector_data["custom_config_file"],
+                "last_modified_by_source": ChatbotConnector.SOURCE_SENPAI_ASSISTANT,
+                "last_modified_by_user": user,
+                "last_modified_by_senpai_conversation": conversation,
             },
         )
+        if _created:
+            connector.created_by_source = ChatbotConnector.SOURCE_SENPAI_ASSISTANT
+            connector.created_by_user = user
+            connector.created_by_senpai_conversation = conversation
+            connector.save(
+                update_fields=[
+                    "created_by_source",
+                    "created_by_user",
+                    "created_by_senpai_conversation",
+                ]
+            )
         source_connector_path = _move_custom_config_if_it_collides_with_export(user, connector, connector_path)
         sync_connector_export_file(connector)
         canonical_path = Path(settings.MEDIA_ROOT) / get_connector_export_relative_path(
@@ -721,24 +748,35 @@ def _unique_connector_config_path(custom_config_path: Path) -> Path:
     return candidate
 
 
-def sync_senpai_profile_files_to_test_files(user: CustomUser, snapshot: SenpaiWorkspaceSnapshot | None = None) -> None:
+def sync_senpai_profile_files_to_test_files(
+    user: CustomUser,
+    snapshot: SenpaiWorkspaceSnapshot | None = None,
+    conversation: SenpaiConversation | None = None,
+) -> None:
     """Register assistant-created project profile files as TestFile rows."""
     for project in Project.objects.filter(owner=user).iterator():
-        _sync_project_senpai_profile_files(user, project, snapshot=snapshot)
+        _sync_project_senpai_profile_files(user, project, snapshot=snapshot, conversation=conversation)
 
 
 def _sync_project_senpai_profile_files(
-    user: CustomUser, project: Project, snapshot: SenpaiWorkspaceSnapshot | None = None
+    user: CustomUser,
+    project: Project,
+    snapshot: SenpaiWorkspaceSnapshot | None = None,
+    conversation: SenpaiConversation | None = None,
 ) -> None:
     """Synchronize assistant-created profile files for one project."""
     profiles_root = Path(settings.MEDIA_ROOT) / get_project_relative_path(user.id, project.id, "profiles")
     if profiles_root.is_dir():
-        _register_existing_senpai_profile_files(project, profiles_root)
+        _register_existing_senpai_profile_files(project, profiles_root, conversation=conversation)
     _delete_missing_project_test_files(project, snapshot=snapshot)
     _update_manual_execution_profile_count(project)
 
 
-def _register_existing_senpai_profile_files(project: Project, profiles_root: Path) -> None:
+def _register_existing_senpai_profile_files(
+    project: Project,
+    profiles_root: Path,
+    conversation: SenpaiConversation | None = None,
+) -> None:
     """Create missing TestFile rows for profile YAML files that exist on disk."""
     manual_execution: ProfileExecution | None = None
     for profile_path in _iter_profile_yaml_files(profiles_root):
@@ -751,6 +789,12 @@ def _register_existing_senpai_profile_files(project: Project, profiles_root: Pat
                 name=profile_path.stem,
                 project=project,
                 execution=manual_execution,
+                created_by_source=TestFile.SOURCE_SENPAI_ASSISTANT,
+                last_modified_by_source=TestFile.SOURCE_SENPAI_ASSISTANT,
+                created_by_user=project.owner,
+                last_modified_by_user=project.owner,
+                created_by_senpai_conversation=conversation,
+                last_modified_by_senpai_conversation=conversation,
             )
         else:
             test_file.save(update_execution_profile_count=False)
@@ -759,6 +803,47 @@ def _register_existing_senpai_profile_files(project: Project, profiles_root: Pat
 def _iter_profile_yaml_files(profiles_root: Path) -> list[Path]:
     """Return sorted profile YAML files directly under a profile directory."""
     return sorted(path for path in profiles_root.iterdir() if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS)
+
+
+def sync_senpai_rule_files_to_database(
+    user: CustomUser,
+    conversation: SenpaiConversation | None = None,
+) -> None:
+    """Register assistant-created project rule files as SENSEI Check rules."""
+    for project in Project.objects.filter(owner=user).iterator():
+        rules_root = Path(settings.MEDIA_ROOT) / get_project_relative_path(user.id, project.id, "rules")
+        if rules_root.is_dir():
+            _register_existing_senpai_rule_files(project, rules_root, conversation=conversation)
+
+
+def _register_existing_senpai_rule_files(
+    project: Project,
+    rules_root: Path,
+    conversation: SenpaiConversation | None = None,
+) -> None:
+    """Create missing SenseiCheckRule rows for rule YAML files that exist on disk."""
+    known_paths = set(RuleFile.objects.filter(project=project).values_list("file", flat=True))
+    known_paths.update(SenseiCheckRule.objects.filter(project=project).values_list("file", flat=True))
+    for rule_path in _iter_rule_yaml_files(rules_root):
+        relative_path = rule_path.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
+        if relative_path in known_paths:
+            continue
+        SenseiCheckRule.objects.create(
+            file=relative_path,
+            name=rule_path.stem,
+            project=project,
+            created_by_source=SenseiCheckRule.SOURCE_SENPAI_ASSISTANT,
+            last_modified_by_source=SenseiCheckRule.SOURCE_SENPAI_ASSISTANT,
+            created_by_user=project.owner,
+            last_modified_by_user=project.owner,
+            created_by_senpai_conversation=conversation,
+            last_modified_by_senpai_conversation=conversation,
+        )
+
+
+def _iter_rule_yaml_files(rules_root: Path) -> list[Path]:
+    """Return sorted rule YAML files directly under a rules directory."""
+    return sorted(path for path in rules_root.iterdir() if path.is_file() and path.suffix.lower() in YAML_EXTENSIONS)
 
 
 def _delete_missing_project_test_files(project: Project, snapshot: SenpaiWorkspaceSnapshot | None = None) -> None:

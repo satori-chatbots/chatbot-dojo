@@ -389,7 +389,7 @@ class SenpaiConversationAPITests(TestCase):
             1,
         )
 
-        build_assistant_mock.assert_called_once_with(conversation)
+        build_assistant_mock.assert_called_once_with(conversation, active_project=None)
         assistant.send_message.assert_called_once_with("Hello", active_project=None)
         assistant.close.assert_called_once()
 

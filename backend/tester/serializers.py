@@ -29,6 +29,16 @@ from .models import (
 # Get the latest version of the user model
 User = get_user_model()
 
+PROVENANCE_READ_ONLY_FIELDS = [
+    "created_by_source",
+    "last_modified_by_source",
+    "created_by_user",
+    "last_modified_by_user",
+    "created_by_senpai_conversation",
+    "last_modified_by_senpai_conversation",
+    "provenance_metadata",
+]
+
 
 class FileURLMixin:
     """Mixin to provide file URL generation functionality for serializers."""
@@ -217,7 +227,7 @@ class TestFileSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = TestFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["project"]
+        read_only_fields: ClassVar[list[str]] = ["project", *PROVENANCE_READ_ONLY_FIELDS]
 
 
 class ChatbotConnectorSerializer(serializers.ModelSerializer):
@@ -233,8 +243,9 @@ class ChatbotConnectorSerializer(serializers.ModelSerializer):
             "technology",
             "parameters",
             "custom_config_file",
+            *PROVENANCE_READ_ONLY_FIELDS,
         ]
-        read_only_fields: ClassVar[list[str]] = ["owner"]
+        read_only_fields: ClassVar[list[str]] = ["owner", *PROVENANCE_READ_ONLY_FIELDS]
 
     def validate_parameters(self, value: dict[str, Any]) -> dict[str, Any]:
         """Validate that parameters is a valid JSON object."""
@@ -259,7 +270,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         model = Project
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["owner"]
+        read_only_fields: ClassVar[list[str]] = ["owner", *PROVENANCE_READ_ONLY_FIELDS]
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         """Initialize the serializer and filter querysets based on the user."""
@@ -396,7 +407,7 @@ class PersonalityFileSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = PersonalityFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
 class RuleFileSerializer(FileURLMixin, serializers.ModelSerializer):
@@ -409,7 +420,7 @@ class RuleFileSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = RuleFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
 class TypeFileSerializer(FileURLMixin, serializers.ModelSerializer):
@@ -422,7 +433,7 @@ class TypeFileSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = TypeFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
 class SenseiCheckRuleSerializer(FileURLMixin, serializers.ModelSerializer):
@@ -457,7 +468,7 @@ class SenseiCheckRuleSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = SenseiCheckRule
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
 class ProjectConfigSerializer(serializers.ModelSerializer):

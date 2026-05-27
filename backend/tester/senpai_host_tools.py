@@ -12,7 +12,18 @@ from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
 from tester import execution_services
-from tester.models import CustomUser, ProfileExecution, Project, TestCase
+from tester.models import (
+    ChatbotConnector,
+    CustomUser,
+    PersonalityFile,
+    ProfileExecution,
+    Project,
+    RuleFile,
+    SenseiCheckRule,
+    TestCase,
+    TestFile,
+    TypeFile,
+)
 
 TRACER_ACTIVE_STATUSES = {"PENDING", "RUNNING", "CANCELLING"}
 TRACER_STATUSES = {"PENDING", "RUNNING", "SUCCESS", "FAILURE", "CANCELLING", "CANCELLED"}
@@ -27,6 +38,7 @@ DASHBOARD_ANALYSIS_TEXT_CHARS_MAX = 12000
 DASHBOARD_ANALYSIS_CSV_ROWS_MAX = 50
 
 DashboardExecutionType = Literal["tracer", "sensei-chat", "sensei-check"]
+ArtifactType = Literal["profile", "project", "connector", "personality", "rule", "type", "sensei_check_rule"]
 
 
 class TracerExecutionSummaryInput(BaseModel):
@@ -240,6 +252,23 @@ class StartSenseiCheckExecutionInput(BaseModel):
     verbose: bool = Field(default=False, description="Whether to execute sensei-check with verbose output.")
 
 
+class ArtifactProvenanceInput(BaseModel):
+    """Input for safely querying artifact provenance."""
+
+    artifact_type: ArtifactType = Field(
+        description="Artifact kind to inspect: profile, project, connector, personality, rule, type, or sensei_check_rule.",
+    )
+    artifact: str | int | None = Field(
+        default=None,
+        description="Optional artifact id, display name, filename stem, or filename. If omitted, returns a bounded list.",
+    )
+    project: str | None = Field(
+        default=None,
+        description="Optional visible project display name, id, or workspace folder name for project-scoped artifacts.",
+    )
+    limit: int = Field(default=10, ge=1, le=20, description="Maximum list size when artifact is omitted.")
+
+
 def build_chatbot_dojo_host_tools(  # noqa: C901, PLR0915
     user: CustomUser,
     active_project: str | None = None,
@@ -248,6 +277,21 @@ def build_chatbot_dojo_host_tools(  # noqa: C901, PLR0915
 
     def _execution_error_payload(exc: execution_services.ExecutionServiceError) -> dict[str, Any]:
         return {"status": "error", "error": str(exc), "status_code": exc.status_code}
+
+    @tool(args_schema=ArtifactProvenanceInput)
+    def get_artifact_provenance(
+        artifact_type: ArtifactType,
+        artifact: str | int | None = None,
+        project: str | None = None,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        """Return minimal provenance metadata for visible artifacts.
+
+        Use this when the user asks whether a profile, rule, connector, project, personality, or type was created
+        by the user, Senpai Assistant, TRACER, or the system. This tool is read-only, user-scoped, and never returns
+        YAML content, connector parameters, or secrets.
+        """
+        return _get_artifact_provenance_for_tool(user, artifact_type, artifact, project, limit)
 
     @tool(args_schema=TracerExecutionSummaryInput)
     def get_tracer_execution_summary(project: str | None = None) -> dict[str, Any]:
@@ -586,10 +630,161 @@ def build_chatbot_dojo_host_tools(  # noqa: C901, PLR0915
         list_sensei_check_executions,
         get_active_backend_executions,
         analyze_dashboard_execution_results,
+        get_artifact_provenance,
         start_tracer_generation,
         start_sensei_chat_execution,
         start_sensei_check_execution,
     ]
+
+
+def _get_artifact_provenance_for_tool(  # noqa: PLR0911
+    user: CustomUser,
+    artifact_type: ArtifactType,
+    artifact: str | int | None,
+    project: str | None,
+    limit: int,
+) -> dict[str, Any]:
+    bounded_limit = min(max(limit, 1), 20)
+
+    if artifact_type == "project":
+        return _get_project_provenance_for_tool(user, artifact, bounded_limit)
+    if artifact_type == "connector":
+        return _get_connector_provenance_for_tool(user, artifact, bounded_limit)
+
+    model_by_type = {
+        "profile": TestFile,
+        "personality": PersonalityFile,
+        "rule": RuleFile,
+        "type": TypeFile,
+        "sensei_check_rule": SenseiCheckRule,
+    }
+    model = model_by_type[artifact_type]
+    queryset = model.objects.filter(Q(project__public=True) | Q(project__owner=user)).select_related(
+        "project",
+        "created_by_user",
+        "last_modified_by_user",
+        "created_by_senpai_conversation",
+        "last_modified_by_senpai_conversation",
+    )
+
+    if project is not None and project.strip():
+        resolved_project = _resolve_visible_project(user, project)
+        if resolved_project is None:
+            return {"error": f"Project not found or not visible: {project}"}
+        queryset = queryset.filter(project=resolved_project)
+
+    if artifact is not None and str(artifact).strip():
+        queryset = _filter_artifact_queryset(queryset, artifact)
+        matches = [_serialize_artifact_provenance(item, artifact_type) for item in queryset.order_by("id")[:2]]
+        if not matches:
+            return {"error": f"{artifact_type} not found or not visible: {artifact}"}
+        if len(matches) > 1:
+            return {"error": f"Ambiguous {artifact_type}: {artifact}", "matches": matches}
+        return {"artifact": matches[0]}
+
+    rows = [_serialize_artifact_provenance(item, artifact_type) for item in queryset.order_by("name", "id")[:bounded_limit]]
+    return {"artifacts": rows, "count": len(rows), "limit": bounded_limit}
+
+
+def _get_project_provenance_for_tool(
+    user: CustomUser,
+    artifact: str | int | None,
+    limit: int,
+) -> dict[str, Any]:
+    queryset = Project.objects.filter(Q(public=True) | Q(owner=user)).select_related(
+        "created_by_user",
+        "last_modified_by_user",
+        "created_by_senpai_conversation",
+        "last_modified_by_senpai_conversation",
+    )
+    if artifact is not None and str(artifact).strip():
+        normalized = str(artifact).strip()
+        matches = [
+            _serialize_artifact_provenance(project, "project")
+            for project in queryset
+            if normalized in {str(project.id), project.name, project.get_project_folder_name()}
+        ][:2]
+        if not matches:
+            return {"error": f"project not found or not visible: {artifact}"}
+        if len(matches) > 1:
+            return {"error": f"Ambiguous project: {artifact}", "matches": matches}
+        return {"artifact": matches[0]}
+
+    rows = [_serialize_artifact_provenance(project, "project") for project in queryset.order_by("name", "id")[:limit]]
+    return {"artifacts": rows, "count": len(rows), "limit": limit}
+
+
+def _get_connector_provenance_for_tool(
+    user: CustomUser,
+    artifact: str | int | None,
+    limit: int,
+) -> dict[str, Any]:
+    queryset = ChatbotConnector.objects.filter(owner=user).select_related(
+        "created_by_user",
+        "last_modified_by_user",
+        "created_by_senpai_conversation",
+        "last_modified_by_senpai_conversation",
+    )
+    if artifact is not None and str(artifact).strip():
+        queryset = _filter_named_queryset(queryset, artifact)
+        matches = [_serialize_artifact_provenance(connector, "connector") for connector in queryset.order_by("id")[:2]]
+        if not matches:
+            return {"error": f"connector not found or not visible: {artifact}"}
+        if len(matches) > 1:
+            return {"error": f"Ambiguous connector: {artifact}", "matches": matches}
+        return {"artifact": matches[0]}
+
+    rows = [
+        _serialize_artifact_provenance(connector, "connector")
+        for connector in queryset.order_by("name", "id")[:limit]
+    ]
+    return {"artifacts": rows, "count": len(rows), "limit": limit}
+
+
+def _filter_artifact_queryset(queryset: QuerySet, artifact: str | int) -> QuerySet:
+    normalized = str(artifact).strip()
+    query = Q(name=normalized) | Q(file=normalized) | Q(file__iendswith=f"/{normalized}")
+    stem = Path(normalized).stem
+    if stem:
+        query |= Q(name=stem) | Q(file__iendswith=f"/{stem}.yaml") | Q(file__iendswith=f"/{stem}.yml")
+    if normalized.isdigit():
+        query |= Q(id=int(normalized))
+    return queryset.filter(query)
+
+
+def _filter_named_queryset(queryset: QuerySet, artifact: str | int) -> QuerySet:
+    normalized = str(artifact).strip()
+    query = Q(name=normalized)
+    if normalized.isdigit():
+        query |= Q(id=int(normalized))
+    return queryset.filter(query)
+
+
+def _serialize_artifact_provenance(artifact: Any, artifact_type: str) -> dict[str, Any]:  # noqa: ANN401
+    project = getattr(artifact, "project", None)
+    row = {
+        "artifact_type": artifact_type,
+        "id": artifact.id,
+        "name": getattr(artifact, "name", ""),
+        "created_by_source": artifact.created_by_source,
+        "created_by_label": artifact.get_created_by_source_display(),
+        "last_modified_by_source": artifact.last_modified_by_source,
+        "last_modified_by_label": artifact.get_last_modified_by_source_display(),
+        "created_by_user_id": artifact.created_by_user_id,
+        "last_modified_by_user_id": artifact.last_modified_by_user_id,
+        "created_by_senpai_conversation_id": artifact.created_by_senpai_conversation_id,
+        "last_modified_by_senpai_conversation_id": artifact.last_modified_by_senpai_conversation_id,
+        "provenance_metadata": artifact.provenance_metadata or {},
+    }
+    if project is not None:
+        row.update(
+            {
+                "project": project.name,
+                "project_id": project.id,
+                "project_workspace_name": project.get_project_folder_name(),
+            }
+        )
+    return row
 
 
 def _get_visible_tracer_executions_for_tool(

@@ -89,7 +89,14 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            personality_file = PersonalityFile.objects.create(file=uploaded_file, project=project)
+            personality_file = PersonalityFile.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=PersonalityFile.SOURCE_USER,
+                last_modified_by_source=PersonalityFile.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(personality_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -146,7 +153,14 @@ class RuleFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            rule_file = RuleFile.objects.create(file=uploaded_file, project=project)
+            rule_file = RuleFile.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=RuleFile.SOURCE_USER,
+                last_modified_by_source=RuleFile.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(rule_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -203,7 +217,14 @@ class TypeFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            type_file = TypeFile.objects.create(file=uploaded_file, project=project)
+            type_file = TypeFile.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=TypeFile.SOURCE_USER,
+                last_modified_by_source=TypeFile.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(type_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -300,7 +321,14 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            sensei_check_rule = SenseiCheckRule.objects.create(file=uploaded_file, project=project)
+            sensei_check_rule = SenseiCheckRule.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=SenseiCheckRule.SOURCE_USER,
+                last_modified_by_source=SenseiCheckRule.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(sensei_check_rule)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -364,6 +392,14 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
                     yaml.dump(data, file, Dumper=CustomDumper, default_flow_style=False)
 
                 # Return updated data
+                rule.last_modified_by_source = SenseiCheckRule.SOURCE_USER
+                rule.last_modified_by_user = request.user
+                rule.save(
+                    update_fields=[
+                        "last_modified_by_source",
+                        "last_modified_by_user",
+                    ]
+                )
                 serializer = self.get_serializer(rule)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(

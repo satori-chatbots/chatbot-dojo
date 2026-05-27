@@ -112,7 +112,13 @@ class TracerResultsProcessor:
 
         # Create TestFile with proper file reference
         relative_path = project.get_relative_project_path("profiles", yaml_file.name).as_posix()
-        test_file = TestFile(project=project, execution=execution)
+        test_file = TestFile(
+            project=project,
+            execution=execution,
+            created_by_source=TestFile.SOURCE_TRACER,
+            last_modified_by_source=TestFile.SOURCE_TRACER,
+            provenance_metadata={"tracer_execution_id": execution.id, "tracer_execution_name": execution.execution_name},
+        )
         test_file.file.name = relative_path
         test_file.save()
 

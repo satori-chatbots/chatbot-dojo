@@ -173,7 +173,13 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer: ChatbotConnectorSerializer) -> None:
         """Set the owner to the current user when creating a connector."""
-        serializer.save(owner=self.request.user)
+        serializer.save(
+            owner=self.request.user,
+            created_by_source=ChatbotConnector.SOURCE_USER,
+            last_modified_by_source=ChatbotConnector.SOURCE_USER,
+            created_by_user=self.request.user,
+            last_modified_by_user=self.request.user,
+        )
 
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request: Request) -> Response:
@@ -242,6 +248,8 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
 
             # Save new file
             connector.custom_config_file.save(file_name, file_content)
+            connector.last_modified_by_source = ChatbotConnector.SOURCE_USER
+            connector.last_modified_by_user = request.user
             connector.save()
 
             return Response(

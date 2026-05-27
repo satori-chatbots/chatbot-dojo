@@ -112,7 +112,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"name": msg})
 
         # Create the project record
-        project = serializer.save(owner=self.request.user)
+        project = serializer.save(
+            owner=self.request.user,
+            created_by_source=Project.SOURCE_USER,
+            last_modified_by_source=Project.SOURCE_USER,
+            created_by_user=self.request.user,
+            last_modified_by_user=self.request.user,
+        )
 
         logger.info(
             "Creating project structure for project '%s' (ID: %d) owned by user %d",
@@ -161,7 +167,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         old_project_values = self._get_original_project_values(project, serializer.validated_data)
 
         with transaction.atomic():
-            updated_project = serializer.save()
+            updated_project = serializer.save(
+                last_modified_by_source=Project.SOURCE_USER,
+                last_modified_by_user=self.request.user,
+            )
             transaction.on_commit(
                 lambda: self._sync_project_storage_after_commit(
                     updated_project.id,
