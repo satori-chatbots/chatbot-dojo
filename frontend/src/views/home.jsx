@@ -150,128 +150,131 @@ function Home() {
   );
 
   // Function to reload executions and profiles
-  const reloadExecutions = useCallback(async ({ silent = false } = {}) => {
-    if (!selectedProject) {
-      setExecutions([]);
-      setAllProfiles([]);
-      return;
-    }
+  const reloadExecutions = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!selectedProject) {
+        setExecutions([]);
+        setAllProfiles([]);
+        return;
+      }
 
-    if (!silent) {
-      setLoadingExecutions(true);
-    }
-    try {
-      // Fetch both profile executions (for manual) and tracer executions (for tracer)
-      const [profileData, tracerData] = await Promise.all([
-        fetchProfileExecutions(selectedProject.id),
-        fetchTracerExecutions(),
-      ]);
+      if (!silent) {
+        setLoadingExecutions(true);
+      }
+      try {
+        // Fetch both profile executions (for manual) and tracer executions (for tracer)
+        const [profileData, tracerData] = await Promise.all([
+          fetchProfileExecutions(selectedProject.id),
+          fetchTracerExecutions(),
+        ]);
 
-      // Filter tracer executions to only include those for the current project
-      const projectTracerExecutions = (tracerData.executions || []).filter(
-        (execution) => execution.project_id === selectedProject.id,
-      );
+        // Filter tracer executions to only include those for the current project
+        const projectTracerExecutions = (tracerData.executions || []).filter(
+          (execution) => execution.project_id === selectedProject.id,
+        );
 
-      // Fetch profiles for tracer executions
-      const tracerExecutionsWithProfiles = await Promise.all(
-        projectTracerExecutions.map(async (execution) => {
-          if (execution.generated_profiles_count > 0) {
-            try {
-              // Get the editable TestFiles for this execution
-              const testFiles = await fetchFiles(selectedProject.id);
-              const executionTestFiles = testFiles.filter(
-                (file) => file.execution === execution.id,
-              );
+        // Fetch profiles for tracer executions
+        const tracerExecutionsWithProfiles = await Promise.all(
+          projectTracerExecutions.map(async (execution) => {
+            if (execution.generated_profiles_count > 0) {
+              try {
+                // Get the editable TestFiles for this execution
+                const testFiles = await fetchFiles(selectedProject.id);
+                const executionTestFiles = testFiles.filter(
+                  (file) => file.execution === execution.id,
+                );
 
-              // Map TestFiles to the expected profile format
-              const profiles = executionTestFiles.map((file) => ({
-                id: file.id, // Use the actual TestFile ID for YAML editor
-                name: file.name || file.file.name, // Use the processed name from TestFile
-                is_valid: file.is_valid,
-                uploaded_at: file.uploaded_at,
-                content: undefined, // Content will be fetched by YAML editor when needed
-              }));
+                // Map TestFiles to the expected profile format
+                const profiles = executionTestFiles.map((file) => ({
+                  id: file.id, // Use the actual TestFile ID for YAML editor
+                  name: file.name || file.file.name, // Use the processed name from TestFile
+                  is_valid: file.is_valid,
+                  uploaded_at: file.uploaded_at,
+                  content: undefined, // Content will be fetched by YAML editor when needed
+                }));
 
-              return {
-                ...execution,
-                execution_type: "tracer",
-                profiles,
-              };
-            } catch (error) {
-              console.error(
-                `Error fetching profiles for tracer execution ${execution.id}:`,
-                error,
-              );
-              // Fallback to empty profiles if fetch fails
+                return {
+                  ...execution,
+                  execution_type: "tracer",
+                  profiles,
+                };
+              } catch (error) {
+                console.error(
+                  `Error fetching profiles for tracer execution ${execution.id}:`,
+                  error,
+                );
+                // Fallback to empty profiles if fetch fails
+                return {
+                  ...execution,
+                  execution_type: "tracer",
+                  profiles: [],
+                };
+              }
+            } else {
               return {
                 ...execution,
                 execution_type: "tracer",
                 profiles: [],
               };
             }
-          } else {
-            return {
-              ...execution,
-              execution_type: "tracer",
-              profiles: [],
-            };
-          }
-        }),
-      );
+          }),
+        );
 
-      // Combine and sort executions: manual first, then tracer by date
-      const manualExecutions = (profileData.executions || []).filter(
-        (exec) => exec.execution_type === "manual",
-      );
-      const tracerExecutions = tracerExecutionsWithProfiles;
+        // Combine and sort executions: manual first, then tracer by date
+        const manualExecutions = (profileData.executions || []).filter(
+          (exec) => exec.execution_type === "manual",
+        );
+        const tracerExecutions = tracerExecutionsWithProfiles;
 
-      // Sort manual executions by date (newest first)
-      const sortedManualExecutions = manualExecutions.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at),
-      );
+        // Sort manual executions by date (newest first)
+        const sortedManualExecutions = manualExecutions.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at),
+        );
 
-      // Sort tracer executions by date (newest first)
-      const sortedTracerExecutions = tracerExecutions.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at),
-      );
+        // Sort tracer executions by date (newest first)
+        const sortedTracerExecutions = tracerExecutions.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at),
+        );
 
-      // Combine: manual first, then tracer
-      const allExecutions = [
-        ...sortedManualExecutions,
-        ...sortedTracerExecutions,
-      ];
+        // Combine: manual first, then tracer
+        const allExecutions = [
+          ...sortedManualExecutions,
+          ...sortedTracerExecutions,
+        ];
 
-      setExecutions(allExecutions);
+        setExecutions(allExecutions);
 
-      // Flatten all profiles for easy selection management (from both manual and tracer executions)
-      const profiles = [];
-      if (profileData.executions) {
-        for (const execution of profileData.executions) {
-          if (execution.execution_type === "manual") {
-            for (const profile of execution.profiles) {
-              profiles.push(profile);
+        // Flatten all profiles for easy selection management (from both manual and tracer executions)
+        const profiles = [];
+        if (profileData.executions) {
+          for (const execution of profileData.executions) {
+            if (execution.execution_type === "manual") {
+              for (const profile of execution.profiles) {
+                profiles.push(profile);
+              }
             }
           }
         }
-      }
-      // Add tracer profiles to the flattened list
-      for (const execution of tracerExecutionsWithProfiles) {
-        for (const profile of execution.profiles) {
-          profiles.push(profile);
+        // Add tracer profiles to the flattened list
+        for (const execution of tracerExecutionsWithProfiles) {
+          for (const profile of execution.profiles) {
+            profiles.push(profile);
+          }
+        }
+        setAllProfiles(profiles);
+      } catch (error) {
+        console.error("Error fetching executions:", error);
+        showToast("error", "Error loading profile executions");
+        setExecutions([]);
+        setAllProfiles([]);
+      } finally {
+        if (!silent) {
+          setLoadingExecutions(false);
         }
       }
-      setAllProfiles(profiles);
-    } catch (error) {
-      console.error("Error fetching executions:", error);
-      showToast("error", "Error loading profile executions");
-      setExecutions([]);
-      setAllProfiles([]);
-    } finally {
-      if (!silent) {
-        setLoadingExecutions(false);
-      }
-    }
-  }, [selectedProject, showToast]);
+    },
+    [selectedProject, showToast],
+  );
 
   // Function to reload sensei check rules
   const reloadSenseiCheckRules = useCallback(async () => {

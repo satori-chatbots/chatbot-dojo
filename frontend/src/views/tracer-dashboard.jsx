@@ -203,7 +203,9 @@ const TracerDashboard = () => {
           setExecutions((prevExecutions) =>
             prevExecutions.map((exec) => {
               if (exec.id === execution.id) {
-                if (!shouldApplyPolledTracerStatus(exec.status, status.status)) {
+                if (
+                  !shouldApplyPolledTracerStatus(exec.status, status.status)
+                ) {
                   return exec;
                 }
                 return {
@@ -260,31 +262,34 @@ const TracerDashboard = () => {
     [applyTracerExecutionsData, showToast, user],
   );
 
-  const loadTracerExecutions = useCallback(async ({ silent = false } = {}) => {
-    try {
-      if (!silent) {
-        setLoading(true);
-      }
-      const data = await fetchTracerExecutions();
-      applyTracerExecutionsData(data);
+  const loadTracerExecutions = useCallback(
+    async ({ silent = false } = {}) => {
+      try {
+        if (!silent) {
+          setLoading(true);
+        }
+        const data = await fetchTracerExecutions();
+        applyTracerExecutionsData(data);
 
-      // Start polling for any running executions (only for authenticated users)
-      if (user && data.executions) {
-        for (const execution of data.executions) {
-          if (ACTIVE_TRACER_STATUSES.has(execution.status)) {
-            startPollingExecution(execution);
+        // Start polling for any running executions (only for authenticated users)
+        if (user && data.executions) {
+          for (const execution of data.executions) {
+            if (ACTIVE_TRACER_STATUSES.has(execution.status)) {
+              startPollingExecution(execution);
+            }
           }
         }
+      } catch (error) {
+        console.error("Error loading TRACER executions:", error);
+        showToast("error", "Error loading TRACER executions");
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Error loading TRACER executions:", error);
-      showToast("error", "Error loading TRACER executions");
-    } finally {
-      if (!silent) {
-        setLoading(false);
-      }
-    }
-  }, [applyTracerExecutionsData, startPollingExecution, showToast, user]);
+    },
+    [applyTracerExecutionsData, startPollingExecution, showToast, user],
+  );
 
   useEffect(() => {
     loadTracerExecutions();
