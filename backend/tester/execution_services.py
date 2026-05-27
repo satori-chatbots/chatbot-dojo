@@ -5,12 +5,11 @@ from __future__ import annotations
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from django.conf import settings
 from django.db import transaction
 from rest_framework import status
-from rest_framework.response import Response
 
 from tester.models import (
     CustomUser,
@@ -21,6 +20,9 @@ from tester.models import (
     TestCase,
     TestFile,
 )
+
+if TYPE_CHECKING:
+    from rest_framework.response import Response
 
 DEFAULT_TRACER_VERBOSITY = "normal"
 VALID_TRACER_VERBOSITIES = {"normal", "verbose", "debug"}
@@ -83,7 +85,7 @@ def start_tracer_generation(  # noqa: PLR0913
 
     resolved_project = resolve_owned_project(user, project, active_project)
     if isinstance(resolved_project, dict):
-        missing.extend(str(item) for item in cast(list[object], resolved_project["missing"]))
+        missing.extend(str(item) for item in cast("list[object]", resolved_project["missing"]))
 
     if missing:
         return needs_input(
@@ -91,7 +93,7 @@ def start_tracer_generation(  # noqa: PLR0913
             "Necesito proyecto, numero de sesiones y turnos por sesion para ejecutar TRACER.",
         )
 
-    project_obj = cast(Project, resolved_project)
+    project_obj = cast("Project", resolved_project)
     if not project_obj.chatbot_connector:
         message = "Project must have a chatbot connector configured."
         raise ExecutionServiceError(message)
@@ -163,7 +165,7 @@ def start_sensei_chat_execution(
     resolved_project = resolve_owned_project(user, project, active_project)
     if isinstance(resolved_project, dict):
         return resolved_project
-    project_obj = cast(Project, resolved_project)
+    project_obj = cast("Project", resolved_project)
     if not profiles:
         return needs_input(["profiles"], "Necesito saber que perfiles ejecutar con sensei-chat.")
 
@@ -263,7 +265,7 @@ def start_sensei_check_execution(  # noqa: PLR0913
     resolved_project = resolve_owned_project(user, project, active_project)
     if isinstance(resolved_project, dict):
         return resolved_project
-    project_obj = cast(Project, resolved_project)
+    project_obj = cast("Project", resolved_project)
 
     test_case_ids = resolve_project_test_cases(project_obj, test_cases)
     if isinstance(test_case_ids, dict):
