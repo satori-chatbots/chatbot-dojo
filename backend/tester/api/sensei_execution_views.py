@@ -164,7 +164,9 @@ class ExecuteSelectedProfilesAPIView(APIView):
             return Response({"error": str(exc)}, status=exc.status_code)
 
         if result.get("status") == "needs_input":
-            return Response({"error": result["message"], "missing": result["missing"]}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": result["message"], "missing": result["missing"]}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         return Response(
             {

@@ -286,7 +286,9 @@ def start_sensei_check_execution(  # noqa: PLR0913
     }
 
 
-def resolve_project_test_cases(project: Project, test_case_refs: list[str | int] | None) -> list[int] | dict[str, object]:
+def resolve_project_test_cases(
+    project: Project, test_case_refs: list[str | int] | None
+) -> list[int] | dict[str, object]:
     """Resolve sensei-chat test case ids, defaulting to the latest test case for the project."""
     if not test_case_refs:
         latest = TestCase.objects.filter(project=project).order_by("-executed_at", "-id").first()
