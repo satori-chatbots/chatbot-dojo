@@ -38,6 +38,16 @@ import SetupProgress from "../components/setup-progress";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
 import { useAuth } from "../contexts/auth-context";
 
+const ACTIVE_TRACER_STATUSES = new Set(["PENDING", "RUNNING", "CANCELLING"]);
+const TERMINAL_TRACER_STATUSES = new Set(["SUCCESS", "FAILURE", "CANCELLED"]);
+const TRACER_DASHBOARD_REFRESH_MS = 5000;
+const TRACER_STATUS_POLL_MS = 2000;
+
+const shouldApplyPolledTracerStatus = (currentStatus, nextStatus) => {
+  if (nextStatus !== "PENDING") return true;
+  return !currentStatus || currentStatus === "PENDING";
+};
+
 // Move getStatusColor to outer scope
 const getStatusColor = (status) => {
   switch (status) {
@@ -94,7 +104,57 @@ const TracerDashboard = () => {
   const [publicView] = useState(!user);
 
   // Progress polling state
-  const [pollingIntervals, setPollingIntervals] = useState(new Map());
+  const pollingIntervalsRef = React.useRef(new Map());
+
+  const applyTracerExecutionsData = useCallback((data) => {
+    const nextExecutions = data.executions || [];
+    setExecutions((previousExecutions) => {
+      const previousById = new Map(
+        previousExecutions.map((execution) => [execution.id, execution]),
+      );
+
+      return nextExecutions.map((execution) => {
+        const previous = previousById.get(execution.id);
+        if (!previous) return execution;
+
+        const nextProgress = execution.progress_percentage;
+        const hasProgressFromServer =
+          nextProgress !== undefined && nextProgress !== null;
+
+        return {
+          ...execution,
+          progress_stage:
+            execution.progress_stage || previous.progress_stage || "",
+          progress_percentage: hasProgressFromServer
+            ? nextProgress
+            : previous.progress_percentage,
+        };
+      });
+    });
+
+    for (const execution of nextExecutions) {
+      if (!ACTIVE_TRACER_STATUSES.has(execution.status)) {
+        const intervalId = pollingIntervalsRef.current.get(execution.id);
+        if (intervalId) {
+          clearInterval(intervalId);
+          pollingIntervalsRef.current.delete(execution.id);
+        }
+      }
+    }
+
+    const projects = [];
+    for (const execution of nextExecutions) {
+      const existing = projects.find((p) => p.id === execution.project_id);
+      if (!existing) {
+        projects.push({
+          id: execution.project_id,
+          name: execution.project_name,
+        });
+      }
+    }
+
+    setUniqueProjects(projects);
+  }, []);
 
   // Clear the modal content once the modal has been closed to avoid leftover overlays
   useEffect(() => {
@@ -105,12 +165,14 @@ const TracerDashboard = () => {
 
   // Cleanup polling intervals on unmount
   useEffect(() => {
+    const pollingIntervals = pollingIntervalsRef.current;
     return () => {
       for (const intervalId of pollingIntervals.values()) {
         clearInterval(intervalId);
       }
+      pollingIntervals.clear();
     };
-  }, [pollingIntervals]);
+  }, []);
 
   // Function to start polling an execution's progress
   const startPollingExecution = useCallback(
@@ -119,12 +181,12 @@ const TracerDashboard = () => {
       if (
         !user ||
         !execution.id ||
-        !["RUNNING", "CANCELLING"].includes(execution.status)
+        !ACTIVE_TRACER_STATUSES.has(execution.status)
       )
         return;
 
       // Check if we're already polling this execution
-      if (pollingIntervals.has(execution.id)) return;
+      if (pollingIntervalsRef.current.has(execution.id)) return;
 
       // Get the Celery task ID directly from the execution object
       if (!execution.celery_task_id) {
@@ -141,6 +203,11 @@ const TracerDashboard = () => {
           setExecutions((prevExecutions) =>
             prevExecutions.map((exec) => {
               if (exec.id === execution.id) {
+                if (
+                  !shouldApplyPolledTracerStatus(exec.status, status.status)
+                ) {
+                  return exec;
+                }
                 return {
                   ...exec,
                   status: status.status,
@@ -153,17 +220,16 @@ const TracerDashboard = () => {
           );
 
           // Stop polling if completed or failed
-          if (
-            status.status === "SUCCESS" ||
-            status.status === "FAILURE" ||
-            status.status === "CANCELLED"
-          ) {
+          if (TERMINAL_TRACER_STATUSES.has(status.status)) {
             clearInterval(intervalId);
-            setPollingIntervals((prev) => {
-              const newMap = new Map(prev);
-              newMap.delete(execution.id);
-              return newMap;
+            pollingIntervalsRef.current.delete(execution.id);
+            setCancellingExecutionIds((previous) => {
+              const next = new Set(previous);
+              next.delete(execution.id);
+              return next;
             });
+            const data = await fetchTracerExecutions();
+            applyTracerExecutionsData(data);
 
             switch (status.status) {
               case "SUCCESS": {
@@ -187,63 +253,57 @@ const TracerDashboard = () => {
           console.error(`Error polling execution ${execution.id}:`, error);
           // Stop polling on error
           clearInterval(intervalId);
-          setPollingIntervals((prev) => {
-            const newMap = new Map(prev);
-            newMap.delete(execution.id);
-            return newMap;
-          });
+          pollingIntervalsRef.current.delete(execution.id);
         }
-      }, 2000); // Poll every 2 seconds
+      }, TRACER_STATUS_POLL_MS);
 
-      setPollingIntervals((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(execution.id, intervalId);
-        return newMap;
-      });
+      pollingIntervalsRef.current.set(execution.id, intervalId);
     },
-    [pollingIntervals, showToast, user],
+    [applyTracerExecutionsData, showToast, user],
   );
 
-  const loadTracerExecutions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await fetchTracerExecutions();
-      setExecutions(data.executions || []);
+  const loadTracerExecutions = useCallback(
+    async ({ silent = false } = {}) => {
+      try {
+        if (!silent) {
+          setLoading(true);
+        }
+        const data = await fetchTracerExecutions();
+        applyTracerExecutionsData(data);
 
-      // Extract unique projects for filtering
-      const projects =
-        data.executions?.reduce((acc, execution) => {
-          const existing = acc.find((p) => p.id === execution.project_id);
-          if (!existing) {
-            acc.push({
-              id: execution.project_id,
-              name: execution.project_name,
-            });
-          }
-          return acc;
-        }, []) || [];
-
-      setUniqueProjects(projects);
-
-      // Start polling for any running executions (only for authenticated users)
-      if (user && data.executions) {
-        for (const execution of data.executions) {
-          if (["RUNNING", "CANCELLING"].includes(execution.status)) {
-            startPollingExecution(execution);
+        // Start polling for any running executions (only for authenticated users)
+        if (user && data.executions) {
+          for (const execution of data.executions) {
+            if (ACTIVE_TRACER_STATUSES.has(execution.status)) {
+              startPollingExecution(execution);
+            }
           }
         }
+      } catch (error) {
+        console.error("Error loading TRACER executions:", error);
+        showToast("error", "Error loading TRACER executions");
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Error loading TRACER executions:", error);
-      showToast("error", "Error loading TRACER executions");
-    } finally {
-      setLoading(false);
-    }
-  }, [startPollingExecution, showToast, user]);
+    },
+    [applyTracerExecutionsData, startPollingExecution, showToast, user],
+  );
 
   useEffect(() => {
     loadTracerExecutions();
   }, [loadTracerExecutions]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const intervalId = setInterval(() => {
+      loadTracerExecutions({ silent: true });
+    }, TRACER_DASHBOARD_REFRESH_MS);
+
+    return () => clearInterval(intervalId);
+  }, [loadTracerExecutions, user]);
 
   useEffect(() => {
     // Apply filters when executions or filter criteria change
@@ -337,7 +397,7 @@ const TracerDashboard = () => {
       if (
         !user ||
         !execution?.id ||
-        execution.status !== "RUNNING" ||
+        !ACTIVE_TRACER_STATUSES.has(execution.status) ||
         cancellingExecutionIds.has(execution.id)
       ) {
         return;

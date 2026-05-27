@@ -23,6 +23,8 @@ import { useNavigate } from "react-router-dom";
 import { getErrorTypeDisplay } from "../utils/error-types";
 import { getStatusLabel } from "../utils/status-labels";
 
+const CANCELLABLE_TRACER_STATUSES = new Set(["PENDING", "RUNNING"]);
+
 const ExecutionFolder = ({
   execution,
   profiles,
@@ -75,7 +77,7 @@ const ExecutionFolder = ({
       SUCCESS: { color: "success", label: getStatusLabel("SUCCESS") },
       RUNNING: { color: "warning", label: getStatusLabel("RUNNING") },
       FAILURE: { color: "danger", label: getStatusLabel("FAILURE") },
-      PENDING: { color: "default", label: getStatusLabel("PENDING") },
+      PENDING: { color: "warning", label: getStatusLabel("PENDING") },
       CANCELLING: { color: "warning", label: getStatusLabel("CANCELLING") },
       CANCELLED: { color: "danger", label: getStatusLabel("CANCELLED") },
     };
@@ -157,7 +159,7 @@ const ExecutionFolder = ({
   const canDelete = execution.execution_type === "tracer";
   const canCancel =
     execution.execution_type === "tracer" &&
-    execution.status === "RUNNING" &&
+    CANCELLABLE_TRACER_STATUSES.has(execution.status) &&
     onCancelExecution;
   // Manual executions are permanent and should not be deleted
 

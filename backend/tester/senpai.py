@@ -337,7 +337,10 @@ def get_or_create_senpai_conversation(
     return SenpaiConversation.objects.create(user=user, thread_id=uuid4().hex, is_active=True), True
 
 
-def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assistant:
+def build_assistant_for_conversation(
+    conversation: SenpaiConversation,
+    active_project: str | None = None,
+) -> Assistant:
     """Create a Senpai assistant bound to the stored conversation thread."""
     if conversation.assistant_api_key is None:
         msg = "No assistant API key is configured for this conversation."
@@ -377,7 +380,7 @@ def build_assistant_for_conversation(conversation: SenpaiConversation) -> Assist
         runtime_root=runtime_root,
         model=model,
         require_checkpointer=False,
-        host_tools=build_chatbot_dojo_host_tools(conversation.user),
+        host_tools=build_chatbot_dojo_host_tools(conversation.user, active_project=active_project),
     )
 
 

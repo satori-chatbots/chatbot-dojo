@@ -2,12 +2,15 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from langchain_core.tools import BaseTool
+from rest_framework.response import Response
 
-from tester.models import ChatbotConnector, CustomUser, ProfileExecution, Project
+from tester.models import ChatbotConnector, CustomUser, ProfileExecution, Project, SenseiCheckRule, TestFile
 from tester.models import TestCase as SenseiTestCase
 from tester.senpai_host_tools import build_chatbot_dojo_host_tools
 
@@ -37,6 +40,7 @@ class SenpaiHostToolsTests(TestCase):
             name="Checkout QA",
             chatbot_connector=self.connector,
             owner=self.user,
+            llm_model="gpt-4o-mini",
         )
         self.public_project = Project.objects.create(
             name="Public QA",
@@ -64,6 +68,8 @@ class SenpaiHostToolsTests(TestCase):
 
         tools = build_chatbot_dojo_host_tools(self.user)
         self.tools = {tool.name: tool for tool in tools}
+        active_tools = build_chatbot_dojo_host_tools(self.user, active_project=self.project.get_project_folder_name())
+        self.active_tools = {tool.name: tool for tool in active_tools}
 
     def _create_tracer_execution(self, project: Project, name: str, status: str) -> ProfileExecution:
         return ProfileExecution.objects.create(
@@ -101,6 +107,9 @@ class SenpaiHostToolsTests(TestCase):
 
     def _tool(self, name: str) -> BaseTool:
         return self.tools[name]
+
+    def _active_tool(self, name: str) -> BaseTool:
+        return self.active_tools[name]
 
     def test_tracer_summary_counts_visible_executions_only(self) -> None:
         """Summary should include owned and public runs but not another user's private runs."""
@@ -241,6 +250,59 @@ class SenpaiHostToolsTests(TestCase):
         result = self._tool("analyze_dashboard_execution_results").invoke({"dashboard": "unknown"})
 
         self.assertEqual(result, {"error": "Invalid dashboard execution type: unknown"})  # noqa: PT009
+
+    def test_start_tracer_generation_defaults_to_active_project_and_requires_counts(self) -> None:
+        """TRACER execution should use the active project but still ask for required counts."""
+        result = self._active_tool("start_tracer_generation").invoke({"turns_per_session": 8})
+
+        self.assertEqual(result["status"], "needs_input")  # noqa: PT009
+        self.assertEqual(result["missing"], ["sessions"])  # noqa: PT009
+
+    @patch("tester.api.tasks.generate_profiles_task.delay")
+    def test_start_tracer_generation_starts_with_active_project(self, delay: Mock) -> None:
+        """TRACER execution tool should create a task using the host active project by default."""
+        delay.return_value = Mock(id="celery-tracer-1")
+
+        result = self._active_tool("start_tracer_generation").invoke(
+            {"sessions": 2, "turns_per_session": 4, "verbosity": "verbose"}
+        )
+
+        self.assertEqual(result["status"], "started")  # noqa: PT009
+        self.assertEqual(result["project"], self.project.name)  # noqa: PT009
+        execution = ProfileExecution.objects.get(id=result["execution_id"])
+        self.assertEqual(execution.project, self.project)  # noqa: PT009
+        self.assertEqual(execution.sessions, 2)  # noqa: PT009
+        self.assertEqual(execution.turns_per_session, 4)  # noqa: PT009
+        self.assertEqual(execution.verbosity, "verbose")  # noqa: PT009
+
+    @patch("tester.api.tasks.execute_sensei_test_task.delay")
+    def test_start_sensei_chat_execution_uses_default_test_name(self, delay: Mock) -> None:
+        """sensei-chat execution should default project and test_name when profile selection is provided."""
+        delay.return_value = Mock(id="celery-sensei-1")
+        profile = TestFile.objects.create(project=self.project, name="Checkout Profile")
+        profile.file.save("checkout_profile.yaml", ContentFile("test_name: Checkout Profile\n"), save=True)
+
+        result = self._active_tool("start_sensei_chat_execution").invoke({"profiles": [profile.id]})
+
+        self.assertEqual(result["status"], "started")  # noqa: PT009
+        self.assertEqual(result["project"], self.project.name)  # noqa: PT009
+        self.assertTrue(result["test_name"].startswith("Sensei Chat "))  # noqa: PT009
+        self.assertEqual(result["profiles"], ["Checkout Profile"])  # noqa: PT009
+
+    @patch("tester.execution_services.execute_sensei_check_for_project")
+    def test_start_sensei_check_execution_defaults_to_latest_project_test_case(self, execute_check: Mock) -> None:
+        """sensei-check should use the latest sensei-chat execution when test_cases is omitted."""
+        execute_check.return_value = Response({"success": True, "exit_code": 0}, status=200)
+        latest = SenseiTestCase.objects.create(project=self.project, name="Latest Run", status="SUCCESS")
+        rule = SenseiCheckRule.objects.create(project=self.project, name="Greeting Rule")
+        rule.file.save("greeting_rule.yaml", ContentFile("name: Greeting Rule\n"), save=True)
+
+        result = self._active_tool("start_sensei_check_execution").invoke({"rules": [rule.id]})
+
+        self.assertEqual(result["status"], "completed")  # noqa: PT009
+        self.assertEqual(result["project"], self.project.name)  # noqa: PT009
+        self.assertEqual(result["test_case_ids"], [latest.id])  # noqa: PT009
+        self.assertEqual(result["rules"], ["Greeting Rule"])  # noqa: PT009
 
     def tearDown(self) -> None:
         """Remove project folders created by sensei-check fixture data."""

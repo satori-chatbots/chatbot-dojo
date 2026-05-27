@@ -276,7 +276,7 @@ class SenpaiConversationMessageView(APIView):
 
         try:
             workspace_snapshot = sync_database_records_to_senpai_workspace(request.user)
-            assistant = build_assistant_for_conversation(conversation)
+            assistant = build_assistant_for_conversation(conversation, active_project=active_project_name)
             if "approval_decisions" in serializer.validated_data:
                 reply = assistant.resume_pending_interrupts(
                     serializer.validated_data["approval_decisions"],

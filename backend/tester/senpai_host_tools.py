@@ -11,6 +11,7 @@ from django.db.models import Count, Q, QuerySet
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
+from tester import execution_services
 from tester.models import CustomUser, ProfileExecution, Project, TestCase
 
 TRACER_ACTIVE_STATUSES = {"PENDING", "RUNNING", "CANCELLING"}
@@ -171,8 +172,82 @@ class AnalyzeDashboardExecutionResultsInput(BaseModel):
     )
 
 
-def build_chatbot_dojo_host_tools(user: CustomUser) -> list[BaseTool]:  # noqa: C901, PLR0915
+class StartTracerGenerationInput(BaseModel):
+    """Input for starting a TRACER execution."""
+
+    project: str | None = Field(
+        default=None,
+        description=(
+            "Optional project display name, id, or workspace folder name. If omitted, the host active project is used."
+        ),
+    )
+    sessions: int | None = Field(
+        default=None,
+        ge=1,
+        description="Number of TRACER sessions. Ask the user if omitted.",
+    )
+    turns_per_session: int | None = Field(
+        default=None,
+        ge=1,
+        description="Number of turns per TRACER session. Ask the user if omitted.",
+    )
+    verbosity: str | None = Field(
+        default=None,
+        description="Optional TRACER verbosity: normal, verbose, or debug. Defaults to normal.",
+    )
+
+
+class StartSenseiChatExecutionInput(BaseModel):
+    """Input for starting a sensei-chat execution."""
+
+    project: str | None = Field(
+        default=None,
+        description=(
+            "Optional project display name, id, or workspace folder name. If omitted, the host active project is used."
+        ),
+    )
+    profiles: list[str | int] | None = Field(
+        default=None,
+        description="Profile ids, names, filename stems, or filenames to execute. Ask the user if omitted.",
+    )
+    test_name: str | None = Field(
+        default=None,
+        description="Optional test execution name. If omitted, a timestamped default is used.",
+    )
+
+
+class StartSenseiCheckExecutionInput(BaseModel):
+    """Input for starting a sensei-check execution."""
+
+    project: str | None = Field(
+        default=None,
+        description=(
+            "Optional project display name, id, or workspace folder name. If omitted, the host active project is used."
+        ),
+    )
+    test_cases: list[str | int] | None = Field(
+        default=None,
+        description=(
+            "Optional sensei-chat test case ids or names. If omitted, the latest execution for the project is used."
+        ),
+    )
+    rules: list[str | int] | None = Field(
+        default=None,
+        description=(
+            "Optional SENSEI Check rule ids, names, filename stems, or filenames. If omitted, all project rules are used."
+        ),
+    )
+    verbose: bool = Field(default=False, description="Whether to execute sensei-check with verbose output.")
+
+
+def build_chatbot_dojo_host_tools(  # noqa: C901, PLR0915
+    user: CustomUser,
+    active_project: str | None = None,
+) -> list[BaseTool]:
     """Return host-owned tools for Senpai Assistant, scoped to one authenticated user."""
+
+    def _execution_error_payload(exc: execution_services.ExecutionServiceError) -> dict[str, Any]:
+        return {"status": "error", "error": str(exc), "status_code": exc.status_code}
 
     @tool(args_schema=TracerExecutionSummaryInput)
     def get_tracer_execution_summary(project: str | None = None) -> dict[str, Any]:
@@ -429,6 +504,79 @@ def build_chatbot_dojo_host_tools(user: CustomUser) -> list[BaseTool]:  # noqa: 
             log_tail_lines=bounded_log_tail_lines,
         )
 
+    @tool(args_schema=StartTracerGenerationInput)
+    def start_tracer_generation(
+        project: str | None = None,
+        sessions: int | None = None,
+        turns_per_session: int | None = None,
+        verbosity: str | None = None,
+    ) -> dict[str, Any]:
+        """Start TRACER profile generation for a project.
+
+        Use this when the user asks Senpai to run, launch, start, or execute TRACER. If project is omitted, the
+        host active project is used. If sessions or turns_per_session are omitted, the tool returns needs_input so
+        Senpai can ask only for the missing values. Verbosity defaults to normal.
+        """
+        try:
+            return execution_services.start_tracer_generation(
+                user=user,
+                project=project,
+                active_project=active_project,
+                sessions=sessions,
+                turns_per_session=turns_per_session,
+                verbosity=verbosity,
+            )
+        except execution_services.ExecutionServiceError as exc:
+            return _execution_error_payload(exc)
+
+    @tool(args_schema=StartSenseiChatExecutionInput)
+    def start_sensei_chat_execution(
+        project: str | None = None,
+        profiles: list[str | int] | None = None,
+        test_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Start a sensei-chat execution for selected profiles.
+
+        Use this when the user asks Senpai to execute profiles against the chatbot with SENSEI or sensei-chat. If
+        project is omitted, the host active project is used. If test_name is omitted, a timestamped default is used.
+        """
+        try:
+            return execution_services.start_sensei_chat_execution(
+                user=user,
+                project=project,
+                active_project=active_project,
+                profiles=profiles,
+                test_name=test_name,
+            )
+        except execution_services.ExecutionServiceError as exc:
+            return _execution_error_payload(exc)
+
+    @tool(args_schema=StartSenseiCheckExecutionInput)
+    def start_sensei_check_execution(
+        project: str | None = None,
+        test_cases: list[str | int] | None = None,
+        rules: list[str | int] | None = None,
+        *,
+        verbose: bool = False,
+    ) -> dict[str, Any]:
+        """Start a sensei-check execution over conversation outputs.
+
+        Use this when the user asks Senpai to run SENSEI Check. If project is omitted, the host active project is
+        used. If test_cases is omitted, the latest sensei-chat execution for the project is used. If rules is
+        omitted, all project rules are used.
+        """
+        try:
+            return execution_services.start_sensei_check_execution(
+                user=user,
+                project=project,
+                active_project=active_project,
+                test_cases=test_cases,
+                rules=rules,
+                verbose=verbose,
+            )
+        except execution_services.ExecutionServiceError as exc:
+            return _execution_error_payload(exc)
+
     return [
         get_tracer_execution_summary,
         list_tracer_executions,
@@ -438,6 +586,9 @@ def build_chatbot_dojo_host_tools(user: CustomUser) -> list[BaseTool]:  # noqa: 
         list_sensei_check_executions,
         get_active_backend_executions,
         analyze_dashboard_execution_results,
+        start_tracer_generation,
+        start_sensei_chat_execution,
+        start_sensei_check_execution,
     ]
 
 

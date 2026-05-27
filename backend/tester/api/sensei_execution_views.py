@@ -25,8 +25,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tester.api.base import logger
-from tester.api.tasks import execute_sensei_test_task
-from tester.api.test_runner import TestExecutionConfig
+from tester.execution_services import (
+    ExecutionServiceError,
+    execute_sensei_check_for_project,
+    start_sensei_chat_execution,
+)
 from tester.models import (
     ProfileExecution,
     Project,
@@ -150,74 +153,26 @@ class ExecuteSelectedProfilesAPIView(APIView):
         This creates a TestCase instance and runs the profiles through the Sensei
         execution system (sensei-chat/user-simulator) against the configured chatbot.
         """
-        error_response, project, profile_files = SenseiExecutionValidator.validate_execution_request(request)
-        if error_response:
-            return error_response
-
-        execution_name = request.data.get("test_name")
-        api_key = SenseiApiKeyManager.setup_api_key(project)
-
-        project_path = Path(project.get_project_path())
-
-        with transaction.atomic():
-            technology = project.chatbot_connector.technology
-
-            test_case = TestCase.objects.create(
-                project=project,
-                name=execution_name,
-                technology=technology,
-                llm_model=project.llm_model or "",
-                llm_provider=project.llm_provider or "",
+        try:
+            result = start_sensei_chat_execution(
+                user=request.user,
+                project=request.data.get("project_id"),
+                profiles=request.data.get("test_file_ids"),
+                test_name=request.data.get("test_name"),
             )
-            test_case.status = "RUNNING"
+        except ExecutionServiceError as exc:
+            return Response({"error": str(exc)}, status=exc.status_code)
 
-            results_path = (
-                Path(settings.MEDIA_ROOT)
-                / "results"
-                / f"user_{request.user.id}"
-                / f"project_{project.id}"
-                / f"testcase_{test_case.id}"
+        if result.get("status") == "needs_input":
+            return Response(
+                {"error": result["message"], "missing": result["missing"]}, status=status.HTTP_400_BAD_REQUEST
             )
-            user_profiles_path = project_path / "profiles" / f"testcase_{test_case.id}"
-            user_profiles_path.mkdir(parents=True, exist_ok=True)
-
-            copied_profiles = SenseiProfileProcessor.copy_and_prepare_profiles(list(profile_files), user_profiles_path)
-            test_case.copied_files = copied_profiles
-            test_case.save()
-
-            execution_config = TestExecutionConfig(
-                test_case_id=test_case.id,
-                project_path=str(project_path),
-                profiles_directory=f"testcase_{test_case.id}",
-                results_path=str(results_path),
-                technology=technology,
-                api_key=api_key,
-                api_provider=project.llm_provider,
-            )
-
-            # Convert config to dict for Celery serialization
-            config_dict = {
-                "test_case_id": execution_config.test_case_id,
-                "project_path": execution_config.project_path,
-                "profiles_directory": execution_config.profiles_directory,
-                "results_path": execution_config.results_path,
-                "technology": execution_config.technology,
-                "api_key": execution_config.api_key,
-                "api_provider": execution_config.api_provider,
-            }
-
-            # Start Celery task for asynchronous execution
-            task = execute_sensei_test_task.delay(config_dict)
-
-            # Store the task ID in the test case for progress tracking
-            test_case.celery_task_id = task.id
-            test_case.save()
 
         return Response(
             {
                 "message": "Sensei profile execution started",
-                "test_case_id": test_case.id,
-                "task_id": task.id,
+                "test_case_id": result["test_case_id"],
+                "task_id": result["task_id"],
                 "total_conversations": "Calculating...",
             },
             status=status.HTTP_202_ACCEPTED,
@@ -786,7 +741,11 @@ def execute_sensei_check(request: Request) -> Response:
             return _create_error_response(f"{missing_field} is required", status.HTTP_400_BAD_REQUEST)
 
         # Handle the main execution logic
-        return _handle_sensei_execution(project_id, test_case_ids, verbose=verbose)
+        return execute_sensei_check_for_project(
+            project_id=str(project_id),
+            test_case_ids=test_case_ids,
+            verbose=verbose,
+        )
 
     except (Project.DoesNotExist, TestCase.DoesNotExist, ValueError, OSError, DatabaseError) as e:
         if isinstance(e, DatabaseError):
