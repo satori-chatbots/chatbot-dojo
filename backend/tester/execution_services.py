@@ -5,10 +5,12 @@ from __future__ import annotations
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from django.conf import settings
 from django.db import transaction
 from rest_framework import status
+from rest_framework.response import Response
 
 from tester.models import (
     CustomUser,
@@ -81,7 +83,7 @@ def start_tracer_generation(  # noqa: PLR0913
 
     resolved_project = resolve_owned_project(user, project, active_project)
     if isinstance(resolved_project, dict):
-        missing.extend(str(item) for item in resolved_project["missing"])
+        missing.extend(str(item) for item in cast(list[object], resolved_project["missing"]))
 
     if missing:
         return needs_input(
@@ -89,7 +91,7 @@ def start_tracer_generation(  # noqa: PLR0913
             "Necesito proyecto, numero de sesiones y turnos por sesion para ejecutar TRACER.",
         )
 
-    project_obj = resolved_project
+    project_obj = cast(Project, resolved_project)
     if not project_obj.chatbot_connector:
         message = "Project must have a chatbot connector configured."
         raise ExecutionServiceError(message)
@@ -161,29 +163,30 @@ def start_sensei_chat_execution(
     resolved_project = resolve_owned_project(user, project, active_project)
     if isinstance(resolved_project, dict):
         return resolved_project
+    project_obj = cast(Project, resolved_project)
     if not profiles:
         return needs_input(["profiles"], "Necesito saber que perfiles ejecutar con sensei-chat.")
 
-    profile_files = resolve_project_profiles(resolved_project, profiles)
+    profile_files = resolve_project_profiles(project_obj, profiles)
     execution_name = (test_name or "").strip() or f"Sensei Chat {datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
-    api_key = SenseiApiKeyManager.setup_api_key(resolved_project)
-    project_path = Path(resolved_project.get_project_path())
+    api_key = SenseiApiKeyManager.setup_api_key(project_obj)
+    project_path = Path(project_obj.get_project_path())
 
     with transaction.atomic():
-        technology = resolved_project.chatbot_connector.technology
+        technology = project_obj.chatbot_connector.technology
         test_case = TestCase.objects.create(
-            project=resolved_project,
+            project=project_obj,
             name=execution_name,
             technology=technology,
-            llm_model=resolved_project.llm_model or "",
-            llm_provider=resolved_project.llm_provider or "",
+            llm_model=project_obj.llm_model or "",
+            llm_provider=project_obj.llm_provider or "",
             status="RUNNING",
         )
         results_path = (
             Path(settings.MEDIA_ROOT)
             / "results"
             / f"user_{user.id}"
-            / f"project_{resolved_project.id}"
+            / f"project_{project_obj.id}"
             / f"testcase_{test_case.id}"
         )
         user_profiles_path = project_path / "profiles" / f"testcase_{test_case.id}"
@@ -199,7 +202,7 @@ def start_sensei_chat_execution(
             results_path=str(results_path),
             technology=technology,
             api_key=api_key,
-            api_provider=resolved_project.llm_provider,
+            api_provider=project_obj.llm_provider,
         )
         celery_task = execute_sensei_test_task.delay(execution_config.__dict__)
         test_case.celery_task_id = celery_task.id
@@ -208,7 +211,7 @@ def start_sensei_chat_execution(
     return {
         "status": "started",
         "message": "Sensei profile execution started",
-        "project": resolved_project.name,
+        "project": project_obj.name,
         "test_case_id": test_case.id,
         "task_id": celery_task.id,
         "test_name": execution_name,
@@ -260,14 +263,15 @@ def start_sensei_check_execution(  # noqa: PLR0913
     resolved_project = resolve_owned_project(user, project, active_project)
     if isinstance(resolved_project, dict):
         return resolved_project
+    project_obj = cast(Project, resolved_project)
 
-    test_case_ids = resolve_project_test_cases(resolved_project, test_cases)
+    test_case_ids = resolve_project_test_cases(project_obj, test_cases)
     if isinstance(test_case_ids, dict):
         return test_case_ids
 
-    rule_files = resolve_project_rules(resolved_project, rules) if rules else None
+    rule_files = resolve_project_rules(project_obj, rules) if rules else None
     response = execute_sensei_check_for_project(
-        project_id=str(resolved_project.id),
+        project_id=str(project_obj.id),
         test_case_ids=test_case_ids,
         rule_files=rule_files,
         verbose=verbose,
@@ -279,10 +283,10 @@ def start_sensei_check_execution(  # noqa: PLR0913
 
     return {
         "status": "completed",
-        "project": resolved_project.name,
+        "project": project_obj.name,
         "test_case_ids": test_case_ids,
         "rules": [rule.name for rule in rule_files] if rule_files else "all_project_rules",
-        **dict(response.data),
+        **(response.data if isinstance(response.data, dict) else {}),
     }
 
 
@@ -343,7 +347,7 @@ def execute_sensei_check_for_project(
     test_case_ids: list[int],
     rule_files: list[SenseiCheckRule] | None = None,
     verbose: bool = False,
-) -> object:
+) -> Response:
     """Run sensei-check for selected test cases and optional selected rules."""
     from tester.api.sensei_execution_views import (  # noqa: PLC0415
         _build_sensei_command,
