@@ -181,6 +181,14 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
             last_modified_by_user=self.request.user,
         )
 
+    def perform_update(self, serializer: ChatbotConnectorSerializer) -> None:
+        """Track direct user edits to connector metadata."""
+        serializer.save(
+            last_modified_by_source=ChatbotConnector.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+        )
+
     @action(detail=False, methods=["get"], url_path="check-name")
     def check_name(self, request: Request) -> Response:
         """Check if a connector name is already used by the current user. It can't be none or empty."""
@@ -248,8 +256,7 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
 
             # Save new file
             connector.custom_config_file.save(file_name, file_content)
-            connector.last_modified_by_source = ChatbotConnector.SOURCE_USER
-            connector.last_modified_by_user = request.user
+            connector.mark_modified_by_user(request.user)
             connector.save()
 
             return Response(

@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -86,6 +87,69 @@ class SenpaiConversationAPITests(TestCase):
         user_root = self.media_root / "users" / f"user_{self.user.id}"
         self.assertTrue((user_root / "projects").is_dir())  # noqa: PT009
         self.assertTrue((user_root / "connectors").is_dir())  # noqa: PT009
+
+    def test_user_profile_update_clears_senpai_last_modifier(self) -> None:
+        """Saving a Senpai-created profile from the UI should make the user the latest modifier."""
+        conversation, _created = get_or_create_senpai_conversation(self.user)
+        connector = ChatbotConnector.objects.create(owner=self.user, name="Demo Connector", technology="custom")
+        project = Project.objects.create(owner=self.user, name="Demo Project", chatbot_connector=connector)
+        profile = TestFile.objects.create(
+            project=project,
+            name="Checkout Profile",
+            created_by_source=TestFile.SOURCE_SENPAI_ASSISTANT,
+            last_modified_by_source=TestFile.SOURCE_SENPAI_ASSISTANT,
+            created_by_user=self.user,
+            last_modified_by_user=self.user,
+            created_by_senpai_conversation=conversation,
+            last_modified_by_senpai_conversation=conversation,
+        )
+        profile.file.save("checkout_profile.yaml", ContentFile("test_name: Checkout Profile\n"), save=True)
+
+        response = self.client.put(
+            f"/api/testfiles/{profile.id}/update-file/",
+            {"content": "test_name: Checkout Profile\n", "ignore_validation_errors": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        profile.refresh_from_db()
+        self.assertEqual(profile.last_modified_by_source, TestFile.SOURCE_USER)  # noqa: PT009
+        self.assertEqual(profile.last_modified_by_user, self.user)  # noqa: PT009
+        self.assertIsNone(profile.last_modified_by_senpai_conversation)  # noqa: PT009
+
+    def test_user_sensei_check_rule_update_clears_senpai_last_modifier(self) -> None:
+        """Saving a Senpai-created SENSEI Check rule should make the user the latest modifier."""
+        conversation, _created = get_or_create_senpai_conversation(self.user)
+        connector = ChatbotConnector.objects.create(owner=self.user, name="Rule Connector", technology="custom")
+        project = Project.objects.create(owner=self.user, name="Rule Project", chatbot_connector=connector)
+        rule = SenseiCheckRule.objects.create(
+            project=project,
+            name="Greeting Rule",
+            created_by_source=SenseiCheckRule.SOURCE_SENPAI_ASSISTANT,
+            last_modified_by_source=SenseiCheckRule.SOURCE_SENPAI_ASSISTANT,
+            created_by_user=self.user,
+            last_modified_by_user=self.user,
+            created_by_senpai_conversation=conversation,
+            last_modified_by_senpai_conversation=conversation,
+        )
+        rule.file.save("greeting_rule.yaml", ContentFile("name: Greeting Rule\nactive: True\n"), save=True)
+        upload = SimpleUploadedFile(
+            "rule.yaml",
+            b"name: Greeting Rule\nactive: True\n",
+            content_type="application/x-yaml",
+        )
+
+        response = self.client.put(
+            f"/api/senseicheckrules/{rule.id}/",
+            {"file": upload, "project": project.id, "ignore_validation_errors": "true"},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        rule.refresh_from_db()
+        self.assertEqual(rule.last_modified_by_source, SenseiCheckRule.SOURCE_USER)  # noqa: PT009
+        self.assertEqual(rule.last_modified_by_user, self.user)  # noqa: PT009
+        self.assertIsNone(rule.last_modified_by_senpai_conversation)  # noqa: PT009
 
     def test_initialize_with_force_new_reuses_empty_active_conversation(self) -> None:
         """Force-new initialization should not create duplicate empty history rows."""

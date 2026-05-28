@@ -170,6 +170,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             updated_project = serializer.save(
                 last_modified_by_source=Project.SOURCE_USER,
                 last_modified_by_user=self.request.user,
+                last_modified_by_senpai_conversation=None,
             )
             transaction.on_commit(
                 lambda: self._sync_project_storage_after_commit(

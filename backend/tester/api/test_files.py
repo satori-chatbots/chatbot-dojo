@@ -127,8 +127,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         test_file.name = new_test_name
         test_file.is_valid = is_valid
-        test_file.last_modified_by_source = TestFile.SOURCE_USER
-        test_file.last_modified_by_user = request.user
+        test_file.mark_modified_by_user(request.user)
         test_file.save()
 
         return Response({"message": "File updated successfully"}, status=status.HTTP_200_OK)

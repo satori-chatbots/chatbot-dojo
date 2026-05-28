@@ -499,6 +499,12 @@ class ArtifactProvenanceMixin(models.Model):
 
         abstract = True
 
+    def mark_modified_by_user(self, user: Any) -> None:  # noqa: ANN401
+        """Mark the latest modification as a direct user edit."""
+        self.last_modified_by_source = self.SOURCE_USER
+        self.last_modified_by_user = user
+        self.last_modified_by_senpai_conversation = None
+
 
 class TestFile(ArtifactProvenanceMixin, models.Model):
     """Model to store the uploaded User Profiles YAML files.

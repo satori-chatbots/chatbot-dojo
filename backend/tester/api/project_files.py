@@ -47,6 +47,14 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
 
+    def perform_update(self, serializer: PersonalityFileSerializer) -> None:
+        """Track direct user edits to personality files."""
+        serializer.save(
+            last_modified_by_source=PersonalityFile.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+        )
+
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all personality files, filtered by project if specified."""
         project_id = request.query_params.get("project_id", None)
@@ -110,6 +118,14 @@ class RuleFileViewSet(viewsets.ModelViewSet):
     serializer_class = RuleFileSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def perform_update(self, serializer: RuleFileSerializer) -> None:
+        """Track direct user edits to rule files."""
+        serializer.save(
+            last_modified_by_source=RuleFile.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+        )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all rule files, filtered by project if specified."""
@@ -175,6 +191,14 @@ class TypeFileViewSet(viewsets.ModelViewSet):
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
 
+    def perform_update(self, serializer: TypeFileSerializer) -> None:
+        """Track direct user edits to type files."""
+        serializer.save(
+            last_modified_by_source=TypeFile.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+        )
+
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all type files, filtered by project if specified."""
         project_id = request.query_params.get("project_id", None)
@@ -238,6 +262,14 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
     serializer_class = SenseiCheckRuleSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def perform_update(self, serializer: SenseiCheckRuleSerializer) -> None:
+        """Track direct user edits to SENSEI Check rules."""
+        serializer.save(
+            last_modified_by_source=SenseiCheckRule.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+        )
 
     @staticmethod
     def _ignore_validation_errors(request: Request) -> bool:
@@ -392,12 +424,12 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
                     yaml.dump(data, file, Dumper=CustomDumper, default_flow_style=False)
 
                 # Return updated data
-                rule.last_modified_by_source = SenseiCheckRule.SOURCE_USER
-                rule.last_modified_by_user = request.user
+                rule.mark_modified_by_user(request.user)
                 rule.save(
                     update_fields=[
                         "last_modified_by_source",
                         "last_modified_by_user",
+                        "last_modified_by_senpai_conversation",
                     ]
                 )
                 serializer = self.get_serializer(rule)
