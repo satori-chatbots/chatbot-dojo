@@ -762,16 +762,28 @@ def _filter_named_queryset(queryset: QuerySet, artifact: str | int) -> QuerySet:
 
 def _serialize_artifact_provenance(artifact: Any, artifact_type: str) -> dict[str, Any]:  # noqa: ANN401
     project = getattr(artifact, "project", None)
+    created_by_label = _serialize_actor_label(
+        artifact.created_by_source,
+        artifact.created_by_user,
+        artifact.get_created_by_source_display(),
+    )
+    last_modified_by_label = _serialize_actor_label(
+        artifact.last_modified_by_source,
+        artifact.last_modified_by_user,
+        artifact.get_last_modified_by_source_display(),
+    )
     row = {
         "artifact_type": artifact_type,
         "id": artifact.id,
         "name": getattr(artifact, "name", ""),
         "created_by_source": artifact.created_by_source,
-        "created_by_label": artifact.get_created_by_source_display(),
+        "created_by_label": created_by_label,
         "last_modified_by_source": artifact.last_modified_by_source,
-        "last_modified_by_label": artifact.get_last_modified_by_source_display(),
+        "last_modified_by_label": last_modified_by_label,
         "created_by_user_id": artifact.created_by_user_id,
+        "created_by_user_name": _serialize_user_name(artifact.created_by_user),
         "last_modified_by_user_id": artifact.last_modified_by_user_id,
+        "last_modified_by_user_name": _serialize_user_name(artifact.last_modified_by_user),
         "created_by_senpai_conversation_id": artifact.created_by_senpai_conversation_id,
         "last_modified_by_senpai_conversation_id": artifact.last_modified_by_senpai_conversation_id,
         "provenance_metadata": artifact.provenance_metadata or {},
@@ -785,6 +797,26 @@ def _serialize_artifact_provenance(artifact: Any, artifact_type: str) -> dict[st
             }
         )
     return row
+
+
+def _serialize_actor_label(source: str, user: CustomUser | None, fallback_label: str) -> str:
+    if source == TestFile.SOURCE_USER:
+        return _serialize_user_name(user) or fallback_label
+    return fallback_label
+
+
+def _serialize_user_name(user: CustomUser | None) -> str | None:
+    if user is None:
+        return None
+
+    if user.username:
+        return user.username
+    full_name = user.get_full_name().strip()
+    if full_name:
+        return full_name
+    if user.email:
+        return user.email
+    return None
 
 
 def _get_visible_tracer_executions_for_tool(
