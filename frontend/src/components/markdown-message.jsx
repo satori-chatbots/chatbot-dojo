@@ -647,11 +647,7 @@ const parseMarkdown = (content) => {
 
     const orderedMatch = line.match(/^(\d+)\.\s+/);
     if (orderedMatch) {
-      const { items, nextIndex } = readListItems(
-        lines,
-        lineIndex,
-        /^\d+\.\s+/,
-      );
+      const { items, nextIndex } = readListItems(lines, lineIndex, /^\d+\.\s+/);
       lineIndex = nextIndex;
 
       elements.push(renderList(items, `list-${elements.length}`));
