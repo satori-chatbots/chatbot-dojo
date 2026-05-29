@@ -453,20 +453,52 @@ const renderParagraph = (text, key) => {
   );
 };
 
-const renderList = (items, ordered, key) => {
-  const ListTag = ordered ? "ol" : "ul";
+const renderList = (items, key) => {
   return (
-    <ListTag
+    <ul
       key={key}
-      className={`space-y-1 pl-5 text-sm leading-6 ${
-        ordered ? "list-decimal" : "list-disc"
-      } break-words`}
+      className="space-y-1 pl-5 text-sm leading-6 list-disc break-words"
     >
       {items.map((item, index) => (
         <li key={`${key}-item-${index}`}>{splitInlineMarkdown(item)}</li>
       ))}
-    </ListTag>
+    </ul>
   );
+};
+
+const readListItems = (lines, startIndex, itemPattern) => {
+  const items = [];
+  let lineIndex = startIndex;
+
+  while (lineIndex < lines.length) {
+    if (itemPattern.test(lines[lineIndex])) {
+      items.push(lines[lineIndex].replace(itemPattern, ""));
+      lineIndex += 1;
+      continue;
+    }
+
+    if (!lines[lineIndex].trim()) {
+      let nextContentIndex = lineIndex + 1;
+      while (
+        nextContentIndex < lines.length &&
+        !lines[nextContentIndex].trim()
+      ) {
+        nextContentIndex += 1;
+      }
+
+      if (
+        nextContentIndex < lines.length &&
+        itemPattern.test(lines[nextContentIndex])
+      ) {
+        lineIndex = nextContentIndex;
+        continue;
+      }
+    }
+
+    break;
+  }
+
+  return { items, nextIndex: lineIndex };
 };
 
 const CodeBlock = ({ lines, language }) => {
@@ -602,28 +634,23 @@ const parseMarkdown = (content) => {
     }
 
     if (/^(-|\*|\+)\s+/.test(line)) {
-      const items = [];
-      while (
-        lineIndex < lines.length &&
-        /^(-|\*|\+)\s+/.test(lines[lineIndex])
-      ) {
-        items.push(lines[lineIndex].replace(/^(-|\*|\+)\s+/, ""));
-        lineIndex += 1;
-      }
+      const { items, nextIndex } = readListItems(
+        lines,
+        lineIndex,
+        /^(-|\*|\+)\s+/,
+      );
+      lineIndex = nextIndex;
 
-      elements.push(renderList(items, false, `list-${elements.length}`));
+      elements.push(renderList(items, `list-${elements.length}`));
       continue;
     }
 
     const orderedMatch = line.match(/^(\d+)\.\s+/);
     if (orderedMatch) {
-      const items = [];
-      while (lineIndex < lines.length && /^\d+\.\s+/.test(lines[lineIndex])) {
-        items.push(lines[lineIndex].replace(/^\d+\.\s+/, ""));
-        lineIndex += 1;
-      }
+      const { items, nextIndex } = readListItems(lines, lineIndex, /^\d+\.\s+/);
+      lineIndex = nextIndex;
 
-      elements.push(renderList(items, true, `list-${elements.length}`));
+      elements.push(renderList(items, `list-${elements.length}`));
       continue;
     }
 
