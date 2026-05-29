@@ -682,7 +682,9 @@ def _get_artifact_provenance_for_tool(  # noqa: PLR0911
             return {"error": f"Ambiguous {artifact_type}: {artifact}", "matches": matches}
         return {"artifact": matches[0]}
 
-    rows = [_serialize_artifact_provenance(item, artifact_type) for item in queryset.order_by("name", "id")[:bounded_limit]]
+    rows = [
+        _serialize_artifact_provenance(item, artifact_type) for item in queryset.order_by("name", "id")[:bounded_limit]
+    ]
     return {"artifacts": rows, "count": len(rows), "limit": bounded_limit}
 
 
@@ -735,8 +737,7 @@ def _get_connector_provenance_for_tool(
         return {"artifact": matches[0]}
 
     rows = [
-        _serialize_artifact_provenance(connector, "connector")
-        for connector in queryset.order_by("name", "id")[:limit]
+        _serialize_artifact_provenance(connector, "connector") for connector in queryset.order_by("name", "id")[:limit]
     ]
     return {"artifacts": rows, "count": len(rows), "limit": limit}
 

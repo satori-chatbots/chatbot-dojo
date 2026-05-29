@@ -117,7 +117,10 @@ class TracerResultsProcessor:
             execution=execution,
             created_by_source=TestFile.SOURCE_TRACER,
             last_modified_by_source=TestFile.SOURCE_TRACER,
-            provenance_metadata={"tracer_execution_id": execution.id, "tracer_execution_name": execution.execution_name},
+            provenance_metadata={
+                "tracer_execution_id": execution.id,
+                "tracer_execution_name": execution.execution_name,
+            },
         )
         test_file.file.name = relative_path
         test_file.save()

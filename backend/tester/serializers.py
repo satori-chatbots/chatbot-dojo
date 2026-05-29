@@ -1,6 +1,7 @@
 """Serializers for the tester app."""
 
-from typing import Any, ClassVar
+from datetime import datetime
+from typing import Any, ClassVar, Protocol
 
 import yaml
 from django.contrib.auth import get_user_model
@@ -29,6 +30,35 @@ from .models import (
 # Get the latest version of the user model
 User = get_user_model()
 
+
+class UserDisplay(Protocol):
+    """User fields required for audit display names."""
+
+    username: str
+    email: str
+
+    def get_full_name(self) -> str:
+        """Return the user's full name."""
+
+
+class ProvenanceAuditObject(Protocol):
+    """Model fields required to serialize provenance audit metadata."""
+
+    created_by_source: str
+    last_modified_by_source: str
+    created_by_user: UserDisplay | None
+    last_modified_by_user: UserDisplay | None
+    uploaded_at: datetime | None
+    created_at: datetime | None
+    last_modified_at: datetime | None
+
+    def get_created_by_source_display(self) -> str:
+        """Return the display label for the creation source."""
+
+    def get_last_modified_by_source_display(self) -> str:
+        """Return the display label for the latest modification source."""
+
+
 PROVENANCE_READ_ONLY_FIELDS = [
     "created_by_source",
     "last_modified_by_source",
@@ -41,7 +71,7 @@ PROVENANCE_READ_ONLY_FIELDS = [
 ]
 
 
-def _serialize_user_display_name(user: User | None) -> str | None:
+def _serialize_user_display_name(user: UserDisplay | None) -> str | None:
     if user is None:
         return None
     if user.username:
@@ -54,7 +84,7 @@ def _serialize_user_display_name(user: User | None) -> str | None:
     return None
 
 
-def _serialize_actor_label(source: str, user: User | None, fallback_label: str) -> str:
+def _serialize_actor_label(source: str, user: UserDisplay | None, fallback_label: str) -> str:
     if source == TestFile.SOURCE_USER:
         return _serialize_user_display_name(user) or fallback_label
     return fallback_label
@@ -63,7 +93,7 @@ def _serialize_actor_label(source: str, user: User | None, fallback_label: str) 
 class ProvenanceAuditSerializerMixin:
     """Expose human-readable provenance details for YAML editors and API clients."""
 
-    def get_audit(self, obj: object) -> dict[str, str | None]:
+    def get_audit(self, obj: ProvenanceAuditObject) -> dict[str, str | None]:
         """Return compact audit metadata for provenance-enabled models."""
         created_at = getattr(obj, "uploaded_at", None) or getattr(obj, "created_at", None)
         last_modified_at = getattr(obj, "last_modified_at", None) or created_at
