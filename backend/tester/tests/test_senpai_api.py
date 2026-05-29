@@ -909,6 +909,45 @@ class SenpaiConversationAPITests(TestCase):
         )
 
     @patch("tester.api.senpai.build_assistant_for_conversation")
+    def test_send_message_prioritizes_attached_yaml_over_conversation_context(
+        self,
+        build_assistant_mock: MagicMock,
+    ) -> None:
+        """Embedded YAML attachments should be made explicit as the edit target."""
+        SenpaiConversation.objects.create(
+            user=self.user,
+            thread_id="thread-1",
+            assistant_api_key=self.api_key,
+        )
+        assistant = MagicMock()
+        assistant.send_message.return_value = "Updated YAML"
+        build_assistant_mock.return_value = assistant
+
+        message = "\n\n".join(
+            [
+                "modificame de este perfil que te adjunto los steps",
+                "Archivo YAML adjunto: restaurant_recommendation.yml\n"
+                "```yaml\n"
+                'test_name: "bartender"\n'
+                "conversation:\n"
+                "  goal_style:\n"
+                "    steps: 3\n"
+                "```",
+            ],
+        )
+        response = self.client.post(
+            "/api/senpai/conversation/message/",
+            {"message": message},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, HTTP_OK)  # noqa: PT009
+        sent_message = assistant.send_message.call_args.args[0]
+        self.assertIn("Treat the attached YAML content as the primary target", sent_message)  # noqa: PT009
+        self.assertIn("restaurant_recommendation.yml", sent_message)  # noqa: PT009
+        self.assertIn('test_name: "bartender"', sent_message)  # noqa: PT009
+
+    @patch("tester.api.senpai.build_assistant_for_conversation")
     def test_send_message_passes_screen_context_to_assistant(self, build_assistant_mock: MagicMock) -> None:
         """Sending a message should pass current Chatbot Dojo screen context to Senpai."""
         SenpaiConversation.objects.create(

@@ -1,6 +1,7 @@
 """Senpai Assistant API endpoints."""
 
 import logging
+import re
 from collections.abc import Sequence
 from typing import ClassVar, Protocol, TypeAlias
 from uuid import uuid4
@@ -36,6 +37,16 @@ logger = logging.getLogger(__name__)
 
 JsonValue: TypeAlias = None | str | int | float | bool | list["JsonValue"] | dict[str, "JsonValue"]
 CONVERSATION_TITLE_MAX_LENGTH = 80
+YAML_ATTACHMENT_BLOCK_PATTERN = re.compile(
+    r"(?im)^Archivo YAML adjunto:\s*.+\.ya?ml\s*\n```(?:ya?ml)?\s*\n",
+)
+YAML_ATTACHMENT_PRIORITY_INSTRUCTION = """\
+Important attached-YAML handling:
+- The user included one or more YAML attachments in this message.
+- Treat the attached YAML content as the primary target and source of truth for requests such as "this profile", "the attached profile", or "modify the steps".
+- Do not choose, edit, or claim to have updated a previously discussed workspace YAML unless the user explicitly names that workspace file outside the attachment.
+- If you cannot save changes to the attached file directly, return the complete modified YAML and say that no workspace file was changed.
+"""
 
 
 class PendingInterruptAssistant(Protocol):
@@ -249,6 +260,13 @@ class SenpaiConversationMessageView(APIView):
             return error_message
         return self.GENERIC_RUNTIME_ERROR_MESSAGE
 
+    def _prepare_message_for_assistant(self, message: str) -> str:
+        """Add attachment-specific guidance when the frontend embedded a YAML file."""
+        if not YAML_ATTACHMENT_BLOCK_PATTERN.search(message):
+            return message
+
+        return f"{YAML_ATTACHMENT_PRIORITY_INSTRUCTION}\nUser message:\n{message}"
+
     def _get_active_project_name(self, request: Request, active_project_id: int | None) -> str | None:
         """Return Senpai's workspace project name for the host-selected project."""
         if active_project_id is None:
@@ -293,7 +311,7 @@ class SenpaiConversationMessageView(APIView):
                         active_project_id=serializer.validated_data.get("active_project_id"),
                     )
                 reply = assistant.send_message(
-                    serializer.validated_data["message"],
+                    self._prepare_message_for_assistant(serializer.validated_data["message"]),
                     **send_kwargs,
                 )
             pending_approvals = self._serialize_pending_approvals(assistant)
