@@ -923,17 +923,15 @@ class SenpaiConversationAPITests(TestCase):
         assistant.send_message.return_value = "Updated YAML"
         build_assistant_mock.return_value = assistant
 
-        message = "\n\n".join(
-            [
-                "modificame de este perfil que te adjunto los steps",
-                "Archivo YAML adjunto: restaurant_recommendation.yml\n"
-                "```yaml\n"
-                'test_name: "bartender"\n'
-                "conversation:\n"
-                "  goal_style:\n"
-                "    steps: 3\n"
-                "```",
-            ],
+        message = (
+            "modificame de este perfil que te adjunto los steps\n\n"
+            "Archivo YAML adjunto: restaurant_recommendation.yml\n"
+            "```yaml\n"
+            'test_name: "bartender"\n'
+            "conversation:\n"
+            "  goal_style:\n"
+            "    steps: 3\n"
+            "```"
         )
         response = self.client.post(
             "/api/senpai/conversation/message/",
