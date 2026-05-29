@@ -1388,7 +1388,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                                       {formatTimestamp(message.timestamp)}
                                     </span>
                                   </div>
-                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                  <p className="message-text-wrap whitespace-pre-wrap text-sm leading-6">
                                     {getApprovalDescription(message.approval)}
                                   </p>
                                   <div className="mt-3 flex justify-end gap-2">
@@ -1447,7 +1447,7 @@ const SenpaiAssistantPanel = ({ onClose, isMobile = false, onCollapse }) => {
                                     className="space-y-2"
                                   />
                                 ) : (
-                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                  <p className="message-text-wrap whitespace-pre-wrap text-sm leading-6">
                                     {message.content}
                                   </p>
                                 )}

@@ -442,7 +442,7 @@ const splitInlineMarkdown = (text) => {
 const renderParagraph = (text, key) => {
   const lines = text.split("\n");
   return (
-    <p key={key} className="break-words text-sm leading-6">
+    <p key={key} className="message-text-wrap text-sm leading-6">
       {lines.map((line, index) => (
         <React.Fragment key={`${key}-line-${index}`}>
           {index > 0 && <br />}
@@ -457,7 +457,7 @@ const renderList = (items, key) => {
   return (
     <ul
       key={key}
-      className="space-y-1 pl-5 text-sm leading-6 list-disc break-words"
+      className="message-text-wrap space-y-1 pl-5 text-sm leading-6 list-disc"
     >
       {items.map((item, index) => (
         <li key={`${key}-item-${index}`}>{splitInlineMarkdown(item)}</li>
@@ -683,7 +683,9 @@ const MarkdownMessage = ({ content, className = "" }) => {
   const children = parseMarkdown(content || "");
 
   return (
-    <div className={`min-w-0 max-w-full overflow-x-hidden ${className}`}>
+    <div
+      className={`message-text-wrap min-w-0 max-w-full overflow-x-hidden ${className}`}
+    >
       {children}
     </div>
   );
