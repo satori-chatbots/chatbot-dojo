@@ -15,6 +15,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from .senpai_validation import validate_yaml_content
 
@@ -436,7 +437,79 @@ def delete_connector_export_file(connector: "ChatbotConnector") -> None:
             export_path.unlink()
 
 
-class TestFile(models.Model):
+class ArtifactProvenanceMixin(models.Model):
+    """Track who or what created and last modified an artifact."""
+
+    SOURCE_USER = "user"
+    SOURCE_SENPAI_ASSISTANT = "senpai_assistant"
+    SOURCE_TRACER = "tracer"
+    SOURCE_SYSTEM = "system"
+    SOURCE_UNKNOWN = "unknown"
+    SOURCE_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        (SOURCE_USER, "User"),
+        (SOURCE_SENPAI_ASSISTANT, "Senpai Assistant"),
+        (SOURCE_TRACER, "TRACER"),
+        (SOURCE_SYSTEM, "System"),
+        (SOURCE_UNKNOWN, "Unknown"),
+    ]
+
+    created_by_source = models.CharField(
+        max_length=32,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_USER,
+        db_index=True,
+    )
+    last_modified_by_source = models.CharField(
+        max_length=32,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_USER,
+        db_index=True,
+    )
+    created_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    last_modified_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    created_by_senpai_conversation = models.ForeignKey(
+        "SenpaiConversation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    last_modified_by_senpai_conversation = models.ForeignKey(
+        "SenpaiConversation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    last_modified_at = models.DateTimeField(default=timezone.now)
+    provenance_metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        """Keep provenance fields reusable without creating a table for the mixin."""
+
+        abstract = True
+
+    def mark_modified_by_user(self, user: Any) -> None:  # noqa: ANN401
+        """Mark the latest modification as a direct user edit."""
+        self.last_modified_by_source = self.SOURCE_USER
+        self.last_modified_by_user = user
+        self.last_modified_by_senpai_conversation = None
+        self.last_modified_at = timezone.now()
+
+
+class TestFile(ArtifactProvenanceMixin, models.Model):
     """Model to store the uploaded User Profiles YAML files.
 
     These are the models that are available to the user to run tests, each testfile belongs to a project
@@ -578,7 +651,7 @@ def initialize_user_sensei_workspace(
         transaction.on_commit(lambda: ensure_user_sensei_directory(user_id))
 
 
-class Project(models.Model):
+class Project(ArtifactProvenanceMixin, models.Model):
     """A Project is a collection of test cases, it uses one chatbot connector."""
 
     # Name of the project, must be unique for the user
@@ -729,7 +802,7 @@ def delete_project_directory(sender: type[Project], instance: Project, **_kwargs
             logger.exception("Error deleting project directory %s", project_path)
 
 
-class ChatbotConnector(models.Model):
+class ChatbotConnector(ArtifactProvenanceMixin, models.Model):
     """Information about the technology of the chatbot used, it can be used by multiple projects.
 
     Contains the used technology and the parameters to access the chatbot, also a name to identify it
@@ -737,6 +810,7 @@ class ChatbotConnector(models.Model):
 
     # Name of the chatbot connector, must be unique per user
     name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
     technology = models.CharField(max_length=255)  # No longer hardcoded choices - dynamic from TRACER
     parameters = models.JSONField(default=dict, blank=True, help_text="Connector-specific parameters as JSON")
 
@@ -1099,7 +1173,7 @@ class ProfileGenerationTask(models.Model):
         return f"ProfileGenerationTask {self.id} for Project {self.project.name}"
 
 
-class PersonalityFile(models.Model):
+class PersonalityFile(ArtifactProvenanceMixin, models.Model):
     """Model to store personality files in the personalities/ folder."""
 
     file = models.FileField(upload_to=upload_to_personalities, max_length=500)
@@ -1118,7 +1192,7 @@ class PersonalityFile(models.Model):
         super().save(*args, **kwargs)
 
 
-class RuleFile(models.Model):
+class RuleFile(ArtifactProvenanceMixin, models.Model):
     """Model to store rule files in the rules/ folder."""
 
     file = models.FileField(upload_to=upload_to_rules, max_length=500)
@@ -1137,7 +1211,7 @@ class RuleFile(models.Model):
         super().save(*args, **kwargs)
 
 
-class TypeFile(models.Model):
+class TypeFile(ArtifactProvenanceMixin, models.Model):
     """Model to store type files in the types/ folder."""
 
     file = models.FileField(upload_to=upload_to_types, max_length=500)
@@ -1156,7 +1230,7 @@ class TypeFile(models.Model):
         super().save(*args, **kwargs)
 
 
-class SenseiCheckRule(models.Model):
+class SenseiCheckRule(ArtifactProvenanceMixin, models.Model):
     """Model to store SENSEI Check rule files."""
 
     file = models.FileField(upload_to=upload_to_sensei_check_rules, max_length=500)

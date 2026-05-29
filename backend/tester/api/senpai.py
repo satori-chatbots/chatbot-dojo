@@ -297,7 +297,7 @@ class SenpaiConversationMessageView(APIView):
                     **send_kwargs,
                 )
             pending_approvals = self._serialize_pending_approvals(assistant)
-            sync_senpai_workspace_to_database(request.user, workspace_snapshot)
+            sync_senpai_workspace_to_database(request.user, workspace_snapshot, conversation=conversation)
         except (FileNotFoundError, NotADirectoryError) as exc:
             logger.warning(
                 "Senpai Assistant workspace lookup failed for user_id=%s thread_id=%s: %s",

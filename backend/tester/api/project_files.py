@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 import yaml
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -46,6 +47,15 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
     serializer_class = PersonalityFileSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def perform_update(self, serializer: PersonalityFileSerializer) -> None:
+        """Track direct user edits to personality files."""
+        serializer.save(
+            last_modified_by_source=PersonalityFile.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
+        )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all personality files, filtered by project if specified."""
@@ -89,7 +99,14 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            personality_file = PersonalityFile.objects.create(file=uploaded_file, project=project)
+            personality_file = PersonalityFile.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=PersonalityFile.SOURCE_USER,
+                last_modified_by_source=PersonalityFile.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(personality_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -103,6 +120,15 @@ class RuleFileViewSet(viewsets.ModelViewSet):
     serializer_class = RuleFileSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def perform_update(self, serializer: RuleFileSerializer) -> None:
+        """Track direct user edits to rule files."""
+        serializer.save(
+            last_modified_by_source=RuleFile.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
+        )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all rule files, filtered by project if specified."""
@@ -146,7 +172,14 @@ class RuleFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            rule_file = RuleFile.objects.create(file=uploaded_file, project=project)
+            rule_file = RuleFile.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=RuleFile.SOURCE_USER,
+                last_modified_by_source=RuleFile.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(rule_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -160,6 +193,15 @@ class TypeFileViewSet(viewsets.ModelViewSet):
     serializer_class = TypeFileSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def perform_update(self, serializer: TypeFileSerializer) -> None:
+        """Track direct user edits to type files."""
+        serializer.save(
+            last_modified_by_source=TypeFile.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
+        )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
         """Return a list of all type files, filtered by project if specified."""
@@ -203,7 +245,14 @@ class TypeFileViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            type_file = TypeFile.objects.create(file=uploaded_file, project=project)
+            type_file = TypeFile.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=TypeFile.SOURCE_USER,
+                last_modified_by_source=TypeFile.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(type_file)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -217,6 +266,15 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
     serializer_class = SenseiCheckRuleSerializer
     parser_classes: ClassVar[list[Any]] = [MultiPartParser, FormParser, JSONParser]
     permission_classes: ClassVar[list[Any]] = [permissions.IsAuthenticated, ProjectFilePermission]
+
+    def perform_update(self, serializer: SenseiCheckRuleSerializer) -> None:
+        """Track direct user edits to SENSEI Check rules."""
+        serializer.save(
+            last_modified_by_source=SenseiCheckRule.SOURCE_USER,
+            last_modified_by_user=self.request.user,
+            last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
+        )
 
     @staticmethod
     def _ignore_validation_errors(request: Request) -> bool:
@@ -300,7 +358,14 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
 
         created_files = []
         for uploaded_file in uploaded_files:
-            sensei_check_rule = SenseiCheckRule.objects.create(file=uploaded_file, project=project)
+            sensei_check_rule = SenseiCheckRule.objects.create(
+                file=uploaded_file,
+                project=project,
+                created_by_source=SenseiCheckRule.SOURCE_USER,
+                last_modified_by_source=SenseiCheckRule.SOURCE_USER,
+                created_by_user=request.user,
+                last_modified_by_user=request.user,
+            )
             created_files.append(sensei_check_rule)
 
         serializer = self.get_serializer(created_files, many=True)
@@ -364,6 +429,15 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
                     yaml.dump(data, file, Dumper=CustomDumper, default_flow_style=False)
 
                 # Return updated data
+                rule.mark_modified_by_user(request.user)
+                rule.save(
+                    update_fields=[
+                        "last_modified_by_source",
+                        "last_modified_by_user",
+                        "last_modified_by_senpai_conversation",
+                        "last_modified_at",
+                    ]
+                )
                 serializer = self.get_serializer(rule)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(

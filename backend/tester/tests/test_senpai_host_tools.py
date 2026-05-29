@@ -111,6 +111,62 @@ class SenpaiHostToolsTests(TestCase):
     def _active_tool(self, name: str) -> BaseTool:
         return self.active_tools[name]
 
+    def test_get_artifact_provenance_returns_profile_source(self) -> None:
+        """The provenance tool should expose minimal source metadata for visible profiles."""
+        self.user.username = "dojo_owner"
+        self.user.first_name = "Dojo"
+        self.user.last_name = "Owner"
+        self.user.save(update_fields=["username", "first_name", "last_name"])
+        profile = TestFile.objects.create(
+            project=self.project,
+            name="Checkout Profile",
+            created_by_source=TestFile.SOURCE_SENPAI_ASSISTANT,
+            last_modified_by_source=TestFile.SOURCE_USER,
+            created_by_user=self.user,
+            last_modified_by_user=self.user,
+        )
+        profile.file.save("checkout_profile.yaml", ContentFile("test_name: Checkout Profile\n"), save=True)
+
+        result = self._tool("get_artifact_provenance").invoke(
+            {"artifact_type": "profile", "artifact": "Checkout Profile", "project": self.project.name}
+        )
+
+        self.assertEqual(result["artifact"]["id"], profile.id)  # noqa: PT009
+        self.assertEqual(result["artifact"]["created_by_source"], TestFile.SOURCE_SENPAI_ASSISTANT)  # noqa: PT009
+        self.assertEqual(result["artifact"]["created_by_label"], "Senpai Assistant")  # noqa: PT009
+        self.assertEqual(result["artifact"]["last_modified_by_source"], TestFile.SOURCE_USER)  # noqa: PT009
+        self.assertEqual(result["artifact"]["last_modified_by_label"], "dojo_owner")  # noqa: PT009
+        self.assertEqual(result["artifact"]["last_modified_by_user_name"], "dojo_owner")  # noqa: PT009
+        self.assertNotIn("parameters", result["artifact"])  # noqa: PT009
+
+    def test_get_artifact_provenance_uses_user_email_when_username_is_blank(self) -> None:
+        """User provenance labels should fall back to the account email only without a username."""
+        profile = TestFile.objects.create(
+            project=self.project,
+            name="Email Profile",
+            created_by_source=TestFile.SOURCE_USER,
+            last_modified_by_source=TestFile.SOURCE_USER,
+            created_by_user=self.user,
+            last_modified_by_user=self.user,
+        )
+        profile.file.save("email_profile.yaml", ContentFile("test_name: Email Profile\n"), save=True)
+
+        result = self._tool("get_artifact_provenance").invoke(
+            {"artifact_type": "profile", "artifact": "Email Profile", "project": self.project.name}
+        )
+
+        self.assertEqual(result["artifact"]["created_by_label"], "owner@example.com")  # noqa: PT009
+        self.assertEqual(result["artifact"]["last_modified_by_label"], "owner@example.com")  # noqa: PT009
+        self.assertEqual(result["artifact"]["created_by_user_name"], "owner@example.com")  # noqa: PT009
+
+    def test_get_artifact_provenance_scopes_connectors_to_current_user(self) -> None:
+        """Connector provenance should not expose another user's private connector."""
+        result = self._tool("get_artifact_provenance").invoke(
+            {"artifact_type": "connector", "artifact": self.other_connector.name}
+        )
+
+        self.assertIn("error", result)  # noqa: PT009
+
     def test_tracer_summary_counts_visible_executions_only(self) -> None:
         """Summary should include owned and public runs but not another user's private runs."""
         result = self._tool("get_tracer_execution_summary").invoke({})

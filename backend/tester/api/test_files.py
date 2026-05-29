@@ -127,9 +127,14 @@ class TestFileViewSet(viewsets.ModelViewSet):
 
         test_file.name = new_test_name
         test_file.is_valid = is_valid
+        test_file.mark_modified_by_user(request.user)
         test_file.save()
 
-        return Response({"message": "File updated successfully"}, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(test_file)
+        return Response(
+            {"message": "File updated successfully", "audit": serializer.data.get("audit")},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["delete"], url_path="delete-bulk")
     def bulk_delete(self, request: Request) -> Response:
@@ -169,7 +174,7 @@ class TestFileViewSet(viewsets.ModelViewSet):
             return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            saved_file_ids = self._create_test_files_from_data(project, processed_files)
+            saved_file_ids = self._create_test_files_from_data(project, processed_files, request.user)
         except Exception:
             logger.exception("Failed to save files during bulk upload.")
             return Response({"error": self.UPLOAD_SAVE_ERROR_MESSAGE}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -234,7 +239,12 @@ class TestFileViewSet(viewsets.ModelViewSet):
         else:
             return validation.is_valid, test_name, None if validation.is_valid else error
 
-    def _create_test_files_from_data(self, project: Project, file_data: builtins.list[dict]) -> builtins.list[int]:
+    def _create_test_files_from_data(
+        self,
+        project: Project,
+        file_data: builtins.list[dict],
+        user: Any,  # noqa: ANN401
+    ) -> builtins.list[int]:
         """Save processed file data while keeping DB transactions short."""
         saved_file_ids = []
         current_instance = None
@@ -250,6 +260,10 @@ class TestFileViewSet(viewsets.ModelViewSet):
                     project=project,
                     is_valid=data["is_valid"],
                     execution=manual_execution,  # Assign to manual execution
+                    created_by_source=TestFile.SOURCE_USER,
+                    last_modified_by_source=TestFile.SOURCE_USER,
+                    created_by_user=user,
+                    last_modified_by_user=user,
                 )
                 current_instance.save(update_execution_profile_count=False)
                 saved_file_ids.append(current_instance.id)

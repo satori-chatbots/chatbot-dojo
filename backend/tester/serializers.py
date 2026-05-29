@@ -1,6 +1,7 @@
 """Serializers for the tester app."""
 
-from typing import Any, ClassVar
+from datetime import datetime
+from typing import Any, ClassVar, Protocol
 
 import yaml
 from django.contrib.auth import get_user_model
@@ -28,6 +29,92 @@ from .models import (
 
 # Get the latest version of the user model
 User = get_user_model()
+
+
+class UserDisplay(Protocol):
+    """User fields required for audit display names."""
+
+    username: str
+    email: str
+
+    def get_full_name(self) -> str:
+        """Return the user's full name."""
+
+
+class ProvenanceAuditObject(Protocol):
+    """Model fields required to serialize provenance audit metadata."""
+
+    created_by_source: str
+    last_modified_by_source: str
+    created_by_user: UserDisplay | None
+    last_modified_by_user: UserDisplay | None
+    uploaded_at: datetime | None
+    created_at: datetime | None
+    last_modified_at: datetime | None
+
+    def get_created_by_source_display(self) -> str:
+        """Return the display label for the creation source."""
+
+    def get_last_modified_by_source_display(self) -> str:
+        """Return the display label for the latest modification source."""
+
+
+PROVENANCE_READ_ONLY_FIELDS = [
+    "created_by_source",
+    "last_modified_by_source",
+    "created_by_user",
+    "last_modified_by_user",
+    "created_by_senpai_conversation",
+    "last_modified_by_senpai_conversation",
+    "last_modified_at",
+    "provenance_metadata",
+]
+
+
+def _serialize_user_display_name(user: UserDisplay | None) -> str | None:
+    if user is None:
+        return None
+    if user.username:
+        return user.username
+    full_name = user.get_full_name().strip()
+    if full_name:
+        return full_name
+    if user.email:
+        return user.email
+    return None
+
+
+def _serialize_actor_label(source: str, user: UserDisplay | None, fallback_label: str) -> str:
+    if source == TestFile.SOURCE_USER:
+        return _serialize_user_display_name(user) or fallback_label
+    return fallback_label
+
+
+class ProvenanceAuditSerializerMixin:
+    """Expose human-readable provenance details for YAML editors and API clients."""
+
+    def get_audit(self, obj: ProvenanceAuditObject) -> dict[str, str | None]:
+        """Return compact audit metadata for provenance-enabled models."""
+        created_at = getattr(obj, "uploaded_at", None) or getattr(obj, "created_at", None)
+        last_modified_at = getattr(obj, "last_modified_at", None) or created_at
+        created_by_user = getattr(obj, "created_by_user", None)
+        last_modified_by_user = getattr(obj, "last_modified_by_user", None)
+        return {
+            "created_by": _serialize_actor_label(
+                obj.created_by_source,
+                created_by_user,
+                obj.get_created_by_source_display(),
+            ),
+            "last_modified_by": _serialize_actor_label(
+                obj.last_modified_by_source,
+                last_modified_by_user,
+                obj.get_last_modified_by_source_display(),
+            ),
+            "created_by_source": obj.created_by_source,
+            "last_modified_by_source": obj.last_modified_by_source,
+            "created_at": created_at.isoformat() if created_at else None,
+            "last_modified_at": last_modified_at.isoformat() if last_modified_at else None,
+        }
 
 
 class FileURLMixin:
@@ -207,21 +294,24 @@ class ProfileReportSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class TestFileSerializer(FileURLMixin, serializers.ModelSerializer):
+class TestFileSerializer(ProvenanceAuditSerializerMixin, FileURLMixin, serializers.ModelSerializer):
     """Serializer for the TestFile model."""
 
     file_url = serializers.SerializerMethodField()
+    audit = serializers.SerializerMethodField()
 
     class Meta:
         """Meta class for TestFileSerializer."""
 
         model = TestFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["project"]
+        read_only_fields: ClassVar[list[str]] = ["project", *PROVENANCE_READ_ONLY_FIELDS]
 
 
-class ChatbotConnectorSerializer(serializers.ModelSerializer):
+class ChatbotConnectorSerializer(ProvenanceAuditSerializerMixin, serializers.ModelSerializer):
     """Serializer for the ChatbotConnector model."""
+
+    audit = serializers.SerializerMethodField()
 
     class Meta:
         """Meta class for ChatbotConnectorSerializer."""
@@ -233,8 +323,10 @@ class ChatbotConnectorSerializer(serializers.ModelSerializer):
             "technology",
             "parameters",
             "custom_config_file",
+            "audit",
+            *PROVENANCE_READ_ONLY_FIELDS,
         ]
-        read_only_fields: ClassVar[list[str]] = ["owner"]
+        read_only_fields: ClassVar[list[str]] = ["owner", *PROVENANCE_READ_ONLY_FIELDS]
 
     def validate_parameters(self, value: dict[str, Any]) -> dict[str, Any]:
         """Validate that parameters is a valid JSON object."""
@@ -244,9 +336,10 @@ class ChatbotConnectorSerializer(serializers.ModelSerializer):
         return value
 
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectSerializer(ProvenanceAuditSerializerMixin, serializers.ModelSerializer):
     """Serializer for the Project model."""
 
+    audit = serializers.SerializerMethodField()
     test_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     chatbot_connector = serializers.PrimaryKeyRelatedField(queryset=ChatbotConnector.objects.none())
     is_owner = serializers.SerializerMethodField()
@@ -259,7 +352,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         model = Project
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["owner"]
+        read_only_fields: ClassVar[list[str]] = ["owner", *PROVENANCE_READ_ONLY_FIELDS]
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         """Initialize the serializer and filter querysets based on the user."""
@@ -386,50 +479,54 @@ class UserAPIKeySerializer(serializers.ModelSerializer):
         return obj.get_api_key()
 
 
-class PersonalityFileSerializer(FileURLMixin, serializers.ModelSerializer):
+class PersonalityFileSerializer(ProvenanceAuditSerializerMixin, FileURLMixin, serializers.ModelSerializer):
     """Serializer for the PersonalityFile model."""
 
     file_url = serializers.SerializerMethodField()
+    audit = serializers.SerializerMethodField()
 
     class Meta:
         """Meta class for PersonalityFileSerializer."""
 
         model = PersonalityFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
-class RuleFileSerializer(FileURLMixin, serializers.ModelSerializer):
+class RuleFileSerializer(ProvenanceAuditSerializerMixin, FileURLMixin, serializers.ModelSerializer):
     """Serializer for the RuleFile model."""
 
     file_url = serializers.SerializerMethodField()
+    audit = serializers.SerializerMethodField()
 
     class Meta:
         """Meta class for RuleFileSerializer."""
 
         model = RuleFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
-class TypeFileSerializer(FileURLMixin, serializers.ModelSerializer):
+class TypeFileSerializer(ProvenanceAuditSerializerMixin, FileURLMixin, serializers.ModelSerializer):
     """Serializer for the TypeFile model."""
 
     file_url = serializers.SerializerMethodField()
+    audit = serializers.SerializerMethodField()
 
     class Meta:
         """Meta class for TypeFileSerializer."""
 
         model = TypeFile
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
-class SenseiCheckRuleSerializer(FileURLMixin, serializers.ModelSerializer):
+class SenseiCheckRuleSerializer(ProvenanceAuditSerializerMixin, FileURLMixin, serializers.ModelSerializer):
     """Serializer for the SenseiCheckRule model."""
 
     file_url = serializers.SerializerMethodField()
     active = serializers.SerializerMethodField()
+    audit = serializers.SerializerMethodField()
 
     def get_active(self, obj: SenseiCheckRule) -> bool | None:
         """Extract the 'active' field from the YAML file content."""
@@ -457,7 +554,7 @@ class SenseiCheckRuleSerializer(FileURLMixin, serializers.ModelSerializer):
 
         model = SenseiCheckRule
         fields = "__all__"
-        read_only_fields: ClassVar[list[str]] = ["name"]
+        read_only_fields: ClassVar[list[str]] = ["name", *PROVENANCE_READ_ONLY_FIELDS]
 
 
 class ProjectConfigSerializer(serializers.ModelSerializer):

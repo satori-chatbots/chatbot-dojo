@@ -40,6 +40,7 @@ import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
 import { useSetup } from "../contexts/setup-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import YamlEditorAuditFooter from "../components/yaml-editor-audit-footer";
 import {
   documentationSections,
   yamlBasicsSections,
@@ -120,6 +121,7 @@ function YamlEditor() {
     }
   }, []);
   const [lastSaved, setLastSaved] = useState();
+  const [auditInfo, setAuditInfo] = useState();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -215,6 +217,7 @@ function YamlEditor() {
           const response = await fetchFile(fileId);
           setEditorContent(response.yamlContent);
           setOriginalContent(response.yamlContent);
+          setAuditInfo(response.audit);
           await validateYaml(response.yamlContent);
         } else {
           const response = await fetchTemplate();
@@ -259,6 +262,9 @@ function YamlEditor() {
         const response = await updateFile(fileId, editorContent, {
           ignoreValidationErrors: hasValidationErrors || forceSave,
         });
+        if (response.audit) {
+          setAuditInfo(response.audit);
+        }
         await reloadProfiles(); // Update setup progress
         setOriginalContent(editorContent);
         setHasUnsavedChanges(false);
@@ -582,14 +588,15 @@ function YamlEditor() {
               />
             )}
 
-            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-wrap justify-between items-center gap-3 text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex flex-wrap items-center gap-4">
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
                 <span>{lineCount} lines</span>
                 <span>{editorContent.length} characters</span>
                 {editorContent.length > 0 && <span>{wordCount} words</span>}
+                <YamlEditorAuditFooter audit={auditInfo} />
                 {hasUnsavedChanges && (
                   <span className="text-warning-600 flex items-center gap-1">
                     <div className="w-2 h-2 bg-warning-500 rounded-full" />
