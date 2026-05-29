@@ -130,7 +130,11 @@ class TestFileViewSet(viewsets.ModelViewSet):
         test_file.mark_modified_by_user(request.user)
         test_file.save()
 
-        return Response({"message": "File updated successfully"}, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(test_file)
+        return Response(
+            {"message": "File updated successfully", "audit": serializer.data.get("audit")},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["delete"], url_path="delete-bulk")
     def bulk_delete(self, request: Request) -> Response:

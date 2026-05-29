@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import yaml
 from django.conf import settings
+from django.utils import timezone
 from langchain.chat_models import init_chat_model
 from openai import OpenAI
 
@@ -604,6 +605,7 @@ def _register_existing_senpai_connector_files(
                 "last_modified_by_source": ChatbotConnector.SOURCE_SENPAI_ASSISTANT,
                 "last_modified_by_user": user,
                 "last_modified_by_senpai_conversation": conversation,
+                "last_modified_at": timezone.now(),
             },
         )
         if _created:

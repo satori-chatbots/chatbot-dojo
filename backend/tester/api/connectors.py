@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.db.models.query import QuerySet
 from django.http import JsonResponse
+from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
@@ -187,6 +188,7 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
             last_modified_by_source=ChatbotConnector.SOURCE_USER,
             last_modified_by_user=self.request.user,
             last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
         )
 
     @action(detail=False, methods=["get"], url_path="check-name")
@@ -221,12 +223,14 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
 
     def _handle_get_config(self, connector: ChatbotConnector) -> Response:
         """Handle GET request for configuration."""
+        audit = self.get_serializer(connector).data.get("audit")
         if connector.custom_config_file:
             try:
                 with connector.custom_config_file.open("r") as f:
                     content = f.read()
                 return Response(
-                    {"content": content, "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK
+                    {"content": content, "name": connector.name, "id": connector.id, "audit": audit},
+                    status=status.HTTP_200_OK,
                 )
             except OSError as e:
                 return Response(
@@ -235,7 +239,10 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
                 )
         else:
             # Return empty configuration
-            return Response({"content": "", "name": connector.name, "id": connector.id}, status=status.HTTP_200_OK)
+            return Response(
+                {"content": "", "name": connector.name, "id": connector.id, "audit": audit},
+                status=status.HTTP_200_OK,
+            )
 
     def _handle_put_config(self, request: Request, connector: ChatbotConnector) -> Response:
         """Handle PUT request for configuration."""
@@ -259,8 +266,10 @@ class ChatbotConnectorViewSet(viewsets.ModelViewSet):
             connector.mark_modified_by_user(request.user)
             connector.save()
 
+            audit = self.get_serializer(connector).data.get("audit")
             return Response(
-                {"message": "Configuration updated successfully", "id": connector.id}, status=status.HTTP_200_OK
+                {"message": "Configuration updated successfully", "id": connector.id, "audit": audit},
+                status=status.HTTP_200_OK,
             )
 
         except OSError as e:

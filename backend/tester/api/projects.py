@@ -10,6 +10,7 @@ from django.db import models, transaction
 from django.db.models.query import QuerySet
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.permissions import BasePermission
@@ -19,7 +20,7 @@ from user_sim.cli.init_project import init_proj
 
 from tester.models import ChatbotConnector, Project, TestFile, rename_project_storage
 from tester.senpai_validation import ValidationKind, validate_yaml_content, validation_response_payload
-from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer
+from tester.serializers import ChatbotConnectorSerializer, ProjectSerializer, TestFileSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +172,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 last_modified_by_source=Project.SOURCE_USER,
                 last_modified_by_user=self.request.user,
                 last_modified_by_senpai_conversation=None,
+                last_modified_at=timezone.now(),
             )
             transaction.on_commit(
                 lambda: self._sync_project_storage_after_commit(
@@ -285,7 +287,15 @@ def fetch_file_content(request: Request, file_id: int) -> Response:
         # Read the file content
         content = file_path.read_text()
 
-        return Response({"id": test_file.id, "name": test_file.name, "yamlContent": content})
+        serializer = TestFileSerializer(test_file, context={"request": request})
+        return Response(
+            {
+                "id": test_file.id,
+                "name": test_file.name,
+                "yamlContent": content,
+                "audit": serializer.data.get("audit"),
+            }
+        )
 
     except Http404:
         return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)

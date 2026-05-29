@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 import yaml
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -53,6 +54,7 @@ class PersonalityFileViewSet(viewsets.ModelViewSet):
             last_modified_by_source=PersonalityFile.SOURCE_USER,
             last_modified_by_user=self.request.user,
             last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
         )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
@@ -125,6 +127,7 @@ class RuleFileViewSet(viewsets.ModelViewSet):
             last_modified_by_source=RuleFile.SOURCE_USER,
             last_modified_by_user=self.request.user,
             last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
         )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
@@ -197,6 +200,7 @@ class TypeFileViewSet(viewsets.ModelViewSet):
             last_modified_by_source=TypeFile.SOURCE_USER,
             last_modified_by_user=self.request.user,
             last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
         )
 
     def list(self, request: Request, *_args: Any, **_kwargs: Any) -> Response:  # noqa: ANN401
@@ -269,6 +273,7 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
             last_modified_by_source=SenseiCheckRule.SOURCE_USER,
             last_modified_by_user=self.request.user,
             last_modified_by_senpai_conversation=None,
+            last_modified_at=timezone.now(),
         )
 
     @staticmethod
@@ -430,6 +435,7 @@ class SenseiCheckRuleViewSet(viewsets.ModelViewSet):
                         "last_modified_by_source",
                         "last_modified_by_user",
                         "last_modified_by_senpai_conversation",
+                        "last_modified_at",
                     ]
                 )
                 serializer = self.get_serializer(rule)

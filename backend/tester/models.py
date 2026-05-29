@@ -15,6 +15,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from .senpai_validation import validate_yaml_content
 
@@ -492,6 +493,7 @@ class ArtifactProvenanceMixin(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    last_modified_at = models.DateTimeField(default=timezone.now)
     provenance_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
@@ -504,6 +506,7 @@ class ArtifactProvenanceMixin(models.Model):
         self.last_modified_by_source = self.SOURCE_USER
         self.last_modified_by_user = user
         self.last_modified_by_senpai_conversation = None
+        self.last_modified_at = timezone.now()
 
 
 class TestFile(ArtifactProvenanceMixin, models.Model):
@@ -807,6 +810,7 @@ class ChatbotConnector(ArtifactProvenanceMixin, models.Model):
 
     # Name of the chatbot connector, must be unique per user
     name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
     technology = models.CharField(max_length=255)  # No longer hardcoded choices - dynamic from TRACER
     parameters = models.JSONField(default=dict, blank=True, help_text="Connector-specific parameters as JSON")
 

@@ -76,6 +76,7 @@ import { useTheme } from "next-themes";
 import useSelectedProject from "../hooks/use-selected-projects";
 import { useSetup } from "../contexts/setup-context";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import YamlEditorAuditFooter from "../components/yaml-editor-audit-footer";
 import { autocompletion } from "@codemirror/autocomplete";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
@@ -427,6 +428,7 @@ function SenseiCheckRulesEditor() {
   const [fontSize, setFontSize] = useState(14);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [lastSaved, setLastSaved] = useState();
+  const [auditInfo, setAuditInfo] = useState();
   // editorRef removed (unused)
   const [ruleProject, setRuleProject] = useState();
 
@@ -518,6 +520,7 @@ function SenseiCheckRulesEditor() {
           const response = await fetchSenseiCheckRule(ruleId);
           // Store the project information for updates
           setRuleProject(response.project);
+          setAuditInfo(response.audit);
           // For now, try to read from the file URL if available
           let content = "";
           if (response.file_url) {
@@ -579,9 +582,17 @@ function SenseiCheckRulesEditor() {
           return;
         }
         // We don't need the response object here; await the update and proceed.
-        await updateSenseiCheckRule(ruleId, editorContent, projectIdToUse, {
-          ignoreValidationErrors: !contentIsValid,
-        });
+        const updateResponse = await updateSenseiCheckRule(
+          ruleId,
+          editorContent,
+          projectIdToUse,
+          {
+            ignoreValidationErrors: !contentIsValid,
+          },
+        );
+        if (updateResponse.audit) {
+          setAuditInfo(updateResponse.audit);
+        }
         await reloadProfiles();
         setOriginalContent(editorContent);
         setHasUnsavedChanges(false);
@@ -907,14 +918,15 @@ function SenseiCheckRulesEditor() {
             />
 
             {/* Status bar directly under editor */}
-            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-wrap justify-between items-center gap-3 text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex flex-wrap items-center gap-4">
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
                 <span>{lineCount} lines</span>
                 <span>{editorContent.length} characters</span>
                 {editorContent.length > 0 && <span>{wordCount} words</span>}
+                <YamlEditorAuditFooter audit={auditInfo} />
                 {hasUnsavedChanges && (
                   <span className="text-warning-600 flex items-center gap-1">
                     <div className="w-2 h-2 bg-warning-500 rounded-full" />

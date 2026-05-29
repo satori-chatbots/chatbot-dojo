@@ -44,6 +44,7 @@ import { validateYamlOnServer } from "../api/file-api";
 import apiClient from "../api/api-client";
 import API_BASE_URL, { ENDPOINTS } from "../api/config";
 import { useMyCustomToast } from "../contexts/my-custom-toast-context";
+import YamlEditorAuditFooter from "../components/yaml-editor-audit-footer";
 import { keymap } from "@codemirror/view";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import { searchKeymap } from "@codemirror/search";
@@ -323,6 +324,7 @@ function CustomConnectorYamlEditor() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
   const [connectorName, setConnectorName] = useState("");
+  const [auditInfo, setAuditInfo] = useState();
 
   // New state for sidebar and responsive design
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -446,6 +448,7 @@ response_path: "response.text"
 `);
         setOriginalContent("");
         setConnectorName("New Custom Connector");
+        setAuditInfo(undefined);
         return;
       }
 
@@ -486,6 +489,7 @@ response_path: "response.text"
           );
           setOriginalContent(data.content || "");
           setConnectorName(data.name || "Custom Connector");
+          setAuditInfo(data.audit);
         } else {
           throw new Error("Failed to load connector configuration");
         }
@@ -554,7 +558,7 @@ response_path: "response.text"
       }
 
       // Save connector YAML configuration
-      await apiClient(
+      const saveResponse = await apiClient(
         `${API_BASE_URL}${ENDPOINTS.CHATBOTCONNECTOR}${targetConnectorId}/config/`,
         {
           method: "PUT",
@@ -563,6 +567,10 @@ response_path: "response.text"
           }),
         },
       );
+      const saveData = await saveResponse.json();
+      if (saveData.audit) {
+        setAuditInfo(saveData.audit);
+      }
 
       setOriginalContent(editorContent);
       setLastSaved(new Date());
@@ -888,14 +896,15 @@ response_path: "response.text"
             />
 
             {/* Status bar directly under editor */}
-            <div className="flex justify-between items-center text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-wrap justify-between items-center gap-3 text-xs text-default-500 border-t border-default-200 bg-default-50 px-4 py-2 rounded-b-lg">
+              <div className="flex flex-wrap items-center gap-4">
                 <span className="font-mono">
                   Line {cursorPosition.line}, Col {cursorPosition.column}
                 </span>
                 <span>{lineCount} lines</span>
                 <span>{editorContent.length} characters</span>
                 {editorContent.length > 0 && <span>{wordCount} words</span>}
+                <YamlEditorAuditFooter audit={auditInfo} />
                 {hasUnsavedChanges && (
                   <span className="text-warning-600 flex items-center gap-1">
                     <div className="w-2 h-2 bg-warning-500 rounded-full" />
