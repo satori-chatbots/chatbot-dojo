@@ -10,6 +10,9 @@ const getAgentHtmlStyles = () => `
   .agent-html-content * {
     color: inherit !important;
     font-family: inherit !important;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .agent-html-content a {
@@ -93,7 +96,7 @@ const HTMLMessageRenderer = ({ htmlContent, isAgent = false }) => {
         <style dangerouslySetInnerHTML={{ __html: agentHtmlStyles }} />
       )}
       <div
-        className={`mt-1 ${isAgent ? "agent-html-content" : ""}`}
+        className={`message-text-wrap mt-1 ${isAgent ? "agent-html-content" : ""}`}
         dangerouslySetInnerHTML={createMarkup(htmlContent)}
       />
     </>

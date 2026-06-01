@@ -164,4 +164,16 @@
   .dark .code-token-attribute {
     color: #a5b4fc;
   }
+
+  .message-text-wrap,
+  .message-text-wrap * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .message-text-wrap pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
 }
