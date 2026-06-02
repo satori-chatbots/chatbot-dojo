@@ -38,6 +38,33 @@ import HTMLMessageRenderer, {
   containsHTML,
 } from "../components/html-message-renderer";
 
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
+const objectEntries = (value) =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? Object.entries(value)
+    : [];
+
+const firstObjectEntry = (value) => objectEntries(value)[0] || ["", ""];
+
+const formatCellValue = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return "None";
+  }
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+};
+
+const safeNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
 function TestCase() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1061,7 +1088,7 @@ function TestCase() {
                                           Questions
                                         </h4>
                                         <div className="space-y-2 pl-4">
-                                          {conversation.ask_about
+                                          {asArray(conversation.ask_about)
                                             .filter(
                                               (item) =>
                                                 typeof item === "string",
@@ -1090,23 +1117,22 @@ function TestCase() {
                                             <TableColumn>Value</TableColumn>
                                           </TableHeader>
                                           <TableBody>
-                                            {conversation.ask_about
+                                            {asArray(conversation.ask_about)
                                               .filter(
                                                 (item) =>
-                                                  typeof item === "object",
+                                                  objectEntries(item).length >
+                                                  0,
                                               )
                                               .map((item, index) => {
                                                 const [key, value] =
-                                                  Object.entries(item)[0];
+                                                  firstObjectEntry(item);
                                                 return (
                                                   <TableRow key={index}>
                                                     <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
                                                       {key}
                                                     </TableCell>
                                                     <TableCell className="text-foreground dark:text-foreground-dark">
-                                                      {Array.isArray(value)
-                                                        ? value.join(", ")
-                                                        : value}
+                                                      {formatCellValue(value)}
                                                     </TableCell>
                                                   </TableRow>
                                                 );
@@ -1137,19 +1163,25 @@ function TestCase() {
                                           <TableColumn>Value</TableColumn>
                                         </TableHeader>
                                         <TableBody>
-                                          {conversation.data_output.map(
-                                            (item, index) => (
-                                              <TableRow key={index}>
-                                                <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
-                                                  {Object.keys(item)[0]}
-                                                </TableCell>
-                                                <TableCell className="text-foreground dark:text-foreground-dark">
-                                                  {Object.values(item)[0] ??
-                                                    "None"}
-                                                </TableCell>
-                                              </TableRow>
-                                            ),
-                                          )}
+                                          {asArray(conversation.data_output)
+                                            .filter(
+                                              (item) =>
+                                                objectEntries(item).length > 0,
+                                            )
+                                            .map((item, index) => {
+                                              const [key, value] =
+                                                firstObjectEntry(item);
+                                              return (
+                                                <TableRow key={index}>
+                                                  <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
+                                                    {key}
+                                                  </TableCell>
+                                                  <TableCell className="text-foreground dark:text-foreground-dark">
+                                                    {formatCellValue(value)}
+                                                  </TableCell>
+                                                </TableRow>
+                                              );
+                                            })}
                                         </TableBody>
                                       </Table>
                                     </CardBody>
@@ -1177,18 +1209,26 @@ function TestCase() {
                                           </TableColumn>
                                         </TableHeader>
                                         <TableBody emptyContent="There are no errors in this conversation">
-                                          {conversation.errors.map(
-                                            (error, index) => (
-                                              <TableRow key={index}>
-                                                <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
-                                                  {Object.keys(error)[0]}
-                                                </TableCell>
-                                                <TableCell className="text-foreground dark:text-foreground-dark">
-                                                  {Object.values(error)[0]}
-                                                </TableCell>
-                                              </TableRow>
-                                            ),
-                                          )}
+                                          {asArray(conversation.errors)
+                                            .filter(
+                                              (error) =>
+                                                objectEntries(error).length >
+                                                0,
+                                            )
+                                            .map((error, index) => {
+                                              const [key, value] =
+                                                firstObjectEntry(error);
+                                              return (
+                                                <TableRow key={index}>
+                                                  <TableCell className="font-medium w-1/3 text-foreground dark:text-foreground-dark">
+                                                    {key}
+                                                  </TableCell>
+                                                  <TableCell className="text-foreground dark:text-foreground-dark">
+                                                    {formatCellValue(value)}
+                                                  </TableCell>
+                                                </TableRow>
+                                              );
+                                            })}
                                         </TableBody>
                                       </Table>
                                     </CardBody>
@@ -1230,9 +1270,9 @@ function TestCase() {
                                             </TableCell>
                                             <TableCell className="text-foreground dark:text-foreground-dark">
                                               $
-                                              {conversation.total_cost.toFixed(
-                                                6,
-                                              )}
+                                              {safeNumber(
+                                                conversation.total_cost,
+                                              ).toFixed(6)}
                                             </TableCell>
                                           </TableRow>
                                         </TableBody>
@@ -1265,9 +1305,9 @@ function TestCase() {
                                               Average
                                             </TableCell>
                                             <TableCell className="text-foreground dark:text-foreground-dark">
-                                              {conversation.response_time_avg.toFixed(
-                                                2,
-                                              )}
+                                              {safeNumber(
+                                                conversation.response_time_avg,
+                                              ).toFixed(2)}
                                               s
                                             </TableCell>
                                           </TableRow>
@@ -1276,9 +1316,9 @@ function TestCase() {
                                               Maximum
                                             </TableCell>
                                             <TableCell className="text-foreground dark:text-foreground-dark">
-                                              {conversation.response_time_max.toFixed(
-                                                2,
-                                              )}
+                                              {safeNumber(
+                                                conversation.response_time_max,
+                                              ).toFixed(2)}
                                               s
                                             </TableCell>
                                           </TableRow>
@@ -1287,9 +1327,9 @@ function TestCase() {
                                               Minimum
                                             </TableCell>
                                             <TableCell className="text-foreground dark:text-foreground-dark">
-                                              {conversation.response_time_min.toFixed(
-                                                2,
-                                              )}
+                                              {safeNumber(
+                                                conversation.response_time_min,
+                                              ).toFixed(2)}
                                               s
                                             </TableCell>
                                           </TableRow>
@@ -1308,12 +1348,14 @@ function TestCase() {
                                       </h3>
                                     </CardHeader>
                                     <CardBody className="pl-4">
-                                      {conversation.interaction.map(
+                                      {asArray(conversation.interaction).map(
                                         (message, index) => {
+                                          const [speaker, rawContent] =
+                                            firstObjectEntry(message);
                                           const isUser =
-                                            Object.keys(message)[0] === "User";
+                                            speaker === "User";
                                           const messageContent =
-                                            Object.values(message)[0];
+                                            formatCellValue(rawContent);
 
                                           return (
                                             <div
