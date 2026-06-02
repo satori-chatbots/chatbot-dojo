@@ -1212,8 +1212,7 @@ function TestCase() {
                                           {asArray(conversation.errors)
                                             .filter(
                                               (error) =>
-                                                objectEntries(error).length >
-                                                0,
+                                                objectEntries(error).length > 0,
                                             )
                                             .map((error, index) => {
                                               const [key, value] =
@@ -1352,8 +1351,7 @@ function TestCase() {
                                         (message, index) => {
                                           const [speaker, rawContent] =
                                             firstObjectEntry(message);
-                                          const isUser =
-                                            speaker === "User";
+                                          const isUser = speaker === "User";
                                           const messageContent =
                                             formatCellValue(rawContent);
 
